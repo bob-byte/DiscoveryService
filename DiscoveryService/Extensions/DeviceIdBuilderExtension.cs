@@ -3,9 +3,13 @@ using System;
 
 namespace DiscoveryServices.Extensions
 {
-    public static class DeviceIdBuilderExtension
+    static class DeviceIdBuilderExtension
     {
-        public static String GetDeviceId(this DeviceIdBuilder deviceIdBuilder) =>
-            deviceIdBuilder.AddMotherboardSerialNumber().ToString();
+        public static String GetDeviceId(this DeviceIdBuilder deviceIdBuilder)
+        {
+            var motherboard = deviceIdBuilder.AddMotherboardSerialNumber().ToString();
+
+            return $"{motherboard}{Guid.NewGuid()}";
+        }
     }
 }

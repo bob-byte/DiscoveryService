@@ -1,41 +1,20 @@
-﻿using System;
+﻿using DiscoveryServices.Extensions.IPExtensions;
+using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace DiscoveryServices.Protocols
 {
     class Broadcast
     {
-        public Int32 Port { get; set; }
-
-        public Broadcast(Int32 port)
+        public void Listen(IPAddress ipClass, Int32 port, out IPEndPoint groupEndPoint, out Byte[] bytes)
         {
-            Port = port;
-        }
-
-        public Broadcast()
-        {
-            DoNothing();
-        }
-
-        //inline-function
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DoNothing()
-        {
-            ;
-        }
-
-        public void Listen(out IPEndPoint groupEndPoint)
-        {
-            UdpClient listener = new UdpClient(Port);
-            groupEndPoint = new IPEndPoint(IPAddress.Any, Port);
+            UdpClient listener = new UdpClient(port);
+            groupEndPoint = new IPEndPoint(ipClass, port);
 
             try
             {
-                var bytes = listener.Receive(ref groupEndPoint);
-                Console.WriteLine(Encoding.ASCII.GetString(bytes));
+                bytes = listener.Receive(ref groupEndPoint);
             }
             catch
             {
@@ -47,38 +26,12 @@ namespace DiscoveryServices.Protocols
             }
         }
 
-        public void Listen(out IPEndPoint groupEndPoint, out byte[] bytes)
-        {
-            UdpClient listener = new UdpClient(Port);
-            groupEndPoint = new IPEndPoint(IPAddress.Any, Port);
-            bytes = null;
-
-            try
-            {
-                while (true)
-                {
-                    bytes = listener.Receive(ref groupEndPoint);
-                }
-            }
-            catch
-            {
-                throw;
-            }
-            finally
-            {
-                listener.Close();
-            }
-        }
-
-        public void SendBroadcastToAll(Byte[] sendbuf, String ipNetwork)
+        public void Send(IPAddress ipNetwork, IPAddress subnetMask, Int32 port, Byte[] sendbuf)
         {
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            var ipBroadcast = ipNetwork.GetBroadcastAddress(subnetMask);
 
-            var bytes = IPAddress.Parse(ipNetwork).GetAddressBytes();
-            bytes[3] = 255;
-            var broadcast = new IPAddress(bytes);
-
-            IPEndPoint ep = new IPEndPoint(broadcast, Port);
+            IPEndPoint ep = new IPEndPoint(ipBroadcast, port);
 
             try
             {

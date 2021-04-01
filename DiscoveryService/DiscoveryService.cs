@@ -1,87 +1,170 @@
-﻿using DeviceId;
-using DiscoveryServices.Extensions;
+﻿using DiscoveryServices.Extensions.IPExtensions;
+using LUC.Interfaces;
+using LUC.Services.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.ComponentModel.Composition;
+using System.Text;
 
 namespace DiscoveryServices
 {
     public class DiscoveryService
     {
+        private const Int32 PeriodSendingsInMs = /*60 * */1000;
+
         private static DiscoveryService instance;
+
+        private static Peer currentPeer;
         private static Client client;
         private static Server server;
 
-        private static Object locker = new Object();
         private Task taskClient;
-        private Thread threadServer;
+        private Task taskServer;
 
-        String ipNetwork;
+        [Import(typeof(INotifyService))]
+        private ILoggingService loggingService;
 
-        public List<IPEndPoint> RecognizedPeers { get; private set; }
-        public String Id { get; }
+        private CancellationTokenSource tokenSourceInnerClient, tokenSourceOuterClient;
+        private CancellationTokenSource tokenSourceInnerServer, tokenSourceOuterServer;
 
-        private DiscoveryService(String ipNetwork, List<IPAddress> groupsSupported, ProtocolVersion protocolVersion)
+        private DiscoveryService(List<String> groupsSupported)
         {
-            this.ipNetwork = ipNetwork;
+            Lock.InitWithLock(Lock.lockerCurrentPeer, new Peer(groupsSupported), ref currentPeer);
 
-            DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
-            Random random = new Random();
-            Id = $"{deviceIdBuilder.GetDeviceId()}-{random.GenerateRandomSymbols(5)}";
-
-            client = new Client(ipNetwork, groupsSupported, protocolVersion, Id);
+            client = new Client();
             server = new Server();
+            
+
+            loggingService = new LoggingService();
         }
 
-        public static DiscoveryService GetInstance(String ipNetwork, List<IPAddress> groupsSupported, ProtocolVersion protocolVersion)
+        public static DiscoveryService GetInstance(List<String> groupsSupported)
         {
-            if (instance == null)
-            {
-                lock (locker)
-                {
-                    if (instance == null)
-                    {
-                        instance = new DiscoveryService(ipNetwork, groupsSupported, protocolVersion);
-                    }
-                }
-            }
-
+            Lock.InitWithLock(Lock.lockerService, new DiscoveryService(groupsSupported), ref instance);
             return instance;
         }
-        CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
+        public Dictionary<String, List<IPAddress>> KnownPeers { get; } = new Dictionary<String, List<IPAddress>>();
+        
         public void Start(out String machineId)
         {
-            CancellationToken token = cancellationTokenSource.Token;
+            tokenSourceOuterClient = new CancellationTokenSource();
+            var tokenClient = tokenSourceOuterClient.Token;
             
-            taskClient = new Task(async () => 
+            Task.Run(async () =>
             {
-                client.SendPackages();
-                await Task.Delay(new TimeSpan(0, 1, 0));
-            }, token);
-            //threadClient = new Thread(new ThreadStart(() => client.SendPacketsPeriodically(RecognizedPeers, new TimeSpan(0, 1, 0), ipNetwork)));
-            taskClient.Start();
-
-            threadServer = new Thread(new ThreadStart(() =>
-            {
-                while(true)
+                while (!tokenClient.IsCancellationRequested)
                 {
-                    server.ListenBroadcast(out IPEndPoint newClient);
-                    RecognizedPeers.Add(newClient);
+                    await Sending(tokenClient);
                 }
-            }));
-            threadServer.Start();
+            }, tokenClient);
 
-            machineId = Id;
+
+            tokenSourceOuterServer = new CancellationTokenSource();
+            var tokenServer = tokenSourceOuterClient.Token;
+            Task.Run(async () =>
+            {
+                while (!tokenServer.IsCancellationRequested)
+                {
+                    await Listening();
+                }
+            }, tokenServer);
+
+            machineId = currentPeer.Id;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="tokenOuter"></param>
+        /// <returns></returns>
+        private Task Sending(CancellationToken tokenOuter)
+        {
+            tokenSourceInnerClient = new CancellationTokenSource();
+            CancellationToken token = tokenSourceInnerClient.Token;
+
+            taskClient = Task.Run(() =>
+            {
+                while (taskClient.Status != TaskStatus.Canceled && taskClient.Status != TaskStatus.Faulted && !token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        //ConfigureAwait(false) allows us to use thread pool in GUI
+                        //var sendUsingClassA = Task.Run(() => client.SendPackages(IPAddressClass.ClassA, SubnetMask.ClassC, currentPeer))/*.ConfigureAwait(false)*/;
+                        //var sendUsingClassB = Task.Run(() => client.SendPackages(IPAddressClass.ClassB, SubnetMask.ClassC, currentPeer))/*.ConfigureAwait(false)*/;
+                        var sendUsingClassC = Task.Run(() => client.SendPackages(IPAddressClass.ClassC, SubnetMask.ClassC, currentPeer))/*.ConfigureAwait(false)*/;
+
+                        Task.WaitAll(sendUsingClassC);
+                    }
+                    catch (Exception ex)
+                    {
+                        tokenSourceInnerClient.Cancel();
+
+                        loggingService.LogError(ex, ex.Message);
+                    }
+
+                    //if outer task is cancelled we stop current task
+                    var cancelled = tokenOuter.WaitHandle.WaitOne(PeriodSendingsInMs);
+                    if (cancelled)
+                    {
+                        break;
+                    }
+                }
+            }, token);
+
+            return taskClient;
+        }
+
+        private Task Listening()
+        {
+            tokenSourceInnerServer = new CancellationTokenSource();
+            var token = tokenSourceInnerServer.Token;
+
+            taskServer = Task.Run(async () =>
+            {
+                while (taskServer.Status != TaskStatus.Canceled && taskServer.Status != TaskStatus.Faulted && !token.IsCancellationRequested)
+                {
+                    IPEndPoint newClient = null;
+                    Peer peerWhereFromGetPackage = null;
+                    try
+                    {
+                        Byte[] bytes = null;
+                        await Task.Run(() => server.ListenBroadcast(IPAddress.Any, currentPeer.RunningPort, out newClient, out bytes, out peerWhereFromGetPackage)).ConfigureAwait(false);
+
+                        String package = Encoding.ASCII.GetString(bytes);
+                        //loggingService.LogInfo(package);
+                    }
+                    catch(Exception ex)
+                    {
+                        tokenSourceInnerServer.Cancel();
+                        loggingService.LogError(ex, ex.Message);
+
+                        currentPeer.RunningPort++;
+                    }
+
+                    var isAddedToKnownPeers = KnownPeers.ContainsKey(peerWhereFromGetPackage.Id);
+                    var messToYourself = currentPeer.Id.Equals(peerWhereFromGetPackage.Id);
+                    if ((!isAddedToKnownPeers) && (!messToYourself))
+                    {
+                        KnownPeers.Add(peerWhereFromGetPackage.Id, peerWhereFromGetPackage.IpAddresses);
+                    }
+                }
+            }, token);
+
+            return taskServer;
         }
 
         public void Stop()
         {
-            cancellationTokenSource.Cancel();
-            //var statusTask = taskClient.Status;
-            threadServer.Abort();
+            tokenSourceInnerClient.Cancel();
+            tokenSourceInnerServer.Cancel();
+
+            tokenSourceOuterClient.Cancel();
+            tokenSourceOuterServer.Cancel();
         }
     }
 }
