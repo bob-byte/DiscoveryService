@@ -14,18 +14,17 @@ namespace DiscoveryServices
         private const Int32 MaxValuePort = 17510;
 
         private const Int32 ProtocolVersion = 1;
-        public Int32 VersionOfProtocol => ProtocolVersion;
-
-        private String id;
-        internal String Id => id;
-
-        private List<IPAddress> ipAddresses;
-        internal List<IPAddress> IpAddresses => ipAddresses;
-
-        private List<String> groupsSupported;
-        internal List<String> GroupsSupported => groupsSupported;
 
         private Int32 runningPort;
+
+        public Int32 VersionOfProtocol => ProtocolVersion;
+
+        internal String Id { get; }
+
+        internal List<IPAddress> IpAddresses { get; }
+
+        internal List<String> GroupsSupported { get; }
+
         internal Int32 RunningPort
         {
             get => runningPort;
@@ -45,13 +44,11 @@ namespace DiscoveryServices
         internal Peer(List<String> groupsSupported)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
-            Lock.InitWithLock(Lock.lockId, deviceIdBuilder.GetDeviceId(), ref id);
-            Lock.InitWithLock(Lock.lockIp, Local_IP.GetLocalIPAddresses(), ref ipAddresses);
-            Lock.InitWithLock(Lock.lockGroupsSupported, groupsSupported, ref this.groupsSupported);
+            Id = deviceIdBuilder.GetMachineId();
 
-            Int32? nullablePort = null;
-            Lock.InitWithLock(Lock.lockPort, MinValuePort, ref nullablePort);
-            runningPort = (Int32)nullablePort;
+            IpAddresses = Local_IP.GetLocalIPAddresses();
+            GroupsSupported = groupsSupported;
+            runningPort = MinValuePort;
         }
     }
 }

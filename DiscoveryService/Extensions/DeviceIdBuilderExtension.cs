@@ -5,7 +5,7 @@ namespace DiscoveryServices.Extensions
 {
     static class DeviceIdBuilderExtension
     {
-        public static String GetDeviceId(this DeviceIdBuilder deviceIdBuilder)
+        public static String GetMachineId(this DeviceIdBuilder deviceIdBuilder)
         {
             var motherboard = deviceIdBuilder.AddMotherboardSerialNumber().ToString();
 

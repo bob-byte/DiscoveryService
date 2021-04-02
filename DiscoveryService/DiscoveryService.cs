@@ -13,7 +13,7 @@ namespace DiscoveryServices
 {
     public class DiscoveryService
     {
-        private const Int32 PeriodSendingsInMs = /*60 * */1000;
+        private const Int32 PeriodSendingsInMs = 60 * 1000;
 
         private static DiscoveryService instance;
 
@@ -24,6 +24,7 @@ namespace DiscoveryServices
         private Task taskClient;
         private Task taskServer;
 
+        //Value of this field should get externally so we use this attribute
         [Import(typeof(INotifyService))]
         private ILoggingService loggingService;
 
@@ -35,12 +36,20 @@ namespace DiscoveryServices
             Lock.InitWithLock(Lock.lockerCurrentPeer, new Peer(groupsSupported), ref currentPeer);
 
             client = new Client();
-            server = new Server();
-            
+            server = new Server();           
 
             loggingService = new LoggingService();
         }
 
+        /// <summary>
+        /// It creates instance to discover others peer in local network
+        /// </summary>
+        /// <param name="groupsSupported">
+        /// Groups which current peer supports
+        /// </param>
+        /// <returns>
+        /// Object to discover other peers. You can't get different instance, so it doesn't have sense to use this method more than 1 time
+        /// </returns>
         public static DiscoveryService GetInstance(List<String> groupsSupported)
         {
             Lock.InitWithLock(Lock.lockerService, new DiscoveryService(groupsSupported), ref instance);
@@ -49,6 +58,13 @@ namespace DiscoveryServices
 
         public Dictionary<String, List<IPAddress>> KnownPeers { get; } = new Dictionary<String, List<IPAddress>>();
         
+        /// <summary>
+        /// It starts discovery others peer in local network
+        /// </summary>
+        /// 
+        /// <param name="machineId">
+        /// Id of current machine
+        /// </param>
         public void Start(out String machineId)
         {
             tokenSourceOuterClient = new CancellationTokenSource();
@@ -58,7 +74,7 @@ namespace DiscoveryServices
             {
                 while (!tokenClient.IsCancellationRequested)
                 {
-                    await Sending(tokenClient);
+                    await SendingBroadcast(tokenClient);
                 }
             }, tokenClient);
 
@@ -69,7 +85,7 @@ namespace DiscoveryServices
             {
                 while (!tokenServer.IsCancellationRequested)
                 {
-                    await Listening();
+                    await ListeningBroadcast();
                 }
             }, tokenServer);
 
@@ -78,32 +94,32 @@ namespace DiscoveryServices
 
 
         /// <summary>
-        /// 
+        /// It sends broadcast package asynchronously to 255 PC of the IP address class C
         /// </summary>
-        /// <param name="tokenOuter"></param>
-        /// <returns></returns>
-        private Task Sending(CancellationToken tokenOuter)
+        /// 
+        /// <param name="tokenOuter">
+        /// Token of the outer task, which run this method
+        /// </param>
+        /// 
+        /// <returns>
+        /// Task which was canceled or has any exception
+        /// </returns>
+        private Task SendingBroadcast(CancellationToken tokenOuter)
         {
             tokenSourceInnerClient = new CancellationTokenSource();
             CancellationToken token = tokenSourceInnerClient.Token;
 
             taskClient = Task.Run(() =>
             {
-                while (taskClient.Status != TaskStatus.Canceled && taskClient.Status != TaskStatus.Faulted && !token.IsCancellationRequested)
+                while (WhetherToContinueTask(taskClient, token))
                 {
                     try
                     {
-                        //ConfigureAwait(false) allows us to use thread pool in GUI
-                        //var sendUsingClassA = Task.Run(() => client.SendPackages(IPAddressClass.ClassA, SubnetMask.ClassC, currentPeer))/*.ConfigureAwait(false)*/;
-                        //var sendUsingClassB = Task.Run(() => client.SendPackages(IPAddressClass.ClassB, SubnetMask.ClassC, currentPeer))/*.ConfigureAwait(false)*/;
-                        var sendUsingClassC = Task.Run(() => client.SendPackages(IPAddressClass.ClassC, SubnetMask.ClassC, currentPeer))/*.ConfigureAwait(false)*/;
-
-                        Task.WaitAll(sendUsingClassC);
+                        client.SendBroadcastMessage(IPAddressClass.ClassC, SubnetMask.ClassC, currentPeer);
                     }
                     catch (Exception ex)
                     {
                         tokenSourceInnerClient.Cancel();
-
                         loggingService.LogError(ex, ex.Message);
                     }
 
@@ -119,21 +135,38 @@ namespace DiscoveryServices
             return taskClient;
         }
 
-        private Task Listening()
+        private Boolean WhetherToContinueTask(Task task, CancellationToken token)
+        {
+            var isThisTaskCanceled = task.Status == TaskStatus.Canceled;
+            var hasThisTaskException = task.Status == TaskStatus.Faulted;
+            
+            return ((!isThisTaskCanceled) && (!hasThisTaskException) && !token.IsCancellationRequested);
+        }
+
+        /// <summary>
+        /// It listens broadcast asynchronously in a different task until it will be canceled or has an exception. 
+        /// Also it adds info about remote peer wherefrom we get package to KnowPeers property
+        /// </summary>
+        /// 
+        /// <returns>
+        /// It returns task which listened broadcast package
+        /// </returns>
+        private Task ListeningBroadcast()
         {
             tokenSourceInnerServer = new CancellationTokenSource();
             var token = tokenSourceInnerServer.Token;
 
-            taskServer = Task.Run(async () =>
+            taskServer = Task.Run(() =>
             {
-                while (taskServer.Status != TaskStatus.Canceled && taskServer.Status != TaskStatus.Faulted && !token.IsCancellationRequested)
+                while (WhetherToContinueTask(taskServer, token))
                 {
                     IPEndPoint newClient = null;
                     Peer peerWhereFromGetPackage = null;
+
                     try
                     {
                         Byte[] bytes = null;
-                        await Task.Run(() => server.ListenBroadcast(IPAddress.Any, currentPeer.RunningPort, out newClient, out bytes, out peerWhereFromGetPackage)).ConfigureAwait(false);
+                        server.ListenBroadcast(IPAddress.Any, currentPeer.RunningPort, out newClient, out bytes, out peerWhereFromGetPackage);
 
                         String package = Encoding.ASCII.GetString(bytes);
                         //loggingService.LogInfo(package);
@@ -160,9 +193,11 @@ namespace DiscoveryServices
 
         public void Stop()
         {
+            //Stop inner task of sending and listening appropriately
             tokenSourceInnerClient.Cancel();
             tokenSourceInnerServer.Cancel();
 
+            //Stop outer task of sending and listening appropriately
             tokenSourceOuterClient.Cancel();
             tokenSourceOuterServer.Cancel();
         }
