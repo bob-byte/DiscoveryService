@@ -7,6 +7,8 @@ namespace DiscoveryServices.Protocols
 {
     class Broadcast
     {
+        private const Int32 PortForListening = 0;
+
         /// <summary>
         /// It sends a broadcast package
         /// </summary>
@@ -25,12 +27,13 @@ namespace DiscoveryServices.Protocols
         public void Send(IPAddress ipAddressClass, IPAddress subnetMask, Int32 port, Byte[] sendbuf)
         {
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            socket.EnableBroadcast = true;
             var ipBroadcast = ipAddressClass.GetBroadcastAddress(subnetMask);
-
             IPEndPoint ep = new IPEndPoint(ipBroadcast, port);
 
             try
             {
+                //socket.Connect(ep);
                 socket.SendTo(sendbuf, ep);
             }
             catch
@@ -39,8 +42,15 @@ namespace DiscoveryServices.Protocols
             }
             finally
             {
-                socket.Close();
+                Close(SocketShutdown.Send, ref socket);
             }
+        }
+
+        private void Close(SocketShutdown shutdown, ref Socket socket)
+        {
+            socket.Shutdown(shutdown);
+            socket.Close();
+            socket = null;
         }
 
         /// <summary>
@@ -62,14 +72,23 @@ namespace DiscoveryServices.Protocols
         /// <param name="bytes">
         /// Bytes which we get in message
         /// </param>
-        public void Listen(IPAddress ipClass, Int32 port, out IPEndPoint endPoint, out Byte[] bytes)
+        public void Listen(Byte[] bytes, IPEndPoint local_Ip, Int32 timeout)
         {
-            UdpClient listener = new UdpClient(port);
-            endPoint = new IPEndPoint(ipClass, port);
+            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            socket.EnableBroadcast = true;
+            var ipBroadcast = local_Ip.Address.GetBroadcastAddress(SubnetMask.ClassC);
+            IPEndPoint localEndPoint = new IPEndPoint(ipBroadcast, local_Ip.Port);
+
+            EndPoint remoteIp = new IPEndPoint(IPAddress.Any, PortForListening);
+            socket.Bind(remoteIp);
+
+            socket.ReceiveTimeout = timeout;
 
             try
             {
-                bytes = listener.Receive(ref endPoint);
+                //to enable receiving broadcast messages as I read. But i actually can't get such messages
+                socket.SendTo(new Byte[] { 0, 2, 3 }, localEndPoint);
+                socket.ReceiveFrom(bytes, ref remoteIp);
             }
             catch
             {
@@ -77,8 +96,9 @@ namespace DiscoveryServices.Protocols
             }
             finally
             {
-                listener.Close();
+                Close(SocketShutdown.Receive, ref socket);
             }
         }
+
     }
 }

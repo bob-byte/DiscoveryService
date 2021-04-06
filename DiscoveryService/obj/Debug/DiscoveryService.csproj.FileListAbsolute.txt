@@ -16,3 +16,12 @@ D:\МояКарєраПрограмістом\Xentime\DiscoveryService\Discovery
 D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.csproj.CopyComplete
 D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.dll
 D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.pdb
+C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\bin\Debug\DiscoveryService.dll
+C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\bin\Debug\DiscoveryService.pdb
+C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\bin\Debug\DeviceId.dll
+C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\bin\Debug\DeviceId.xml
+C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.csprojAssemblyReference.cache
+C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.csproj.CoreCompileInputs.cache
+C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.csproj.CopyComplete
+C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.dll
+C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.pdb

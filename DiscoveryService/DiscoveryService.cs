@@ -1,5 +1,4 @@
-﻿using DiscoveryServices.Extensions.IPExtensions;
-using LUC.Interfaces;
+﻿using LUC.Interfaces;
 using LUC.Services.Implementation;
 using System;
 using System.Collections.Generic;
@@ -7,13 +6,20 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.ComponentModel.Composition;
-using System.Text;
+using System.Security.Cryptography.X509Certificates;
 
 namespace DiscoveryServices
 {
     public class DiscoveryService
     {
-        private const Int32 PeriodSendingsInMs = 60 * 1000;
+        private const Int32 MillisecondsPerSecond = 1000;
+        private const Int32 PeriodSendingsInMs = 60 * MillisecondsPerSecond;
+        private const Int32 ReceiveTimeoutInMs = 5 * MillisecondsPerSecond;
+
+        private const Int32 CountDataToListen = 256;
+
+        private const Int32 MinValuePort = 17500;
+        private const Int32 MaxValuePort = 17510;
 
         private static DiscoveryService instance;
 
@@ -21,22 +27,23 @@ namespace DiscoveryServices
         private static Client client;
         private static Server server;
 
-        private Task taskClient;
-        private Task taskServer;
-
         //Value of this field should get externally so we use this attribute
         [Import(typeof(INotifyService))]
         private ILoggingService loggingService;
 
         private CancellationTokenSource tokenSourceInnerClient, tokenSourceOuterClient;
+        private CancellationTokenSource tokenSourceInnerTcpClient, tokenSourceOuterTcpClient;
         private CancellationTokenSource tokenSourceInnerServer, tokenSourceOuterServer;
+
+        private Boolean isDiscoveryServiceStarted = false;
 
         private DiscoveryService(List<String> groupsSupported)
         {
-            Lock.InitWithLock(Lock.lockerCurrentPeer, new Peer(groupsSupported), ref currentPeer);
+            Lock.InitWithLock(Lock.lockCurrentPeer, new Peer(groupsSupported, new X509Certificate(), MinValuePort, MaxValuePort), ref currentPeer);
+            //X509Store keyStore = new X509Store(StoreName.My, )
 
-            client = new Client();
-            server = new Server();           
+            client = new Client(currentPeer, loggingService);
+            server = new Server(currentPeer, loggingService);           
 
             loggingService = new LoggingService();
         }
@@ -52,11 +59,20 @@ namespace DiscoveryServices
         /// </returns>
         public static DiscoveryService GetInstance(List<String> groupsSupported)
         {
-            Lock.InitWithLock(Lock.lockerService, new DiscoveryService(groupsSupported), ref instance);
+            Lock.InitWithLock(Lock.lockService, new DiscoveryService(groupsSupported), ref instance);
             return instance;
         }
 
-        public Dictionary<String, List<IPAddress>> KnownPeers { get; } = new Dictionary<String, List<IPAddress>>();
+        public Dictionary<String, IPAddress> KnownPeers 
+        {
+            get
+            {
+                lock(Lock.lockChangeKnownPeers)
+                {
+                    return currentPeer.KnownOtherPeers;
+                }
+            }
+        }
         
         /// <summary>
         /// It starts discovery others peer in local network
@@ -67,139 +83,76 @@ namespace DiscoveryServices
         /// </param>
         public void Start(out String machineId)
         {
+            if(isDiscoveryServiceStarted)
+            {
+                throw new Exception("Already started");
+            }
+
             tokenSourceOuterClient = new CancellationTokenSource();
             var tokenClient = tokenSourceOuterClient.Token;
+            tokenSourceInnerClient = new CancellationTokenSource();
             
             Task.Run(async () =>
             {
                 while (!tokenClient.IsCancellationRequested)
                 {
-                    await SendingBroadcast(tokenClient);
+                    await client.SendingBroadcast(PeriodSendingsInMs, tokenSourceInnerClient, tokenClient);
+
+                    //if we don't initialize this, token will have property IsCancellationRequested equal to true
+                    tokenSourceInnerClient = new CancellationTokenSource();
                 }
             }, tokenClient);
 
+            tokenSourceOuterTcpClient = new CancellationTokenSource();
+            var tokenTcpClient = tokenSourceInnerTcpClient.Token;
+            tokenSourceInnerTcpClient = new CancellationTokenSource();
+
+            Task.Run(async () =>
+            {
+                while(!tokenTcpClient.IsCancellationRequested)
+                {
+                    await client.ListenTcpMessage(ReceiveTimeoutInMs, tokenSourceInnerTcpClient);
+
+                    //if we don't initialize this, token will have property IsCancellationRequested equal to true
+                    tokenSourceInnerTcpClient = new CancellationTokenSource();
+                }
+            }, tokenTcpClient);
 
             tokenSourceOuterServer = new CancellationTokenSource();
             var tokenServer = tokenSourceOuterClient.Token;
+            tokenSourceInnerServer = new CancellationTokenSource();
+
             Task.Run(async () =>
             {
                 while (!tokenServer.IsCancellationRequested)
                 {
-                    await ListeningBroadcast();
+                    await server.ListeningBroadcast(tokenSourceInnerServer, CountDataToListen, ReceiveTimeoutInMs);
+
+                    //if we don't initialize this, token will have property IsCancellationRequested equal to true
+                    tokenSourceInnerServer = new CancellationTokenSource();
                 }
             }, tokenServer);
 
             machineId = currentPeer.Id;
-        }
-
-
-        /// <summary>
-        /// It sends broadcast package asynchronously to 255 PC of the IP address class C
-        /// </summary>
-        /// 
-        /// <param name="tokenOuter">
-        /// Token of the outer task, which run this method
-        /// </param>
-        /// 
-        /// <returns>
-        /// Task which was canceled or has any exception
-        /// </returns>
-        private Task SendingBroadcast(CancellationToken tokenOuter)
-        {
-            tokenSourceInnerClient = new CancellationTokenSource();
-            CancellationToken token = tokenSourceInnerClient.Token;
-
-            taskClient = Task.Run(() =>
-            {
-                while (WhetherToContinueTask(taskClient, token))
-                {
-                    try
-                    {
-                        client.SendBroadcastMessage(IPAddressClass.ClassC, SubnetMask.ClassC, currentPeer);
-                    }
-                    catch (Exception ex)
-                    {
-                        tokenSourceInnerClient.Cancel();
-                        loggingService.LogError(ex, ex.Message);
-                    }
-
-                    //if outer task is cancelled we stop current task
-                    var cancelled = tokenOuter.WaitHandle.WaitOne(PeriodSendingsInMs);
-                    if (cancelled)
-                    {
-                        break;
-                    }
-                }
-            }, token);
-
-            return taskClient;
-        }
-
-        private Boolean WhetherToContinueTask(Task task, CancellationToken token)
-        {
-            var isThisTaskCanceled = task.Status == TaskStatus.Canceled;
-            var hasThisTaskException = task.Status == TaskStatus.Faulted;
-            
-            return ((!isThisTaskCanceled) && (!hasThisTaskException) && !token.IsCancellationRequested);
-        }
-
-        /// <summary>
-        /// It listens broadcast asynchronously in a different task until it will be canceled or has an exception. 
-        /// Also it adds info about remote peer wherefrom we get package to KnowPeers property
-        /// </summary>
-        /// 
-        /// <returns>
-        /// It returns task which listened broadcast package
-        /// </returns>
-        private Task ListeningBroadcast()
-        {
-            tokenSourceInnerServer = new CancellationTokenSource();
-            var token = tokenSourceInnerServer.Token;
-
-            taskServer = Task.Run(() =>
-            {
-                while (WhetherToContinueTask(taskServer, token))
-                {
-                    IPEndPoint newClient = null;
-                    Peer peerWhereFromGetPackage = null;
-
-                    try
-                    {
-                        Byte[] bytes = null;
-                        server.ListenBroadcast(IPAddress.Any, currentPeer.RunningPort, out newClient, out bytes, out peerWhereFromGetPackage);
-
-                        String package = Encoding.ASCII.GetString(bytes);
-                        //loggingService.LogInfo(package);
-                    }
-                    catch(Exception ex)
-                    {
-                        tokenSourceInnerServer.Cancel();
-                        loggingService.LogError(ex, ex.Message);
-
-                        currentPeer.RunningPort++;
-                    }
-
-                    var isAddedToKnownPeers = KnownPeers.ContainsKey(peerWhereFromGetPackage.Id);
-                    var messToYourself = currentPeer.Id.Equals(peerWhereFromGetPackage.Id);
-                    if ((!isAddedToKnownPeers) && (!messToYourself))
-                    {
-                        KnownPeers.Add(peerWhereFromGetPackage.Id, peerWhereFromGetPackage.IpAddresses);
-                    }
-                }
-            }, token);
-
-            return taskServer;
+            isDiscoveryServiceStarted = true;
         }
 
         public void Stop()
         {
-            //Stop inner task of sending and listening appropriately
-            tokenSourceInnerClient.Cancel();
-            tokenSourceInnerServer.Cancel();
+            if(isDiscoveryServiceStarted)
+            {
+                //Stop inner tasks of sending and listening
+                tokenSourceInnerClient.Cancel();
+                tokenSourceInnerTcpClient.Cancel();
+                tokenSourceInnerServer.Cancel();
 
-            //Stop outer task of sending and listening appropriately
-            tokenSourceOuterClient.Cancel();
-            tokenSourceOuterServer.Cancel();
+                //Stop outer tasks of sending and listening
+                tokenSourceOuterClient.Cancel();
+                tokenSourceOuterTcpClient.Cancel();
+                tokenSourceOuterServer.Cancel();
+
+                isDiscoveryServiceStarted = false;
+            }
         }
     }
 }

@@ -2,11 +2,16 @@
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
-namespace DiscoveryServices
+namespace DiscoveryServices.CodingData
 {
     class Parsing<T>
     {
-        public static T GetEncodedData(Byte[] bytes)
+        /// <summary>
+        /// It use BinaryFormatter, so too many spaces and time
+        /// </summary>
+        /// <param name="bytes"></param>
+        /// <returns></returns>
+        public virtual T GetEncodedData(Byte[] bytes)
         {
             using (MemoryStream stream = new MemoryStream(bytes))
             {
@@ -17,7 +22,12 @@ namespace DiscoveryServices
             }
         }
 
-        public static Byte[] GetDecodedData(T obj)
+        /// <summary>
+        /// It use BinaryFormatter, so too many spaces and time
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public virtual Byte[] GetDecodedData(T obj)
         {
             using (var stream = new MemoryStream())
             {

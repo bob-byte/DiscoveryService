@@ -4,35 +4,33 @@ using DiscoveryServices.Extensions.IPExtensions;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 
 namespace DiscoveryServices
 {
-    [Serializable]
     class Peer
     {
-        private const Int32 MinValuePort = 17500;
-        private const Int32 MaxValuePort = 17510;
-
-        private const Int32 ProtocolVersion = 1;
-
+        private readonly Int32 minValuePort, maxValuePort;
         private Int32 runningPort;
-
-        public Int32 VersionOfProtocol => ProtocolVersion;
 
         internal String Id { get; }
 
-        internal List<IPAddress> IpAddresses { get; }
+        internal IPAddress IpAddress { get; }
 
         internal List<String> GroupsSupported { get; }
+
+        public X509Certificate Certificate { get; }
+
+        internal Dictionary<String, IPAddress> KnownOtherPeers { get; }
 
         internal Int32 RunningPort
         {
             get => runningPort;
             set
             {
-                if (value < MinValuePort || MaxValuePort < value)
+                if (value < minValuePort || maxValuePort < value)
                 {
-                    runningPort = MinValuePort;
+                    runningPort = minValuePort;
                 }
                 else
                 {
@@ -41,14 +39,18 @@ namespace DiscoveryServices
             }
         }
 
-        internal Peer(List<String> groupsSupported)
+        internal Peer(List<String> groupsSupported, X509Certificate certificate, Int32 minValuePort, Int32 maxValuePort)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
             Id = deviceIdBuilder.GetMachineId();
 
-            IpAddresses = Local_IP.GetLocalIPAddresses();
+            IpAddress = Local_IP.GetLocalIPAddress(System.Net.Sockets.AddressFamily.InterNetwork);
             GroupsSupported = groupsSupported;
-            runningPort = MinValuePort;
+            Certificate = certificate;
+
+            runningPort = minValuePort;
+            this.minValuePort = minValuePort;
+            this.maxValuePort = maxValuePort;
         }
     }
 }

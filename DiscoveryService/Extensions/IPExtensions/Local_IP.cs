@@ -8,10 +8,7 @@ using System.Net.Sockets;
 namespace DiscoveryServices.Extensions.IPExtensions
 {
     class Local_IP
-    {
-        private const Int32 ErrorInvalidParameter = 87;
-        private const Int32 ErrorUnexpNetErr = 59;
-
+    {        
         public static List<IPAddress> GetLocalIPAddresses()
         {
             Boolean isNetworkAvailable = NetworkInterface.GetIsNetworkAvailable();
@@ -25,11 +22,11 @@ namespace DiscoveryServices.Extensions.IPExtensions
             }
             else
             {
-                throw new NetworkInformationException(ErrorUnexpNetErr);
+                throw new NetworkInformationException(SystemErrorCode.ErrorUnexpNetErr);
             }
         }
 
-        public static String GetLocalIPAddress(AddressFamily addressFamily)
+        public static IPAddress GetLocalIPAddress(AddressFamily addressFamily)
         {
             Boolean isNetworkAvailable = NetworkInterface.GetIsNetworkAvailable();
             if (isNetworkAvailable)
@@ -41,16 +38,16 @@ namespace DiscoveryServices.Extensions.IPExtensions
                 {
                     if (ip.AddressFamily == addressFamily)
                     {
-                        return ip.ToString();
+                        return ip;
                     }
                 }
 
                 //$"Host {hostName} doesn\'t have ip in {addressFamily} format"
-                throw new NetworkInformationException(ErrorInvalidParameter);
+                throw new NetworkInformationException(SystemErrorCode.ErrorInvalidParameter);
             }
             else
             {
-                throw new NetworkInformationException(ErrorUnexpNetErr);
+                throw new NetworkInformationException(SystemErrorCode.ErrorUnexpNetErr);
             }
         }
     }
