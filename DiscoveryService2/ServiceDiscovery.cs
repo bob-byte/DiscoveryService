@@ -169,7 +169,10 @@ namespace LUC.DiscoveryService
             {
                 log.Trace(msg);
             }
-
+	    // TODO: to pass the following info:
+	    // - source IP address of discovered system
+	    // - protocol version it supports
+	    // - groups it supports
             ServiceInstanceDiscovered?.Invoke(this, args);
         }
 
