@@ -35,8 +35,8 @@ namespace LUC.DiscoveryService
         public ServiceDiscovery(MulticastService service)
         {
             this.Service = service;
-            mdns.QueryReceived += OnQuery;
-            mdns.AnswerReceived += OnAnswer;
+            Service.QueryReceived += OnQuery;
+            Service.AnswerReceived += OnAnswer;
         }
 
         /// <summary>
@@ -178,8 +178,6 @@ namespace LUC.DiscoveryService
                 return;
             }
 
-            // Many bonjour browsers don't like DNS-SD response
-            // with additional records.
             if (response.Answers.Any(a => a.Name == ServiceName))
             {
                 response.AdditionalRecords.Clear();
