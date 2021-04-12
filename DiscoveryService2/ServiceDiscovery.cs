@@ -158,6 +158,21 @@ namespace LUC.DiscoveryService
             Service.SendAnswer(message, checkDuplicate: false);
         }
 
+        void OnAnswer(object sender, MessageEventArgs e)
+        {
+            var msg = e.Message;
+            if (log.IsDebugEnabled)
+            {
+                log.Debug($"Answer from {e.RemoteEndPoint}");
+            }
+            if (log.IsTraceEnabled)
+            {
+                log.Trace(msg);
+            }
+
+            ServiceInstanceDiscovered?.Invoke(this, args);
+        }
+
         void OnQuery(object sender, MessageEventArgs e)
         {
             var request = e.Message;
