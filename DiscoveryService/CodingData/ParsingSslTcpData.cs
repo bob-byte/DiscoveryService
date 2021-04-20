@@ -1,49 +1,69 @@
-﻿using DiscoveryServices.Messages;
+﻿using LUC.DiscoveryService.Messages;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
 
-namespace DiscoveryServices.CodingData
+namespace LUC.DiscoveryService.CodingData
 {
-    class ParsingSslTcpData : Parsing<SslTcpMessage>
+    class ParsingSslTcpData : Parsing<TcpMessage>
     {
-        public override Byte[] GetDecodedData(SslTcpMessage message)
+        public override Byte[] GetDecodedData(TcpMessage message)
         {
-            using (MemoryStream stream = new MemoryStream())
+            if (message == null)
             {
-                using (var writer = new BinaryWriter(stream))
+                throw new ArgumentNullException(nameof(message));
+            }
+            else
+            {
+                using (MemoryStream stream = new MemoryStream())
                 {
-                    writer.Write(message.VersionOfProtocol);
-                    writer.Write(message.GroupsSupported.Count);
-                    foreach (var groupSupported in message.GroupsSupported)
+                    using (var writer = new BinaryWriter(stream))
                     {
-                        writer.Write(groupSupported);
+                        writer.Write(message.VersionOfProtocol);
+                        writer.Write(message.GroupsSupported.Count);
+                        foreach (var groupSupported in message.GroupsSupported)
+                        {
+                            writer.Write(((IPEndPoint)groupSupported.Key).Address.ToString());
+                            writer.Write(((IPEndPoint)groupSupported.Key).Port);
+                        }
+
+                        var decodedData = stream.GetBuffer();
+
+                        return decodedData;
                     }
-
-                    var decodedData = stream.GetBuffer();
-
-                    return decodedData;
                 }
             }
         }
 
-        public override SslTcpMessage GetEncodedData(Byte[] bytes)
+        public override TcpMessage GetEncodedData(Byte[] bytes)
         {
-            using (MemoryStream stream = new MemoryStream(bytes))
+            if(bytes == null)
             {
-                using (var reader = new BinaryReader(stream))
+                throw new ArgumentNullException(nameof(bytes));
+            }
+            else
+            {
+                using (MemoryStream stream = new MemoryStream(bytes))
                 {
-                    var protocolVersion = reader.ReadInt32();
-                    var countGroups = reader.ReadInt32();
-                    var groupsSupported = new List<String>();
-                    for (Int32 i = 0; i < countGroups; i++)
+                    using (var reader = new BinaryReader(stream))
                     {
-                        groupsSupported.Add(reader.ReadString());
+                        var protocolVersion = reader.ReadInt32();
+                        var countGroups = reader.ReadInt32();
+                        var groupsSupported = new Dictionary<EndPoint, List<X509Certificate>>();
+                        for (Int32 i = 0; i < countGroups; i++)
+                        {
+                            var address = IPAddress.Parse(reader.ReadString());
+                            var port = reader.ReadInt32();
+
+                            groupsSupported.Add(new IPEndPoint(address, port), new List<X509Certificate>());
+                        }
+
+                        var message = new TcpMessage(protocolVersion, groupsSupported);
+
+                        return message;
                     }
-
-                    var message = new SslTcpMessage(protocolVersion, groupsSupported);
-
-                    return message;
                 }
             }
         }

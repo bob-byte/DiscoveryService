@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
-namespace DiscoveryServices.Extensions.IPExtensions
+namespace LUC.DiscoveryService.Extensions.IPExtensions
 {
     static class IPAddressExtension
     {

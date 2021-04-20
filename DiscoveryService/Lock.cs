@@ -1,19 +1,19 @@
 ﻿using System;
 
-namespace DiscoveryServices
+namespace LUC.DiscoveryService
 {
     static class Lock
     {
         internal static readonly Object lockService;
-        internal static readonly Object lockCurrentPeer;
-        internal static readonly Object lockChangeKnownPeers;
+        internal static readonly Object lockGroupsSupported;
+        internal static readonly Object lockSendTcp;
 
-        //if we don't use static constructor we will not actuually know when fields are inizialized
+        //if we don't use static constructor we will not actually know when fields are inizialized
         static Lock()
         {
             lockService = new Object();
-            lockCurrentPeer = new Object();
-            lockChangeKnownPeers = new Object();
+            lockGroupsSupported = new Object();
+            lockSendTcp = new Object();
         }
 
         internal static void InitWithLock<T>(Object locker, T value, ref T prop)

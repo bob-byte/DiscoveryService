@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Extensions
+namespace LUC.DiscoveryService.Extensions
 {
     static class TaskExtension
     {

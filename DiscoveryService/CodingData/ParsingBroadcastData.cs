@@ -1,41 +1,76 @@
-﻿using DiscoveryServices.Messages;
+﻿using LUC.DiscoveryService.Messages;
 using System;
 using System.IO;
 
-namespace DiscoveryServices.CodingData
+namespace LUC.DiscoveryService.CodingData
 {
     class ParsingBroadcastData : Parsing<BroadcastMessage>
     {
         public override BroadcastMessage GetEncodedData(Byte[] bytes)
         {
-            using (MemoryStream stream = new MemoryStream(bytes))
+            if(bytes == null)
             {
-                using (var reader = new BinaryReader(stream))
+                throw new ArgumentNullException(nameof(bytes));
+            }
+            else
+            {
+                using (MemoryStream stream = new MemoryStream(bytes))
                 {
-                    var id = reader.ReadString();
-                    var tcpPort = reader.ReadInt32();
-                    var protocolVersion = reader.ReadInt32();
+                    BroadcastMessage receivedMessage = null;
+                    try
+                    {
+                        using (var reader = new BinaryReader(stream))
+                        {
+                            var protocolVersion = reader.ReadInt32();
+                            if (protocolVersion != Message.ProtocolVersion)
+                            {
+                                throw new Exception("Bad version of protocol");
+                            }
 
-                    var message = new BroadcastMessage(id, tcpPort, protocolVersion);
+                            var id = reader.ReadString();
+                            var tcpPort = reader.ReadInt32();
 
-                    return message;
+                            receivedMessage = new BroadcastMessage(id, tcpPort, protocolVersion);
+                        }
+                    }
+                    catch
+                    {
+                        throw;
+                    }
+
+                    return receivedMessage;
                 }
             }
         }
 
         public override Byte[] GetDecodedData(BroadcastMessage message)
         {
-            using (MemoryStream stream = new MemoryStream())
+            if(message == null)
             {
-                using (var writer = new BinaryWriter(stream))
+                throw new ArgumentNullException(nameof(message));
+            }
+            else
+            {
+                using (MemoryStream stream = new MemoryStream())
                 {
-                    writer.Write(message.Id);
-                    writer.Write(message.TcpPort);
-                    writer.Write(message.VersionOfProtocol);
+                    using (var writer = new BinaryWriter(stream))
+                    {
+                        Byte[] decodedData = null;
+                        try
+                        {
+                            writer.Write(message.VersionOfProtocol);
+                            writer.Write(message.MachineId);
+                            writer.Write(message.TcpPort);
 
-                    var decodedData = stream.GetBuffer();
+                            decodedData = stream.GetBuffer();
+                        }
+                        catch
+                        {
+                            throw;
+                        }
 
-                    return decodedData;
+                        return decodedData;
+                    }
                 }
             }
         }

@@ -25,3 +25,14 @@ C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\obj\Debu
 C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.csproj.CopyComplete
 C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.dll
 C:\Users\Богдан\Desktop\Xentime\DiscoveryService\DiscoveryService\obj\Debug\DiscoveryService.pdb
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\Makaretu.Dns.Multicast.dll
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\Makaretu.Dns.dll
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\Common.Logging.Core.dll
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\System.Net.IPNetwork.dll
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\Common.Logging.dll
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\SimpleBase.dll
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\Makaretu.Dns.Multicast.pdb
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\Makaretu.Dns.Multicast.xml
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\Makaretu.Dns.pdb
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\Makaretu.Dns.xml
+D:\МояКарєраПрограмістом\Xentime\DiscoveryService\DiscoveryService\bin\Debug\SimpleBase.pdb

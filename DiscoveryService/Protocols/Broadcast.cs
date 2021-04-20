@@ -1,9 +1,9 @@
-﻿using DiscoveryServices.Extensions.IPExtensions;
+﻿using LUC.DiscoveryService.Extensions.IPExtensions;
 using System;
 using System.Net;
 using System.Net.Sockets;
 
-namespace DiscoveryServices.Protocols
+namespace LUC.DiscoveryService.Protocols
 {
     class Broadcast
     {

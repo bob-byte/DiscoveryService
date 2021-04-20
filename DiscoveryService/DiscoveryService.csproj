@@ -7,11 +7,12 @@
     <ProjectGuid>{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DiscoveryServices</RootNamespace>
+    <RootNamespace>LUC.DiscoveryService</RootNamespace>
     <AssemblyName>DiscoveryService</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -42,10 +43,19 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>bin\Debug\LUC.Services.Implementation.dll</HintPath>
     </Reference>
+    <Reference Include="Makaretu.Dns, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\UDPtest\packages\Makaretu.Dns.2.0.1\lib\net45\Makaretu.Dns.dll</HintPath>
+    </Reference>
+    <Reference Include="SimpleBase, Version=1.3.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\UDPtest\packages\SimpleBase.1.3.1\lib\net45\SimpleBase.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Management" />
+    <Reference Include="System.Net.IPNetwork, Version=2.1.2.0, Culture=neutral, PublicKeyToken=717343cc2c25edcf, processorArchitecture=MSIL">
+      <HintPath>..\..\UDPtest\packages\IPNetwork2.2.1.2\lib\net46\System.Net.IPNetwork.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -54,16 +64,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Client.cs" />
     <Compile Include="CodingData\Parsing.cs" />
     <Compile Include="CodingData\ParsingBroadcastData.cs" />
-    <Compile Include="DiscoveryService.cs" />
     <Compile Include="Extensions\IPExtensions\SystemErrorCode.cs" />
     <Compile Include="Extensions\TaskExtension.cs" />
+    <Compile Include="MessageEventArgs.cs" />
     <Compile Include="Messages\BroadcastMessage.cs" />
     <Compile Include="Messages\Message.cs" />
-    <Compile Include="Messages\SslTcpMessage.cs" />
-    <Compile Include="Peer.cs" />
+    <Compile Include="Messages\TcpMessage.cs" />
+    <Compile Include="Client.cs" />
+    <Compile Include="Service.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\IPExtensions\IPAddressExtension.cs" />
     <Compile Include="Extensions\IPExtensions\Local_IP.cs" />
@@ -75,11 +85,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Protocols\Broadcast.cs" />
     <Compile Include="Protocols\SslTcp.cs" />
-    <Compile Include="Server.cs" />
+    <Compile Include="ServiceDiscovery.cs" />
+    <Compile Include="ServiceProfile.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\..\net-mdns-master\src\Mdns.csproj">
+      <Project>{f3c81c57-c283-4e07-b765-deabcfb22136}</Project>
+      <Name>Mdns</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

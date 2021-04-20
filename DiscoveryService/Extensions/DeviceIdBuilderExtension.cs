@@ -1,9 +1,9 @@
 ﻿using DeviceId;
 using System;
 
-namespace DiscoveryServices.Extensions
+namespace LUC.DiscoveryService.Extensions
 {
-    static class DeviceIdBuilderExtension
+    public static class DeviceIdBuilderExtension
     {
         public static String GetMachineId(this DeviceIdBuilder deviceIdBuilder)
         {

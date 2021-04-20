@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace DiscoveryServices.Extensions.IPExtensions
+namespace LUC.DiscoveryService.Extensions.IPExtensions
 {
     class SubnetMask
     {

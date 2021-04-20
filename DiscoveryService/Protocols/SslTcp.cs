@@ -4,7 +4,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
-namespace DiscoveryServices.Protocols
+namespace LUC.DiscoveryService.Protocols
 {
     class SslTcp
     {
@@ -13,7 +13,7 @@ namespace DiscoveryServices.Protocols
         public void Send(IPEndPoint endPoint, X509Certificate certificate, Byte[] sendBuf)
         {
             TcpClient client = new TcpClient(endPoint);
-
+            
             SslStream sslStream = new SslStream(client.GetStream());
             try
             {

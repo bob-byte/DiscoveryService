@@ -5,9 +5,9 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
-namespace DiscoveryServices.Extensions.IPExtensions
+namespace LUC.DiscoveryService.Extensions.IPExtensions
 {
-    class Local_IP
+    public class Local_IP
     {        
         public static List<IPAddress> GetLocalIPAddresses()
         {
