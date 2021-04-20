@@ -25,6 +25,8 @@ namespace LUC.DiscoveryService
         /// </value>
         public IPEndPoint RemoteEndPoint { get; set; }
 
+        private Dictionary<String, String> Groups; // received groups with their SSL certificates
+
         /// <summary>
         ///   Protocol version.
         /// </summary>

@@ -35,8 +35,8 @@ namespace LUC.DiscoveryService
         public ServiceDiscovery(MulticastService service)
         {
             this.Service = service;
-            Service.QueryReceived += OnQuery;
-            Service.AnswerReceived += OnAnswer;
+            mdns.QueryReceived += OnQuery;
+            mdns.AnswerReceived += OnAnswer;
         }
 
         /// <summary>
@@ -158,24 +158,6 @@ namespace LUC.DiscoveryService
             Service.SendAnswer(message, checkDuplicate: false);
         }
 
-        void OnAnswer(object sender, MessageEventArgs e)
-        {
-            var msg = e.Message;
-            if (log.IsDebugEnabled)
-            {
-                log.Debug($"Answer from {e.RemoteEndPoint}");
-            }
-            if (log.IsTraceEnabled)
-            {
-                log.Trace(msg);
-            }
-	    // TODO: to pass the following info:
-	    // - source IP address of discovered system
-	    // - protocol version it supports
-	    // - groups it supports
-            ServiceInstanceDiscovered?.Invoke(this, args);
-        }
-
         void OnQuery(object sender, MessageEventArgs e)
         {
             var request = e.Message;
@@ -196,6 +178,8 @@ namespace LUC.DiscoveryService
                 return;
             }
 
+            // Many bonjour browsers don't like DNS-SD response
+            // with additional records.
             if (response.Answers.Any(a => a.Name == ServiceName))
             {
                 response.AdditionalRecords.Clear();
