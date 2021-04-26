@@ -4,9 +4,9 @@ using System.IO;
 
 namespace LUC.DiscoveryService.CodingData
 {
-    class ParsingBroadcastData : Parsing<BroadcastMessage>
+    class ParsingMulticastData : Parsing<MulticastMessage>
     {
-        public override BroadcastMessage GetEncodedData(Byte[] bytes)
+        public override MulticastMessage GetEncodedData(Byte[] bytes)
         {
             if(bytes == null)
             {
@@ -16,7 +16,7 @@ namespace LUC.DiscoveryService.CodingData
             {
                 using (MemoryStream stream = new MemoryStream(bytes))
                 {
-                    BroadcastMessage receivedMessage = null;
+                    MulticastMessage receivedMessage = null;
                     try
                     {
                         using (var reader = new BinaryReader(stream))
@@ -24,13 +24,13 @@ namespace LUC.DiscoveryService.CodingData
                             var protocolVersion = reader.ReadInt32();
                             if (protocolVersion != Message.ProtocolVersion)
                             {
-                                throw new Exception("Bad version of protocol");
+                                throw new ArgumentException("Bad version of protocol");
                             }
 
                             var id = reader.ReadString();
                             var tcpPort = reader.ReadInt32();
 
-                            receivedMessage = new BroadcastMessage(id, tcpPort, protocolVersion);
+                            receivedMessage = new MulticastMessage(id, tcpPort, protocolVersion);
                         }
                     }
                     catch
@@ -43,7 +43,7 @@ namespace LUC.DiscoveryService.CodingData
             }
         }
 
-        public override Byte[] GetDecodedData(BroadcastMessage message)
+        public override Byte[] GetDecodedData(MulticastMessage message)
         {
             if(message == null)
             {

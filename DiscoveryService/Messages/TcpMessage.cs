@@ -7,7 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace LUC.DiscoveryService.Messages
 {
-    class TcpMessage : Message
+    public class TcpMessage : Message
     {
         public TcpMessage(Int32 receivedProcolVersion, Dictionary<EndPoint, List<X509Certificate>> groupsSupported)
         {

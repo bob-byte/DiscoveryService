@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Protocols;
 using Makaretu.Dns;
 
 namespace LUC.DiscoveryService
@@ -26,7 +25,7 @@ namespace LUC.DiscoveryService
     ///   raised when a <see cref="Message"/> is received.
     ///   </para>
     /// </remarks>
-    class Service
+    public class Service
     {
         //[Import(typeof(ILoggingService))]
         //static readonly ILoggingService log = new LoggingService();
@@ -77,13 +76,19 @@ namespace LUC.DiscoveryService
         /// <seealso cref="SendQuery(Message)"/>
         public event EventHandler<MessageEventArgs> QueryReceived;
 
+        public event EventHandler<NetworkInterfaceEventArgs> NetworkInterfaceDiscovered;
+
+        public event EventHandler<MessageEventArgs> AnswerReceived;
+
+        public event EventHandler<Byte[]> MalformedMessage;
+
         /// <summary>
         ///   Create a new instance of the <see cref="Service"/> class.
         /// </summary>
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        public Service(ServiceProfile profile, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
+        internal Service(ServiceProfile profile, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
             this.profile = profile;
 
@@ -97,32 +102,28 @@ namespace LUC.DiscoveryService
 
         internal void SendTcp(Object sender, MessageEventArgs e)
         {
-            var parsingSsl = new ParsingSslTcpData();
-            lock(Lock.lockSendTcp)
+            var parsingSsl = new ParsingTcpData();
+            try
             {
                 Byte[] bytes = parsingSsl.GetDecodedData(new TcpMessage(e.Message.VersionOfProtocol, profile.GroupsSupported));
 
-                TcpClient client = new TcpClient();
-                BroadcastMessage message = e.Message as BroadcastMessage;
+                TcpClient client = new TcpClient(e.RemoteEndPoint.AddressFamily);
+                if(!(e.Message is MulticastMessage message))
+                {
+                    throw new ArgumentException("Bad format of the message");
+                }
                 client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, message.TcpPort);
 
                 var stream = client.GetStream();
-
                 stream.Write(bytes, 0, bytes.Length);
 
                 stream.Close();
                 client.Close();
             }
-            
-        }
-
-        private void SendTcpSsl(Object sender, MessageEventArgs e)
-        {
-            var parsingSsl = new ParsingSslTcpData();
-            Byte[] bytes = parsingSsl.GetDecodedData(new TcpMessage(profile.GroupsSupported));
-
-            SslTcp sslTcp = new SslTcp();
-            sslTcp.Send((IPEndPoint)e.RemoteEndPoint, profile.Certificate, bytes);
+            catch
+            {
+                throw;
+            }
         }
 
         /// <summary>
@@ -238,7 +239,8 @@ namespace LUC.DiscoveryService
         {
             // All event handlers are cleared.
             QueryReceived = null;
-            //AnswerReceived = null;
+            AnswerReceived = null;
+            NetworkInterfaceDiscovered = null;
 
             // Stop current UDP listener
             client?.Dispose();
@@ -289,6 +291,14 @@ namespace LUC.DiscoveryService
                     client.TcpMessageReceived += OnTcpMessage;
                 }
 
+                if(newNics.Any())
+                {
+                    NetworkInterfaceDiscovered?.Invoke(this, new NetworkInterfaceEventArgs
+                    {
+                        NetworkInterfaces = newNics
+                    });
+                }
+
                 // Magic from @eshvatskyi
                 //
                 // I've seen situation when NetworkAddressChanged is not triggered 
@@ -334,8 +344,8 @@ namespace LUC.DiscoveryService
             }
 
             //var msg = new Messages.BroadcastMessage();
-            Parsing<BroadcastMessage> parsing = new ParsingBroadcastData();
-            BroadcastMessage message;
+            Parsing<MulticastMessage> parsing = new ParsingMulticastData();
+            MulticastMessage message;
             try
             {
                 message = parsing.GetEncodedData(result.Buffer);
@@ -343,17 +353,18 @@ namespace LUC.DiscoveryService
             catch (Exception e)
             {
                 //log.LogError("Received malformed message", e);
+                MalformedMessage.Invoke(sender, result.Buffer);
                 return; // eat the exception
             }
 
-            if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion)
-                ||
-                (message.MachineId == profile.MachineId)
-                ||
-                (message.Status != MessageStatus.NoError))
-            {
-                return;
-            }
+            //if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion)
+            //    ||
+            //    (message.MachineId == profile.MachineId)
+            //    ||
+            //    (message.Status != MessageStatus.NoError))
+            //{
+            //    return;
+            //}
 
             // Dispatch the message.
             try
@@ -375,17 +386,39 @@ namespace LUC.DiscoveryService
         /// </param>
         internal void OnTcpMessage(Object sender, TcpMessage message)
         {
-            foreach (var group in message.GroupsSupported)
-            {
-                if(!profile.GroupsSupported.ContainsValue(group.Value))
-                {
-                    if(profile.GroupsSupported.ContainsKey(group.Key))
-                    {
-                        profile.GroupsSupported.Remove(group.Key);
-                    }
+            Boolean isRightMessage = true;
 
-                    profile.GroupsSupported.Add(group.Key, group.Value);
+            try
+            {
+                foreach (var group in message.GroupsSupported)
+                {
+                    if (!profile.GroupsSupported.ContainsValue(group.Value))
+                    {
+                        if (profile.GroupsSupported.ContainsKey(group.Key))
+                        {
+                            profile.GroupsSupported.Remove(group.Key);
+                        }
+
+                        profile.GroupsSupported.Add(group.Key, group.Value);
+                        isRightMessage = true;
+                    }
                 }
+            }
+            catch
+            {
+                Parsing<TcpMessage> parsing = new ParsingTcpData();
+                var bytes = parsing.GetDecodedData(message);
+
+                MalformedMessage.Invoke(sender, bytes);
+            }
+
+            if(isRightMessage)
+            {
+                AnswerReceived.Invoke(sender, new MessageEventArgs
+                {
+                    Message = message,
+                    GroupsSupported = message.GroupsSupported
+                });
             }
         }
 
@@ -407,16 +440,16 @@ namespace LUC.DiscoveryService
             CancellationToken token = innerTokenSource.Token;
             Task taskClient = null;
 
-            taskClient = Task.Run(() =>
+            taskClient = Task.Run(async () =>
             {
                 while (taskClient.WhetherToContinueTask(token))
                 {
                     try
                     {
-                        Parsing<BroadcastMessage> parsing = new ParsingBroadcastData();
-                        var bytes = parsing.GetDecodedData(new BroadcastMessage(profile.MachineId, profile.RunningTcpPort, Messages.Message.ProtocolVersion));
+                        Parsing<MulticastMessage> parsing = new ParsingMulticastData();
+                        var bytes = parsing.GetDecodedData(new MulticastMessage(profile.MachineId, profile.RunningTcpPort/*, Messages.Message.ProtocolVersion*/));
 
-                        client?.SendUdpAsync(bytes, period, tokenOuter).GetAwaiter().GetResult();
+                        await client.SendUdpAsync(bytes, period, tokenOuter).ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {

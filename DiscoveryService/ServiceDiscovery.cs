@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService
     public class ServiceDiscovery
     {
         private const Int32 MillisecondsPerSecond = 1000;
-        private const Int32 PeriodSendingsInMs = 60 * MillisecondsPerSecond;
+        private const Int32 PeriodSendingsInMs = /*60 * */MillisecondsPerSecond;
 
         private const Int32 UdpPort = 17500;
         private const Int32 MinValueTcpPort = 17500;
@@ -28,7 +28,6 @@ namespace LUC.DiscoveryService
         private static ServiceDiscovery instance;
 
         private readonly ServiceProfile profile;
-        private Service service;
 
         private CancellationTokenSource sourceInnerService, sourceOuterService;
 
@@ -38,17 +37,17 @@ namespace LUC.DiscoveryService
         {
             profile = new ServiceProfile(MinValueTcpPort, MaxValueTcpPort, UdpPort, 
                 Message.ProtocolVersion, certificate, groupsSupported);
-            service = new Service(profile);
+            Service = new Service(profile);
 
-            service.UseIpv4 = useIpv4;
-            service.UseIpv6 = useIpv6;
+            Service.UseIpv4 = useIpv4;
+            Service.UseIpv6 = useIpv6;
         }
 
         private ServiceDiscovery(X509Certificate certificate, Dictionary<EndPoint, List<X509Certificate>> groupsSupported = null)
         {
             profile = new ServiceProfile(MinValueTcpPort, MaxValueTcpPort, UdpPort, 
                 Message.ProtocolVersion, certificate, groupsSupported);
-            service = new Service(profile);
+            Service = new Service(profile);
         }
 
         /// <summary>
@@ -58,6 +57,8 @@ namespace LUC.DiscoveryService
         {
             Stop();
         }
+
+        public Service Service { get; set; }
 
         public Dictionary<EndPoint, List<X509Certificate>> GroupsSupported
         {
@@ -83,8 +84,8 @@ namespace LUC.DiscoveryService
                 //Stop outer tasks of sending and listening
                 sourceOuterService.Cancel();
 
-                service.Stop();
-                service = null;
+                Service.Stop();
+                Service = null;
 
                 isDiscoveryServiceStarted = false;
             }
@@ -113,7 +114,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         public void Start(out String machineId)
         {
-            service.Start();
+            Service.Start();
 
             sourceOuterService = new CancellationTokenSource();
             var tokenMulticastSendings = sourceOuterService.Token;
@@ -123,7 +124,7 @@ namespace LUC.DiscoveryService
             {
                 while (!tokenMulticastSendings.IsCancellationRequested)
                 {
-                    await service.SendQuery(PeriodSendingsInMs, sourceInnerService, tokenMulticastSendings);
+                    await Service.SendQuery(PeriodSendingsInMs, sourceInnerService, tokenMulticastSendings);
 
                     //if we don't initialize this, token will have property IsCancellationRequested equals to true
                     sourceInnerService = new CancellationTokenSource();

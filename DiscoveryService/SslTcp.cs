@@ -4,7 +4,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
-namespace LUC.DiscoveryService.Protocols
+namespace LUC.DiscoveryService
 {
     class SslTcp
     {

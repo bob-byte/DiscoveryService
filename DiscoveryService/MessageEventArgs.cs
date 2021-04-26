@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService
     ///   The event data for <see cref="Service.QueryReceived"/> or
     ///   <see cref="Service.AnswerReceived"/>.
     /// </summary>
-    class MessageEventArgs : EventArgs
+    public class MessageEventArgs : EventArgs
     {
         /// <summary>
         ///   The LightUpon.Cloud message.
@@ -44,6 +44,6 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public ConcurrentDictionary<IPAddress, List<X509Certificate>> Groups { get; set; } // received groups with their SSL certificates
+        public Dictionary<EndPoint, List<X509Certificate>> GroupsSupported { get; set; } // necessary to change type to ConcurrentDictionary
     }
 }

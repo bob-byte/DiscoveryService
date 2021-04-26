@@ -331,7 +331,7 @@ namespace LUC.DiscoveryService
                 var stream = client.GetStream();
                 
                 stream.Read(buffer, 0, countDataToReadAtTime);
-                Parsing<TcpMessage> parsing = new ParsingSslTcpData();
+                Parsing<TcpMessage> parsing = new ParsingTcpData();
                 var message = parsing.GetEncodedData(buffer);
 
                 stream.Close();

@@ -7,7 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace LUC.DiscoveryService.CodingData
 {
-    class ParsingSslTcpData : Parsing<TcpMessage>
+    class ParsingTcpData : Parsing<TcpMessage>
     {
         public override Byte[] GetDecodedData(TcpMessage message)
         {
@@ -50,6 +50,11 @@ namespace LUC.DiscoveryService.CodingData
                     using (var reader = new BinaryReader(stream))
                     {
                         var protocolVersion = reader.ReadInt32();
+                        if (protocolVersion != Message.ProtocolVersion)
+                        {
+                            throw new ArgumentException("Bad version of protocol");
+                        }
+
                         var countGroups = reader.ReadInt32();
                         var groupsSupported = new Dictionary<EndPoint, List<X509Certificate>>();
                         for (Int32 i = 0; i < countGroups; i++)

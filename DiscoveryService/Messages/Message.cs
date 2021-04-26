@@ -2,12 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages
 {
-    abstract class Message
+    public abstract class Message
     {
         public const Int32 ProtocolVersion = 1;
 

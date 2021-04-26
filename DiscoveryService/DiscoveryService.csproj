@@ -65,28 +65,24 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CodingData\Parsing.cs" />
-    <Compile Include="CodingData\ParsingBroadcastData.cs" />
+    <Compile Include="CodingData\ParsingMulticastData.cs" />
     <Compile Include="Extensions\IPExtensions\SystemErrorCode.cs" />
     <Compile Include="Extensions\TaskExtension.cs" />
     <Compile Include="MessageEventArgs.cs" />
-    <Compile Include="Messages\BroadcastMessage.cs" />
+    <Compile Include="Messages\MulticastMessage.cs" />
     <Compile Include="Messages\Message.cs" />
     <Compile Include="Messages\TcpMessage.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="Service.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
-    <Compile Include="Extensions\IPExtensions\IPAddressExtension.cs" />
     <Compile Include="Extensions\IPExtensions\Local_IP.cs" />
-    <Compile Include="Extensions\RandomExtension.cs" />
-    <Compile Include="Extensions\IPExtensions\IPAddressClass.cs" />
-    <Compile Include="Extensions\IPExtensions\SubnetMask.cs" />
     <Compile Include="Lock.cs" />
-    <Compile Include="CodingData\ParsingSslTcpData.cs" />
+    <Compile Include="CodingData\ParsingTcpData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Protocols\Broadcast.cs" />
-    <Compile Include="Protocols\SslTcp.cs" />
+    <Compile Include="SslTcp.cs" />
     <Compile Include="ServiceDiscovery.cs" />
     <Compile Include="ServiceProfile.cs" />
+    <Compile Include="UsageExample.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
