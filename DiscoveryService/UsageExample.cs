@@ -79,7 +79,8 @@ namespace LUC.DiscoveryService
             };
 
             Thread.Sleep(9000000);
-            //serviceDiscovery.Stop();
+            
+            serviceDiscovery.Stop();
             Console.ReadKey();
         }
     }
