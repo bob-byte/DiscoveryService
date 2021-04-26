@@ -7,7 +7,7 @@ using Common.Logging;
 namespace LUC.DiscoveryService
 {
     /// <summary>
-    ///   LightUpon.Cloud Service Discovery maintens the list of IP addresses in LAN.
+    ///   LightUpon.Cloud Service Discovery maintains the list of IP addresses in LAN.
     /// </summary>
     public class ServiceDiscovery : IDisposable
     {
