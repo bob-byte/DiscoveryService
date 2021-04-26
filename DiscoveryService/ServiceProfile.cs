@@ -50,7 +50,7 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// Why do we need this property?
+        /// Why will we need this property if NetworkInterfaceEventArgs (is used for event Service.NetworkInterfaceDiscovered) contains it?
         /// </summary>
         public ICollection<IPAddress> NetworkInterfaces { get; }
 
