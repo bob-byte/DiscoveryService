@@ -3,7 +3,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 
 namespace LUC.DiscoveryService
 {
@@ -44,6 +43,6 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public Dictionary<EndPoint, List<X509Certificate>> GroupsSupported { get; set; } // necessary to change type to ConcurrentDictionary
+        public ConcurrentDictionary<String, List<String>> GroupsSupported { get; set; } // necessary to change type to ConcurrentDictionary
     }
 }
