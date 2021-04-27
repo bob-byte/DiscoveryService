@@ -96,6 +96,12 @@ StyleCopReport.xml
 *.pidb
 *.svclog
 *.scc
+bin/*
+obj/*
+*/bin/*
+*/obj/*
+Debug/*
+Release/*
 
 # Chutzpah Test files
 _Chutzpah*
@@ -192,7 +198,7 @@ publish/
 PublishScripts/
 
 # NuGet Packages
-packages/DeviceId.5.2.0/
+packages/*
 *.nupkg
 # NuGet Symbol Packages
 *.snupkg

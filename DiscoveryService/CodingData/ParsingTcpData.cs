@@ -1,9 +1,8 @@
 ﻿using LUC.DiscoveryService.Messages;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
 
 namespace LUC.DiscoveryService.CodingData
 {
@@ -25,8 +24,12 @@ namespace LUC.DiscoveryService.CodingData
                         writer.Write(message.GroupsSupported.Count);
                         foreach (var groupSupported in message.GroupsSupported)
                         {
-                            writer.Write(((IPEndPoint)groupSupported.Key).Address.ToString());
-                            writer.Write(((IPEndPoint)groupSupported.Key).Port);
+                            writer.Write(groupSupported.Key);
+                            writer.Write(groupSupported.Value.Count);
+                            foreach (var nameOfGroups in groupSupported.Value)
+                            {
+                                writer.Write(nameOfGroups);
+                            }
                         }
 
                         var decodedData = stream.GetBuffer();
@@ -49,25 +52,35 @@ namespace LUC.DiscoveryService.CodingData
                 {
                     using (var reader = new BinaryReader(stream))
                     {
-                        var protocolVersion = reader.ReadInt32();
-                        if (protocolVersion != Message.ProtocolVersion)
+                        try
                         {
-                            throw new ArgumentException("Bad version of protocol");
-                        }
+                            var protocolVersion = reader.ReadInt32();
+                            if (protocolVersion != Message.ProtocolVersion)
+                            {
+                                throw new ArgumentException("Bad version of protocol");
+                            }
 
-                        var countGroups = reader.ReadInt32();
-                        var groupsSupported = new Dictionary<EndPoint, List<X509Certificate>>();
-                        for (Int32 i = 0; i < countGroups; i++)
+                            var countPeers = reader.ReadInt32();
+                            var groupsOfEachPeer = new ConcurrentDictionary<String, List<String>>();
+                            for (Int32 i = 0; i < countPeers; i++)
+                            {
+                                var iPEndPoint = reader.ReadString();
+                                var countGroupOfCurrentPeer = reader.ReadInt32();
+
+                                List<String> groups = new List<String>(countGroupOfCurrentPeer);
+                                for (Int32 nameGroup = 0; nameGroup < countGroupOfCurrentPeer; nameGroup++)
+                                {
+                                    groups.Add(reader.ReadString());
+                                }
+                                groupsOfEachPeer.TryAdd(iPEndPoint, groups);
+                            }
+
+                            return new TcpMessage(protocolVersion, groupsOfEachPeer);
+                        }
+                        catch(IOException)
                         {
-                            var address = IPAddress.Parse(reader.ReadString());
-                            var port = reader.ReadInt32();
-
-                            groupsSupported.Add(new IPEndPoint(address, port), new List<X509Certificate>());
+                            throw;
                         }
-
-                        var message = new TcpMessage(protocolVersion, groupsSupported);
-
-                        return message;
                     }
                 }
             }
