@@ -1,17 +1,17 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
+using LUC.DiscoveryService;
 using Common.Logging;
 using Common.Logging.Simple;
+using System.Security.Cryptography.X509Certificates;
 
 namespace LUC.DiscoveryService
 {
     class UsageExample
     {
-        static readonly Object ttyLock = new Object();
+        static readonly object ttyLock = new object();
 
-        private static void OnBadMessage(Object sender, Byte[] packet)
+        private static void OnBadMessage(object sender, byte[] packet)
         {
             lock (ttyLock)
             {
@@ -24,7 +24,7 @@ namespace LUC.DiscoveryService
             Environment.Exit(1);
         }
 
-        private static void OnGoodTcpMessage(Object sender, MessageEventArgs e)
+        private static void OnGoodTcpMessage(object sender, MessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -34,7 +34,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnGoodUdpMessage(Object sender, MessageEventArgs e)
+        private static void OnGoodUdpMessage(object sender, MessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -63,20 +63,7 @@ namespace LUC.DiscoveryService
                 Console.WriteLine($"IP address {a}");
             }
 
-            ConcurrentDictionary<String, List<String>> groupsSupported = new ConcurrentDictionary<String, List<String>>();
-            groupsSupported.TryAdd("192.168.1.100:17500", new List<String>
-            {
-                "the-dubstack-engineers-res",
-                "the-dubstack-architects-res"
-            });
-
-            groupsSupported.TryAdd("192.168.13.140:17500", new List<String>
-            {
-                "the-dubstack-engineers-res",
-                "the-dubstack-architects-res"
-            });
-
-            var serviceDiscovery = ServiceDiscovery.GetInstance(groupsSupported);
+            var serviceDiscovery = ServiceDiscovery.GetInstance(new X509Certificate());
             serviceDiscovery.Start(out _);
 
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;
@@ -91,19 +78,8 @@ namespace LUC.DiscoveryService
                 };
             };
 
-            DateTime start = DateTime.Now;
-            Double intervalInMin = default;
-            Int32 sendForInMin = 5;
-            do
-            {
-                serviceDiscovery.QueryAllServices();
-                Thread.Sleep(1000);
-
-                DateTime end = DateTime.Now;
-                intervalInMin = end.Subtract(start).TotalMinutes;
-            }
-            while (intervalInMin <= sendForInMin);
-
+            Thread.Sleep(9000000);
+            
             serviceDiscovery.Stop();
             Console.ReadKey();
         }

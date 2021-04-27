@@ -35,6 +35,14 @@
     <Reference Include="DeviceId, Version=5.2.0.0, Culture=neutral, PublicKeyToken=f755c371b5c59c52, processorArchitecture=MSIL">
       <HintPath>..\..\UDPtest\packages\DeviceId.5.2.0\lib\net40\DeviceId.dll</HintPath>
     </Reference>
+    <Reference Include="LUC.Interfaces, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\LUC.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="LUC.Services.Implementation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\LUC.Services.Implementation.dll</HintPath>
+    </Reference>
     <Reference Include="Makaretu.Dns, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\UDPtest\packages\Makaretu.Dns.2.0.1\lib\net45\Makaretu.Dns.dll</HintPath>
     </Reference>
@@ -65,7 +73,6 @@
     <Compile Include="Messages\Message.cs" />
     <Compile Include="Messages\TcpMessage.cs" />
     <Compile Include="Client.cs" />
-    <Compile Include="Messages\TcpReceiveResult.cs" />
     <Compile Include="Service.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\IPExtensions\Local_IP.cs" />

@@ -1,15 +1,16 @@
 ﻿using DeviceId;
 using LUC.DiscoveryService.Extensions;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 
 namespace LUC.DiscoveryService
 {
     /// <summary>
     ///   Contains info about current peer
     /// </summary>
+    /// <seealso cref="ServiceDiscovery.Advertise(ServiceProfile)"/>
     class ServiceProfile
     {
         private readonly Int32 minValueTcpPort, maxValueTcpPort;
@@ -25,8 +26,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceProfile"/> class.
         /// </summary>
-        public ServiceProfile(Int32 minValueTcpPort, Int32 maxValueTcpPort, Int32 udpPort, 
-            Int32 protocolVersion, ConcurrentDictionary<String, List<String>> groupsSupported)
+        public ServiceProfile(Int32 minValueTcpPort, Int32 maxValueTcpPort, Int32 udpPort, Int32 protocolVersion, X509Certificate certificate, Dictionary<EndPoint, List<X509Certificate>> groupsSupported)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
             MachineId = deviceIdBuilder.GetMachineId();
@@ -37,8 +37,9 @@ namespace LUC.DiscoveryService
             }
             else
             {
-                GroupsSupported = new ConcurrentDictionary<String, List<String>>();
+                GroupsSupported = new Dictionary<EndPoint, List<X509Certificate>>();
             }
+            Certificate = certificate;
 
             ProtocolVersion = protocolVersion;
 
@@ -49,7 +50,7 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// Why do we need this property?
+        /// Why will we need this property if NetworkInterfaceEventArgs (is used for event Service.NetworkInterfaceDiscovered) contains it?
         /// </summary>
         public ICollection<IPAddress> NetworkInterfaces { get; }
 
@@ -90,6 +91,11 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// This property use in internal classes and allow to avoid strong connectivity. It is weaker, because we don't use object type DiscoveryService in the different classes
         /// </summary>
-        public ConcurrentDictionary<String, List<String>> GroupsSupported { get; }
+        public Dictionary<EndPoint, List<X509Certificate>> GroupsSupported { get; }
+
+        /// <summary>
+        /// <see cref="X509Certificate"/> is basic of all certificates for SSL in .NET
+        /// </summary>
+        public X509Certificate Certificate { get; set; }
     }
 }

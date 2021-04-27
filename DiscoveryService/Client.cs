@@ -1,9 +1,11 @@
-﻿using LUC.DiscoveryService.Messages;
-//using LUC.Interfaces;
-//using LUC.Services.Implementation;
+﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Messages;
+using LUC.Interfaces;
+using LUC.Services.Implementation;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -20,8 +22,8 @@ namespace LUC.DiscoveryService
     /// </summary>
     class Client : IDisposable
     {
-        //[Import(typeof(ILoggingService))]
-        //private static readonly ILoggingService log = new LoggingService();
+        [Import(typeof(ILoggingService))]
+        private static readonly ILoggingService log = new LoggingService();
 
         private static readonly IPAddress MulticastAddressIp4 = IPAddress.Parse("224.0.0.251");
         private static readonly IPAddress MulticastAddressIp6 = IPAddress.Parse("FF02::FB");
@@ -41,7 +43,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// It calls method OnTcpMessage, which add new groups to ServiceDiscovery.GroupsSupported
         /// </summary>
-        public event EventHandler<TcpReceiveResult> TcpMessageReceived;
+        public event EventHandler<TcpMessage> TcpMessageReceived;
 
         /// <summary>
         ///   Creates a new instance of the <see cref="Client"/> class.
@@ -215,7 +217,7 @@ namespace LUC.DiscoveryService
         /// Token which is initialized in <see cref="ServiceDiscovery"/> to know when we should stop sendings
         /// </param>
         /// <returns></returns>
-        public async Task SendUdpAsync(Byte[] message)
+        public async Task SendUdpAsync(Byte[] message, Int32 periodInMs, CancellationToken tokenOuter)
         {
             foreach (var sender in sendersUdp)
             {
@@ -226,14 +228,26 @@ namespace LUC.DiscoveryService
                         new IPEndPoint(MulticastAddressIp6, profile.RunningTcpPort);
                     await sender.Value.SendAsync(message, message.Length, endpoint)
                                       .ConfigureAwait(false);
+
+                    //if outer task is cancelled we stop current task
+                    if (IsCancelledOuterTask(tokenOuter, periodInMs))
+                    {
+                        return;
+                    }
                 }
                 catch (Exception e)
                 {
                     //log.LogError($"Sender {sender.Key} failure: {e.Message}");
 
                     profile.RunningTcpPort++;
+                    if (IsCancelledOuterTask(tokenOuter, periodInMs))
+                    {
+                        return;
+                    }
                 }
             }
+
+            _ = IsCancelledOuterTask(tokenOuter, periodInMs);
         }
 
         /// <summary>
@@ -306,7 +320,7 @@ namespace LUC.DiscoveryService
         /// <returns>
         /// Task which can return data of <see cref="TcpMessage"/>
         /// </returns>
-        private Task<TcpReceiveResult> ReceiveTcpAsync(TcpListener receiver)
+        private Task<TcpMessage> ReceiveTcpAsync(TcpListener receiver)
         {
             return Task.Run(async () =>
             {
@@ -317,16 +331,13 @@ namespace LUC.DiscoveryService
                 var stream = client.GetStream();
                 
                 stream.Read(buffer, 0, countDataToReadAtTime);
-                TcpReceiveResult receiveResult = default;
-                if(client.Client.RemoteEndPoint is IPEndPoint iPEndPoint)
-                {
-                    receiveResult = new TcpReceiveResult(buffer, iPEndPoint);
-                }
+                Parsing<TcpMessage> parsing = new ParsingTcpData();
+                var message = parsing.GetEncodedData(buffer);
 
                 stream.Close();
                 client.Close();
 
-                return receiveResult;
+                return message;
             });
         }
 
