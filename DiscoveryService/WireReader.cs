@@ -132,6 +132,25 @@ namespace LUC.DiscoveryService
 	// Read array of rank 1
 	// ( jagged arrays not supported atm )
 	//
+	// Message example:
+	//
+	// 01 05 h e l l o 02 03 01 04 b l a h 01 04 h a l b 01 03 b y e
+	//
+	// 01 -- String type
+	// 05 -- length of string
+	// "hello" -- message to read ( 5 bytes )
+	// 02 -- array type
+	// 03 -- length of array
+	// 01 -- string type
+	// 04 -- length of string
+	// "blah" -- string
+	// 01 -- type of string
+	// 04 -- length of string
+	// "halb" -- value of string
+	// 01 -- type of string
+	// 03 -- length of string
+	// "bye" -- string itself
+	//
         public List ReadArray()
         {
             var type = stream.ReadByte();

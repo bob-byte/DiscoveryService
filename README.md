@@ -16,3 +16,7 @@ TODO
 ====
 
 * to keep only one reference to ServiceProfile. Currently it is present in Client, Serivce and ServiceDiscovery
+
+* to make sure TCP socket options are working ok
+
+
