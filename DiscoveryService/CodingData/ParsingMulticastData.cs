@@ -21,16 +21,16 @@ namespace LUC.DiscoveryService.CodingData
                     {
                         using (var reader = new BinaryReader(stream))
                         {
+                            var messageId = reader.ReadInt32();
                             var protocolVersion = reader.ReadInt32();
                             if (protocolVersion != Message.ProtocolVersion)
                             {
                                 throw new ArgumentException("Bad version of protocol");
                             }
-
-                            var id = reader.ReadString();
+                            var machineId = reader.ReadString();
                             var tcpPort = reader.ReadInt32();
 
-                            receivedMessage = new MulticastMessage(id, tcpPort, protocolVersion);
+                            receivedMessage = new MulticastMessage(messageId, machineId, tcpPort, protocolVersion);
                         }
                     }
                     catch
@@ -58,6 +58,7 @@ namespace LUC.DiscoveryService.CodingData
                         Byte[] decodedData = null;
                         try
                         {
+                            writer.Write(message.MessageId);
                             writer.Write(message.VersionOfProtocol);
                             writer.Write(message.MachineId);
                             writer.Write(message.TcpPort);

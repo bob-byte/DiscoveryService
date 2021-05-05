@@ -4,16 +4,18 @@ namespace LUC.DiscoveryService.Messages
 {
     public class MulticastMessage : Message
     {
-        public MulticastMessage(String id, Int32 tcpPort)
+        public MulticastMessage(Int32 messageId, String machineId, Int32 tcpPort)
+            : base(messageId)
         {
-            MachineId = id;
+            MachineId = machineId;
             TcpPort = tcpPort;
             VersionOfProtocol = ProtocolVersion;
         }
 
-        public MulticastMessage(String id, Int32 tcpPort, Int32 receivedProtocolVersion)
+        public MulticastMessage(Int32 messageId, String machineId, Int32 tcpPort, Int32 receivedProtocolVersion)
+            : base(messageId)
         {
-            MachineId = id;
+            MachineId = machineId;
             TcpPort = tcpPort;
             VersionOfProtocol = receivedProtocolVersion;
         }

@@ -58,6 +58,9 @@
   <ItemGroup>
     <Compile Include="CodingData\Parsing.cs" />
     <Compile Include="CodingData\ParsingMulticastData.cs" />
+    <Compile Include="CodingData\WireReader.cs" />
+    <Compile Include="CodingData\WireWriter.cs" />
+    <Compile Include="Extensions\BinaryWriterExtension.cs" />
     <Compile Include="Extensions\IPExtensions\SystemErrorCode.cs" />
     <Compile Include="Extensions\TaskExtension.cs" />
     <Compile Include="MessageEventArgs.cs" />

@@ -4,13 +4,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.NetworkInformation;
 
 namespace LUC.DiscoveryService
 {
     /// <summary>
     ///   Contains info about current peer
     /// </summary>
-    class ServiceProfile
+    public class ServiceProfile
     {
         private readonly Int32 minValueTcpPort, maxValueTcpPort;
         private Int32 runningTcpPort;
@@ -25,8 +26,12 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceProfile"/> class.
         /// </summary>
+        /// <param name="addresses">
+        /// <see cref="IPAddress"/> of network interfaces of current machine 
+        /// </param>
         public ServiceProfile(Int32 minValueTcpPort, Int32 maxValueTcpPort, Int32 udpPort, 
-            Int32 protocolVersion, ConcurrentDictionary<String, List<String>> groupsSupported)
+            Int32 protocolVersion, ConcurrentDictionary<String, List<String>> groupsSupported, 
+            IEnumerable<IPAddress> addresses = null)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
             MachineId = deviceIdBuilder.GetMachineId();
@@ -49,9 +54,9 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// Why do we need this property?
+        /// Handle using event. Don't return NetworkInterface.GetAllNetworkInterfaces()
         /// </summary>
-        public ICollection<IPAddress> NetworkInterfaces { get; }
+        public ICollection<NetworkInterface> NetworkInterfaces => NetworkInterface.GetAllNetworkInterfaces();
 
         /// <summary>
         ///   Protocol version.

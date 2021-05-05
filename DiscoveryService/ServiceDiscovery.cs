@@ -5,8 +5,10 @@ using System.Net;
 using System.Net.Sockets;
 using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Messages;
-//using LUC.Interfaces;
-//using LUC.Services.Implementation;
+using Makaretu.Dns;
+using LUC.Interfaces;
+using LUC.Services.Implementation;
+using System.ComponentModel.Composition;
 
 namespace LUC.DiscoveryService
 {
@@ -19,11 +21,12 @@ namespace LUC.DiscoveryService
         private const Int32 MinValueTcpPort = 17500;
         private const Int32 MaxValueTcpPort = 17510;
 
-        //[Import(typeof(ILoggingService))]
-        //private static readonly ILoggingService log = new LoggingService();
-        private static ServiceDiscovery instance;
+        [Import(typeof(ILoggingService))]
+        private static readonly ILoggingService log = new LoggingService();
 
-        private readonly ServiceProfile profile;
+        private static ServiceDiscovery instance;
+        public ServiceProfile Profile { get; }
+        private readonly RecentMessages sentMessages = new RecentMessages();
 
         private Boolean isDiscoveryServiceStarted = false;
 
@@ -40,21 +43,37 @@ namespace LUC.DiscoveryService
         public event EventHandler<MessageEventArgs> ServiceInstanceShutdown;
 
         private ServiceDiscovery(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, List<String>> groupsSupported = null)
+            : this(groupsSupported)
         {
-            profile = new ServiceProfile(MinValueTcpPort, MaxValueTcpPort, UdpPort, 
-                Message.ProtocolVersion, groupsSupported);
-            Service = new Service(profile);
-
             Service.UseIpv4 = useIpv4;
             Service.UseIpv6 = useIpv6;
         }
 
         private ServiceDiscovery(ConcurrentDictionary<String, List<String>> groupsSupported = null)
         {
-            profile = new ServiceProfile(MinValueTcpPort, MaxValueTcpPort, UdpPort, 
-                Message.ProtocolVersion, groupsSupported);
-            Service = new Service(profile);
+            Profile = new ServiceProfile(MinValueTcpPort, MaxValueTcpPort, UdpPort,
+                Messages.Message.ProtocolVersion, groupsSupported);
+            Service = new Service(Profile);
             Service.QueryReceived += SendTcpMessOnQuery;
+        }
+
+        /// <summary>
+        /// If user of ServiceDiscovery forget to call method Stop
+        /// </summary>
+        ~ServiceDiscovery()
+        {
+            Stop();
+        }
+
+        public Service Service { get; private set; }
+
+        /// <summary>
+        /// Key is a network in a format "IP-address:port"
+        /// Value is the list of name of groups, which current peer (with this key) supports
+        /// </summary>
+        public ConcurrentDictionary<String, List<String>> GroupsSupported
+        {
+            get => Profile.GroupsSupported;
         }
 
         //TODO: check SSL certificate with SNI
@@ -65,7 +84,13 @@ namespace LUC.DiscoveryService
             NetworkStream stream = null;
             try
             {
-                Byte[] bytes = parsingSsl.GetDecodedData(new TcpMessage(e.Message.VersionOfProtocol, profile.GroupsSupported));
+                Random random = new Random();
+                Byte[] bytes = parsingSsl.GetDecodedData(new TcpMessage(random.Next(0, Int32.MaxValue), e.Message.VersionOfProtocol, Profile.GroupsSupported));
+
+                if (!Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
+                {
+                    return;
+                }
 
                 client = new TcpClient(e.RemoteEndPoint.AddressFamily);
                 if (!(e.Message is MulticastMessage message))
@@ -85,24 +110,6 @@ namespace LUC.DiscoveryService
             {
                 stream?.Close();
                 client?.Close();
-            }
-        }
-
-        /// <summary>
-        /// If user of ServiceDiscovery forget to call method Stop
-        /// </summary>
-        ~ServiceDiscovery()
-        {
-            Stop();
-        }
-
-        public Service Service { get; }
-
-        public ConcurrentDictionary<String, List<String>> GroupsSupported
-        {
-            get
-            {
-                return profile.GroupsSupported;
             }
         }
 
@@ -150,7 +157,7 @@ namespace LUC.DiscoveryService
                 isDiscoveryServiceStarted = true;
             }
 
-            machineId = profile.MachineId;
+            machineId = Profile.MachineId;
         }
 
         public void QueryAllServices()

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -7,6 +8,8 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Messages;
+using LUC.Interfaces;
+using LUC.Services.Implementation;
 using Makaretu.Dns;
 
 namespace LUC.DiscoveryService
@@ -25,8 +28,8 @@ namespace LUC.DiscoveryService
     /// </remarks>
     public class Service
     {
-        //[Import(typeof(ILoggingService))]
-        //static readonly ILoggingService log = new LoggingService();
+        [Import(typeof(ILoggingService))]
+        static readonly ILoggingService log = new LoggingService();
         // 169.254.0.0/16 -- a link-local IPv4 address in accordance with RFC 3927.
         private static readonly IPNetwork[] LinkLocalNetworks = new[] { IPNetwork.Parse("169.254.0.0/16"), IPNetwork.Parse("fe80::/10") };
 
@@ -331,7 +334,7 @@ namespace LUC.DiscoveryService
         public void OnUdpMessage(object sender, UdpReceiveResult result)
         {
             // If recently received, then ignore.
-            if (!IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
             {
                 return;
             }
@@ -350,14 +353,14 @@ namespace LUC.DiscoveryService
                 return; // eat the exception
             }
 
-            //if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion)
-            //    ||
-            //    (message.MachineId == profile.MachineId)
-            //    ||
-            //    (message.Status != MessageStatus.NoError))
-            //{
-            //    return;
-            //}
+            if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion)
+                ||
+                (message.MachineId == profile.MachineId)
+                ||
+                (message.Status != MessageStatus.NoError))
+            {
+                return;
+            }
 
             // Dispatch the message.
             try
@@ -401,13 +404,13 @@ namespace LUC.DiscoveryService
                         profile.GroupsSupported.TryAdd(group.Key, group.Value);
                     }
                 }
-            }
 
-            AnswerReceived.Invoke(sender, new MessageEventArgs
-            {
-                Message = message,
-                GroupsSupported = message.GroupsSupported
-            });
+                AnswerReceived.Invoke(sender, new MessageEventArgs
+                {
+                    Message = message,
+                    GroupsSupported = message.GroupsSupported
+                });
+            }
         }
 
         /// <summary>
@@ -434,7 +437,8 @@ namespace LUC.DiscoveryService
                     try
                     {
                         Parsing<MulticastMessage> parsing = new ParsingMulticastData();
-                        var bytes = parsing.GetDecodedData(new MulticastMessage(profile.MachineId, profile.RunningTcpPort));
+                        Random random = new Random();
+                        var bytes = parsing.GetDecodedData(new MulticastMessage(messageId: random.Next(0, Int32.MaxValue), profile.MachineId, profile.RunningTcpPort));
 
                         if(client != null)
                         {

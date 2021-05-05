@@ -4,6 +4,7 @@ using LUC.Services.Implementation;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -25,6 +26,8 @@ namespace LUC.DiscoveryService
 
         private static readonly IPAddress MulticastAddressIp4 = IPAddress.Parse("224.0.0.251");
         private static readonly IPAddress MulticastAddressIp6 = IPAddress.Parse("FF02::FB");
+        static IPEndPoint MulticastEndpointIp6;
+        static IPEndPoint MulticastEndpointIp4;
 
         private readonly List<UdpClient> udpReceivers;
         private readonly List<TcpListener> tcpReceivers;
@@ -67,6 +70,8 @@ namespace LUC.DiscoveryService
         public Client(ServiceProfile profile, Boolean useIpv4, Boolean useIpv6, IEnumerable<NetworkInterface> nics)
         {
             this.profile = profile;
+            MulticastEndpointIp4 = new IPEndPoint(MulticastAddressIp4, profile.RunningUdpPort);
+            MulticastEndpointIp6 = new IPEndPoint(MulticastAddressIp6, profile.RunningUdpPort);
 
             // Get the IP addresses that we should send to.
             var addresses = nics
@@ -76,8 +81,24 @@ namespace LUC.DiscoveryService
 
             udpReceivers = new List<UdpClient>();
             tcpReceivers = new List<TcpListener>();
-            InitUdpClients(useIpv4, useIpv6,
-                out var udpReceiver4, out var udpReceiver6);
+            UdpClient udpReceiver4 = null;
+
+            if (useIpv4)
+            {
+                udpReceiver4 = new UdpClient(AddressFamily.InterNetwork);
+                udpReceiver4.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                udpReceiver4.Client.Bind(new IPEndPoint(IPAddress.Any, profile.RunningUdpPort));
+                udpReceivers.Add(udpReceiver4);
+            }
+
+            UdpClient udpReceiver6 = null;
+            if (useIpv6)
+            {
+                udpReceiver6 = new UdpClient(AddressFamily.InterNetworkV6);
+                udpReceiver6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                udpReceiver6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, profile.RunningUdpPort));
+                udpReceivers.Add(udpReceiver6);
+            }
 
             foreach (var address in addresses)
             {
@@ -111,7 +132,6 @@ namespace LUC.DiscoveryService
                                     new IPv6MulticastOption(MulticastAddressIp6, address.ScopeId),  
                                     new IPv6MulticastOption(MulticastAddressIp6));
                                 
-
                                 break;
                             }
                         default:
@@ -140,7 +160,6 @@ namespace LUC.DiscoveryService
                 }
             }
 
-            // Start listening for messages.
             Task.Run(() =>
             {
                 foreach (var r in udpReceivers)
@@ -159,33 +178,6 @@ namespace LUC.DiscoveryService
                     ListenTcp(tcpReceiver);
                 }
             });
-        }
-
-        private void InitUdpClients(bool useIPv4, bool useIpv6,
-            out UdpClient udpReceiver4, out UdpClient udpReceiver6)
-        {
-            udpReceiver4 = null;
-
-            if (useIPv4)
-            {
-                udpReceiver4 = new UdpClient(AddressFamily.InterNetwork);
-                SetOptionsOfClient(udpReceiver4.Client, IPAddress.Any);
-                udpReceivers.Add(udpReceiver4);
-            }
-
-            udpReceiver6 = null;
-            if (useIpv6)
-            {
-                udpReceiver6 = new UdpClient(AddressFamily.InterNetworkV6);
-                SetOptionsOfClient(udpReceiver6.Client, IPAddress.IPv6Any);
-                udpReceivers.Add(udpReceiver6);
-            }
-        }
-
-        private void SetOptionsOfClient(Socket socket, IPAddress address)
-        {
-            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            socket.Bind(new IPEndPoint(address, profile.RunningUdpPort));
         }
 
         private void SetOptionsOfSocket(SocketOptionLevel socketLevel,
@@ -222,25 +214,16 @@ namespace LUC.DiscoveryService
                 try
                 {
                     var endpoint = sender.Key.AddressFamily == AddressFamily.InterNetwork ? 
-                        new IPEndPoint(MulticastAddressIp4, profile.RunningTcpPort) : 
-                        new IPEndPoint(MulticastAddressIp6, profile.RunningTcpPort);
+                        MulticastEndpointIp4 : MulticastEndpointIp6;
                     await sender.Value.SendAsync(message, message.Length, endpoint)
                                       .ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
                     //log.LogError($"Sender {sender.Key} failure: {e.Message}");
-
-                    profile.RunningTcpPort++;
                 }
             }
         }
-
-        /// <summary>
-        /// It waits <paramref name="periodInMs"/> ms and if <paramref name="tokenOuter"/>.IsCancellationRequested equals to true, it will return true immediately without waiting, else it will return false
-        /// </summary>
-        private Boolean IsCancelledOuterTask(CancellationToken tokenOuter, Int32 periodInMs) =>
-            tokenOuter.WaitHandle.WaitOne(periodInMs);
 
         /// <summary>
         /// It listens udp messages in another task
@@ -313,10 +296,15 @@ namespace LUC.DiscoveryService
                 Int32 countDataToReadAtTime = 256;
                 Byte[] buffer = new Byte[countDataToReadAtTime];
 
-                var client = await receiver.AcceptTcpClientAsync();
+                TcpClient tcpClient = new TcpClient();
+                SocketAsyncEventArgs e = new SocketAsyncEventArgs();
+                tcpClient.Client.ReceiveAsync(e);
+                
+                var client = await receiver.AcceptTcpClientAsync().ConfigureAwait(false);
                 var stream = client.GetStream();
                 
                 stream.Read(buffer, 0, countDataToReadAtTime);
+
                 TcpReceiveResult receiveResult = default;
                 if(client.Client.RemoteEndPoint is IPEndPoint iPEndPoint)
                 {
@@ -328,6 +316,33 @@ namespace LUC.DiscoveryService
 
                 return receiveResult;
             });
+        }
+        /// <summary>
+        ///   Read the specified number of bytes.
+        /// </summary>
+        /// <param name="length">
+        ///   The number of bytes to read.
+        /// </param>
+        /// <returns>
+        ///   The next <paramref name="length"/> bytes in the stream.
+        /// </returns>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public byte[] ReadBytes(int length)
+        {
+            var buffer = new byte[length];
+            for (var offset = 0; length > 0;)
+            {
+                var n = stream.Read(buffer, offset, length);
+                if (n == 0)
+                    throw new EndOfStreamException();
+                offset += n;
+                length -= n;
+                Position += n;
+            }
+
+            return buffer;
         }
 
         /// <param name="nic">
