@@ -11,6 +11,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using LUC.DiscoveryService.CodingData;
 
 namespace LUC.DiscoveryService
 {
@@ -26,15 +27,13 @@ namespace LUC.DiscoveryService
 
         private static readonly IPAddress MulticastAddressIp4 = IPAddress.Parse("224.0.0.251");
         private static readonly IPAddress MulticastAddressIp6 = IPAddress.Parse("FF02::FB");
-        static IPEndPoint MulticastEndpointIp6;
-        static IPEndPoint MulticastEndpointIp4;
+        private static IPEndPoint MulticastEndpointIp6;
+        private static IPEndPoint MulticastEndpointIp4;
 
         private readonly List<UdpClient> udpReceivers;
         private readonly List<TcpListener> tcpReceivers;
 
         private readonly ConcurrentDictionary<IPAddress, UdpClient> sendersUdp = new ConcurrentDictionary<IPAddress, UdpClient>();
-
-        private readonly ServiceProfile profile;
 
         /// <summary>
         /// It calls method OnUdpMessage, which run SendTcp
@@ -69,15 +68,8 @@ namespace LUC.DiscoveryService
         /// </param>
         public Client(ServiceProfile profile, Boolean useIpv4, Boolean useIpv6, IEnumerable<NetworkInterface> nics)
         {
-            this.profile = profile;
             MulticastEndpointIp4 = new IPEndPoint(MulticastAddressIp4, profile.RunningUdpPort);
             MulticastEndpointIp6 = new IPEndPoint(MulticastAddressIp6, profile.RunningUdpPort);
-
-            // Get the IP addresses that we should send to.
-            var addresses = nics
-                .SelectMany(GetNetworkInterfaceLocalAddresses)
-                .Where(a => (useIpv4 && a.AddressFamily == AddressFamily.InterNetwork)
-                    || (useIpv6 && a.AddressFamily == AddressFamily.InterNetworkV6));
 
             udpReceivers = new List<UdpClient>();
             tcpReceivers = new List<TcpListener>();
@@ -100,6 +92,12 @@ namespace LUC.DiscoveryService
                 udpReceivers.Add(udpReceiver6);
             }
 
+            // Get the IP addresses that we should send to.
+            var addresses = nics
+                .SelectMany(GetNetworkInterfaceLocalAddresses)
+                .Where(a => (useIpv4 && a.AddressFamily == AddressFamily.InterNetwork)
+                    || (useIpv6 && a.AddressFamily == AddressFamily.InterNetworkV6));
+
             foreach (var address in addresses)
             {
                 if (sendersUdp.Keys.Contains(address))
@@ -118,20 +116,28 @@ namespace LUC.DiscoveryService
                     {
                         case AddressFamily.InterNetwork:
                             {
-                                SetOptionsOfSocket(SocketOptionLevel.IP, senderUdp, senderTcp,
-                                    udpReceiver4, localEndpoint, 
-                                    new MulticastOption(MulticastAddressIp4, address), 
-                                    new MulticastOption(MulticastAddressIp4));
+                                udpReceiver4.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(MulticastAddressIp4, address));
+
+                                senderTcp.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.ReuseAddress, true);
+                                senderUdp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+
+                                senderUdp.Client.Bind(localEndpoint);
+                                senderUdp.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(MulticastAddressIp4));
+                                senderUdp.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, true);
 
                                 break;
                             }
                         case AddressFamily.InterNetworkV6:
                             {
-                                SetOptionsOfSocket(SocketOptionLevel.IPv6, senderUdp, senderTcp,
-                                    udpReceiver6, localEndpoint, 
-                                    new IPv6MulticastOption(MulticastAddressIp6, address.ScopeId),  
-                                    new IPv6MulticastOption(MulticastAddressIp6));
-                                
+                                udpReceiver6.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new IPv6MulticastOption(MulticastAddressIp6, address.ScopeId));
+
+                                senderTcp.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.ReuseAddress, true);
+                                senderUdp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+
+                                senderUdp.Client.Bind(localEndpoint);
+                                senderUdp.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new IPv6MulticastOption(MulticastAddressIp6));
+                                senderUdp.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastLoopback, true);
+
                                 break;
                             }
                         default:
@@ -171,9 +177,8 @@ namespace LUC.DiscoveryService
             // TODO: add SSL support
             Task.Run(() =>
             {
-                foreach (var address in addresses)
+                foreach (var tcpReceiver in tcpReceivers)
                 {
-                    TcpListener tcpReceiver = new TcpListener(address, profile.RunningTcpPort);
                     tcpReceiver.Start();
                     ListenTcp(tcpReceiver);
                 }
@@ -213,12 +218,16 @@ namespace LUC.DiscoveryService
             {
                 try
                 {
-                    var endpoint = sender.Key.AddressFamily == AddressFamily.InterNetwork ? 
+                    var endpoint = sender.Key.AddressFamily == AddressFamily.InterNetwork ?
                         MulticastEndpointIp4 : MulticastEndpointIp6;
-                    await sender.Value.SendAsync(message, message.Length, endpoint)
-                                      .ConfigureAwait(false);
+                    await sender.Value.SendAsync(message, message.Length, endpoint).ConfigureAwait(false);
+                    break;
                 }
-                catch (Exception e)
+                catch(SocketException)
+                {
+                    //log.LogError($"Sender {sender.Key} failure: {e.Message}");
+                }
+                catch(InvalidOperationException)
                 {
                     //log.LogError($"Sender {sender.Key} failure: {e.Message}");
                 }
@@ -295,12 +304,8 @@ namespace LUC.DiscoveryService
             {
                 Int32 countDataToReadAtTime = 256;
                 Byte[] buffer = new Byte[countDataToReadAtTime];
-
-                TcpClient tcpClient = new TcpClient();
-                SocketAsyncEventArgs e = new SocketAsyncEventArgs();
-                tcpClient.Client.ReceiveAsync(e);
                 
-                var client = await receiver.AcceptTcpClientAsync().ConfigureAwait(false);
+                var client = await receiver.AcceptTcpClientAsync();
                 var stream = client.GetStream();
                 
                 stream.Read(buffer, 0, countDataToReadAtTime);
@@ -316,33 +321,6 @@ namespace LUC.DiscoveryService
 
                 return receiveResult;
             });
-        }
-        /// <summary>
-        ///   Read the specified number of bytes.
-        /// </summary>
-        /// <param name="length">
-        ///   The number of bytes to read.
-        /// </param>
-        /// <returns>
-        ///   The next <paramref name="length"/> bytes in the stream.
-        /// </returns>
-        /// <exception cref="EndOfStreamException">
-        ///   When no more data is available.
-        /// </exception>
-        public byte[] ReadBytes(int length)
-        {
-            var buffer = new byte[length];
-            for (var offset = 0; length > 0;)
-            {
-                var n = stream.Read(buffer, offset, length);
-                if (n == 0)
-                    throw new EndOfStreamException();
-                offset += n;
-                length -= n;
-                Position += n;
-            }
-
-            return buffer;
         }
 
         /// <param name="nic">

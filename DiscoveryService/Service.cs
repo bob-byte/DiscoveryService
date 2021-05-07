@@ -338,8 +338,7 @@ namespace LUC.DiscoveryService
             {
                 return;
             }
-            
-            //var msg = new Messages.BroadcastMessage();
+
             Parsing<MulticastMessage> parsing = new ParsingMulticastData();
             MulticastMessage message;
             try
@@ -438,7 +437,8 @@ namespace LUC.DiscoveryService
                     {
                         Parsing<MulticastMessage> parsing = new ParsingMulticastData();
                         Random random = new Random();
-                        var bytes = parsing.GetDecodedData(new MulticastMessage(messageId: random.Next(0, Int32.MaxValue), profile.MachineId, profile.RunningTcpPort));
+                        var messageId = random.Next(0, Int32.MaxValue);
+                        var bytes = parsing.GetDecodedData(new MulticastMessage(messageId, profile.MachineId, profile.RunningTcpPort));
 
                         if(client != null)
                         {

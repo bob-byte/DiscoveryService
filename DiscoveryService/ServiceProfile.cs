@@ -30,7 +30,7 @@ namespace LUC.DiscoveryService
         /// <see cref="IPAddress"/> of network interfaces of current machine 
         /// </param>
         public ServiceProfile(Int32 minValueTcpPort, Int32 maxValueTcpPort, Int32 udpPort, 
-            Int32 protocolVersion, ConcurrentDictionary<String, List<String>> groupsSupported, 
+            Int32 protocolVersion, ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported, 
             IEnumerable<IPAddress> addresses = null)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
@@ -42,7 +42,7 @@ namespace LUC.DiscoveryService
             }
             else
             {
-                GroupsSupported = new ConcurrentDictionary<String, List<String>>();
+                GroupsSupported = new ConcurrentDictionary<String, List<KeyValuePair<String, String>>>();
             }
 
             ProtocolVersion = protocolVersion;
@@ -95,6 +95,6 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// This property use in internal classes and allow to avoid strong connectivity. It is weaker, because we don't use object type DiscoveryService in the different classes
         /// </summary>
-        public ConcurrentDictionary<String, List<String>> GroupsSupported { get; }
+        public ConcurrentDictionary<String, List<KeyValuePair<String, String>>> GroupsSupported { get; }
     }
 }

@@ -42,14 +42,14 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public event EventHandler<MessageEventArgs> ServiceInstanceShutdown;
 
-        private ServiceDiscovery(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, List<String>> groupsSupported = null)
+        private ServiceDiscovery(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = null)
             : this(groupsSupported)
         {
             Service.UseIpv4 = useIpv4;
             Service.UseIpv6 = useIpv6;
         }
 
-        private ServiceDiscovery(ConcurrentDictionary<String, List<String>> groupsSupported = null)
+        private ServiceDiscovery(ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = null)
         {
             Profile = new ServiceProfile(MinValueTcpPort, MaxValueTcpPort, UdpPort,
                 Messages.Message.ProtocolVersion, groupsSupported);
@@ -71,7 +71,7 @@ namespace LUC.DiscoveryService
         /// Key is a network in a format "IP-address:port"
         /// Value is the list of name of groups, which current peer (with this key) supports
         /// </summary>
-        public ConcurrentDictionary<String, List<String>> GroupsSupported
+        public ConcurrentDictionary<String, List<KeyValuePair<String, String>>> GroupsSupported
         {
             get => Profile.GroupsSupported;
         }
@@ -79,6 +79,11 @@ namespace LUC.DiscoveryService
         //TODO: check SSL certificate with SNI
         internal void SendTcpMessOnQuery(Object sender, MessageEventArgs e)
         {
+            if (!(e.Message is MulticastMessage))
+            {
+                throw new ArgumentException("Bad format of the message");
+            }
+
             var parsingSsl = new ParsingTcpData();
             TcpClient client = null;
             NetworkStream stream = null;
@@ -87,16 +92,13 @@ namespace LUC.DiscoveryService
                 Random random = new Random();
                 Byte[] bytes = parsingSsl.GetDecodedData(new TcpMessage(random.Next(0, Int32.MaxValue), e.Message.VersionOfProtocol, Profile.GroupsSupported));
 
-                if (!Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
+                if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
                 {
                     return;
                 }
 
+                var message = e.Message as MulticastMessage;
                 client = new TcpClient(e.RemoteEndPoint.AddressFamily);
-                if (!(e.Message is MulticastMessage message))
-                {
-                    throw new ArgumentException("Bad format of the message");
-                }
                 client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, message.TcpPort);
 
                 stream = client.GetStream();
@@ -131,7 +133,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceDiscovery"/> class.
         /// </summary>
-        public static ServiceDiscovery GetInstance(ConcurrentDictionary<String, List<String>> groupsSupported = null)
+        public static ServiceDiscovery GetInstance(ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = null)
         {
             Lock.InitWithLock(Lock.lockService, new ServiceDiscovery(groupsSupported), ref instance);
             return instance;
@@ -140,7 +142,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceDiscovery"/> class.
         /// </summary>
-        public static ServiceDiscovery GetInstance(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, List<String>> groupsSupported = null)
+        public static ServiceDiscovery GetInstance(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = null)
         {
             Lock.InitWithLock(Lock.lockService, new ServiceDiscovery(useIpv4, useIpv6, groupsSupported), ref instance);
             return instance;

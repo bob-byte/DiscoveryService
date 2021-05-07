@@ -9,7 +9,7 @@ namespace LUC.DiscoveryService
 {
     class UsageExample
     {
-        static readonly Object ttyLock = new Object();
+        private static readonly Object ttyLock = new Object();
 
         private static void OnBadMessage(Object sender, Byte[] packet)
         {
@@ -63,17 +63,16 @@ namespace LUC.DiscoveryService
                 Console.WriteLine($"IP address {a}");
             }
 
-            ConcurrentDictionary<String, List<String>> groupsSupported = new ConcurrentDictionary<String, List<String>>();
-            groupsSupported.TryAdd("192.168.1.100:17500", new List<String>
+            ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = new ConcurrentDictionary<String, List<KeyValuePair<String, String>>>();
+            groupsSupported.TryAdd("192.168.1.100:17500", new List<KeyValuePair<String, String>>
             {
-                "the-dubstack-engineers-res",
-                "the-dubstack-architects-res"
+                { new KeyValuePair<String, String>("the-dubstack-architects-res", "SSL-Cert") },
+                { new KeyValuePair<String, String>("the-dubstack-programmers-res", "SSL-Cert2") }
             });
 
-            groupsSupported.TryAdd("192.168.13.140:17500", new List<String>
+            groupsSupported.TryAdd("192.168.13.140:17500", new List<KeyValuePair<String, String>>
             {
-                "the-dubstack-engineers-res",
-                "the-dubstack-architects-res"
+                { new KeyValuePair<String, String>("the-dubstack-accountant-res", "SSL-Cert3") },
             });
 
             var serviceDiscovery = ServiceDiscovery.GetInstance(groupsSupported);
