@@ -37,17 +37,6 @@ namespace LUC.DiscoveryService.CodingData
                             //write certificates
                         }
 
-                        writer.Write((UInt32)message.GroupsSupported.Count);
-                        foreach (var groupSupported in message.GroupsSupported)
-                        {
-                            writer.Write(groupSupported.Key);
-                            writer.Write((UInt32)groupSupported.Value.Count);
-                            foreach (var nameOfGroups in groupSupported.Value)
-                            {
-                                writer.Write(nameOfGroups);
-                            }
-                        }
-
                         var decodedData = stream.GetBuffer();
 
                         return decodedData;
@@ -78,25 +67,13 @@ namespace LUC.DiscoveryService.CodingData
                             List<String> arrayIpNetwork = reader.ReadArrayOfString().ToList();
                             for (int i = 0; i < length; i++)
                             {
-                                //read names of groups
-                                //read ceritificates
-                                //add those to dictionary
-                            }
-
-
-                            var countPeers = reader.ReadUInt32();
-                            var groupsOfEachPeer = new ConcurrentDictionary<String, List<String>>();
-                            for (Int32 i = 0; i < countPeers; i++)
-                            {
-                                var iPEndPoint = reader.ReadString();
-                                var countGroupOfCurrentPeer = reader.ReadUInt32();
-
-                                List<String> groups = new List<String>((Int32)countGroupOfCurrentPeer);
-                                for (Int32 nameGroup = 0; nameGroup < countGroupOfCurrentPeer; nameGroup++)
+                                for (int j = 0; j < length; j++)
                                 {
-                                    groups.Add(reader.ReadString());
+                                    //read names of groups
+                                    //read ceritificates
                                 }
-                                groupsOfEachPeer.TryAdd(iPEndPoint, groups);
+                                
+                                //add those to dictionary
                             }
 
                             return new TcpMessage((Int32)protocolVersion, groupsOfEachPeer);
