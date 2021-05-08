@@ -9,7 +9,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <summary>
         /// It use BinaryFormatter, so too many spaces and time
         /// </summary>
-        public virtual T GetEncodedData(Byte[] bytes)
+        public virtual T EncodedData(Byte[] bytes)
         {
             using (MemoryStream stream = new MemoryStream(bytes))
             {
@@ -23,7 +23,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <summary>
         /// It use BinaryFormatter, so too many spaces and time
         /// </summary>
-        public virtual Byte[] GetDecodedData(T obj)
+        public virtual Byte[] DecodedData(T obj)
         {
             using (var stream = new MemoryStream())
             {

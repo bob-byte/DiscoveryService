@@ -9,7 +9,7 @@ namespace LUC.DiscoveryService.CodingData
     {
         private readonly SupportedTcpCodingTypes supportedTypes = new SupportedTcpCodingTypes();
 
-        public override Byte[] GetDecodedData(TcpMessage message)
+        public override Byte[] DecodedData(TcpMessage message)
         {
             if (message == null)
             {
@@ -61,8 +61,8 @@ namespace LUC.DiscoveryService.CodingData
                 }
             }
         }
-        private Object locker = new Object();
-        public override TcpMessage GetEncodedData(Byte[] bytes)
+
+        public override TcpMessage EncodedData(Byte[] bytes)
         {
             if(bytes == null)
             {
@@ -77,45 +77,42 @@ namespace LUC.DiscoveryService.CodingData
                         TcpMessage message = new TcpMessage();
                         try
                         {
-                            lock (locker)
+                            for (var property = PropertyInTcpMessage.First; property <= PropertyInTcpMessage.Last; property++)
                             {
-                                for (var property = PropertyInTcpMessage.First; property <= PropertyInTcpMessage.Last; property++)
+
+                                var typeAsByte = reader.ReadByte();
+
+                                switch (supportedTypes[typeAsByte])
                                 {
+                                    case PropertyInTcpMessage.MessageId:
+                                        {
+                                            message.MessageId = reader.ReadUInt32();
+                                            break;
+                                        }
+                                    case PropertyInTcpMessage.VersionOfProtocol:
+                                        {
+                                            message.VersionOfProtocol = reader.ReadUInt32();
+                                            if (message.VersionOfProtocol != Message.ProtocolVersion)
+                                            {
+                                                throw new ArgumentException("Bad version of protocol");
+                                            }
 
-                                    var typeAsByte = reader.ReadByte();
-
-                                    switch (supportedTypes[typeAsByte])
-                                    {
-                                        case PropertyInTcpMessage.MessageId:
-                                            {
-                                                message.MessageId = reader.ReadUInt32();
-                                                break;
-                                            }
-                                        case PropertyInTcpMessage.VersionOfProtocol:
-                                            {
-                                                message.VersionOfProtocol = reader.ReadUInt32();
-                                                if (message.VersionOfProtocol != Message.ProtocolVersion)
-                                                {
-                                                    throw new ArgumentException("Bad version of protocol");
-                                                }
-
-                                                break;
-                                            }
-                                        case PropertyInTcpMessage.GroupsSupported:
-                                            {
-                                                message.GroupsSupported = reader.DictionaryFromMessage();
-                                                break;
-                                            }
-                                        case PropertyInTcpMessage.KnownIps:
-                                            {
-                                                message.KnownIps = reader.DictionaryFromMessage();
-                                                break;
-                                            }
-                                    }
+                                            break;
+                                        }
+                                    case PropertyInTcpMessage.GroupsSupported:
+                                        {
+                                            message.GroupsSupported = reader.DictionaryFromMessage();
+                                            break;
+                                        }
+                                    case PropertyInTcpMessage.KnownIps:
+                                        {
+                                            message.KnownIps = reader.DictionaryFromMessage();
+                                            break;
+                                        }
                                 }
-
-                                return message;
                             }
+
+                            return message;
                         }
                         catch (EndOfStreamException)
                         {

@@ -9,7 +9,7 @@ namespace LUC.DiscoveryService.CodingData
     {
         private readonly SupportedUdpCodingTypes supportedTypes = new SupportedUdpCodingTypes();
 
-        public override Byte[] GetDecodedData(MulticastMessage message)
+        public override Byte[] DecodedData(MulticastMessage message)
         {
             if(message != null)
             {
@@ -57,7 +57,7 @@ namespace LUC.DiscoveryService.CodingData
             }
         }
 
-        public override MulticastMessage GetEncodedData(Byte[] bytes)
+        public override MulticastMessage EncodedData(Byte[] bytes)
         {
             if (bytes == null)
             {

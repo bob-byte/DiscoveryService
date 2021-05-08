@@ -343,7 +343,7 @@ namespace LUC.DiscoveryService
             MulticastMessage message;
             try
             {
-                message = parsing.GetEncodedData(result.Buffer);
+                message = parsing.EncodedData(result.Buffer);
             }
             catch (Exception e)
             {
@@ -385,7 +385,7 @@ namespace LUC.DiscoveryService
             try
             {
                 Parsing<TcpMessage> parsing = new ParsingTcpData();
-                message = parsing.GetEncodedData(receiveResult.Buffer);
+                message = parsing.EncodedData(receiveResult.Buffer);
             }
             catch
             {
@@ -444,7 +444,7 @@ namespace LUC.DiscoveryService
                         Parsing<MulticastMessage> parsing = new ParsingUdpData();
                         Random random = new Random();
                         var messageId = (UInt32)random.Next(0, Int32.MaxValue);
-                        var bytes = parsing.GetDecodedData(new MulticastMessage(messageId, profile.MachineId, profile.RunningTcpPort));
+                        var bytes = parsing.DecodedData(new MulticastMessage(messageId, profile.MachineId, profile.RunningTcpPort));
 
                         if(client != null)
                         {

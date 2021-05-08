@@ -90,7 +90,7 @@ namespace LUC.DiscoveryService
             try
             {
                 Random random = new Random();
-                Byte[] bytes = parsingSsl.GetDecodedData(new TcpMessage((UInt32)random.Next(0, Int32.MaxValue), (UInt32)e.Message.VersionOfProtocol, Profile.GroupsSupported, Profile.KnownIps));
+                Byte[] bytes = parsingSsl.DecodedData(new TcpMessage((UInt32)random.Next(0, Int32.MaxValue), (UInt32)e.Message.VersionOfProtocol, Profile.GroupsSupported, Profile.KnownIps));
 
                 //if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
                 //{
