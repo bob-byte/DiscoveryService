@@ -41,9 +41,7 @@ namespace LUC.DiscoveryService.CodingData
                             var ipNetworks = message.KnownIps.Values;
                             writer.WriteEnumerable(ipNetworks);
 
-                            var decodedData = stream.GetBuffer();
-
-                            return decodedData;
+                            return stream.GetBuffer();
                         }
                         catch (EncoderFallbackException)
                         {
