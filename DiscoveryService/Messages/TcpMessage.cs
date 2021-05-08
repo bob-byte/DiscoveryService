@@ -6,29 +6,56 @@ namespace LUC.DiscoveryService.Messages
 {
     public class TcpMessage : Message
     {
-        public TcpMessage()
-        {
+        /// <summary>
+        ///   Unique message identifier. It is used to detect duplicate messages.
+        /// </summary>
+	public UInt32 MessageId { get; set;  };
 
+        /// <summary>
+        ///   Supported version of protocol of the remote application.
+        /// </summary>
+	public UInt32 ProtocolVersion { get; set;  };
+
+        /// <summary>
+        ///   The list group IDs, for example:
+	///   the-light-test1-res, the-light-test2-res, etc
+        /// </summary>
+        public List<String> GroupIds { get; set;  } = new List<String>();
+
+        public override IWireSerialiser Read(WireReader reader)
+        {
+            MessageId = reader.ReadUInt32();
+	    ProtocolVersion = reader.ReadUInt32();
+	    GroupIds = reader.ReadArray();
+            return this;
         }
 
-        public TcpMessage(UInt32 messageId, UInt32 receivedProcolVersion, ConcurrentDictionary<String, String> groupsSupported, ConcurrentDictionary<String, String> knownIps)
-            : base(messageId)
+        public override string ToString()
         {
-            GroupsSupported = groupsSupported;
-            KnownIps = knownIps;
-            VersionOfProtocol = receivedProcolVersion;
+            using (var s = new StringWriter())
+            {
+                s.Write("Message");
+                s.WriteLine();
+                if (MessageId) s.Write("MessageId %d", MessageId);
+                s.WriteLine();
+                if (ProtocolVersion) s.Write("ProtocolVersion %d", ProtocolVersion);
+                s.WriteLine();
+
+                s.Write("Groups:");
+                s.WriteLine();
+                if (GroupIds.Count == 0)
+                {
+                    s.WriteLine("(empty)");
+                }
+                else
+                {
+                    foreach (var g in GroupIds)
+                    {
+                        s.WriteLine(g);
+                    }
+                }
+                return s.ToString();
+            }
         }
-
-        public TcpMessage(UInt32 messageId, ConcurrentDictionary<String, String> groupsSupported, ConcurrentDictionary<String, String> knownIps) 
-            : base(messageId)
-        {
-            GroupsSupported = groupsSupported;
-            KnownIps = knownIps;
-            VersionOfProtocol = ProtocolVersion;
-        }
-
-        public ConcurrentDictionary<String, String> GroupsSupported { get; set; }
-
-        public ConcurrentDictionary<String, String> KnownIps { get; set; }
     }
 }

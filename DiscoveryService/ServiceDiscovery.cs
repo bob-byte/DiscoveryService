@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Messages;
-using Makaretu.Dns;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 using System.ComponentModel.Composition;
@@ -76,43 +75,41 @@ namespace LUC.DiscoveryService
             get => Profile.GroupsSupported;
         }
 
-        //TODO: check SSL certificate with SNI
+        // TODO: check SSL certificate with SNI
         internal void SendTcpMessOnQuery(Object sender, MessageEventArgs e)
         {
             if (!(e.Message is MulticastMessage))
             {
-                throw new ArgumentException("Bad format of the message");
+                throw new ArgumentException("Bad format of the message"); // We expect multicast messages only
             }
 
-            var parsingSsl = new ParsingTcpData();
+	    // Check if we have sent reply to such message recently.
+	    // Reason: we might receive repeated packets from malicious sender,
+	    // so it is necessary to prevent outgoing messages, which would make
+	    // the situation worse.
+	    var checkDuplicate = true;
+            if (checkDuplicate && !sentMessages.TryAdd(e)) // TODO: make sure it works
+            {
+                return;
+            }
+
+	    var msg = new TcpMessage();
+	    msg.MessageId = (UInt32)random.Next(0, Int32.MaxValue);
+	    msg.ProtocolVersion = profile.ProtocolVersion;
+	    msg.GroupIds = profile.GroupsSupported.Keys;
+
             TcpClient client = null;
-            NetworkStream stream = null;
-            try
-            {
-                Random random = new Random();
-                Byte[] bytes = parsingSsl.DecodedData(new TcpMessage((UInt32)random.Next(0, Int32.MaxValue), (UInt32)e.Message.VersionOfProtocol, Profile.GroupsSupported, Profile.KnownIps));
+            client = new TcpClient(e.RemoteEndPoint.AddressFamily);
+            client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)e.Message.TcpPort);
 
-                //if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
-                //{
-                //    return;
-                //}
+            var packet = msg.ToByteArray();
+            client?.SendAsync(packet).GetAwaiter().GetResult();
 
-                var message = e.Message as MulticastMessage;
-                client = new TcpClient(e.RemoteEndPoint.AddressFamily);
-                client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
+            stream = client.GetStream();
+            stream.Write(packet, 0, packet.Length);
+            stream?.Close();
+            client?.Close();
 
-                stream = client.GetStream();
-                stream.Write(bytes, 0, bytes.Length);
-            }
-            catch
-            {
-                throw;
-            }
-            finally
-            {
-                stream?.Close();
-                client?.Close();
-            }
         }
 
         /// <summary>

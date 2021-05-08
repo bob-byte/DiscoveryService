@@ -10,7 +10,6 @@ using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
-using Makaretu.Dns;
 
 namespace LUC.DiscoveryService
 {
@@ -334,24 +333,30 @@ namespace LUC.DiscoveryService
         public void OnUdpMessage(object sender, UdpReceiveResult result)
         {
             // If recently received, then ignore.
+	    // TODO: check for duplicates
             //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
             //{
             //    return;
             //}
-
-            Parsing<MulticastMessage> parsing = new ParsingUdpData();
-            MulticastMessage message;
+            var msg = new MulticastMessage();
             try
             {
-                message = parsing.EncodedData(result.Buffer);
+                msg.Read(result.Buffer, 0, result.Buffer.Length);
             }
             catch (Exception e)
             {
-                //log.LogError("Received malformed message", e);
-                MalformedMessage.Invoke(sender, result.Buffer);
+                log.Warn("Received malformed message", e);
+                MalformedMessage?.Invoke(this, result.Buffer);
                 return; // eat the exception
             }
 
+            AnswerReceived?.Invoke(sender, new MessageEventArgs
+            {
+                Message = message,
+		// TODO: set source IP address ( IPEndpoint )
+            });
+
+	    // TODO:
             //if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion)
             //    ||
             //    (message.MachineId == profile.MachineId)
@@ -364,7 +369,10 @@ namespace LUC.DiscoveryService
             // Dispatch the message.
             try
             {
-                QueryReceived?.Invoke(this, new MessageEventArgs { Message = message, RemoteEndPoint = result.RemoteEndPoint });
+                QueryReceived?.Invoke(this, new MessageEventArgs {
+		    Message = message,
+		    RemoteEndPoint = result.RemoteEndPoint
+		});
             }
             catch (Exception e)
             {
@@ -379,49 +387,24 @@ namespace LUC.DiscoveryService
         /// <param name="message">
         /// Received message
         /// </param>
-        internal void OnTcpMessage(Object sender, TcpReceiveResult receiveResult)
+        internal void OnTcpMessage(object sender, TcpReceiveResult result)
         {
-            TcpMessage message = null;
+            var msg = new TcpMessage();
             try
             {
-                Parsing<TcpMessage> parsing = new ParsingTcpData();
-                message = parsing.EncodedData(receiveResult.Buffer);
+                msg.Read(result.Buffer, 0, result.Buffer.Length);
             }
-            catch
+            catch (Exception e)
             {
-                MalformedMessage.Invoke(sender, receiveResult.Buffer);
-                return;
+                log.Warn("Received malformed message", e);
+                MalformedMessage?.Invoke(this, result.Buffer);
+                return; // eat the exception
             }
 
-            if(message?.GroupsSupported != null)
-            {
-                foreach (var group in message.GroupsSupported)
-                {
-                    if (!profile.GroupsSupported.TryAdd(group.Key, group.Value))
-                    {
-                        _ = profile.GroupsSupported.TryRemove(group.Key, out _);
-                        _ = profile.GroupsSupported.TryAdd(group.Key, group.Value);
-                    }
-                }
-            }
-
-            if (message?.KnownIps != null)
-            {
-                foreach (var group in message.KnownIps)
-                {
-                    if (!profile.KnownIps.TryAdd(group.Key, group.Value))
-                    {
-                        _ = profile.KnownIps.TryRemove(group.Key, out _);
-                        _ = profile.KnownIps.TryAdd(group.Key, group.Value);
-                    }
-                }
-            }
-
-            AnswerReceived.Invoke(sender, new MessageEventArgs
+            AnswerReceived?.Invoke(sender, new MessageEventArgs
             {
                 Message = message,
-                GroupsSupported = message.GroupsSupported,
-                KnownIps = message.KnownIps
+		RemoteEndPoint = result.RemoteEndPoint
             });
         }
 
@@ -431,52 +414,16 @@ namespace LUC.DiscoveryService
         /// <returns>
         /// <see cref="Task"/> of sending UDP message
         /// </returns>
-        public Task SendQuery()
+        void SendQuery()
         {
-            Task taskClient = null;
+	    var msg = new MulticastMessage();
+	    msg.MessageId = (UInt32)random.Next(0, Int32.MaxValue);
+	    msg.MachineId = profile.MachineId;
+	    msg.TcpPort = profile.RunningTcpPort;
+	    msg.ProtocolVersion = profile.ProtocolVersion;
 
-            taskClient = Task.Run(async () =>
-            {
-                if (IsPcConnectionToInternet())
-                {
-                    try
-                    {
-                        Parsing<MulticastMessage> parsing = new ParsingUdpData();
-                        Random random = new Random();
-                        var messageId = (UInt32)random.Next(0, Int32.MaxValue);
-                        var bytes = parsing.DecodedData(new MulticastMessage(messageId, profile.MachineId, profile.RunningTcpPort));
-
-                        if(client != null)
-                        {
-                            await client.SendUdpAsync(bytes).ConfigureAwait(false);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        //loggingService.LogError(ex, ex.Message);
-                    }
-                }
-            });
-
-            return taskClient;
-        }
-
-        private Boolean IsPcConnectionToInternet()
-        {
-            try
-            {
-                using(var client = new WebClient())
-                {
-                    using(var stream = client.OpenRead("http://www.google.com"))
-                    {
-                        return true;
-                    }
-                }
-            }
-            catch
-            {
-                return false;
-            }
+            var packet = msg.ToByteArray();
+            client?.SendAsync(packet).GetAwaiter().GetResult();
         }
     }
 }
