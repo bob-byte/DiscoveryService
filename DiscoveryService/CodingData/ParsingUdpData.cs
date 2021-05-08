@@ -17,7 +17,6 @@ namespace LUC.DiscoveryService.CodingData
                 {
                     using (var writer = new WireWriter(stream))
                     {
-                        Byte[] decodedData = null;
                         try
                         {
                             writer.WriteByte(supportedTypes[PropertyInUdpMessage.MessageId]);
@@ -32,7 +31,7 @@ namespace LUC.DiscoveryService.CodingData
                             writer.WriteByte(supportedTypes[PropertyInUdpMessage.TcpPort]);
                             writer.Write(message.TcpPort);
 
-                            decodedData = stream.GetBuffer();
+                            return stream.GetBuffer();
                         }
                         catch (EncoderFallbackException)
                         {
@@ -46,8 +45,6 @@ namespace LUC.DiscoveryService.CodingData
                         {
                             throw;
                         }
-
-                        return decodedData;
                     }
                 }
             }
