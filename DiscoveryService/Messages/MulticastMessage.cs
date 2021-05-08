@@ -4,7 +4,12 @@ namespace LUC.DiscoveryService.Messages
 {
     public class MulticastMessage : Message
     {
-        public MulticastMessage(Int32 messageId, String machineId, Int32 tcpPort)
+        public MulticastMessage()
+        {
+
+        }
+
+        public MulticastMessage(UInt32 messageId, String machineId, UInt32 tcpPort)
             : base(messageId)
         {
             MachineId = machineId;
@@ -12,7 +17,7 @@ namespace LUC.DiscoveryService.Messages
             VersionOfProtocol = ProtocolVersion;
         }
 
-        public MulticastMessage(Int32 messageId, String machineId, Int32 tcpPort, Int32 receivedProtocolVersion)
+        public MulticastMessage(UInt32 messageId, String machineId, UInt32 tcpPort, UInt32 receivedProtocolVersion)
             : base(messageId)
         {
             MachineId = machineId;
@@ -20,7 +25,7 @@ namespace LUC.DiscoveryService.Messages
             VersionOfProtocol = receivedProtocolVersion;
         }
 
-        public Int32 TcpPort { get; set; }
+        public UInt32 TcpPort { get; set; }
 
         public String MachineId { get; set; }
     }

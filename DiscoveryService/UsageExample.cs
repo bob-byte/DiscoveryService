@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using Common.Logging;
 using Common.Logging.Simple;
@@ -63,19 +62,15 @@ namespace LUC.DiscoveryService
                 Console.WriteLine($"IP address {a}");
             }
 
-            ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = new ConcurrentDictionary<String, List<KeyValuePair<String, String>>>();
-            groupsSupported.TryAdd("192.168.1.100:17500", new List<KeyValuePair<String, String>>
-            {
-                { new KeyValuePair<String, String>("the-dubstack-architects-res", "SSL-Cert") },
-                { new KeyValuePair<String, String>("the-dubstack-programmers-res", "SSL-Cert2") }
-            });
+            ConcurrentDictionary<String, String> knownIps = new ConcurrentDictionary<String, String>();
+            knownIps.TryAdd("the-dubstack-engineers-res", "192.168.1.100:17500");
+            knownIps.TryAdd("the-dubstack-architects-res", "192.168.13.140:17500");
 
-            groupsSupported.TryAdd("192.168.13.140:17500", new List<KeyValuePair<String, String>>
-            {
-                { new KeyValuePair<String, String>("the-dubstack-accountant-res", "SSL-Cert3") },
-            });
+            ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
+            groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
+            groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
 
-            var serviceDiscovery = ServiceDiscovery.GetInstance(groupsSupported);
+            var serviceDiscovery = ServiceDiscovery.GetInstance(groupsSupported, knownIps);
             serviceDiscovery.Start(out _);
 
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;
@@ -91,12 +86,12 @@ namespace LUC.DiscoveryService
             };
 
             DateTime start = DateTime.Now;
-            Double intervalInMin = default;
+            Double intervalInMin = 0;
             Int32 sendForInMin = 5;
             do
             {
                 serviceDiscovery.QueryAllServices();
-                Thread.Sleep(1000);
+                Thread.Sleep(1000 * 60);
 
                 DateTime end = DateTime.Now;
                 intervalInMin = end.Subtract(start).TotalMinutes;

@@ -17,9 +17,9 @@ namespace LUC.DiscoveryService
     /// </summary>
     public class ServiceDiscovery
     {
-        private const Int32 UdpPort = 17500;
-        private const Int32 MinValueTcpPort = 17500;
-        private const Int32 MaxValueTcpPort = 17510;
+        private const UInt32 UdpPort = 17500;
+        private const UInt32 MinValueTcpPort = 17500;
+        private const UInt32 MaxValueTcpPort = 17510;
 
         [Import(typeof(ILoggingService))]
         private static readonly ILoggingService log = new LoggingService();
@@ -42,17 +42,17 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public event EventHandler<MessageEventArgs> ServiceInstanceShutdown;
 
-        private ServiceDiscovery(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = null)
-            : this(groupsSupported)
+        private ServiceDiscovery(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, String> groupsSupported = null, ConcurrentDictionary<String, String> knownIps = null)
+            : this(groupsSupported, knownIps)
         {
             Service.UseIpv4 = useIpv4;
             Service.UseIpv6 = useIpv6;
         }
 
-        private ServiceDiscovery(ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = null)
+        private ServiceDiscovery(ConcurrentDictionary<String, String> groupsSupported = null, ConcurrentDictionary<String, String> knownIps = null)
         {
             Profile = new ServiceProfile(MinValueTcpPort, MaxValueTcpPort, UdpPort,
-                Messages.Message.ProtocolVersion, groupsSupported);
+                Messages.Message.ProtocolVersion, groupsSupported, knownIps);
             Service = new Service(Profile);
             Service.QueryReceived += SendTcpMessOnQuery;
         }
@@ -71,7 +71,7 @@ namespace LUC.DiscoveryService
         /// Key is a network in a format "IP-address:port"
         /// Value is the list of name of groups, which current peer (with this key) supports
         /// </summary>
-        public ConcurrentDictionary<String, List<KeyValuePair<String, String>>> GroupsSupported
+        public ConcurrentDictionary<String, String> GroupsSupported
         {
             get => Profile.GroupsSupported;
         }
@@ -90,16 +90,16 @@ namespace LUC.DiscoveryService
             try
             {
                 Random random = new Random();
-                Byte[] bytes = parsingSsl.GetDecodedData(new TcpMessage(random.Next(0, Int32.MaxValue), e.Message.VersionOfProtocol, Profile.GroupsSupported));
+                Byte[] bytes = parsingSsl.GetDecodedData(new TcpMessage((UInt32)random.Next(0, Int32.MaxValue), (UInt32)e.Message.VersionOfProtocol, Profile.GroupsSupported, Profile.KnownIps));
 
-                if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
-                {
-                    return;
-                }
+                //if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
+                //{
+                //    return;
+                //}
 
                 var message = e.Message as MulticastMessage;
                 client = new TcpClient(e.RemoteEndPoint.AddressFamily);
-                client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, message.TcpPort);
+                client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
 
                 stream = client.GetStream();
                 stream.Write(bytes, 0, bytes.Length);
@@ -133,18 +133,18 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceDiscovery"/> class.
         /// </summary>
-        public static ServiceDiscovery GetInstance(ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = null)
+        public static ServiceDiscovery GetInstance(ConcurrentDictionary<String, String> groupsSupported = null, ConcurrentDictionary<String, String> knownIps = null)
         {
-            Lock.InitWithLock(Lock.lockService, new ServiceDiscovery(groupsSupported), ref instance);
+            Lock.InitWithLock(Lock.lockService, new ServiceDiscovery(groupsSupported, knownIps), ref instance);
             return instance;
         }
 
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceDiscovery"/> class.
         /// </summary>
-        public static ServiceDiscovery GetInstance(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported = null)
+        public static ServiceDiscovery GetInstance(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, String> groupsSupported = null, ConcurrentDictionary<String, String> knownIps = null)
         {
-            Lock.InitWithLock(Lock.lockService, new ServiceDiscovery(useIpv4, useIpv6, groupsSupported), ref instance);
+            Lock.InitWithLock(Lock.lockService, new ServiceDiscovery(useIpv4, useIpv6, groupsSupported, knownIps), ref instance);
             return instance;
         }
 

@@ -1,16 +1,14 @@
 ﻿using LUC.DiscoveryService.Messages;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Web;
+using System.Text;
 
 namespace LUC.DiscoveryService.CodingData
 {
     class ParsingTcpData : Parsing<TcpMessage>
     {
+        private readonly SupportedTcpCodingTypes supportedTypes = new SupportedTcpCodingTypes();
+
         public override Byte[] GetDecodedData(TcpMessage message)
         {
             if (message == null)
@@ -23,39 +21,47 @@ namespace LUC.DiscoveryService.CodingData
                 {
                     using (var writer = new WireWriter(stream))
                     {
-                        writer.Write((UInt32)message.VersionOfProtocol);
-                        var arrayIpNetwork = message.GroupsSupported.Keys.ToArray();
-                        writer.WriteArray(arrayIpNetwork);
-                        for (int i = 0; i < arrayIpNetwork.Length; i++)
+                        try
                         {
-                            for (int i = 0; i < length; i++)
-                            {
-                                //add to array of names of group key of value(name of Group)
-                                //add to array of certificates value of value (certificate)
-                            }
-                            //write names of groups
-                            //write certificates
-                        }
+                            writer.WriteByte(supportedTypes[PropertyInTcpMessage.MessageId]);
+                            writer.Write(message.MessageId);
 
-                        writer.Write((UInt32)message.GroupsSupported.Count);
-                        foreach (var groupSupported in message.GroupsSupported)
+                            writer.WriteByte(supportedTypes[PropertyInTcpMessage.VersionOfProtocol]);
+                            writer.Write(message.VersionOfProtocol);
+
+                            writer.WriteByte(supportedTypes[PropertyInTcpMessage.GroupsSupported]);
+                            var namesOfGroupsInGroupsSupported = message.GroupsSupported.Keys;
+                            writer.WriteEnumerable(namesOfGroupsInGroupsSupported);
+                            var certificates = message.GroupsSupported.Values;
+                            writer.WriteEnumerable(certificates);
+
+                            writer.WriteByte(supportedTypes[PropertyInTcpMessage.KnownIps]);
+                            var namesOfGroupsInKnownIps = message.KnownIps.Keys;
+                            writer.WriteEnumerable(namesOfGroupsInKnownIps);
+                            var ipNetworks = message.KnownIps.Values;
+                            writer.WriteEnumerable(ipNetworks);
+
+                            var decodedData = stream.GetBuffer();
+
+                            return decodedData;
+                        }
+                        catch (EncoderFallbackException)
                         {
-                            writer.Write(groupSupported.Key);
-                            writer.Write((UInt32)groupSupported.Value.Count);
-                            foreach (var nameOfGroups in groupSupported.Value)
-                            {
-                                writer.Write(nameOfGroups);
-                            }
+                            throw;
                         }
-
-                        var decodedData = stream.GetBuffer();
-
-                        return decodedData;
+                        catch (ArgumentException)
+                        {
+                            throw;
+                        }
+                        catch(InvalidDataException)
+                        {
+                            throw;
+                        }
                     }
                 }
             }
         }
-
+        private Object locker = new Object();
         public override TcpMessage GetEncodedData(Byte[] bytes)
         {
             if(bytes == null)
@@ -68,40 +74,54 @@ namespace LUC.DiscoveryService.CodingData
                 {
                     using (var reader = new WireReader(stream))
                     {
+                        TcpMessage message = new TcpMessage();
                         try
                         {
-                            var protocolVersion = reader.ReadUInt32();
-                            if (protocolVersion != Message.ProtocolVersion)
+                            lock (locker)
                             {
-                                throw new ArgumentException("Bad version of protocol");
-                            }
-                            List<String> arrayIpNetwork = reader.ReadArrayOfString().ToList();
-                            for (int i = 0; i < length; i++)
-                            {
-                                //read names of groups
-                                //read ceritificates
-                                //add those to dictionary
-                            }
-
-
-                            var countPeers = reader.ReadUInt32();
-                            var groupsOfEachPeer = new ConcurrentDictionary<String, List<String>>();
-                            for (Int32 i = 0; i < countPeers; i++)
-                            {
-                                var iPEndPoint = reader.ReadString();
-                                var countGroupOfCurrentPeer = reader.ReadUInt32();
-
-                                List<String> groups = new List<String>((Int32)countGroupOfCurrentPeer);
-                                for (Int32 nameGroup = 0; nameGroup < countGroupOfCurrentPeer; nameGroup++)
+                                for (var property = PropertyInTcpMessage.First; property <= PropertyInTcpMessage.Last; property++)
                                 {
-                                    groups.Add(reader.ReadString());
-                                }
-                                groupsOfEachPeer.TryAdd(iPEndPoint, groups);
-                            }
 
-                            return new TcpMessage((Int32)protocolVersion, groupsOfEachPeer);
+                                    var typeAsByte = reader.ReadByte();
+
+                                    switch (supportedTypes[typeAsByte])
+                                    {
+                                        case PropertyInTcpMessage.MessageId:
+                                            {
+                                                message.MessageId = reader.ReadUInt32();
+                                                break;
+                                            }
+                                        case PropertyInTcpMessage.VersionOfProtocol:
+                                            {
+                                                message.VersionOfProtocol = reader.ReadUInt32();
+                                                if (message.VersionOfProtocol != Message.ProtocolVersion)
+                                                {
+                                                    throw new ArgumentException("Bad version of protocol");
+                                                }
+
+                                                break;
+                                            }
+                                        case PropertyInTcpMessage.GroupsSupported:
+                                            {
+                                                message.GroupsSupported = reader.DictionaryFromMessage();
+                                                break;
+                                            }
+                                        case PropertyInTcpMessage.KnownIps:
+                                            {
+                                                message.KnownIps = reader.DictionaryFromMessage();
+                                                break;
+                                            }
+                                    }
+                                }
+
+                                return message;
+                            }
                         }
-                        catch(IOException)
+                        catch (EndOfStreamException)
+                        {
+                            throw;
+                        }
+                        catch (IOException)
                         {
                             throw;
                         }

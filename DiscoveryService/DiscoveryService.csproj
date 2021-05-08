@@ -71,7 +71,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CodingData\Parsing.cs" />
-    <Compile Include="CodingData\ParsingMulticastData.cs" />
+    <Compile Include="CodingData\ParsingUdpData.cs" />
+    <Compile Include="CodingData\PropertyInTcpMessage.cs" />
+    <Compile Include="CodingData\PropertyInUdpMessage.cs" />
+    <Compile Include="CodingData\SupportedTcpCodingTypes.cs" />
+    <Compile Include="CodingData\SupportedUdpCodingTypes.cs" />
     <Compile Include="CodingData\WireReader.cs" />
     <Compile Include="CodingData\WireWriter.cs" />
     <Compile Include="Extensions\IPExtensions\SystemErrorCode.cs" />

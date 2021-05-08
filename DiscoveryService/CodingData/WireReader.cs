@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -88,17 +88,13 @@ namespace LUC.DiscoveryService.CodingData
         {
             var buffer = new Byte[length];
             Int32 countReadBytes;
-            for (int offset = 0; length > 0; offset += countReadBytes, 
+            for (Int32 offset = 0; length > 0; offset += countReadBytes, 
                                              length -= countReadBytes, 
                                              Position += countReadBytes)
             {
                 try
                 {
                     countReadBytes = stream.Read(buffer, offset, length);
-                }
-                catch(ArgumentException)
-                {
-                    throw;
                 }
                 catch(EndOfStreamException)
                 {
@@ -164,7 +160,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <summary>
         /// Read array of rank 1
         /// ( jagged arrays not supported atm )
-        public IEnumerable<UInt32> ReadArrayOfUInt32()
+        public IEnumerable<UInt32> ReadEnumerableOfUInt32()
         {
             List<UInt32> list = new List<UInt32>();
             try
@@ -173,7 +169,7 @@ namespace LUC.DiscoveryService.CodingData
 
                 if (length > 0)
                 {
-                    for (int i = 0; i < length; i++)
+                    for (Int32 i = 0; i < length; i++)
                     {
                         list.Add(ReadUInt32());
                     }
@@ -190,7 +186,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <summary>
         /// Read array of rank 1
         /// ( jagged arrays not supported atm )
-        public IEnumerable<String> ReadArrayOfString()
+        public IEnumerable<String> ReadEnumerableOfString()
         {
             List<String> list = new List<String>();
             try
@@ -199,7 +195,7 @@ namespace LUC.DiscoveryService.CodingData
 
                 if (length > 0)
                 {
-                    for (int i = 0; i < length; i++)
+                    for (Int32 i = 0; i < length; i++)
                     {
                         list.Add(ReadString());
                     }
@@ -211,6 +207,28 @@ namespace LUC.DiscoveryService.CodingData
             }
 
             return list;
+        }
+
+
+        public ConcurrentDictionary<String, String> DictionaryFromMessage()
+        {
+            var keys = ReadEnumerableOfString().ToArray();
+            var values = ReadEnumerableOfString().ToArray();
+
+            ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
+            if (keys.Length == values.Length)
+            {
+                for (Int32 i = 0; i < keys.Length; i++)
+                {
+                    _ = groupsSupported.TryAdd(keys[i], values[i]);
+                }
+            }
+            else
+            {
+                throw new InvalidDataException();
+            }
+
+            return groupsSupported;
         }
 
         public void Dispose() =>

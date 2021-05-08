@@ -26,9 +26,10 @@ namespace LUC.DiscoveryService
         private static readonly ILoggingService log = new LoggingService();
 
         private static readonly IPAddress MulticastAddressIp4 = IPAddress.Parse("224.0.0.251");
+        private readonly IPEndPoint MulticastEndpointIp4;
+
         private static readonly IPAddress MulticastAddressIp6 = IPAddress.Parse("FF02::FB");
-        private static IPEndPoint MulticastEndpointIp6;
-        private static IPEndPoint MulticastEndpointIp4;
+        private readonly IPEndPoint MulticastEndpointIp6;
 
         private readonly List<UdpClient> udpReceivers;
         private readonly List<TcpListener> tcpReceivers;
@@ -68,8 +69,8 @@ namespace LUC.DiscoveryService
         /// </param>
         public Client(ServiceProfile profile, Boolean useIpv4, Boolean useIpv6, IEnumerable<NetworkInterface> nics)
         {
-            MulticastEndpointIp4 = new IPEndPoint(MulticastAddressIp4, profile.RunningUdpPort);
-            MulticastEndpointIp6 = new IPEndPoint(MulticastAddressIp6, profile.RunningUdpPort);
+            MulticastEndpointIp4 = new IPEndPoint(MulticastAddressIp4, (Int32)profile.RunningUdpPort);
+            MulticastEndpointIp6 = new IPEndPoint(MulticastAddressIp6, (Int32)profile.RunningUdpPort);
 
             udpReceivers = new List<UdpClient>();
             tcpReceivers = new List<TcpListener>();
@@ -79,7 +80,7 @@ namespace LUC.DiscoveryService
             {
                 udpReceiver4 = new UdpClient(AddressFamily.InterNetwork);
                 udpReceiver4.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                udpReceiver4.Client.Bind(new IPEndPoint(IPAddress.Any, profile.RunningUdpPort));
+                udpReceiver4.Client.Bind(new IPEndPoint(IPAddress.Any, (Int32)profile.RunningUdpPort));
                 udpReceivers.Add(udpReceiver4);
             }
 
@@ -88,7 +89,7 @@ namespace LUC.DiscoveryService
             {
                 udpReceiver6 = new UdpClient(AddressFamily.InterNetworkV6);
                 udpReceiver6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                udpReceiver6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, profile.RunningUdpPort));
+                udpReceiver6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, (Int32)profile.RunningUdpPort));
                 udpReceivers.Add(udpReceiver6);
             }
 
@@ -105,10 +106,10 @@ namespace LUC.DiscoveryService
                     continue;
                 }
 
-                var localEndpoint = new IPEndPoint(address, profile.RunningUdpPort);
+                var localEndpoint = new IPEndPoint(address, (Int32)profile.RunningUdpPort);
                 var senderUdp = new UdpClient(address.AddressFamily);
                 var senderTcp = new TcpClient(address.AddressFamily);
-                TcpListener receiverTcp = new TcpListener(address, profile.RunningTcpPort);
+                TcpListener receiverTcp = new TcpListener(address, (Int32)profile.RunningTcpPort);
 
                 try
                 {
@@ -185,20 +186,6 @@ namespace LUC.DiscoveryService
             });
         }
 
-        private void SetOptionsOfSocket(SocketOptionLevel socketLevel,
-            UdpClient udpSender, TcpClient tcpSender, UdpClient udpReceiver, IPEndPoint localEndpoint,
-            Object optionValueOfReceiver, Object optionValueOfSender)
-        {
-            udpReceiver.Client.SetSocketOption(socketLevel, SocketOptionName.AddMembership, optionValueOfReceiver);
-
-            tcpSender.Client.SetSocketOption(socketLevel, SocketOptionName.ReuseAddress, true);
-            udpSender.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-
-            udpSender.Client.Bind(localEndpoint);
-            udpSender.Client.SetSocketOption(socketLevel, SocketOptionName.AddMembership, optionValueOfSender);
-            udpSender.Client.SetSocketOption(socketLevel, SocketOptionName.MulticastLoopback, true);
-        }
-
         /// <summary>
         /// It sends udp messages from each address, which is initialized in this class
         /// </summary>
@@ -256,7 +243,7 @@ namespace LUC.DiscoveryService
 
                     await task.ConfigureAwait(false);
                 }
-                catch(Exception)
+                catch
                 {
                     return;
                 }
@@ -285,7 +272,7 @@ namespace LUC.DiscoveryService
 
                     await task.ConfigureAwait(false);
                 }
-                catch(Exception)
+                catch
                 {
                     return;
                 }

@@ -13,8 +13,8 @@ namespace LUC.DiscoveryService
     /// </summary>
     public class ServiceProfile
     {
-        private readonly Int32 minValueTcpPort, maxValueTcpPort;
-        private Int32 runningTcpPort;
+        private readonly UInt32 minValueTcpPort, maxValueTcpPort;
+        private UInt32 runningTcpPort;
 
         // Enforce multicast defaults, especially TTL.
         static ServiceProfile()
@@ -29,9 +29,9 @@ namespace LUC.DiscoveryService
         /// <param name="addresses">
         /// <see cref="IPAddress"/> of network interfaces of current machine 
         /// </param>
-        public ServiceProfile(Int32 minValueTcpPort, Int32 maxValueTcpPort, Int32 udpPort, 
-            Int32 protocolVersion, ConcurrentDictionary<String, List<KeyValuePair<String, String>>> groupsSupported, 
-            IEnumerable<IPAddress> addresses = null)
+        public ServiceProfile(UInt32 minValueTcpPort, UInt32 maxValueTcpPort, UInt32 udpPort, 
+            UInt32 protocolVersion, ConcurrentDictionary<String, String> groupsSupported, 
+            ConcurrentDictionary<String, String> knownIps, IEnumerable<IPAddress> addresses = null)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
             MachineId = deviceIdBuilder.GetMachineId();
@@ -42,7 +42,16 @@ namespace LUC.DiscoveryService
             }
             else
             {
-                GroupsSupported = new ConcurrentDictionary<String, List<KeyValuePair<String, String>>>();
+                GroupsSupported = new ConcurrentDictionary<String, String>();
+            }
+
+            if (knownIps != null)
+            {
+                KnownIps = knownIps;
+            }
+            else
+            {
+                KnownIps = new ConcurrentDictionary<String, String>();
             }
 
             ProtocolVersion = protocolVersion;
@@ -64,7 +73,7 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Integer.
         /// </value>
-	    public Int32 ProtocolVersion { get; }
+	    public UInt32 ProtocolVersion { get; }
 
         /// <summary>
         ///   A unique identifier for the service instance.
@@ -74,7 +83,7 @@ namespace LUC.DiscoveryService
         /// </value>
         public String MachineId { get; set; }
 
-        internal Int32 RunningTcpPort
+        internal UInt32 RunningTcpPort
         {
             get => runningTcpPort;
             set
@@ -90,11 +99,13 @@ namespace LUC.DiscoveryService
             }
         }
 
-        internal Int32 RunningUdpPort { get; }
+        internal UInt32 RunningUdpPort { get; }
 
         /// <summary>
         /// This property use in internal classes and allow to avoid strong connectivity. It is weaker, because we don't use object type DiscoveryService in the different classes
         /// </summary>
-        public ConcurrentDictionary<String, List<KeyValuePair<String, String>>> GroupsSupported { get; }
+        public ConcurrentDictionary<String, String> GroupsSupported { get; }
+
+        public ConcurrentDictionary<String, String> KnownIps { get; }
     }
 }

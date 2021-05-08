@@ -334,12 +334,12 @@ namespace LUC.DiscoveryService
         public void OnUdpMessage(object sender, UdpReceiveResult result)
         {
             // If recently received, then ignore.
-            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-            {
-                return;
-            }
+            //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+            //{
+            //    return;
+            //}
 
-            Parsing<MulticastMessage> parsing = new ParsingMulticastData();
+            Parsing<MulticastMessage> parsing = new ParsingUdpData();
             MulticastMessage message;
             try
             {
@@ -352,14 +352,14 @@ namespace LUC.DiscoveryService
                 return; // eat the exception
             }
 
-            if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion)
-                ||
-                (message.MachineId == profile.MachineId)
-                ||
-                (message.Status != MessageStatus.NoError))
-            {
-                return;
-            }
+            //if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion)
+            //    ||
+            //    (message.MachineId == profile.MachineId)
+            //    ||
+            //    (message.Status != MessageStatus.NoError))
+            //{
+            //    return;
+            //}
 
             // Dispatch the message.
             try
@@ -399,45 +399,51 @@ namespace LUC.DiscoveryService
                 {
                     if (!profile.GroupsSupported.TryAdd(group.Key, group.Value))
                     {
-                        profile.GroupsSupported.TryRemove(group.Key, out _);
-                        profile.GroupsSupported.TryAdd(group.Key, group.Value);
+                        _ = profile.GroupsSupported.TryRemove(group.Key, out _);
+                        _ = profile.GroupsSupported.TryAdd(group.Key, group.Value);
                     }
                 }
-
-                AnswerReceived.Invoke(sender, new MessageEventArgs
-                {
-                    Message = message,
-                    GroupsSupported = message.GroupsSupported
-                });
             }
+
+            if (message?.KnownIps != null)
+            {
+                foreach (var group in message.KnownIps)
+                {
+                    if (!profile.KnownIps.TryAdd(group.Key, group.Value))
+                    {
+                        _ = profile.KnownIps.TryRemove(group.Key, out _);
+                        _ = profile.KnownIps.TryAdd(group.Key, group.Value);
+                    }
+                }
+            }
+
+            AnswerReceived.Invoke(sender, new MessageEventArgs
+            {
+                Message = message,
+                GroupsSupported = message.GroupsSupported,
+                KnownIps = message.KnownIps
+            });
         }
 
         /// <summary>
-        ///   Sends udp messages
+        ///   Sends UDP messages
         /// </summary>
-        /// <param name="period">
-        /// How often to send messages
-        /// </param>
-        /// <param name="innerTokenSource">
-        /// TokenSource for cancellation task
-        /// </param>
-        /// <param name="tokenOuter">
-        /// Token of outer task, which is created in <see cref="ServiceDiscovery"/>
-        /// </param>
-        /// <returns></returns>
+        /// <returns>
+        /// <see cref="Task"/> of sending UDP message
+        /// </returns>
         public Task SendQuery()
         {
             Task taskClient = null;
 
             taskClient = Task.Run(async () =>
             {
-                while (NetworkInterface.GetIsNetworkAvailable())
+                if (IsPcConnectionToInternet())
                 {
                     try
                     {
-                        Parsing<MulticastMessage> parsing = new ParsingMulticastData();
+                        Parsing<MulticastMessage> parsing = new ParsingUdpData();
                         Random random = new Random();
-                        var messageId = random.Next(0, Int32.MaxValue);
+                        var messageId = (UInt32)random.Next(0, Int32.MaxValue);
                         var bytes = parsing.GetDecodedData(new MulticastMessage(messageId, profile.MachineId, profile.RunningTcpPort));
 
                         if(client != null)
@@ -453,6 +459,24 @@ namespace LUC.DiscoveryService
             });
 
             return taskClient;
+        }
+
+        private Boolean IsPcConnectionToInternet()
+        {
+            try
+            {
+                using(var client = new WebClient())
+                {
+                    using(var stream = client.OpenRead("http://www.google.com"))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

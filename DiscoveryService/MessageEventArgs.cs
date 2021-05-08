@@ -43,6 +43,8 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public ConcurrentDictionary<String, List<KeyValuePair<String, String>>> GroupsSupported { get; set; } // necessary to change type to ConcurrentDictionary
+        public ConcurrentDictionary<String, String> GroupsSupported { get; set; }
+
+        public ConcurrentDictionary<String, String> KnownIps { get; set; }
     }
 }

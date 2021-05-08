@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -49,8 +50,7 @@ namespace LUC.DiscoveryService.CodingData
             stream.WriteByte((Byte)(value >> 16));
             stream.WriteByte((Byte)(value >> 8));
             stream.WriteByte((Byte)value);
-            BinaryWriter writer = new BinaryWriter(stream);
-            writer.Write(value);
+
             Position += 4;
         }
 
@@ -153,7 +153,7 @@ namespace LUC.DiscoveryService.CodingData
             }
         }
 
-        public void WriteArray(IEnumerable<UInt32> enumerable)
+        public void WriteEnumerable(IEnumerable<UInt32> enumerable)
         {
             if(enumerable != null)
             {
@@ -171,7 +171,7 @@ namespace LUC.DiscoveryService.CodingData
             }
         }
 
-        public void WriteArray(IEnumerable<String> enumerable)
+        public void WriteEnumerable(IEnumerable<String> enumerable)
         {
             if (enumerable != null)
             {
@@ -187,6 +187,11 @@ namespace LUC.DiscoveryService.CodingData
             {
                 throw new ArgumentNullException(nameof(enumerable));
             }
+        }
+
+        public void WriteDictionary(ConcurrentDictionary<String, String> dictionary)
+        {
+
         }
 
         public static IEnumerable<Byte> ToBytes(BitArray bits, Boolean msb = false)
