@@ -15,15 +15,10 @@ namespace LUC.DiscoveryService.Messages
         /// </summary>
 	public UInt32 TcpPort { get; set;  };
 
-        /// <summary>
-        ///   Supported version of protocol of the remote application.
-        /// </summary>
-	public UInt32 ProtocolVersion { get; set;  };
-
         public override IWireSerialiser Read(WireReader reader)
         {
             MessageId = reader.ReadUInt32();
-            String = reader.ReadString();
+            MachineId = reader.ReadString();
 	    TcpPort = reader.ReadUInt32();
 	    ProtocolVersion = reader.ReadUInt32();
             return this;

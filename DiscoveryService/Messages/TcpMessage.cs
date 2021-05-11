@@ -7,11 +7,6 @@ namespace LUC.DiscoveryService.Messages
     public class TcpMessage : Message
     {
         /// <summary>
-        ///   Supported version of protocol of the remote application.
-        /// </summary>
-	public UInt32 ProtocolVersion { get; set;  };
-
-        /// <summary>
         ///   The list group IDs, for example:
 	///   the-light-test1-res, the-light-test2-res, etc
         /// </summary>

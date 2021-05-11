@@ -357,7 +357,7 @@ namespace LUC.DiscoveryService
             });
 
 	    // TODO:
-            //if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion)
+            //if ((message.ProtocolVersion != Messages.Message.ProtocolVersion)
             //    ||
             //    (message.MachineId == profile.MachineId)
             //    ||
