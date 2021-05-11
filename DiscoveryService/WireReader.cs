@@ -9,7 +9,7 @@ using System.Text;
 namespace LUC.DiscoveryService
 {
     /// <summary>
-    ///   Methods to read DNS wire formatted data items.
+    ///   Methods to read a wire formatted data items.
     /// </summary>
     public class WireReader
     {

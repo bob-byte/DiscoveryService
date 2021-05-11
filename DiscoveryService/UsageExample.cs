@@ -10,6 +10,28 @@ namespace LUC.DiscoveryService
     {
         private static readonly Object ttyLock = new Object();
 
+        /// <summary>
+        ///   User Groups with their SSL certificates.
+        ///   SSL should have SNI ( Server Name Indication ) feature enabled
+        ///   This allows us to tell which group we are trying to connect to, so that the server knows which certificate to use.
+        ///
+        ///   We generate SSL and key/certificate pairs for every group. These are distributed from server to user’s computers 
+        ///   which are authenticated for the buckets later.
+        ///
+        ///   These are rotated any time membership changes e.g., when someone is removed from a group/shared folder. 
+        ///   We can require both ends of the HTTPS connection to authenticate with the same certificate (the certificate for the group).
+        ///   This proves that both ends of the connection are authenticated.
+        /// </summary>
+        /// <value>
+        ///   Some unique value.
+        /// </value>
+        public ConcurrentDictionary<IPEndPoint, String> OurSupportedGroups { get; set; }
+
+        public ConcurrentDictionary<IPEndPoint, String> GroupsDiscovered { get; set; }
+
+        public ConcurrentDictionary<String, String> KnownIps { get; set; }
+
+
         private static void OnBadMessage(Object sender, Byte[] packet)
         {
             lock (ttyLock)
@@ -29,7 +51,19 @@ namespace LUC.DiscoveryService
             {
                 Console.WriteLine("=== TCP {0:O} ===", DateTime.Now);
                 Console.WriteLine(e.Message.ToString());
-                // TODO take IP and groups from the message and save them in memory.
+
+                if (e?.GroupIds != null)
+                {
+                    foreach (var group in message.GroupIds)
+                    {
+                        if (!profile.KnownIps.TryAdd(group.Key, group.Value))
+                        {
+                            // TODO: keys hould be IP:port as string
+                            _ = GroupsDiscovered.TryRemove(e.RemoteEndPoint, out _);
+                            _ = GroupsDiscovered.TryAdd(e.RemoteEndPoint, group.Value);
+                        }
+                    }
+                }
             }
         }
 

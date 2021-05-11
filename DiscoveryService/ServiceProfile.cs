@@ -73,7 +73,7 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Integer.
         /// </value>
-	    public UInt32 ProtocolVersion { get; }
+	public UInt32 ProtocolVersion { get; }
 
         /// <summary>
         ///   A unique identifier for the service instance.

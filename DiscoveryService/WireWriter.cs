@@ -6,10 +6,10 @@ using System.Net;
 using System.Text;
 using System.Collections;
 
-namespace Makaretu.Dns
+namespace LUC.DiscoveryService
 {
     /// <summary>
-    ///   Methods to write DNS wire formatted data items.
+    ///   Methods to write a wire formatted data items.
     /// </summary>
     public class WireWriter
     {
@@ -19,7 +19,6 @@ namespace Makaretu.Dns
         ///   The writer relative position within the stream.
         /// </summary>
         public int Position;
-
 
         /// <summary>
         ///   Creates a new instance of the <see cref="WireWriter"/> on the
@@ -122,5 +121,4 @@ namespace Makaretu.Dns
         }
     }
     }
-
 }
