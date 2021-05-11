@@ -68,12 +68,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CodingData\IWireSerialiser.cs" />
-    <Compile Include="CodingData\PropertyInTcpMessage.cs" />
-    <Compile Include="CodingData\PropertyInUdpMessage.cs" />
-    <Compile Include="CodingData\SupportedTcpCodingTypes.cs" />
-    <Compile Include="CodingData\SupportedUdpCodingTypes.cs" />
     <Compile Include="CodingData\WireReader.cs" />
     <Compile Include="CodingData\WireWriter.cs" />
+    <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\TcpListenerExtension.cs" />
     <Compile Include="MessageEventArgs.cs" />
     <Compile Include="Messages\MulticastMessage.cs" />
@@ -81,7 +78,6 @@
     <Compile Include="Messages\TcpMessage.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="Service.cs" />
-    <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Lock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SslTcp.cs" />

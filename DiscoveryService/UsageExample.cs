@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using Common.Logging;
 using Common.Logging.Simple;
+using LUC.DiscoveryService.Messages;
 
 namespace LUC.DiscoveryService
 {
@@ -25,9 +26,9 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public ConcurrentDictionary<IPEndPoint, String> OurSupportedGroups { get; set; }
+        public ConcurrentDictionary<String, String> OurSupportedGroups { get; set; }
 
-        public ConcurrentDictionary<IPEndPoint, String> GroupsDiscovered { get; set; }
+        public ConcurrentDictionary<String, String> GroupsDiscovered { get; set; }
 
         public ConcurrentDictionary<String, String> KnownIps { get; set; }
 
@@ -52,9 +53,9 @@ namespace LUC.DiscoveryService
                 Console.WriteLine("=== TCP {0:O} ===", DateTime.Now);
                 Console.WriteLine(e.Message.ToString());
 
-                if (e?.GroupIds != null)
+                if (e.Message is TcpMessage message)
                 {
-                    foreach (var group in message.GroupIds)
+                    foreach (var group in message.GroupsIds)
                     {
                         if (!profile.KnownIps.TryAdd(group.Key, group.Value))
                         {
