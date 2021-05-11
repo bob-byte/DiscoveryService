@@ -7,7 +7,6 @@ namespace LUC.DiscoveryService.Messages
         public const UInt32 ProtocolVersion = 1;
         public UInt32 MessageId { get; set; }
         public UInt32 VersionOfProtocol { get; set; }
-        public MessageStatus Status { get; set; }
 
         /// <summary>
         ///   Length in bytes of the object when serialised.
