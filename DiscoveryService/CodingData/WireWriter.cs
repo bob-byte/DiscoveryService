@@ -153,22 +153,10 @@ namespace LUC.DiscoveryService.CodingData
             }
         }
 
-        public void WriteEnumerable(IEnumerable<UInt32> enumerable)
+        public void WriteDictionary(ConcurrentDictionary<String, String> dict)
         {
-            if(enumerable != null)
-            {
-                var array = enumerable.ToArray();
-
-                Write((UInt32)array.Length);
-                foreach (var item in array)
-                {
-                    Write(item);
-                }
-            }
-            else
-            {
-                throw new ArgumentNullException(nameof(enumerable));
-            }
+            WriteEnumerable(dict.Keys);
+            WriteEnumerable(dict.Values);
         }
 
         public void WriteEnumerable(IEnumerable<String> enumerable)
@@ -189,14 +177,9 @@ namespace LUC.DiscoveryService.CodingData
             }
         }
 
-        public void WriteDictionary(ConcurrentDictionary<String, String> dictionary)
-        {
-
-        }
-
         public static IEnumerable<Byte> ToBytes(BitArray bits, Boolean msb = false)
         {
-            Int32 bitCount = 7;//why 7, not 8?
+            Int32 bitCount = 7;//why 7, not 8?. For ASCII
             Int32 resultByte = 0;
 
             foreach (Boolean isOne in bits)

@@ -9,6 +9,7 @@ using Makaretu.Dns;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 using System.ComponentModel.Composition;
+using System.Linq;
 
 namespace LUC.DiscoveryService
 {
@@ -25,7 +26,6 @@ namespace LUC.DiscoveryService
         private static readonly ILoggingService log = new LoggingService();
 
         private static ServiceDiscovery instance;
-        public ServiceProfile Profile { get; }
         private readonly RecentMessages sentMessages = new RecentMessages();
 
         private Boolean isDiscoveryServiceStarted = false;
@@ -65,6 +65,8 @@ namespace LUC.DiscoveryService
             Stop();
         }
 
+        public ServiceProfile Profile { get; }
+
         public Service Service { get; private set; }
 
         /// <summary>
@@ -84,25 +86,26 @@ namespace LUC.DiscoveryService
                 throw new ArgumentException("Bad format of the message");
             }
 
-            var parsingSsl = new ParsingTcpData();
             TcpClient client = null;
             NetworkStream stream = null;
             try
             {
                 Random random = new Random();
-                Byte[] bytes = parsingSsl.DecodedData(new TcpMessage((UInt32)random.Next(0, Int32.MaxValue), (UInt32)e.Message.VersionOfProtocol, Profile.GroupsSupported, Profile.KnownIps));
-
-                //if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
-                //{
-                //    return;
-                //}
 
                 var message = e.Message as MulticastMessage;
                 client = new TcpClient(e.RemoteEndPoint.AddressFamily);
                 client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
-
+                
                 stream = client.GetStream();
-                stream.Write(bytes, 0, bytes.Length);
+                var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue), 
+                    e.Message.VersionOfProtocol, Profile.GroupsSupported.Keys.ToList());
+                var bytes = tcpMess.ToByteArray();
+
+                if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
+                {
+                    return;
+                }
+                stream.WriteAsync(bytes, offset: 0, bytes.Length);
             }
             catch
             {

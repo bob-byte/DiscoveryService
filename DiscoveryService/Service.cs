@@ -31,14 +31,14 @@ namespace LUC.DiscoveryService
         [Import(typeof(ILoggingService))]
         static readonly ILoggingService log = new LoggingService();
         // 169.254.0.0/16 -- a link-local IPv4 address in accordance with RFC 3927.
-        private static readonly IPNetwork[] LinkLocalNetworks = new[] { IPNetwork.Parse("169.254.0.0/16"), IPNetwork.Parse("fe80::/10") };
+        //private static readonly IPNetwork[] LinkLocalNetworks = new[] { IPNetwork.Parse("169.254.0.0/16"), IPNetwork.Parse("fe80::/10") };
 
-        private List<NetworkInterface> knownNics = new List<NetworkInterface>();
-
+        internal static List<NetworkInterface> KnownNics { get; private set; } = new List<NetworkInterface>();
+        
         /// <summary>
         ///   Recently received messages.
         /// </summary>
-        private RecentMessages receivedMessages = new RecentMessages();
+        private readonly RecentMessages receivedMessages = new RecentMessages();
 
         /// <summary>
         ///   The multicast client.
@@ -48,9 +48,9 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Function used for listening filtered network interfaces.
         /// </summary>
-        private Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> networkInterfacesFilter;
+        private readonly Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> networkInterfacesFilter;
 
-        private ServiceProfile profile;
+        private readonly ServiceProfile profile;
 
         /// <summary>
         ///   Set the default TTLs.
@@ -128,7 +128,7 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Defaults to <b>true</b> if the OS supports it.
         /// </value>
-        public bool UseIpv4 { get; set; }
+        public Boolean UseIpv4 { get; set; }
 
         /// <summary>
         ///   Send and receive on IPv6.
@@ -136,7 +136,7 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Defaults to <b>true</b> if the OS supports it.
         /// </value>
-        public bool UseIpv6 { get; set; }
+        public Boolean UseIpv6 { get; set; }
 
         /// <summary>
         ///   Determines if received messages are checked for duplicates.
@@ -148,7 +148,7 @@ namespace LUC.DiscoveryService
         ///   When set, a message that has been received within the last minute
         ///   will be ignored.
         /// </remarks>
-        public bool IgnoreDuplicateMessages { get; set; }
+        public Boolean IgnoreDuplicateMessages { get; set; }
 
         /// <summary>
         ///   Get the network interfaces that are useable.
@@ -220,7 +220,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         public void Start()
         {
-            knownNics.Clear();
+            KnownNics.Clear();
 
             FindNetworkInterfaces();
         }
@@ -256,7 +256,7 @@ namespace LUC.DiscoveryService
                 var newNics = new List<NetworkInterface>();
                 var oldNics = new List<NetworkInterface>();
 
-                foreach (var nic in knownNics.Where(k => !currentNics.Any(n => k.Id == n.Id)))
+                foreach (var nic in KnownNics.Where(k => !currentNics.Any(n => k.Id == n.Id)))
                 {
                     oldNics.Add(nic);
 
@@ -266,7 +266,7 @@ namespace LUC.DiscoveryService
                     //}
                 }
 
-                foreach (var nic in currentNics.Where(nic => !knownNics.Any(k => k.Id == nic.Id)))
+                foreach (var nic in currentNics.Where(nic => !KnownNics.Any(k => k.Id == nic.Id)))
                 {
                     newNics.Add(nic);
 
@@ -276,13 +276,13 @@ namespace LUC.DiscoveryService
                     //}
                 }
 
-                knownNics = currentNics;
+                KnownNics = currentNics;
 
                 // Only create client if something has change.
                 if (newNics.Any() || oldNics.Any())
                 {
                     client?.Dispose();
-                    client = new Client(profile, UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(knownNics) ?? knownNics);
+                    client = new Client(profile, UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
                     client.UdpMessageReceived += OnUdpMessage;
                     client.TcpMessageReceived += OnTcpMessage;
                 }
@@ -295,9 +295,7 @@ namespace LUC.DiscoveryService
                     });
                 }
 
-                // Magic from @eshvatskyi
-                //
-                // I've seen situation when NetworkAddressChanged is not triggered 
+                // Situation has seen when NetworkAddressChanged is not triggered 
                 // (wifi off, but NIC is not disabled, wifi - on, NIC was not changed 
                 // so no event). Rebinding fixes this.
                 //
@@ -334,16 +332,17 @@ namespace LUC.DiscoveryService
         public void OnUdpMessage(object sender, UdpReceiveResult result)
         {
             // If recently received, then ignore.
-            //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-            //{
-            //    return;
-            //}
+            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+            {
+                return;
+            }
 
-            Parsing<MulticastMessage> parsing = new ParsingUdpData();
-            MulticastMessage message;
+            MulticastMessage message = new MulticastMessage();
             try
             {
-                message = parsing.EncodedData(result.Buffer);
+                message.Read(result.Buffer);
+                
+                
             }
             catch (Exception e)
             {
@@ -352,14 +351,11 @@ namespace LUC.DiscoveryService
                 return; // eat the exception
             }
 
-            //if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion)
-            //    ||
-            //    (message.MachineId == profile.MachineId)
-            //    ||
-            //    (message.Status != MessageStatus.NoError))
-            //{
-            //    return;
-            //}
+            if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion) || 
+                (message.MachineId == profile.MachineId))
+            {
+                return;
+            }
 
             // Dispatch the message.
             try
@@ -379,50 +375,16 @@ namespace LUC.DiscoveryService
         /// <param name="message">
         /// Received message
         /// </param>
-        internal void OnTcpMessage(Object sender, TcpReceiveResult receiveResult)
+        internal void OnTcpMessage(Object sender, MessageEventArgs receiveResult)
         {
-            TcpMessage message = null;
-            try
+            if(receiveResult.Message is TcpMessage message)
             {
-                Parsing<TcpMessage> parsing = new ParsingTcpData();
-                message = parsing.EncodedData(receiveResult.Buffer);
-            }
-            catch
-            {
-                MalformedMessage.Invoke(sender, receiveResult.Buffer);
-                return;
-            }
-
-            if(message?.GroupsSupported != null)
-            {
-                foreach (var group in message.GroupsSupported)
+                AnswerReceived.Invoke(sender, new MessageEventArgs
                 {
-                    if (!profile.GroupsSupported.TryAdd(group.Key, group.Value))
-                    {
-                        _ = profile.GroupsSupported.TryRemove(group.Key, out _);
-                        _ = profile.GroupsSupported.TryAdd(group.Key, group.Value);
-                    }
-                }
+                    Message = message,
+                    RemoteEndPoint = receiveResult.RemoteEndPoint
+                });
             }
-
-            if (message?.KnownIps != null)
-            {
-                foreach (var group in message.KnownIps)
-                {
-                    if (!profile.KnownIps.TryAdd(group.Key, group.Value))
-                    {
-                        _ = profile.KnownIps.TryRemove(group.Key, out _);
-                        _ = profile.KnownIps.TryAdd(group.Key, group.Value);
-                    }
-                }
-            }
-
-            AnswerReceived.Invoke(sender, new MessageEventArgs
-            {
-                Message = message,
-                GroupsSupported = message.GroupsSupported,
-                KnownIps = message.KnownIps
-            });
         }
 
         /// <summary>
@@ -433,50 +395,28 @@ namespace LUC.DiscoveryService
         /// </returns>
         public Task SendQuery()
         {
-            Task taskClient = null;
-
-            taskClient = Task.Run(async () =>
+            return Task.Run(async () =>
             {
-                if (IsPcConnectionToInternet())
+                if (NetworkInterface.GetIsNetworkAvailable())
                 {
                     try
                     {
-                        Parsing<MulticastMessage> parsing = new ParsingUdpData();
                         Random random = new Random();
-                        var messageId = (UInt32)random.Next(0, Int32.MaxValue);
-                        var bytes = parsing.DecodedData(new MulticastMessage(messageId, profile.MachineId, profile.RunningTcpPort));
+                        var mess = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), profile.MachineId, profile.RunningTcpPort);
+                        var bytes = mess.ToByteArray();
 
-                        if(client != null)
+                        if (client != null)
                         {
                             await client.SendUdpAsync(bytes).ConfigureAwait(false);
                         }
                     }
                     catch (Exception ex)
                     {
-                        //loggingService.LogError(ex, ex.Message);
+                        //loggingService.LogError(ex,ex.Message);
                     }
                 }
             });
-
-            return taskClient;
         }
 
-        private Boolean IsPcConnectionToInternet()
-        {
-            try
-            {
-                using(var client = new WebClient())
-                {
-                    using(var stream = client.OpenRead("http://www.google.com"))
-                    {
-                        return true;
-                    }
-                }
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }

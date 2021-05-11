@@ -65,7 +65,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Handle using event. Don't return NetworkInterface.GetAllNetworkInterfaces()
         /// </summary>
-        public ICollection<NetworkInterface> NetworkInterfaces => NetworkInterface.GetAllNetworkInterfaces();
+        public ICollection<NetworkInterface> NetworkInterfaces => Service.KnownNics;
 
         /// <summary>
         ///   Protocol version.
@@ -88,14 +88,8 @@ namespace LUC.DiscoveryService
             get => runningTcpPort;
             set
             {
-                if (value < minValueTcpPort || maxValueTcpPort < value)
-                {
-                    runningTcpPort = minValueTcpPort;
-                }
-                else
-                {
-                    runningTcpPort = value;
-                }
+                runningTcpPort = (value < minValueTcpPort) || (maxValueTcpPort < value) ? 
+                    minValueTcpPort : value;
             }
         }
 

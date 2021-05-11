@@ -43,8 +43,5 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public ConcurrentDictionary<String, String> GroupsSupported { get; set; }
-
-        public ConcurrentDictionary<String, String> KnownIps { get; set; }
     }
 }

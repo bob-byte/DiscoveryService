@@ -10,7 +10,7 @@ namespace LUC.DiscoveryService.CodingData
     /// <summary>
     /// Methods to read DNS wire formatted data items.
     /// </summary>
-    class WireReader : IDisposable
+    public class WireReader : IDisposable
     {
         private readonly Stream stream;
 
