@@ -5,7 +5,12 @@ namespace LUC.DiscoveryService.Messages
     public abstract class Message : IWireSerialiser
     {
         public const UInt32 ProtocolVersion = 1;
-        public UInt32 MessageId { get; set; }
+
+        /// <summary>
+        ///   Unique message identifier. It is used to detect duplicate messages.
+        /// </summary>
+	public UInt32 MessageId { get; set;  };
+
         public UInt32 VersionOfProtocol { get; set; }
 
         /// <summary>

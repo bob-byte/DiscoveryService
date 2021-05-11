@@ -7,11 +7,6 @@ namespace LUC.DiscoveryService.Messages
     public class TcpMessage : Message
     {
         /// <summary>
-        ///   Unique message identifier. It is used to detect duplicate messages.
-        /// </summary>
-	public UInt32 MessageId { get; set;  };
-
-        /// <summary>
         ///   Supported version of protocol of the remote application.
         /// </summary>
 	public UInt32 ProtocolVersion { get; set;  };

@@ -4,12 +4,6 @@ namespace LUC.DiscoveryService.Messages
 {
     public class MulticastMessage : Message
     {
-
-        /// <summary>
-        ///   Unique message identifier. It is used to detect duplicate messages.
-        /// </summary>
-	public UInt32 MessageId { get; set;  };
-
         /// <summary>
         ///   Unique machine ID within LAN.
         /// </summary>
