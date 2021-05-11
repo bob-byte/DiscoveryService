@@ -25,7 +25,9 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public ConcurrentDictionary<IPEndPoint, String> GroupsSupported { get; set; }
+        public ConcurrentDictionary<IPEndPoint, String> OurSupportedGroups { get; set; }
+
+        public ConcurrentDictionary<IPEndPoint, String> GroupsDiscovered { get; set; }
 
         public ConcurrentDictionary<String, String> KnownIps { get; set; }
 
@@ -57,8 +59,8 @@ namespace LUC.DiscoveryService
                         if (!profile.KnownIps.TryAdd(group.Key, group.Value))
                         {
                             // TODO: keys hould be IP:port as string
-                            _ = GroupsSupported.TryRemove(e.RemoteEndPoint, out _);
-                            _ = GroupsSupported.TryAdd(e.RemoteEndPoint, group.Value);
+                            _ = GroupsDiscovered.TryRemove(e.RemoteEndPoint, out _);
+                            _ = GroupsDiscovered.TryAdd(e.RemoteEndPoint, group.Value);
                         }
                     }
                 }
