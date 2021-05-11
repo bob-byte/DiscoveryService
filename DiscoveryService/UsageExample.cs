@@ -57,8 +57,8 @@ namespace LUC.DiscoveryService
                         if (!profile.KnownIps.TryAdd(group.Key, group.Value))
                         {
                             // TODO: keys hould be IP:port as string
-                            _ = GroupsSupported.TryRemove(RemoteEndPoint, out _);
-                            _ = GroupsSupported.TryAdd(RemoteEndPoint group.Value);
+                            _ = GroupsSupported.TryRemove(e.RemoteEndPoint, out _);
+                            _ = GroupsSupported.TryAdd(e.RemoteEndPoint, group.Value);
                         }
                     }
                 }

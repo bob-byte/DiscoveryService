@@ -69,7 +69,5 @@ namespace LUC.DiscoveryService.Messages
 
         /// <inheritdoc />
         public abstract void Write(WireWriter writer);
-
-        public IPEndPoint RemoteEndPoint { get; }
     }
 }
