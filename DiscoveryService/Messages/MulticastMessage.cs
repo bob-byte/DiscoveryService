@@ -27,6 +27,12 @@ namespace LUC.DiscoveryService.Messages
 
         public String MachineId { get; set; }
 
+        /// <summary>
+        ///   Read multicast message 
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
         public override IWireSerialiser Read(WireReader reader)
         {
             if (reader == null)

@@ -118,6 +118,8 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="value"/> is equal to null
         /// </exception>
+        /// <exception cref="EncoderFallbackException">
+        /// </exception>
         public void Write(String value)
         {
             if(value != null)

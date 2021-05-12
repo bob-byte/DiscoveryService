@@ -52,6 +52,12 @@ namespace LUC.DiscoveryService.CodingData
             return (Byte)value;
         }
 
+        /// <summary>
+        ///   Read unsigned integer of 32 bits
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
         public UInt32 ReadUInt32()
         {
             Int32 value;
@@ -100,6 +106,9 @@ namespace LUC.DiscoveryService.CodingData
         /// <returns>
         ///   The next N bytes.
         /// </returns>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
         public Byte[] ReadByteLengthPrefixedBytes()
         {
             Int32 length = ReadByte();
@@ -154,6 +163,9 @@ namespace LUC.DiscoveryService.CodingData
         /// <summary>
         /// Read array of rank 1
         /// ( jagged arrays not supported atm )
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
         public IEnumerable<String> ReadEnumerableOfString()
         {
             List<String> list = new List<String>();
