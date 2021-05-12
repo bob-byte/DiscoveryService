@@ -88,6 +88,12 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="reader"/> is equal to null
         /// </exception>
+        /// <exception cref="EndOfStreamException">
+        /// 
+        /// </exception>
+        /// <exception cref="IOException">
+        /// 
+        /// </exception>
         public abstract IWireSerialiser Read(CodingData.WireReader reader);
 
         /// <summary>

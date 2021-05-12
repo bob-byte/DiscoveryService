@@ -1,7 +1,6 @@
 ﻿using LUC.DiscoveryService.CodingData;
 using System;
 using System.IO;
-using System.Text;
 
 namespace LUC.DiscoveryService.Messages
 {
@@ -13,8 +12,17 @@ namespace LUC.DiscoveryService.Messages
         }
 
         /// <summary>
-        ///   Create a new instance of the <see cref="MulticastMessage"/> class.
+        /// Create a new instance of the <see cref="MulticastMessage"/> class.
         /// </summary>
+        /// <param name="messageId">
+        /// Unique message identifier. It is used to detect duplicate messages.
+        /// </param>
+        /// <param name="machineId">
+        /// Id of machine which is sending this messege
+        /// </param>
+        /// <param name="tcpPort">
+        /// TCP port which is being run in machine with <see cref="MachineId"/>
+        /// </param>
         public MulticastMessage(UInt32 messageId, String machineId, UInt32 tcpPort)
             : base(messageId)
         {
@@ -24,20 +32,16 @@ namespace LUC.DiscoveryService.Messages
         }
 
         /// <summary>
-        ///   Create a new instance of the <see cref="MulticastMessage"/> class.
+        /// TCP port which is being run in machine with <see cref="MachineId"/>
         /// </summary>
-        public MulticastMessage(UInt32 messageId, String machineId, UInt32 tcpPort, UInt32 receivedProtocolVersion)
-            : base(messageId)
-        {
-            MachineId = machineId;
-            TcpPort = tcpPort;
-            VersionOfProtocol = receivedProtocolVersion;
-        }
-
         public UInt32 TcpPort { get; set; }
 
+        /// <summary>
+        /// Id of machine which is sending this messege
+        /// </summary>
         public String MachineId { get; set; }
 
+        /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)
         {
             if (reader == null)
@@ -46,26 +50,16 @@ namespace LUC.DiscoveryService.Messages
             }
             else
             {
-                try
-                {
-                    MessageId = reader.ReadUInt32();
-                    VersionOfProtocol = reader.ReadUInt32();
-                    MachineId = reader.ReadString();
-                    TcpPort = reader.ReadUInt32();
-                }
-                catch (EndOfStreamException)
-                {
-                    throw;
-                }
-                catch (IOException)
-                {
-                    throw;
-                }
+                MessageId = reader.ReadUInt32();
+                VersionOfProtocol = reader.ReadUInt32();
+                MachineId = reader.ReadString();
+                TcpPort = reader.ReadUInt32();
 
                 return this;
             }
         }
 
+        /// <inheritdoc/>
         public override void Write(WireWriter writer)
         {
             if(writer == null)
@@ -74,22 +68,23 @@ namespace LUC.DiscoveryService.Messages
             }
             else
             {
-                    writer.Write(MessageId);
-                    writer.Write(VersionOfProtocol);
-                    writer.Write(MachineId);
-                    writer.Write(TcpPort);
+                writer.Write(MessageId);
+                writer.Write(VersionOfProtocol);
+                writer.Write(MachineId);
+                writer.Write(TcpPort);
             }
         }
 
+        /// <inheritdoc/>
         public override String ToString()
         {
             using(var writer = new StringWriter())
             {
                 writer.WriteLine("Multicast message");
                 writer.WriteLine($"MessageId = {MessageId};\n" +
-                             $"MachineId = {MachineId};\n" +
-                             $"Tcp port = {TcpPort};\n" +
-                             $"Protocol version = {VersionOfProtocol}");
+                                 $"MachineId = {MachineId};\n" +
+                                 $"Tcp port = {TcpPort};\n" +
+                                 $"Protocol version = {VersionOfProtocol}");
 
                 return writer.ToString();
             }

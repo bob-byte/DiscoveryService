@@ -66,16 +66,21 @@ namespace LUC.DiscoveryService
 
         public ServiceProfile Profile { get; }
 
+
         public Service Service { get; private set; }
 
         /// <summary>
-        /// Key is a network in a format "IP-address:port"
-        /// Value is the list of name of groups, which current peer (with this key) supports
+        /// IP address of groups which were discovered.
+        /// Key is a name of group, which current peer supports.
+        /// Value is a network in a format "IP-address:port"
         /// </summary>
-        public ConcurrentDictionary<String, String> GroupsSupported
-        {
-            get => Profile.GroupsSupported;
-        }
+        public ConcurrentDictionary<String, String> KnownIps => Profile.KnownIps;
+
+        /// <summary>
+        /// Key is a name of group, which current peer supports.
+        /// Value is a SSL certificate of group
+        /// </summary>
+        public ConcurrentDictionary<String, String> GroupsSupported => Profile.GroupsSupported;
 
         //TODO: check SSL certificate with SNI
         internal void SendTcpMessOnQuery(Object sender, MessageEventArgs e)
@@ -135,6 +140,14 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceDiscovery"/> class.
         /// </summary>
+        /// <param name="groupsSupported">
+        /// Groups which current machine supports.
+        /// Key is a network in a format "IP-address:port".
+        /// Value is the list of name of groups, which current peer (with this key) supports
+        /// </param>
+        /// <param name="knownIps">
+        /// 
+        /// </param>
         public static ServiceDiscovery GetInstance(ConcurrentDictionary<String, String> groupsSupported = null, ConcurrentDictionary<String, String> knownIps = null)
         {
             Lock.InitWithLock(Lock.lockService, new ServiceDiscovery(groupsSupported, knownIps), ref instance);

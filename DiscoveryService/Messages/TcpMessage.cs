@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 
 namespace LUC.DiscoveryService.Messages
@@ -48,22 +47,11 @@ namespace LUC.DiscoveryService.Messages
             }
             else
             {
-                try
-                {
-                    MessageId = reader.ReadUInt32();
-                    VersionOfProtocol = reader.ReadUInt32();
-                    GroupsIds = reader.ReadEnumerableOfString().ToList();
+                MessageId = reader.ReadUInt32();
+                VersionOfProtocol = reader.ReadUInt32();
+                GroupsIds = reader.ReadStringList();
 
-                    return this;
-                }
-                catch (EndOfStreamException)
-                {
-                    throw;
-                }
-                catch (IOException)
-                {
-                    throw;
-                }
+                return this;
             }
         }
 
@@ -101,18 +89,11 @@ namespace LUC.DiscoveryService.Messages
         {
             using(var writer = new StringWriter())
             {
-                try
-                {
-                    writer.WriteLine("TCP message");
-                    writer.WriteLine($"MessageId = {MessageId};\n" +
-                                     $"Protocol version = {VersionOfProtocol};");
-                    writer.WriteLine($"{nameof(GroupsIds)}:");
-                }
-                catch(IOException)
-                {
-                    throw;
-                }
+                writer.WriteLine("TCP message:");
+                writer.WriteLine($"MessageId = {MessageId};\n" +
+                                 $"Protocol version = {VersionOfProtocol};");
 
+                writer.WriteLine($"{nameof(GroupsIds)}:");
                 for (Int32 id = 0; id < GroupsIds.Count; id++)
                 {
                     if(id == GroupsIds.Count - 1)
