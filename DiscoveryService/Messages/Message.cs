@@ -9,22 +9,6 @@ namespace LUC.DiscoveryService.Messages
     {
         public const UInt32 ProtocolVersion = 1;
 
-        public Message()
-        {
-            DoNothing();
-        }
-
-        public Message(UInt32 messageId)
-        {
-            MessageId = messageId;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void DoNothing()
-        {
-            ;
-        }
-
         /// <summary>
         ///   Unique message identifier. It is used to detect duplicate messages.
         /// </summary>
