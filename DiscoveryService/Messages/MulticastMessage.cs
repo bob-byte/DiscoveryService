@@ -38,26 +38,11 @@ namespace LUC.DiscoveryService.Messages
             {
                 throw new ArgumentNullException(nameof(reader));
             }
-            else
-            {
-                try
-                {
-                    MessageId = reader.ReadUInt32();
-                    VersionOfProtocol = reader.ReadUInt32();
-                    MachineId = reader.ReadString();
-                    TcpPort = reader.ReadUInt32();
-                }
-                catch (EndOfStreamException)
-                {
-                    throw;
-                }
-                catch (IOException)
-                {
-                    throw;
-                }
-
-                return this;
-            }
+            MessageId = reader.ReadUInt32();
+            VersionOfProtocol = reader.ReadUInt32();
+            MachineId = reader.ReadString();
+            TcpPort = reader.ReadUInt32();
+            return this;
         }
 
         public override void Write(WireWriter writer)
@@ -66,28 +51,10 @@ namespace LUC.DiscoveryService.Messages
             {
                 throw new ArgumentNullException(nameof(writer));
             }
-            else
-            {
-                try
-                {
-                    writer.Write(MessageId);
-                    writer.Write(VersionOfProtocol);
-                    writer.Write(MachineId);
-                    writer.Write(TcpPort);
-                }
-                catch (EncoderFallbackException)
-                {
-                    throw;
-                }
-                catch (ArgumentException)
-                {
-                    throw;
-                }
-                catch (InvalidDataException)
-                {
-                    throw;
-                }
-            }
+            writer.Write(MessageId);
+            writer.Write(VersionOfProtocol);
+            writer.Write(MachineId);
+            writer.Write(TcpPort);
         }
 
         public override String ToString()

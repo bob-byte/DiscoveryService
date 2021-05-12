@@ -55,20 +55,12 @@ namespace LUC.DiscoveryService.CodingData
         public UInt32 ReadUInt32()
         {
             Int32 value;
-            try
-            {
-                value = ReadByte();
+            value = ReadByte();
 
-                Int32 bitInByte = 8;
-                value = value << bitInByte | ReadByte();
-                value = value << bitInByte | ReadByte();
-                value = value << bitInByte | ReadByte();
-            }
-            catch (EndOfStreamException)
-            {
-                throw;
-            }
-
+            Int32 bitInByte = 8;
+            value = value << bitInByte | ReadByte();
+            value = value << bitInByte | ReadByte();
+            value = value << bitInByte | ReadByte();
             return (UInt32)value;
         }
 
@@ -92,15 +84,7 @@ namespace LUC.DiscoveryService.CodingData
                                              length -= countReadBytes, 
                                              Position += countReadBytes)
             {
-                try
-                {
-                    countReadBytes = stream.Read(buffer, offset, length);
-                }
-                catch(EndOfStreamException)
-                {
-                    throw;
-                }
-
+                countReadBytes = stream.Read(buffer, offset, length);
                 if (countReadBytes == 0)
                 {
                     throw new EndOfStreamException();
@@ -118,15 +102,8 @@ namespace LUC.DiscoveryService.CodingData
         /// </returns>
         public Byte[] ReadByteLengthPrefixedBytes()
         {
-            try
-            {
-                Int32 length = ReadByte();
-                return ReadBytes(length);
-            }
-            catch(EndOfStreamException)
-            {
-                throw;
-            }
+            Int32 length = ReadByte();
+            return ReadBytes(length);
         }
 
         /// <summary>
@@ -163,23 +140,14 @@ namespace LUC.DiscoveryService.CodingData
         public IEnumerable<UInt32> ReadEnumerableOfUInt32()
         {
             List<UInt32> list = new List<UInt32>();
-            try
+            var length = ReadUInt32();
+            if (length > 0)
             {
-                var length = ReadUInt32();
-
-                if (length > 0)
+                for (Int32 i = 0; i < length; i++)
                 {
-                    for (Int32 i = 0; i < length; i++)
-                    {
-                        list.Add(ReadUInt32());
-                    }
+                    list.Add(ReadUInt32());
                 }
             }
-            catch (EndOfStreamException)
-            {
-                throw;
-            }
-
             return list;
         }
 
@@ -189,23 +157,14 @@ namespace LUC.DiscoveryService.CodingData
         public IEnumerable<String> ReadEnumerableOfString()
         {
             List<String> list = new List<String>();
-            try
+            var length = ReadUInt32();
+            if (length > 0)
             {
-                var length = ReadUInt32();
-
-                if (length > 0)
+            for (Int32 i = 0; i < length; i++)
                 {
-                    for (Int32 i = 0; i < length; i++)
-                    {
-                        list.Add(ReadString());
-                    }
+                    list.Add(ReadString());
                 }
             }
-            catch (EndOfStreamException)
-            {
-                throw;
-            }
-
             return list;
         }
 

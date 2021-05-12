@@ -124,23 +124,8 @@ namespace LUC.DiscoveryService.CodingData
             {
                 if (!value.Any(c => c > 0x7F))
                 {
-                    try
-                    {
-                        var bytes = Encoding.ASCII.GetBytes(value);
-                        WriteByteLengthPrefixedBytes(bytes);
-                    }
-                    catch (EncoderFallbackException)
-                    {
-                        throw;
-                    }
-                    catch (EndOfStreamException)
-                    {
-                        throw;
-                    }
-                    catch (ArgumentException)
-                    {
-                        throw;
-                    }
+                    var bytes = Encoding.ASCII.GetBytes(value);
+                    WriteByteLengthPrefixedBytes(bytes);
                 }
                 else
                 {
