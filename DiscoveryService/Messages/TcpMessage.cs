@@ -9,11 +9,6 @@ namespace LUC.DiscoveryService.Messages
 {
     public class TcpMessage : Message
     {
-        public TcpMessage()
-        {
-            DoNothing();
-        }
-
         public TcpMessage(UInt32 messageId, UInt32 receivedProcolVersion, List<String> groupsIds)
             : base(messageId)
         {

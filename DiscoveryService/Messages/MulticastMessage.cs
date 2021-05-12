@@ -7,11 +7,6 @@ namespace LUC.DiscoveryService.Messages
 {
     public class MulticastMessage : Message
     {
-        public MulticastMessage()
-        {
-            DoNothing();
-        }
-
         public MulticastMessage(UInt32 messageId, String machineId, UInt32 tcpPort)
             : base(messageId)
         {
