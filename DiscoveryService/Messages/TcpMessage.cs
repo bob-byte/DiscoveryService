@@ -11,16 +11,33 @@ namespace LUC.DiscoveryService.Messages
     {
         public TcpMessage()
         {
-            DoNothing();
+            ;
         }
 
+        /// <summary>
+        ///   Create a new instance of the <see cref="TcpMessage"/> class.
+        /// </summary>
+        /// <param name="messageId">
+        ///   Unique message identifier. It is used to detect duplicate messages.
+        /// </param>
         public TcpMessage(UInt32 messageId, UInt32 receivedProcolVersion, List<String> groupsIds)
             : base(messageId)
         {
-            GroupsIds = groupsIds;
+            if(groupsIds == null)
+            {
+                GroupsIds = new List<String>();
+            }
+            else
+            {
+                GroupsIds = groupsIds;
+            }
+
             VersionOfProtocol = receivedProcolVersion;
         }
 
+        /// <summary>
+        /// Names of groups
+        /// </summary>
         public List<String> GroupsIds { get; set; }
 
         public override IWireSerialiser Read(WireReader reader)
@@ -50,6 +67,22 @@ namespace LUC.DiscoveryService.Messages
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="writer"></param>
+        /// <exception cref="ArgumentNullException">
+        /// 
+        /// </exception>
+        /// <exception cref="EncoderFallbackException">
+        /// 
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// 
+        /// </exception>
+        /// <exception cref="InvalidDataException">
+        /// 
+        /// </exception>
         public override void Write(WireWriter writer)
         {
             if (writer == null)
@@ -58,24 +91,9 @@ namespace LUC.DiscoveryService.Messages
             }
             else
             {
-                try
-                {
-                    writer.Write(MessageId);
-                    writer.Write(VersionOfProtocol);
-                    writer.WriteEnumerable(GroupsIds);
-                }
-                catch (EncoderFallbackException)
-                {
-                    throw;
-                }
-                catch (ArgumentException)
-                {
-                    throw;
-                }
-                catch (InvalidDataException)
-                {
-                    throw;
-                }
+                writer.Write(MessageId);
+                writer.Write(VersionOfProtocol);
+                writer.WriteEnumerable(GroupsIds);
             }
         }
 
@@ -83,13 +101,28 @@ namespace LUC.DiscoveryService.Messages
         {
             using(var writer = new StringWriter())
             {
-                writer.WriteLine("TCP message\n");
-                writer.Write($"MessageId = {MessageId};\n" +
-                             $"Protocol version = {VersionOfProtocol}\n");
-
-                foreach (var groupId in GroupsIds)
+                try
                 {
-                    writer.Write($"{groupId};\n");
+                    writer.WriteLine("TCP message");
+                    writer.WriteLine($"MessageId = {MessageId};\n" +
+                                     $"Protocol version = {VersionOfProtocol};");
+                    writer.WriteLine($"{nameof(GroupsIds)}:");
+                }
+                catch(IOException)
+                {
+                    throw;
+                }
+
+                for (Int32 id = 0; id < GroupsIds.Count; id++)
+                {
+                    if(id == GroupsIds.Count - 1)
+                    {
+                        writer.WriteLine($"{GroupsIds[id]}");
+                    }
+                    else
+                    {
+                        writer.WriteLine($"{GroupsIds[id]};");
+                    }
                 }
 
                 return writer.ToString();

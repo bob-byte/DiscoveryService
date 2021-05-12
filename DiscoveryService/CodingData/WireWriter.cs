@@ -32,6 +32,9 @@ namespace LUC.DiscoveryService.CodingData
         /// <summary>
         ///   Write a byte.
         /// </summary>
+        /// <param name="value">
+        /// Value to write
+        /// </param>
         public void WriteByte(Byte value)
         {
             stream.WriteByte(value);
@@ -60,6 +63,9 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="bytes">
         ///   A sequence of bytes to write.
         /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="bytes"/> is equal to null
+        /// </exception>
         public void WriteBytes(Byte[] bytes)
         {
             if(bytes != null)
@@ -118,29 +124,17 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="value"/> is equal to null
         /// </exception>
+        /// <exception cref="EncoderFallbackException">
+        /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
+        /// </exception>
         public void Write(String value)
         {
             if(value != null)
             {
                 if (!value.Any(c => c > 0x7F))
                 {
-                    try
-                    {
-                        var bytes = Encoding.ASCII.GetBytes(value);
-                        WriteByteLengthPrefixedBytes(bytes);
-                    }
-                    catch (EncoderFallbackException)
-                    {
-                        throw;
-                    }
-                    catch (EndOfStreamException)
-                    {
-                        throw;
-                    }
-                    catch (ArgumentException)
-                    {
-                        throw;
-                    }
+                    var bytes = Encoding.ASCII.GetBytes(value);
+                    WriteByteLengthPrefixedBytes(bytes);
                 }
                 else
                 {
@@ -153,12 +147,15 @@ namespace LUC.DiscoveryService.CodingData
             }
         }
 
-        public void WriteDictionary(ConcurrentDictionary<String, String> dict)
-        {
-            WriteEnumerable(dict.Keys);
-            WriteEnumerable(dict.Values);
-        }
-
+        /// <summary>
+        /// Writes enumerable of data
+        /// </summary>
+        /// <param name="enumerable">
+        /// Enumerable to write
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="enumerable"/> is equal to null
+        /// </exception>
         public void WriteEnumerable(IEnumerable<String> enumerable)
         {
             if (enumerable != null)
@@ -174,34 +171,6 @@ namespace LUC.DiscoveryService.CodingData
             else
             {
                 throw new ArgumentNullException(nameof(enumerable));
-            }
-        }
-
-        public static IEnumerable<Byte> ToBytes(BitArray bits, Boolean msb = false)
-        {
-            Int32 bitCount = 7;//why 7, not 8?. For ASCII
-            Int32 resultByte = 0;
-
-            foreach (Boolean isOne in bits)
-            {
-                if(isOne)
-                {
-                    resultByte |= msb ? 1 << bitCount : 1 << (7 - bitCount);
-                }
-
-                if(bitCount == 0)
-                {
-                    yield return (Byte)resultByte;
-
-                    bitCount = 8;
-                    resultByte = 0;
-                }
-                bitCount = 0;
-            }
-
-            if(bitCount < 7)
-            {
-                yield return (Byte)resultByte;
             }
         }
 

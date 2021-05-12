@@ -5,7 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Messages
 {
     /// <summary>
     ///   Maintains a sequence of recent messages.

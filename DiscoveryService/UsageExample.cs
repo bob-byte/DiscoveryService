@@ -53,18 +53,18 @@ namespace LUC.DiscoveryService
                 Console.WriteLine("=== TCP {0:O} ===", DateTime.Now);
                 Console.WriteLine(e.Message.ToString());
 
-                if (e.Message is TcpMessage message)
-                {
-                    foreach (var group in message.GroupsIds)
-                    {
-                        if (!profile.KnownIps.TryAdd(group.Key, group.Value))
-                        {
-                            // TODO: keys hould be IP:port as string
-                            _ = GroupsDiscovered.TryRemove(e.RemoteEndPoint, out _);
-                            _ = GroupsDiscovered.TryAdd(e.RemoteEndPoint, group.Value);
-                        }
-                    }
-                }
+                //if (e.Message is TcpMessage message)
+                //{
+                //    foreach (var group in message.GroupsIds)
+                //    {
+                //        if (!profile.KnownIps.TryAdd(group.Key, group.Value))
+                //        {
+                //            // TODO: keys hould be IP:port as string
+                //            _ = GroupsDiscovered.TryRemove(e.RemoteEndPoint, out _);
+                //            _ = GroupsDiscovered.TryAdd(e.RemoteEndPoint, group.Value);
+                //        }
+                //    }
+                //}
             }
         }
 

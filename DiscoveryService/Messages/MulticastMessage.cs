@@ -9,9 +9,12 @@ namespace LUC.DiscoveryService.Messages
     {
         public MulticastMessage()
         {
-            DoNothing();
+            ;
         }
 
+        /// <summary>
+        ///   Create a new instance of the <see cref="MulticastMessage"/> class.
+        /// </summary>
         public MulticastMessage(UInt32 messageId, String machineId, UInt32 tcpPort)
             : base(messageId)
         {
@@ -20,6 +23,9 @@ namespace LUC.DiscoveryService.Messages
             VersionOfProtocol = ProtocolVersion;
         }
 
+        /// <summary>
+        ///   Create a new instance of the <see cref="MulticastMessage"/> class.
+        /// </summary>
         public MulticastMessage(UInt32 messageId, String machineId, UInt32 tcpPort, UInt32 receivedProtocolVersion)
             : base(messageId)
         {
@@ -68,25 +74,10 @@ namespace LUC.DiscoveryService.Messages
             }
             else
             {
-                try
-                {
                     writer.Write(MessageId);
                     writer.Write(VersionOfProtocol);
                     writer.Write(MachineId);
                     writer.Write(TcpPort);
-                }
-                catch (EncoderFallbackException)
-                {
-                    throw;
-                }
-                catch (ArgumentException)
-                {
-                    throw;
-                }
-                catch (InvalidDataException)
-                {
-                    throw;
-                }
             }
         }
 
@@ -94,11 +85,11 @@ namespace LUC.DiscoveryService.Messages
         {
             using(var writer = new StringWriter())
             {
-                writer.WriteLine("Multicast message\n");
-                writer.Write($"MessageId = {MessageId};\n" +
+                writer.WriteLine("Multicast message");
+                writer.WriteLine($"MessageId = {MessageId};\n" +
                              $"MachineId = {MachineId};\n" +
                              $"Tcp port = {TcpPort};\n" +
-                             $"Protocol version = {VersionOfProtocol}\n");
+                             $"Protocol version = {VersionOfProtocol}");
 
                 return writer.ToString();
             }

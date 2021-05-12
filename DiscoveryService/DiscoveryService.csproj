@@ -49,9 +49,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>bin\Debug\LUC.Services.Implementation.dll</HintPath>
     </Reference>
-    <Reference Include="Makaretu.Dns, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\UDPtest\packages\Makaretu.Dns.2.0.1\lib\net45\Makaretu.Dns.dll</HintPath>
-    </Reference>
     <Reference Include="SimpleBase, Version=1.3.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\UDPtest\packages\SimpleBase.1.3.1\lib\net45\SimpleBase.dll</HintPath>
     </Reference>
@@ -77,6 +74,8 @@
     <Compile Include="Messages\Message.cs" />
     <Compile Include="Messages\TcpMessage.cs" />
     <Compile Include="Client.cs" />
+    <Compile Include="Messages\RecentMessages.cs" />
+    <Compile Include="NetworkInterfaceEventArgs.cs" />
     <Compile Include="Service.cs" />
     <Compile Include="Lock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -87,12 +86,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\net-mdns-master\src\Mdns.csproj">
-      <Project>{f3c81c57-c283-4e07-b765-deabcfb22136}</Project>
-      <Name>Mdns</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

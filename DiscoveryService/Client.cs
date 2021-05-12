@@ -180,6 +180,7 @@ namespace LUC.DiscoveryService
                 foreach (var tcpReceiver in tcpReceivers)
                 {
                     tcpReceiver.Start();
+                    
                     ListenTcp(tcpReceiver);
                 }
             });

@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Messages;
-using Makaretu.Dns;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 using System.ComponentModel.Composition;
@@ -101,10 +100,10 @@ namespace LUC.DiscoveryService
                     e.Message.VersionOfProtocol, Profile.GroupsSupported.Keys.ToList());
                 var bytes = tcpMess.ToByteArray();
 
-                if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
-                {
-                    return;
-                }
+                //if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
+                //{
+                //    return;
+                //}
                 stream.WriteAsync(bytes, offset: 0, bytes.Length);
             }
             catch

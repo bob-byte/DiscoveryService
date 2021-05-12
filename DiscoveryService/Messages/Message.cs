@@ -1,7 +1,7 @@
 ﻿using LUC.DiscoveryService.CodingData;
 using System;
 using System.IO;
-using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace LUC.DiscoveryService.Messages
 {
@@ -11,18 +11,18 @@ namespace LUC.DiscoveryService.Messages
 
         public Message()
         {
-            DoNothing();
+            ;
         }
 
+        /// <summary>
+        ///   Create a new instance of the <see cref="Message"/> class.
+        /// </summary>
+        /// <param name="messageId">
+        ///   Unique message identifier. It is used to detect duplicate messages.
+        /// </param>
         public Message(UInt32 messageId)
         {
             MessageId = messageId;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void DoNothing()
-        {
-            ;
         }
 
         /// <summary>
@@ -55,6 +55,9 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="buffer">
         ///   The source for the Message object.
         /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="buffer"/> is equal to null
+        /// </exception>
         public IWireSerialiser Read(Byte[] buffer) =>
             Read(buffer, offset: 0, buffer.Length);
 
@@ -70,6 +73,9 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="count">
         ///   The number of bytes in the <paramref name="buffer"/>.
         /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="buffer"/> is equal to null
+        /// </exception>
         public IWireSerialiser Read(Byte[] buffer, Int32 offset, Int32 count)
         {
             using(var stream = new MemoryStream(buffer, offset, count))
@@ -79,6 +85,9 @@ namespace LUC.DiscoveryService.Messages
         }
 
         /// <inheritdoc/>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="reader"/> is equal to null
+        /// </exception>
         public abstract IWireSerialiser Read(CodingData.WireReader reader);
 
         /// <summary>
@@ -102,10 +111,25 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="stream">
         ///   The destination for the Message object.
         /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="writer"/> is equal to null
+        /// </exception>
+        /// <exception cref="EncoderFallbackException">
+        /// 
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        /// 
+        /// </exception>
+        /// <exception cref="InvalidDataException">
+        /// 
+        /// </exception>
         public void Write(Stream stream) =>
             Write(new WireWriter(stream));
 
         /// <inheritdoc/>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="writer"/> is equal to null
+        /// </exception>
         public abstract void Write(WireWriter writer);
     }
 }

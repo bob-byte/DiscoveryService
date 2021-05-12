@@ -10,7 +10,6 @@ using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
-using Makaretu.Dns;
 
 namespace LUC.DiscoveryService
 {
@@ -51,18 +50,6 @@ namespace LUC.DiscoveryService
         private readonly Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> networkInterfacesFilter;
 
         private readonly ServiceProfile profile;
-
-        /// <summary>
-        ///   Set the default TTLs.
-        /// </summary>
-        /// <seealso cref="ResourceRecord.DefaultTTL"/>
-        /// <seealso cref="ResourceRecord.DefaultHostTTL"/>
-        static Service()
-        {
-            // https://tools.ietf.org/html/rfc6762 section 10
-            ResourceRecord.DefaultTTL = TimeSpan.FromMinutes(75);
-            ResourceRecord.DefaultHostTTL = TimeSpan.FromSeconds(120);
-        }
 
         /// <summary>
         ///   Raised when any service sends a query.
@@ -332,10 +319,10 @@ namespace LUC.DiscoveryService
         public void OnUdpMessage(object sender, UdpReceiveResult result)
         {
             // If recently received, then ignore.
-            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-            {
-                return;
-            }
+            //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+            //{
+            //    return;
+            //}
 
             MulticastMessage message = new MulticastMessage();
             try
@@ -351,11 +338,11 @@ namespace LUC.DiscoveryService
                 return; // eat the exception
             }
 
-            if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion) || 
-                (message.MachineId == profile.MachineId))
-            {
-                return;
-            }
+            //if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion) || 
+            //    (message.MachineId == profile.MachineId))
+            //{
+            //    return;
+            //}
 
             // Dispatch the message.
             try

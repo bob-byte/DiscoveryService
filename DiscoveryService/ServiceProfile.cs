@@ -34,7 +34,7 @@ namespace LUC.DiscoveryService
             ConcurrentDictionary<String, String> knownIps, IEnumerable<IPAddress> addresses = null)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
-            MachineId = deviceIdBuilder.GetMachineId();
+            MachineId = deviceIdBuilder.MachineId();
 
             if(groupsSupported != null)
             {

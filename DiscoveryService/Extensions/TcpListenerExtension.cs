@@ -24,7 +24,7 @@ namespace LUC.DiscoveryService.Extensions
                 TcpMessage message = new TcpMessage();
                 message.Read(new CodingData.WireReader(stream));
 
-                MessageEventArgs receiveResult = default;
+                MessageEventArgs receiveResult = new MessageEventArgs();
                 if (client.Client.RemoteEndPoint is IPEndPoint iPEndPoint)
                 {
                     receiveResult.Message = message;
