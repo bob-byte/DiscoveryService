@@ -52,16 +52,8 @@ namespace LUC.DiscoveryService
 
         private readonly ServiceProfile profile;
 
-        /// <summary>
-        ///   Set the default TTLs.
-        /// </summary>
-        /// <seealso cref="ResourceRecord.DefaultTTL"/>
-        /// <seealso cref="ResourceRecord.DefaultHostTTL"/>
         static Service()
         {
-            // https://tools.ietf.org/html/rfc6762 section 10
-            ResourceRecord.DefaultTTL = TimeSpan.FromMinutes(75);
-            ResourceRecord.DefaultHostTTL = TimeSpan.FromSeconds(120);
         }
 
         /// <summary>

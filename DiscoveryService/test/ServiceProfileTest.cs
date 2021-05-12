@@ -32,16 +32,6 @@ namespace LUC.DiscoveryService
         }
 
         [TestMethod]
-        public void ResourceRecords()
-        {
-            var service = new ServiceProfile("x", "_sdtest._udp", 1024, new[] { IPAddress.Loopback });
-
-            Assert.IsTrue(service.Resources.OfType<SRVRecord>().Any());
-            Assert.IsTrue(service.Resources.OfType<TXTRecord>().Any());
-            Assert.IsTrue(service.Resources.OfType<ARecord>().Any());
-        }
-
-        [TestMethod]
         public void Addresses_Default()
         {
             var service = new ServiceProfile("x", "_sdtest._udp", 1024);
