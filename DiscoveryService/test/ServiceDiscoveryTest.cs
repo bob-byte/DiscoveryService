@@ -424,8 +424,6 @@ namespace LUC.DiscoveryService
                     foreach (var answer in answers)
                     {
                         Assert.AreEqual(arpaAddress, answer.Name);
-                        Assert.IsTrue(answer.TTL > TimeSpan.Zero);
-                        Assert.AreEqual(DnsClass.IN, answer.Class);
                     }
                 }
             }

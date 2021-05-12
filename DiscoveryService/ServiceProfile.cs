@@ -16,7 +16,6 @@ namespace LUC.DiscoveryService
         private readonly UInt32 minValueTcpPort, maxValueTcpPort;
         private UInt32 runningTcpPort;
 
-        // Enforce multicast defaults, especially TTL.
         static ServiceProfile()
         {
             // Make sure MulticastService is inited.
