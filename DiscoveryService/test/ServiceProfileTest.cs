@@ -32,16 +32,6 @@ namespace LUC.DiscoveryService
         }
 
         [TestMethod]
-        public void ResourceRecords()
-        {
-            var service = new ServiceProfile("x", "_sdtest._udp", 1024, new[] { IPAddress.Loopback });
-
-            Assert.IsTrue(service.Resources.OfType<SRVRecord>().Any());
-            Assert.IsTrue(service.Resources.OfType<TXTRecord>().Any());
-            Assert.IsTrue(service.Resources.OfType<ARecord>().Any());
-        }
-
-        [TestMethod]
         public void Addresses_Default()
         {
             var service = new ServiceProfile("x", "_sdtest._udp", 1024);
@@ -86,14 +76,6 @@ namespace LUC.DiscoveryService
             var txt = service.Resources.OfType<TXTRecord>().First();
             Assert.AreEqual(service.FullyQualifiedName, txt.Name);
             CollectionAssert.Contains(txt.Strings, "a=1");
-        }
-
-        [TestMethod]
-        public void TTLs()
-        {
-            var service = new ServiceProfile("x", "_sdtest._udp", 1024);
-            Assert.AreEqual(TimeSpan.FromMinutes(75), service.Resources.OfType<TXTRecord>().First().TTL);
-            Assert.AreEqual(TimeSpan.FromSeconds(120), service.Resources.OfType<AddressRecord>().First().TTL);
         }
 
         [TestMethod]

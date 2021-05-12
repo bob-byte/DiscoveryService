@@ -424,33 +424,12 @@ namespace LUC.DiscoveryService
                     foreach (var answer in answers)
                     {
                         Assert.AreEqual(arpaAddress, answer.Name);
-                        Assert.IsTrue(answer.TTL > TimeSpan.Zero);
-                        Assert.AreEqual(DnsClass.IN, answer.Class);
                     }
                 }
             }
             finally
             {
                 mdns.Stop();
-            }
-        }
-
-        [TestMethod]
-        public void ResourceRecords()
-        {
-            var profile = new ServiceProfile("me", "_myservice._udp", 1234, new IPAddress[] { IPAddress.Loopback });
-            profile.Subtypes.Add("apiv2");
-            profile.AddProperty("someprop", "somevalue");
-
-            using (var sd = new ServiceDiscovery())
-            {
-                sd.Advertise(profile);
-
-                var resourceRecords = sd.NameServer.Catalog.Values.SelectMany(node => node.Resources);
-                foreach (var r in resourceRecords)
-                {
-                    Console.WriteLine(r.ToString());
-                }
             }
         }
 
@@ -468,40 +447,6 @@ namespace LUC.DiscoveryService
                 {
                     done.Set();
                 }
-            };
-            try
-            {
-                using (var sd = new ServiceDiscovery(mdns))
-                {
-                    mdns.NetworkInterfaceDiscovered += (s, e) => sd.Announce(service);
-                    mdns.Start();
-                    Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(3)), "announce timeout");
-                }
-            }
-            finally
-            {
-                mdns.Stop();
-            }
-        }
-
-        [TestMethod]
-        public void Announce_ContainsResourceRecords()
-        {
-            var service = new ServiceProfile("z", "_sdtest-4._udp", 1024, new[] { IPAddress.Loopback });
-            var done = new ManualResetEvent(false);
-
-            var mdns = new MulticastService();
-            mdns.AnswerReceived += (s, e) =>
-            {
-                var msg = e.Message;
-                foreach (var r in service.Resources)
-                {
-                    if (!msg.Answers.Contains(r))
-                    {
-                        return;
-                    }
-                }
-                done.Set();
             };
             try
             {

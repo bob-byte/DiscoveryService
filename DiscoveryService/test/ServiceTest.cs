@@ -181,7 +181,6 @@ namespace LUC.DiscoveryService
                 var a = (ARecord)response.Answers[0];
                 Assert.AreEqual(IPAddress.Parse("127.1.1.1"), a.Address);
                 Assert.AreEqual(service, a.Name);
-                Assert.AreEqual(TimeSpan.FromSeconds(10), a.TTL);
             }
         }
 
