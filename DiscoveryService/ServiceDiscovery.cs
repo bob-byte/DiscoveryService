@@ -102,9 +102,10 @@ namespace LUC.DiscoveryService
                 
                 stream = client.GetStream();
                 var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue), 
-                    e.Message.VersionOfProtocol, Profile.GroupsSupported.Keys.ToList());
+                    e.Message.ProtocolVersion, Profile.GroupsSupported.Keys.ToList());
                 var bytes = tcpMess.ToByteArray();
 
+                // TODO
                 //if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
                 //{
                 //    return;

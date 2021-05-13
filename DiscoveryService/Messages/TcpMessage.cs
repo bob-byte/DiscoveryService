@@ -31,7 +31,7 @@ namespace LUC.DiscoveryService.Messages
                 GroupsIds = groupsIds;
             }
 
-            VersionOfProtocol = receivedProcolVersion;
+            ProtocolVersion = receivedProcolVersion;
         }
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace LUC.DiscoveryService.Messages
             else
             {
                 MessageId = reader.ReadUInt32();
-                VersionOfProtocol = reader.ReadUInt32();
+                ProtocolVersion = reader.ReadUInt32();
                 GroupsIds = reader.ReadStringList();
 
                 return this;
@@ -80,7 +80,7 @@ namespace LUC.DiscoveryService.Messages
             else
             {
                 writer.Write(MessageId);
-                writer.Write(VersionOfProtocol);
+                writer.Write(ProtocolVersion);
                 writer.WriteEnumerable(GroupsIds);
             }
         }
@@ -91,7 +91,7 @@ namespace LUC.DiscoveryService.Messages
             {
                 writer.WriteLine("TCP message:");
                 writer.WriteLine($"MessageId = {MessageId};\n" +
-                                 $"Protocol version = {VersionOfProtocol};");
+                                 $"Protocol version = {ProtocolVersion};");
 
                 writer.WriteLine($"{nameof(GroupsIds)}:");
                 for (Int32 id = 0; id < GroupsIds.Count; id++)

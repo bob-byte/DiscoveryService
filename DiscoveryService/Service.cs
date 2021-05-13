@@ -318,6 +318,7 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public void OnUdpMessage(object sender, UdpReceiveResult result)
         {
+            // TODO
             // If recently received, then ignore.
             //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
             //{
@@ -328,17 +329,16 @@ namespace LUC.DiscoveryService
             try
             {
                 message.Read(result.Buffer);
-                
-                
             }
             catch (Exception e)
             {
                 //log.LogError("Received malformed message", e);
-                MalformedMessage.Invoke(sender, result.Buffer);
+                MalformedMessage?.Invoke(sender, result.Buffer);
                 return; // eat the exception
             }
 
-            //if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion) || 
+            // TODO
+            //if ((message.ProtocolVersion != Messages.Message.ProtocolVersion) || 
             //    (message.MachineId == profile.MachineId))
             //{
             //    return;
@@ -366,7 +366,7 @@ namespace LUC.DiscoveryService
         {
             if(receiveResult.Message is TcpMessage message)
             {
-                AnswerReceived.Invoke(sender, new MessageEventArgs
+                AnswerReceived?.Invoke(sender, new MessageEventArgs
                 {
                     Message = message,
                     RemoteEndPoint = receiveResult.RemoteEndPoint

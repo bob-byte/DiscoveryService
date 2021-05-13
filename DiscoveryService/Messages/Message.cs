@@ -33,7 +33,7 @@ namespace LUC.DiscoveryService.Messages
         /// <summary>
         ///   Supported version of protocol of the remote application.
         /// </summary>
-        public UInt32 VersionOfProtocol { get; set; }
+        public UInt32 ProtocolVersion { get; set; }
 
         /// <summary>
         ///   Length in bytes of the object when serialised.

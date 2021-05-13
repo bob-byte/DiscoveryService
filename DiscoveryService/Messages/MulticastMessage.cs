@@ -23,12 +23,12 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="tcpPort">
         /// TCP port which is being run in machine with <see cref="MachineId"/>
         /// </param>
-        public MulticastMessage(UInt32 messageId, String machineId, UInt32 tcpPort)
+        public MulticastMessage(UInt32 protocolVersion, UInt32 messageId, String machineId, UInt32 tcpPort)
             : base(messageId)
         {
             MachineId = machineId;
             TcpPort = tcpPort;
-            VersionOfProtocol = ProtocolVersion;
+            ProtocolVersion = protocolVersion;
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace LUC.DiscoveryService.Messages
             else
             {
                 MessageId = reader.ReadUInt32();
-                VersionOfProtocol = reader.ReadUInt32();
+                ProtocolVersion = reader.ReadUInt32();
                 MachineId = reader.ReadString();
                 TcpPort = reader.ReadUInt32();
 
@@ -69,7 +69,7 @@ namespace LUC.DiscoveryService.Messages
             else
             {
                 writer.Write(MessageId);
-                writer.Write(VersionOfProtocol);
+                writer.Write(ProtocolVersion);
                 writer.Write(MachineId);
                 writer.Write(TcpPort);
             }
@@ -84,7 +84,7 @@ namespace LUC.DiscoveryService.Messages
                 writer.WriteLine($"MessageId = {MessageId};\n" +
                                  $"MachineId = {MachineId};\n" +
                                  $"Tcp port = {TcpPort};\n" +
-                                 $"Protocol version = {VersionOfProtocol}");
+                                 $"Protocol version = {ProtocolVersion}");
 
                 return writer.ToString();
             }
