@@ -19,4 +19,7 @@ TODO
 
 * to make sure TCP socket options are working ok
 
+* in case ip or port of "known IP" changes, we have to remove that IP from knownIPs and let DS to discover the new address on the next check
+  KAD request is supposed to raise exception if it fails to connect.
+
 

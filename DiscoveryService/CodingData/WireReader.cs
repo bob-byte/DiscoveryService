@@ -149,7 +149,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EndOfStreamException">
         ///   When no more data is available.
         /// </exception>
-        public List<String> ReadStringList()
+        public List<String> ReadListofStrings()
         {
             List<String> list = new List<String>();
             var length = ReadUInt32();
