@@ -6,7 +6,6 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
@@ -14,7 +13,7 @@ using LUC.Services.Implementation;
 namespace LUC.DiscoveryService
 {
     /// <summary>
-    ///   Muticast LightUpon.Cloud Service.
+    ///   LightUpon.Cloud Service.
     /// </summary>
     /// <remarks>
     ///   Sends UDP queries via the multicast mechachism
@@ -28,28 +27,23 @@ namespace LUC.DiscoveryService
     public class Service
     {
         [Import(typeof(ILoggingService))]
-        static readonly ILoggingService log = new LoggingService();
-        // 169.254.0.0/16 -- a link-local IPv4 address in accordance with RFC 3927.
-        //private static readonly IPNetwork[] LinkLocalNetworks = new[] { IPNetwork.Parse("169.254.0.0/16"), IPNetwork.Parse("fe80::/10") };
-
-        internal static List<NetworkInterface> KnownNics { get; private set; } = new List<NetworkInterface>();
+        private static readonly ILoggingService log = new LoggingService();
         
         /// <summary>
         ///   Recently received messages.
         /// </summary>
         private readonly RecentMessages receivedMessages = new RecentMessages();
 
-        /// <summary>
-        ///   The multicast client.
-        /// </summary>
         private Client client;
+
+        private readonly String machineId;
+        private readonly UInt32 udpPort;
+        private UInt32 tcpPort;
 
         /// <summary>
         ///   Function used for listening filtered network interfaces.
         /// </summary>
         private readonly Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> networkInterfacesFilter;
-
-        private readonly ServiceProfile profile;
 
         /// <summary>
         ///   Raised when any service sends a query.
@@ -93,14 +87,24 @@ namespace LUC.DiscoveryService
         public event EventHandler<Byte[]> MalformedMessage;
 
         /// <summary>
+        /// Raised when TCP port is changed
+        /// </summary>
+        /// <value>
+        /// New TCP port
+        /// </value>
+        public event EventHandler<UInt32> TcpPortChanged;
+
+        /// <summary>
         ///   Create a new instance of the <see cref="Service"/> class.
         /// </summary>
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        internal Service(ServiceProfile profile, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
+        internal Service(UInt32 udpPort, UInt32 tcpPort, String machineId, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
-            this.profile = profile;
+            this.udpPort = udpPort;
+            this.tcpPort = tcpPort;
+            this.machineId = machineId;
 
             networkInterfacesFilter = filter;
             UseIpv4 = Socket.OSSupportsIPv4;
@@ -108,6 +112,11 @@ namespace LUC.DiscoveryService
 
             IgnoreDuplicateMessages = true;
         }
+
+        /// <summary>
+        /// Known network interfaces
+        /// </summary>
+        internal static List<NetworkInterface> KnownNics { get; private set; } = new List<NetworkInterface>();
 
         /// <summary>
         ///   Send and receive on IPv4.
@@ -203,31 +212,18 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        ///   Start the service.
+        /// Change field <see cref="tcpPort"/> to current run TCP port
         /// </summary>
-        public void Start()
+        /// <param name="sender">
+        /// Object which invoked this event
+        /// </param>
+        /// <param name="tcpPort">
+        /// New TCP port
+        /// </param>
+        private void OnTcpPortChanged(Object sender, UInt32 tcpPort)
         {
-            KnownNics.Clear();
-
-            FindNetworkInterfaces();
-        }
-
-        /// <summary>
-        ///   Stop the service.
-        /// </summary>
-        /// <remarks>
-        ///   Clears all the event handlers.
-        /// </remarks>
-        public void Stop()
-        {
-            // All event handlers are cleared.
-            QueryReceived = null;
-            AnswerReceived = null;
-            NetworkInterfaceDiscovered = null;
-
-            // Stop current UDP listener
-            client?.Dispose();
-            client = null;
+            this.tcpPort = tcpPort;
+            TcpPortChanged?.Invoke(sender, tcpPort);
         }
 
         private void OnNetworkAddressChanged(object sender, EventArgs e) => FindNetworkInterfaces();
@@ -269,7 +265,8 @@ namespace LUC.DiscoveryService
                 if (newNics.Any() || oldNics.Any())
                 {
                     client?.Dispose();
-                    client = new Client(profile, UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
+                    client = new Client(udpPort, tcpPort, UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
+                    client.TcpPortChanged += OnTcpPortChanged;
                     client.UdpMessageReceived += OnUdpMessage;
                     client.TcpMessageReceived += OnTcpMessage;
                 }
@@ -316,33 +313,31 @@ namespace LUC.DiscoveryService
         ///   event is raised.
         ///   </para>
         /// </remarks>
-        public void OnUdpMessage(object sender, UdpReceiveResult result)
+        private void OnUdpMessage(object sender, UdpReceiveResult result)
         {
             // If recently received, then ignore.
-            //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-            //{
-            //    return;
-            //}
+            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+            {
+                return;
+            }
 
             MulticastMessage message = new MulticastMessage();
             try
             {
                 message.Read(result.Buffer);
-                
-                
             }
             catch (Exception e)
             {
                 //log.LogError("Received malformed message", e);
                 MalformedMessage.Invoke(sender, result.Buffer);
-                return; // eat the exception
+                return;
             }
 
-            //if ((message.VersionOfProtocol != Messages.Message.ProtocolVersion) || 
-            //    (message.MachineId == profile.MachineId))
-            //{
-            //    return;
-            //}
+            if ((message.VersionOfProtocol != Message.ProtocolVersion) ||
+                (message.MachineId == machineId))
+            {
+                return;
+            }
 
             // Dispatch the message.
             try
@@ -362,16 +357,44 @@ namespace LUC.DiscoveryService
         /// <param name="message">
         /// Received message
         /// </param>
-        internal void OnTcpMessage(Object sender, MessageEventArgs receiveResult)
+        private void OnTcpMessage(Object sender, MessageEventArgs receiveResult)
         {
             if(receiveResult.Message is TcpMessage message)
             {
-                AnswerReceived.Invoke(sender, new MessageEventArgs
+                AnswerReceived?.Invoke(sender, new MessageEventArgs
                 {
                     Message = message,
                     RemoteEndPoint = receiveResult.RemoteEndPoint
                 });
             }
+        }
+
+        /// <summary>
+        ///   Start the service.
+        /// </summary>
+        public void Start()
+        {
+            KnownNics.Clear();
+
+            FindNetworkInterfaces();
+        }
+
+        /// <summary>
+        ///   Stop the service.
+        /// </summary>
+        /// <remarks>
+        ///   Clears all the event handlers.
+        /// </remarks>
+        public void Stop()
+        {
+            // All event handlers are cleared.
+            QueryReceived = null;
+            AnswerReceived = null;
+            NetworkInterfaceDiscovered = null;
+
+            // Stop current UDP and TCP listeners and senders
+            client?.Dispose();
+            client = null;
         }
 
         /// <summary>
@@ -389,7 +412,7 @@ namespace LUC.DiscoveryService
                     try
                     {
                         Random random = new Random();
-                        var mess = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), profile.MachineId, profile.RunningTcpPort);
+                        var mess = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), tcpPort, machineId);
                         var bytes = mess.ToByteArray();
 
                         if (client != null)

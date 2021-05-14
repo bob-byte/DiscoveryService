@@ -8,12 +8,14 @@ namespace DiscoveryService.Test
     [TestClass]
     public class ServiceDiscoveryTest
     {
+        public TestContext TestContext { get; set; }
+
         [TestMethod]
         public void Discover_AllServices()
         {
             var done = new ManualResetEvent(false);
-            var discoveryService = ServiceDiscovery.GetInstance();
-            
+            var discoveryService = ServiceDiscovery.Instance();
+
             try
             {
                 discoveryService.Start(out _);

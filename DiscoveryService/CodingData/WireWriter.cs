@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,16 +6,19 @@ using System.Text;
 
 namespace LUC.DiscoveryService.CodingData
 {
+    /// <summary>
+    /// Methods to write DNS wire formatted data items.
+    /// </summary>
     public class WireWriter : IDisposable
     {
         private readonly Stream stream;
 
         /// <summary>
-        ///   Creates a new instance of the <see cref="WireWriter"/> on the
-        ///   specified <see cref="Stream"/>.
+        /// Creates a new instance of the <see cref="WireWriter"/> on the
+        /// specified <see cref="Stream"/>.
         /// </summary>
         /// <param name="stream">
-        ///   The destination for data items.
+        /// The destination for data items.
         /// </param>
         public WireWriter(Stream stream)
         {
@@ -25,12 +26,12 @@ namespace LUC.DiscoveryService.CodingData
         }
 
         /// <summary>
-        ///   The writer relative position within the stream.
+        /// The writer relative position within the stream.
         /// </summary>
         public Int32 Position { get; set; }
 
         /// <summary>
-        ///   Write a byte.
+        /// Write a byte.
         /// </summary>
         /// <param name="value">
         /// Value to write
@@ -58,10 +59,10 @@ namespace LUC.DiscoveryService.CodingData
         }
 
         /// <summary>
-        ///   Write a sequence of bytes.
+        /// Write a sequence of bytes.
         /// </summary>
         /// <param name="bytes">
-        ///   A sequence of bytes to write.
+        /// A sequence of bytes to write.
         /// </param>
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="bytes"/> is equal to null
@@ -113,7 +114,7 @@ namespace LUC.DiscoveryService.CodingData
         }
 
         /// <summary>
-        /// Writes a length-prefixed string to this stream in the current encoding of the BinaryWriter, and advances the current position of the stream in accordance with the encoding used and the specific characters being written to the stream.
+        /// Writes a length-prefixed string to this stream in the current encoding of the WireWriter, and advances the current position of the stream in accordance with the encoding used and the specific characters being written to the stream.
         /// </summary>
         /// <param name="value">
         /// The value to write.

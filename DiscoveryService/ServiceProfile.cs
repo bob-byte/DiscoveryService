@@ -18,7 +18,7 @@ namespace LUC.DiscoveryService
 
         static ServiceProfile()
         {
-            // Make sure MulticastService is inited.
+            // Make sure Service is inited.
             Service.ReferenceEquals(null, null);
         }
 
@@ -62,7 +62,7 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// Handle using event. Don't return NetworkInterface.GetAllNetworkInterfaces()
+        /// Known network interfaces
         /// </summary>
         public ICollection<NetworkInterface> NetworkInterfaces => Service.KnownNics;
 
@@ -72,7 +72,7 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Integer.
         /// </value>
-	public UInt32 ProtocolVersion { get; }
+	    public UInt32 ProtocolVersion { get; }
 
         /// <summary>
         ///   A unique identifier for the service instance.
@@ -82,7 +82,10 @@ namespace LUC.DiscoveryService
         /// </value>
         public String MachineId { get; set; }
 
-        internal UInt32 RunningTcpPort
+        /// <summary>
+        /// TCP port which current peer is using in TCP connections
+        /// </summary>
+        public UInt32 RunningTcpPort
         {
             get => runningTcpPort;
             set
@@ -92,13 +95,29 @@ namespace LUC.DiscoveryService
             }
         }
 
+        /// <summary>
+        /// UDP port which current peer is using in UDP connections
+        /// </summary>
         internal UInt32 RunningUdpPort { get; }
 
         /// <summary>
-        /// This property use in internal classes and allow to avoid strong connectivity. It is weaker, because we don't use object type DiscoveryService in the different classes
+        /// Groups which current peer supports.
+        /// Key is a name of group, which current peer supports.
+        /// Value is a SSL certificate of group
         /// </summary>
+        /// <remarks>
+        /// This property is used in internal classes and allow to avoid strong connectivity. It is weaker, because we don't use object type <seealso cref="ServiceDiscovery"/>  in the different classes.
+        /// </remarks>
         public ConcurrentDictionary<String, String> GroupsSupported { get; }
 
+        /// <summary>
+        /// IP address of groups which were discovered.
+        /// Key is a name of group, which current peer supports.
+        /// Value is a network in a format "IP-address:port"
+        /// </summary>
+        /// <remarks>
+        /// This property is used in internal classes and allows to avoid strong connectivity. It is weaker, because we don't use object type <seealso cref="ServiceDiscovery"/> in the different classes.
+        /// </remarks>
         public ConcurrentDictionary<String, String> KnownIps { get; }
     }
 }

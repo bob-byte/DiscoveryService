@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Extensions
         /// Equivalent to <see cref="UdpClient.ReceiveAsync"/>
         /// </summary>
         /// <returns>
-        /// Task which can return data of <see cref="TcpMessage"/>
+        /// Task which return data of <see cref="TcpMessage"/> and remote IP address where from we received message
         /// </returns>
         public static Task<MessageEventArgs> ReceiveAsync(this TcpListener receiver)
         {
@@ -19,6 +19,7 @@ namespace LUC.DiscoveryService.Extensions
             {
                 var localEndpoint = receiver.LocalEndpoint as IPEndPoint;
                 
+                //TODO add try...catch...finally
                 var client = await receiver.AcceptTcpClientAsync();
                 var stream = client.GetStream();
                 TcpMessage message = new TcpMessage();

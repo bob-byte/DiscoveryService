@@ -4,15 +4,21 @@ using System.IO;
 
 namespace LUC.DiscoveryService.Messages
 {
+    /// <summary>
+    /// Allows to write and read multicast message to/from <see cref="Stream"/>
+    /// </summary>
     public class MulticastMessage : Message
     {
+        /// <summary>
+        /// Create a new instance of the <see cref="MulticastMessage"/> class. This constructor is often used to read message
+        /// </summary>
         public MulticastMessage()
         {
             ;
         }
 
         /// <summary>
-        /// Create a new instance of the <see cref="MulticastMessage"/> class.
+        /// Create a new instance of the <see cref="MulticastMessage"/> class. This constructor is often used to write message to a stream
         /// </summary>
         /// <param name="messageId">
         /// Unique message identifier. It is used to detect duplicate messages.
@@ -23,18 +29,11 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="tcpPort">
         /// TCP port which is being run in machine with <see cref="MachineId"/>
         /// </param>
-        public MulticastMessage(UInt32 messageId, String machineId, UInt32 tcpPort)
-            : base(messageId)
+        public MulticastMessage(UInt32 messageId, UInt32 tcpPort, String machineId)
+            : base(messageId, tcpPort)
         {
             MachineId = machineId;
-            TcpPort = tcpPort;
-            VersionOfProtocol = ProtocolVersion;
         }
-
-        /// <summary>
-        /// TCP port which is being run in machine with <see cref="MachineId"/>
-        /// </summary>
-        public UInt32 TcpPort { get; set; }
 
         /// <summary>
         /// Id of machine which is sending this messege
@@ -44,11 +43,7 @@ namespace LUC.DiscoveryService.Messages
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)
         {
-            if (reader == null)
-            {
-                throw new ArgumentNullException(nameof(reader));
-            }
-            else
+            if (reader != null)
             {
                 MessageId = reader.ReadUInt32();
                 VersionOfProtocol = reader.ReadUInt32();
@@ -57,21 +52,25 @@ namespace LUC.DiscoveryService.Messages
 
                 return this;
             }
+            else
+            {
+                throw new ArgumentNullException(nameof(reader));
+            }
         }
 
         /// <inheritdoc/>
         public override void Write(WireWriter writer)
         {
-            if(writer == null)
-            {
-                throw new ArgumentNullException(nameof(writer));
-            }
-            else
+            if(writer != null)
             {
                 writer.Write(MessageId);
                 writer.Write(VersionOfProtocol);
                 writer.Write(MachineId);
                 writer.Write(TcpPort);
+            }
+            else
+            {
+                throw new ArgumentNullException(nameof(writer));
             }
         }
 
@@ -80,11 +79,9 @@ namespace LUC.DiscoveryService.Messages
         {
             using(var writer = new StringWriter())
             {
-                writer.WriteLine("Multicast message");
-                writer.WriteLine($"MessageId = {MessageId};\n" +
-                                 $"MachineId = {MachineId};\n" +
-                                 $"Tcp port = {TcpPort};\n" +
-                                 $"Protocol version = {VersionOfProtocol}");
+                writer.WriteLine("Multicast message:\n");
+                writer.WriteLine(base.ToString());
+                writer.WriteLine($"MachineId = {MachineId};\n");
 
                 return writer.ToString();
             }

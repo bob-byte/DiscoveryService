@@ -6,32 +6,36 @@ using System.Text;
 
 namespace LUC.DiscoveryService.Messages
 {
+    /// <summary>
+    /// Allows to write and read TCP message to/from <see cref="Stream"/>
+    /// </summary>
     public class TcpMessage : Message
     {
+        /// <summary>
+        /// Create a new instance of the <see cref="TcpMessage"/> class. This constructor is often used to read message
+        /// </summary>
         public TcpMessage()
         {
             ;
         }
 
         /// <summary>
-        ///   Create a new instance of the <see cref="TcpMessage"/> class.
+        ///   Create a new instance of the <see cref="TcpMessage"/> class. This constructor is often used to write message to a stream
         /// </summary>
         /// <param name="messageId">
         ///   Unique message identifier. It is used to detect duplicate messages.
         /// </param>
-        public TcpMessage(UInt32 messageId, UInt32 receivedProcolVersion, List<String> groupsIds)
-            : base(messageId)
+        public TcpMessage(UInt32 messageId, UInt32 tcpPort, List<String> groupsIds)
+            : base(messageId, tcpPort)
         {
-            if(groupsIds == null)
-            {
-                GroupsIds = new List<String>();
-            }
-            else
+            if(groupsIds != null)
             {
                 GroupsIds = groupsIds;
             }
-
-            VersionOfProtocol = receivedProcolVersion;
+            else
+            {
+                GroupsIds = new List<String>();
+            }
         }
 
         /// <summary>
@@ -41,17 +45,18 @@ namespace LUC.DiscoveryService.Messages
 
         public override IWireSerialiser Read(WireReader reader)
         {
-            if(reader == null)
-            {
-                throw new ArgumentNullException(nameof(reader));
-            }
-            else
+            if(reader != null)
             {
                 MessageId = reader.ReadUInt32();
                 VersionOfProtocol = reader.ReadUInt32();
+                TcpPort = reader.ReadUInt32();
                 GroupsIds = reader.ReadStringList();
 
                 return this;
+            }
+            else
+            {
+                throw new ArgumentNullException(nameof(reader));
             }
         }
 
@@ -73,15 +78,16 @@ namespace LUC.DiscoveryService.Messages
         /// </exception>
         public override void Write(WireWriter writer)
         {
-            if (writer == null)
-            {
-                throw new ArgumentNullException(nameof(writer));
-            }
-            else
+            if (writer != null)
             {
                 writer.Write(MessageId);
                 writer.Write(VersionOfProtocol);
+                writer.Write(TcpPort);
                 writer.WriteEnumerable(GroupsIds);
+            }
+            else
+            {
+                throw new ArgumentNullException(nameof(writer));
             }
         }
 
@@ -90,8 +96,7 @@ namespace LUC.DiscoveryService.Messages
             using(var writer = new StringWriter())
             {
                 writer.WriteLine("TCP message:");
-                writer.WriteLine($"MessageId = {MessageId};\n" +
-                                 $"Protocol version = {VersionOfProtocol};");
+                writer.WriteLine(base.ToString());
 
                 writer.WriteLine($"{nameof(GroupsIds)}:");
                 for (Int32 id = 0; id < GroupsIds.Count; id++)

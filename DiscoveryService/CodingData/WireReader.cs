@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -87,8 +86,8 @@ namespace LUC.DiscoveryService.CodingData
             var buffer = new Byte[length];
             Int32 countReadBytes;
             for (Int32 offset = 0; length > 0; offset += countReadBytes, 
-                                             length -= countReadBytes, 
-                                             Position += countReadBytes)
+                                               length -= countReadBytes, 
+                                               Position += countReadBytes)
             {
                 countReadBytes = stream.Read(buffer, offset, length);
                 if (countReadBytes == 0)
@@ -119,7 +118,7 @@ namespace LUC.DiscoveryService.CodingData
         ///   Read a string.
         /// </summary>
         /// <remarks>
-        ///   Strings are encoded with a length prefixed byte.  All strings are ASCII.
+        ///   Strings are encoded with a length prefixed byte. All strings are in ASCII format.
         /// </remarks>
         /// <returns>
         ///   The string.
@@ -144,9 +143,10 @@ namespace LUC.DiscoveryService.CodingData
         }
 
         /// <summary>
-        /// Read enumerable of rank 1
-        /// ( jagged arrays not supported atm )
-        /// /// <exception cref="EndOfStreamException">
+        /// Read string list of rank 1
+        /// (jagged arrays not supported atm)
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
         ///   When no more data is available.
         /// </exception>
         public List<String> ReadStringList()

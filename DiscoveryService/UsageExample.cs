@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Net;
 using System.Threading;
 using Common.Logging;
 using Common.Logging.Simple;
@@ -26,11 +27,11 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public ConcurrentDictionary<String, String> OurSupportedGroups { get; set; }
+        public static ConcurrentDictionary<String, String> OurSupportedGroups { get; set; }
 
-        public ConcurrentDictionary<String, String> GroupsDiscovered { get; set; }
+        public static ConcurrentDictionary<String, String> GroupsDiscovered { get; set; }
 
-        public ConcurrentDictionary<String, String> KnownIps { get; set; }
+        public static ConcurrentDictionary<String, String> KnownIps { get; set; }
 
 
         private static void OnBadMessage(Object sender, Byte[] packet)
@@ -53,18 +54,18 @@ namespace LUC.DiscoveryService
                 Console.WriteLine("=== TCP {0:O} ===", DateTime.Now);
                 Console.WriteLine(e.Message.ToString());
 
-                //if (e.Message is TcpMessage message)
-                //{
-                //    foreach (var group in message.GroupsIds)
-                //    {
-                //        if (!profile.KnownIps.TryAdd(group.Key, group.Value))
-                //        {
-                //            // TODO: keys hould be IP:port as string
-                //            _ = GroupsDiscovered.TryRemove(e.RemoteEndPoint, out _);
-                //            _ = GroupsDiscovered.TryAdd(e.RemoteEndPoint, group.Value);
-                //        }
-                //    }
-                //}
+                if ((e.Message is TcpMessage message) && (e.RemoteEndPoint is IPEndPoint endPoint))
+                {
+                    var network = $"{endPoint.Address}:{message.TcpPort}";
+                    foreach (var group in message.GroupsIds)
+                    {
+                        if(!GroupsDiscovered.TryAdd(network, group))
+                        {
+                            GroupsDiscovered.TryRemove(network, out _);
+                            GroupsDiscovered.TryAdd(network, group);
+                        }
+                    }
+                }
             }
         }
 
@@ -105,7 +106,7 @@ namespace LUC.DiscoveryService
             groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
             groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
 
-            var serviceDiscovery = ServiceDiscovery.GetInstance(groupsSupported, knownIps);
+            var serviceDiscovery = ServiceDiscovery.Instance(groupsSupported, knownIps);
             serviceDiscovery.Start(out _);
 
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;

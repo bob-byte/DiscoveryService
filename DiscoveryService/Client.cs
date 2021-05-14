@@ -23,6 +23,8 @@ namespace LUC.DiscoveryService
         [Import(typeof(ILoggingService))]
         private static readonly ILoggingService log = new LoggingService();
 
+        private UInt32 tcpPort;
+
         private static readonly IPAddress MulticastAddressIp4 = IPAddress.Parse("224.0.0.251");
         private readonly IPEndPoint MulticastEndpointIp4;
 
@@ -45,6 +47,14 @@ namespace LUC.DiscoveryService
         public event EventHandler<MessageEventArgs> TcpMessageReceived;
 
         /// <summary>
+        /// Raised when TCP port is changed
+        /// </summary>
+        /// <value>
+        /// New TCP port
+        /// </value>
+        public event EventHandler<UInt32> TcpPortChanged;
+
+        /// <summary>
         ///   Creates a new instance of the <see cref="Client"/> class.
         /// </summary>
         /// <param name="profile">
@@ -65,10 +75,11 @@ namespace LUC.DiscoveryService
         /// <param name="nics">
         /// NetworkInterfaces wherefrom we should send to
         /// </param>
-        public Client(ServiceProfile profile, Boolean useIpv4, Boolean useIpv6, IEnumerable<NetworkInterface> nics)
+        public Client(UInt32 udpPort, UInt32 runningTcpPort, Boolean useIpv4, Boolean useIpv6, IEnumerable<NetworkInterface> nics)
         {
-            MulticastEndpointIp4 = new IPEndPoint(MulticastAddressIp4, (Int32)profile.RunningUdpPort);
-            MulticastEndpointIp6 = new IPEndPoint(MulticastAddressIp6, (Int32)profile.RunningUdpPort);
+            MulticastEndpointIp4 = new IPEndPoint(MulticastAddressIp4, (Int32)udpPort);
+            MulticastEndpointIp6 = new IPEndPoint(MulticastAddressIp6, (Int32)udpPort);
+            tcpPort = runningTcpPort;
 
             udpReceivers = new List<UdpClient>();
             tcpReceivers = new List<TcpListener>();
@@ -78,7 +89,7 @@ namespace LUC.DiscoveryService
             {
                 udpReceiver4 = new UdpClient(AddressFamily.InterNetwork);
                 udpReceiver4.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, optionValue: true);
-                udpReceiver4.Client.Bind(new IPEndPoint(IPAddress.Any, (Int32)profile.RunningUdpPort));
+                udpReceiver4.Client.Bind(new IPEndPoint(IPAddress.Any, (Int32)udpPort));
                 udpReceivers.Add(udpReceiver4);
             }
 
@@ -87,7 +98,7 @@ namespace LUC.DiscoveryService
             {
                 udpReceiver6 = new UdpClient(AddressFamily.InterNetworkV6);
                 udpReceiver6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, optionValue: true);
-                udpReceiver6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, (Int32)profile.RunningUdpPort));
+                udpReceiver6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, (Int32)udpPort));
                 udpReceivers.Add(udpReceiver6);
             }
 
@@ -104,10 +115,10 @@ namespace LUC.DiscoveryService
                     continue;
                 }
 
-                var localEndpoint = new IPEndPoint(address, (Int32)profile.RunningUdpPort);
+                var localEndpoint = new IPEndPoint(address, (Int32)udpPort);
                 var senderUdp = new UdpClient(address.AddressFamily);
                 var senderTcp = new TcpClient(address.AddressFamily);
-                TcpListener receiverTcp = new TcpListener(address, (Int32)profile.RunningTcpPort);
+                TcpListener receiverTcp = new TcpListener(address, (Int32)tcpPort);
 
                 try
                 {
@@ -180,7 +191,6 @@ namespace LUC.DiscoveryService
                 foreach (var tcpReceiver in tcpReceivers)
                 {
                     tcpReceiver.Start();
-                    
                     ListenTcp(tcpReceiver);
                 }
             });
@@ -192,13 +202,9 @@ namespace LUC.DiscoveryService
         /// <param name="message">
         /// Bytes of message to send
         /// </param>
-        /// <param name="periodInMs">
-        /// How often to send messages
-        /// </param>
-        /// <param name="tokenOuter">
-        /// Token which is initialized in <see cref="ServiceDiscovery"/> to know when we should stop sendings
-        /// </param>
-        /// <returns></returns>
+        /// <returns>
+        /// Task which allow to see any exception. Async void method doens't allow it
+        /// </returns>
         public async Task SendUdpAsync(Byte[] message)
         {
             foreach (var sender in sendersUdp)
@@ -211,17 +217,19 @@ namespace LUC.DiscoveryService
                 }
                 catch(SocketException)
                 {
+                    TcpPortChanged?.Invoke(this, ++tcpPort);
                     //log.LogError($"Sender {sender.Key} failure: {e.Message}");
                 }
                 catch(InvalidOperationException)
                 {
+                    TcpPortChanged?.Invoke(this, ++tcpPort);
                     //log.LogError($"Sender {sender.Key} failure: {e.Message}");
                 }
             }
         }
 
         /// <summary>
-        /// It listens udp messages in another task
+        /// It listens UDP messages in another task
         /// </summary>
         /// <param name="receiver">
         /// Object which returns data of the messages
@@ -244,13 +252,14 @@ namespace LUC.DiscoveryService
                 }
                 catch
                 {
+                    //TODO don't return. Change socket
                     return;
                 }
             });
         }
 
         /// <summary>
-        /// It listens tcp messages in another task
+        /// It listens TCP messages in another task
         /// </summary>
         /// <param name="receiver">
         /// Object which returns data of the messages
@@ -273,6 +282,8 @@ namespace LUC.DiscoveryService
                 }
                 catch
                 {
+                    //TODO don't return. Change absolutely TCP port (in TcpListener)
+                    TcpPortChanged?.Invoke(this, ++tcpPort);
                     return;
                 }
             });
