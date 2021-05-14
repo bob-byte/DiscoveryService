@@ -15,7 +15,7 @@ namespace DiscoveryService.Test
     public class MulticastMessageTest
     {
         [TestMethod]
-        public void Writer_null()
+        public void Writer_Null()
         {
             MulticastMessage Multicast = new MulticastMessage();
             MemoryStream ms = new MemoryStream();
@@ -27,19 +27,23 @@ namespace DiscoveryService.Test
         [TestMethod]
         public void Message()
         {
-            uint MessageId = 1111;
-            uint VersionOfProtocol = 1; 
-            uint TcpPort = 17500;
-            String MachineId = "001";
-            var writ = new StringWriter();
-            writ.WriteLine("Multicast message:");
-            writ.WriteLine($"MessageId = {MessageId};\n" +
-                             $"MachineId = {MachineId};\n" +
-                             $"Tcp port = {TcpPort};\n" +
-                             $"Protocol version = {VersionOfProtocol}");
+            UInt32 messageId = 1111;
+            UInt32 versionOfProtocol = 1;
+            UInt32 tcpPort = 17500;
+            String machineId = "001";
+            var writer = new StringWriter();
+            MulticastMessage multicast;
 
-            MulticastMessage Multicast = new MulticastMessage(MessageId, MachineId, TcpPort);
-            Assert.AreEqual(writ.ToString(), Multicast.ToString());
+            writer.WriteLine("Multicast message:");
+            writer.WriteLine($"MessageId = {messageId};\n" +
+                             $"Tcp port = {tcpPort};\n" +
+                             $"Protocol version = {versionOfProtocol};\r\n" +
+                             $"MachineId = {machineId}");
+            var expected = writer.ToString();
+            multicast = new MulticastMessage(messageId, tcpPort, machineId);
+            var actual = multicast.ToString();
+
+            Assert.AreEqual(expected, actual);
         }
 
         [TestMethod]
@@ -55,11 +59,11 @@ namespace DiscoveryService.Test
         [TestMethod]
         public void Reader()
         {
-            uint MessageId = 1111;
+            UInt32 MessageId = 1111;
             String MachineId = "001";
-            uint TcpPort = 17500;
-            uint VersionOfProtocol = 1;
-            MulticastMessage mult= new MulticastMessage(MessageId, MachineId, TcpPort);
+            UInt32 TcpPort = 17500;
+            UInt32 VersionOfProtocol = 1;
+            MulticastMessage mult= new MulticastMessage(MessageId, TcpPort, MachineId);
             MemoryStream ms = new MemoryStream();
             WireWriter writer = new WireWriter(ms);
             writer.Write(MessageId);

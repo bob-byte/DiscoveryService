@@ -4,7 +4,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace DiscoveryService.Test
 {
@@ -20,62 +19,63 @@ namespace DiscoveryService.Test
             TcpMessage tcp = new TcpMessage();
             MemoryStream ms = new MemoryStream();
             WireWriter writer = null;
+
             var ex = Assert.ThrowsException<ArgumentNullException>(() => tcp.Write(writer));
             NUnit.Framework.Assert.That(ex.ParamName, NUnit.Framework.Is.EqualTo("writer"));
         }
         [TestMethod]
         public void Message()
         {
-            uint MessageId = 1111;
-            uint VersionOfProtocol = 2;
-            List<string> GroupsIds=new List<string>{"a","b" };
-            var writ = new StringWriter();
-            writ.WriteLine("TCP message:");
-            writ.WriteLine($"MessageId = {MessageId};\n" +
-                           $"Protocol version = {VersionOfProtocol};");
-            writ.WriteLine($"{nameof(GroupsIds)}:");
+            UInt32 messageId = 1111;
+            UInt32 versionOfProtocol = 1;
+            UInt32 tcpPort = 17500;
+            List<String> groupsIds = new List<String> { "a", "b" };
 
-            for (Int32 id = 0; id < GroupsIds.Count; id++)
+            var expected = GetExptectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
+            var message = new TcpMessage(messageId, tcpPort, groupsIds);
+            var actual = message.ToString();
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        private String GetExptectedMessage(UInt32 messageId, UInt32 versionOfProtocol, UInt32 tcpPort, List<String> groupsIds)
+        {
+            var writer = new StringWriter();
+
+            writer.WriteLine("TCP message:");
+            writer.WriteLine($"MessageId = {messageId};\n" +
+                             $"Tcp port = {tcpPort};\n" +
+                             $"Protocol version = {versionOfProtocol};");
+            writer.WriteLine($"GroupIds:");
+            for (Int32 id = 0; id < groupsIds.Count; id++)
             {
-                if (id == GroupsIds.Count - 1)
+                if (id == groupsIds.Count - 1)
                 {
-                    writ.WriteLine($"{GroupsIds[id]}");
+                    writer.WriteLine($"{groupsIds[id]}");
                 }
                 else
                 {
-                    writ.WriteLine($"{GroupsIds[id]};");
+                    writer.WriteLine($"{groupsIds[id]};");
                 }
             }
+            var expected = writer.ToString();
 
-            var tcp = new TcpMessage(MessageId, VersionOfProtocol, GroupsIds);
-            Assert.AreEqual(writ.ToString(), tcp.ToString());
+            return expected;
         }
+
         [TestMethod]
         public void Message_GroupsIsNULL()
         {
-           uint MessageId = 1111;
-           uint VersionOfProtocol = 2;
-           List <string>  GroupsIds = new List<string>();
-            var writ = new StringWriter();
-                writ.WriteLine( "TCP message:");
-                writ.WriteLine($"MessageId = {MessageId};\n" +
-                               $"Protocol version = {VersionOfProtocol};");
-                writ.WriteLine($"{nameof(GroupsIds)}:");
-            
-            for (Int32 id = 0; id < GroupsIds.Count; id++)
-            {
-                if (id == GroupsIds.Count - 1)
-                {
-                    writ.WriteLine($"{GroupsIds[id]}");
-                }
-                else
-                {
-                    writ.WriteLine($"{GroupsIds[id]};");
-                }
-            }
+            UInt32 messageId = 1111;
+            UInt32 versionOfProtocol = 1;
+            UInt32 tcpPort = 17500;
+            List<String> groupsIds = new List<String>();
 
-            var tcp = new TcpMessage(MessageId, VersionOfProtocol,null);
-            Assert.AreEqual(writ.ToString(), tcp.ToString());
+            var expected = GetExptectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
+            var message = new TcpMessage(messageId, tcpPort, groupsIds: null);
+            var actual = message.ToString();
+
+            Assert.AreEqual(expected, actual);
         }
     }
 }

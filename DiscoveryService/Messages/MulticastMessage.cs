@@ -79,9 +79,9 @@ namespace LUC.DiscoveryService.Messages
         {
             using(var writer = new StringWriter())
             {
-                writer.WriteLine("Multicast message:\n");
-                writer.WriteLine(base.ToString());
-                writer.WriteLine($"MachineId = {MachineId};\n");
+                writer.WriteLine("Multicast message:");
+                writer.WriteLine($"{base.ToString()};");
+                writer.WriteLine($"MachineId = {MachineId}");
 
                 return writer.ToString();
             }

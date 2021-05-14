@@ -41,7 +41,7 @@ namespace LUC.DiscoveryService.Messages
         /// <summary>
         ///   Supported version of protocol of the remote application.
         /// </summary>
-        public UInt32 ProtocolVersion { get; set; }
+        public UInt32 VersionOfProtocol { get; set; }
 
         /// <summary>
         /// TCP port which is being run in machine with machineId
@@ -161,8 +161,7 @@ namespace LUC.DiscoveryService.Messages
         {
             using (var writer = new StringWriter())
             {
-                writer.WriteLine("Multicast message");
-                writer.WriteLine($"MessageId = {MessageId};\n" +
+                writer.Write($"MessageId = {MessageId};\n" +
                                  $"Tcp port = {TcpPort};\n" +
                                  $"Protocol version = {VersionOfProtocol}");
 

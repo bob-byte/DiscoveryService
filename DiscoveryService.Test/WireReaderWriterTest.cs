@@ -19,20 +19,20 @@ namespace DiscoveryService.Test
         public void Roundtrip()
         {
             var someBytes = new Byte[] { 1, 2, 3 };
-            UInt32 test = 35;
-
-            var ms = new MemoryStream();
-            var writer = new WireWriter(ms);
+            UInt32 uintValue = 35;
+            var memoryStream = new MemoryStream();
+            var writer = new WireWriter(memoryStream);
 
             writer.Write("alpha");
-            writer.Write(test);
+            writer.Write(uintValue);
             writer.WriteBytes(someBytes);
             writer.WriteByteLengthPrefixedBytes(someBytes);
 
-            ms.Position = 0;
-            var reader = new WireReader(ms);
+            memoryStream.Position = 0;
+            var reader = new WireReader(memoryStream);
+
             Assert.AreEqual("alpha", reader.ReadString());
-            Assert.AreEqual(test, reader.ReadUInt32());
+            Assert.AreEqual(uintValue, reader.ReadUInt32());
             CollectionAssert.AreEqual(someBytes, reader.ReadBytes(3));
             CollectionAssert.AreEqual(someBytes, reader.ReadByteLengthPrefixedBytes());
         }
@@ -43,8 +43,8 @@ namespace DiscoveryService.Test
         [TestMethod]
         public void BufferOverflow_String()
         {
-            var ms = new MemoryStream(new byte[] { 10, 1 });
-            var reader = new WireReader(ms);
+            var memoryStream = new MemoryStream(new Byte[] { 10, 1 });
+            var reader = new WireReader(memoryStream);
             Assert.ThrowsException<EndOfStreamException>(() => reader.ReadString());
         }
 
@@ -54,7 +54,7 @@ namespace DiscoveryService.Test
         [TestMethod]
         public void BytePrefixedArray_TooBig()
         {
-            var bytes = new byte[byte.MaxValue + 1];
+            var bytes = new Byte[Byte.MaxValue + 1];
             var writer = new WireWriter(new MemoryStream());
             Assert.ThrowsException<ArgumentException>(() => writer.WriteByteLengthPrefixedBytes(bytes));
         }
@@ -78,7 +78,7 @@ namespace DiscoveryService.Test
         public void WriteString_TooBig()
         {
             var writer = new WireWriter(Stream.Null);
-            writer.Write(new string('a', 256));
+            writer.Write(new String('a', count: 256));
         }
 
         /// <summary>
@@ -88,8 +88,9 @@ namespace DiscoveryService.Test
         [ExpectedException(typeof(InvalidDataException))]
         public void ReadString_NotAscii()
         {
-            var ms = new MemoryStream(new byte[] { 1, 255 });
-            var reader = new WireReader(ms);
+            var memoryStream = new MemoryStream(new Byte[] { 1, 255 });
+            var reader = new WireReader(memoryStream);
+
             reader.ReadString();
         }
 
@@ -99,17 +100,16 @@ namespace DiscoveryService.Test
         [TestMethod]
         public void IEnumerable()
         {
-            List<String> data = new List<String> { "a","c","b" };
+            List<String> data = new List<String> { "a", "c", "b" };
 
-                MemoryStream ms = new MemoryStream();
-                WireWriter writer = new WireWriter(ms);
+            MemoryStream ms = new MemoryStream();
+            WireWriter writer = new WireWriter(ms);
 
-                writer.WriteEnumerable(data);
+            writer.WriteEnumerable(data);
 
-                ms.Position = 0;
-                WireReader reader = new WireReader(ms);
-                CollectionAssert.AreEquivalent(data, reader.ReadStringList());
-          
+            ms.Position = 0;
+            WireReader reader = new WireReader(ms);
+            CollectionAssert.AreEquivalent(data, reader.ReadListOfStrings());
         }
     }
 }

@@ -30,18 +30,18 @@ namespace LUC.DiscoveryService.Messages
         {
             if(groupsIds != null)
             {
-                GroupsIds = groupsIds;
+                GroupIds = groupsIds;
             }
             else
             {
-                GroupsIds = new List<String>();
+                GroupIds = new List<String>();
             }
         }
 
         /// <summary>
         /// Names of groups
         /// </summary>
-        public List<String> GroupsIds { get; set; }
+        public List<String> GroupIds { get; set; }
 
         public override IWireSerialiser Read(WireReader reader)
         {
@@ -50,7 +50,7 @@ namespace LUC.DiscoveryService.Messages
                 MessageId = reader.ReadUInt32();
                 VersionOfProtocol = reader.ReadUInt32();
                 TcpPort = reader.ReadUInt32();
-                GroupsIds = reader.ReadStringList();
+                GroupIds = reader.ReadListOfStrings();
 
                 return this;
             }
@@ -83,7 +83,7 @@ namespace LUC.DiscoveryService.Messages
                 writer.Write(MessageId);
                 writer.Write(VersionOfProtocol);
                 writer.Write(TcpPort);
-                writer.WriteEnumerable(GroupsIds);
+                writer.WriteEnumerable(GroupIds);
             }
             else
             {
@@ -96,18 +96,18 @@ namespace LUC.DiscoveryService.Messages
             using(var writer = new StringWriter())
             {
                 writer.WriteLine("TCP message:");
-                writer.WriteLine(base.ToString());
+                writer.WriteLine($"{base.ToString()};");
 
-                writer.WriteLine($"{nameof(GroupsIds)}:");
-                for (Int32 id = 0; id < GroupsIds.Count; id++)
+                writer.WriteLine($"{nameof(GroupIds)}:");
+                for (Int32 id = 0; id < GroupIds.Count; id++)
                 {
-                    if(id == GroupsIds.Count - 1)
+                    if(id == GroupIds.Count - 1)
                     {
-                        writer.WriteLine($"{GroupsIds[id]}");
+                        writer.WriteLine($"{GroupIds[id]}");
                     }
                     else
                     {
-                        writer.WriteLine($"{GroupsIds[id]};");
+                        writer.WriteLine($"{GroupIds[id]};");
                     }
                 }
 
