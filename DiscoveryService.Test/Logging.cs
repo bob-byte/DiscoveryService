@@ -1,16 +1,15 @@
 ﻿using Common.Logging;
 using Common.Logging.Configuration;
 using Common.Logging.Simple;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+using NUnit.Framework;
 
 namespace DiscoveryService.Test
 {
-    [TestClass]
-    public class Logging
+    [SetUpFixture]
+    public static class Logging
     {
-        [AssemblyInitialize]
-        public static void AssemblyInitialize(TestContext context)
+        [OneTimeSetUp]
+        public static void AssemblyInitialize()
         {
             //set logger factory
             var properties = new NameValueCollection
@@ -23,7 +22,7 @@ namespace DiscoveryService.Test
             LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
         }
 
-        [AssemblyCleanup]
+        [OneTimeTearDown]
         public static void AssemblyCleanup()
         {
             ;

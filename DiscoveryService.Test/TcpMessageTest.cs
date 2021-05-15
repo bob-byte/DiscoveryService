@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Messages;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,35 +10,37 @@ namespace DiscoveryService.Test
     /// <summary>
     /// Сводное описание для UnitTest4
     /// </summary>
-    [TestClass]
+    [TestFixture]
     public class TcpMessageTest
     {
-        [TestMethod]
+        [Test]
         public void Writer_null()
         {
             TcpMessage tcp = new TcpMessage();
             MemoryStream ms = new MemoryStream();
             WireWriter writer = null;
 
-            var ex = Assert.ThrowsException<ArgumentNullException>(() => tcp.Write(writer));
-            NUnit.Framework.Assert.That(ex.ParamName, NUnit.Framework.Is.EqualTo("writer"));
+            var exception = Assert.Throws<ArgumentNullException>(() => tcp.Write(writer));
+
+            Assert.That(exception.ParamName, Is.EqualTo(nameof(writer)));
         }
-        [TestMethod]
+
+        [Test]
         public void Message()
         {
             UInt32 messageId = 1111;
             UInt32 versionOfProtocol = 1;
             UInt32 tcpPort = 17500;
             List<String> groupsIds = new List<String> { "a", "b" };
-
-            var expected = GetExptectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
+            var expected = ExpectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
             var message = new TcpMessage(messageId, tcpPort, groupsIds);
+
             var actual = message.ToString();
 
             Assert.AreEqual(expected, actual);
         }
 
-        private String GetExptectedMessage(UInt32 messageId, UInt32 versionOfProtocol, UInt32 tcpPort, List<String> groupsIds)
+        private String ExpectedMessage(UInt32 messageId, UInt32 versionOfProtocol, UInt32 tcpPort, List<String> groupsIds)
         {
             var writer = new StringWriter();
 
@@ -63,16 +65,16 @@ namespace DiscoveryService.Test
             return expected;
         }
 
-        [TestMethod]
+        [Test]
         public void Message_GroupsIsNULL()
         {
             UInt32 messageId = 1111;
             UInt32 versionOfProtocol = 1;
             UInt32 tcpPort = 17500;
             List<String> groupsIds = new List<String>();
-
-            var expected = GetExptectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
+            var expected = ExpectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
             var message = new TcpMessage(messageId, tcpPort, groupsIds: null);
+
             var actual = message.ToString();
 
             Assert.AreEqual(expected, actual);

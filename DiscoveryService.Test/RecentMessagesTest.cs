@@ -1,15 +1,15 @@
 ﻿using LUC.DiscoveryService.Messages;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using System;
 using System.Threading.Tasks;
 
 namespace DiscoveryService.Test
 {
     //TODO rename methods to format <Test_method>_<Scenery>_<Expected_behavior>
-    [TestClass]
+    [TestFixture]
     public class RecentMessagesTest
     {
-        [TestMethod]
+        [Test]
         public void Prunning()
         {
             var messages = new RecentMessages();
@@ -20,11 +20,11 @@ namespace DiscoveryService.Test
             messages.Messages.TryAdd("c", timeNow);
 
             Assert.AreEqual(expected: 2, actual: messages.Prune());
-            Assert.AreEqual(expected: 1, actual: messages.Messages.Count);
-            Assert.IsTrue(messages.Messages.ContainsKey("c"));
+            Assert.AreEqual(1, messages.Messages.Count);
+            Assert.IsTrue(condition: messages.Messages.ContainsKey("c"));
         }
 
-        [TestMethod]
+        [Test]
         public void MessageId()
         {
             var messages = new RecentMessages();
@@ -34,10 +34,10 @@ namespace DiscoveryService.Test
             var idClassB_1 = messages.GetId(new Byte[] { 2 });
 
             Assert.AreEqual(expected: idClassA_1, actual: idClassA_2);
-            Assert.AreNotEqual(notExpected: idClassB_1, actual: idClassA_1);
+            Assert.AreNotEqual(expected: idClassB_1, actual: idClassA_1);
         }
 
-        [TestMethod]
+        [Test]
         public async Task DuplicateCheck()
         {
             var messages = new RecentMessages
@@ -50,9 +50,7 @@ namespace DiscoveryService.Test
             Assert.IsTrue(condition: messages.TryAdd(byteOfClassA));
             Assert.IsTrue(messages.TryAdd(byteOfClassB));
             Assert.IsFalse(messages.TryAdd(byteOfClassA));
-
             await Task.Delay(millisecondsDelay: 200);
-
             Assert.IsTrue(messages.TryAdd(byteOfClassA));
         }
     }

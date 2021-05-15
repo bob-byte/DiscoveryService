@@ -1,16 +1,16 @@
 ﻿using LUC.DiscoveryService;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using System;
 using System.Threading;
 
 namespace DiscoveryService.Test
 {
-    [TestClass]
+    [TestFixture]
     public class ServiceDiscoveryTest
     {
         public TestContext TestContext { get; set; }
 
-        [TestMethod]
+        [Test]
         public void Discover_AllServices()
         {
             var done = new ManualResetEvent(false);
