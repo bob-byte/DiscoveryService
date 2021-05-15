@@ -39,6 +39,11 @@ namespace LUC.DiscoveryService.Messages
         }
 
         /// <summary>
+        /// TCP port of the Kademilia service.
+        /// </summary>
+        public UInt32 KadPort { get; set; }
+
+        /// <summary>
         /// Names of groups
         /// </summary>
         public List<String> GroupIds { get; set; }
@@ -49,7 +54,7 @@ namespace LUC.DiscoveryService.Messages
             {
                 MessageId = reader.ReadUInt32();
                 VersionOfProtocol = reader.ReadUInt32();
-                TcpPort = reader.ReadUInt32();
+                KadPort = reader.ReadUInt32();
                 GroupIds = reader.ReadListOfStrings();
 
                 return this;
@@ -61,7 +66,7 @@ namespace LUC.DiscoveryService.Messages
         }
 
         /// <summary>
-        /// 
+        /// Write as a binary message.
         /// </summary>
         /// <param name="writer"></param>
         /// <exception cref="ArgumentNullException">
@@ -82,7 +87,7 @@ namespace LUC.DiscoveryService.Messages
             {
                 writer.Write(MessageId);
                 writer.Write(VersionOfProtocol);
-                writer.Write(TcpPort);
+                writer.Write(KadPort);
                 writer.WriteEnumerable(GroupIds);
             }
             else

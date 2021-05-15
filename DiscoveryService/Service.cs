@@ -24,11 +24,11 @@ namespace LUC.DiscoveryService
     ///   raised when a <see cref="Message"/> is received.
     ///   </para>
     /// </remarks>
-    public class Service
+    public class Service : IDisposable
     {
         [Import(typeof(ILoggingService))]
         private static readonly ILoggingService log = new LoggingService();
-        
+
         /// <summary>
         ///   Recently received messages.
         /// </summary>
@@ -87,20 +87,13 @@ namespace LUC.DiscoveryService
         public event EventHandler<Byte[]> MalformedMessage;
 
         /// <summary>
-        /// Raised when TCP port is changed
-        /// </summary>
-        /// <value>
-        /// New TCP port
-        /// </value>
-        public event EventHandler<UInt32> TcpPortChanged;
-
-        /// <summary>
         ///   Create a new instance of the <see cref="Service"/> class.
         /// </summary>
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        internal Service(UInt32 udpPort, UInt32 tcpPort, String machineId, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
+        internal Service(UInt32 udpPort, UInt32 tcpPort, String machineId,
+                         Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
             this.udpPort = udpPort;
             this.tcpPort = tcpPort;
@@ -211,26 +204,11 @@ namespace LUC.DiscoveryService
                     (a.AddressFamily == AddressFamily.InterNetworkV6 && a.IsIPv6LinkLocal));
         }
 
-        /// <summary>
-        /// Change field <see cref="tcpPort"/> to current run TCP port
-        /// </summary>
-        /// <param name="sender">
-        /// Object which invoked this event
-        /// </param>
-        /// <param name="tcpPort">
-        /// New TCP port
-        /// </param>
-        private void OnTcpPortChanged(Object sender, UInt32 tcpPort)
-        {
-            this.tcpPort = tcpPort;
-            TcpPortChanged?.Invoke(sender, tcpPort);
-        }
-
         private void OnNetworkAddressChanged(object sender, EventArgs e) => FindNetworkInterfaces();
 
         private void FindNetworkInterfaces()
         {
-            //log.LogInfo("Finding network interfaces");
+            log.Debug("Finding network interfaces");
 
             try
             {
@@ -243,20 +221,20 @@ namespace LUC.DiscoveryService
                 {
                     oldNics.Add(nic);
 
-                    //if (log.IsDebugEnabled)
-                    //{
-                    //    log.Debug($"Removed nic '{nic.Name}'.");
-                    //}
+                    if (log.IsDebugEnabled)
+                    {
+                        log.Debug($"Removed nic '{nic.Name}'.");
+                    }
                 }
 
                 foreach (var nic in currentNics.Where(nic => !KnownNics.Any(k => k.Id == nic.Id)))
                 {
                     newNics.Add(nic);
 
-                    //if (log.IsDebugEnabled)
-                    //{
-                    //    log.Debug($"Found nic '{nic.Name}'.");
-                    //}
+                    if (log.IsDebugEnabled)
+                    {
+                        log.Debug($"Found nic '{nic.Name}'.");
+                    }
                 }
 
                 KnownNics = currentNics;
@@ -265,8 +243,8 @@ namespace LUC.DiscoveryService
                 if (newNics.Any() || oldNics.Any())
                 {
                     client?.Dispose();
-                    client = new Client(udpPort, tcpPort, UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
-                    client.TcpPortChanged += OnTcpPortChanged;
+                    client = new Client(udpPort, tcpPort, UseIpv4, UseIpv6,
+                                        networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
                     client.UdpMessageReceived += OnUdpMessage;
                     client.TcpMessageReceived += OnTcpMessage;
                 }
@@ -279,6 +257,7 @@ namespace LUC.DiscoveryService
                     });
                 }
 
+                //
                 // Situation has seen when NetworkAddressChanged is not triggered 
                 // (wifi off, but NIC is not disabled, wifi - on, NIC was not changed 
                 // so no event). Rebinding fixes this.
@@ -288,7 +267,7 @@ namespace LUC.DiscoveryService
             }
             catch (Exception e)
             {
-                //log.Error("FindNics failed", e);
+                log.Error("FindNics failed", e);
             }
         }
 
@@ -398,35 +377,14 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        ///   Sends UDP messages
+        ///   Sends out UDP multicast messages
         /// </summary>
-        /// <returns>
-        /// <see cref="Task"/> of sending UDP message
-        /// </returns>
-        public Task SendQuery()
+        public void SendQuery()
         {
-            return Task.Run(async () =>
-            {
-                if (NetworkInterface.GetIsNetworkAvailable())
-                {
-                    try
-                    {
-                        Random random = new Random();
-                        var mess = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), tcpPort, machineId);
-                        var bytes = mess.ToByteArray();
-
-                        if (client != null)
-                        {
-                            await client.SendUdpAsync(bytes).ConfigureAwait(false);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        //loggingService.LogError(ex,ex.Message);
-                    }
-                }
-            });
+            Random random = new Random();
+            var msg = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), tcpPort, machineId);
+            var packet = msg.ToByteArray();
+            client?.SendUdpAsync(packet).GetAwaiter().GetResult();
         }
-
     }
 }

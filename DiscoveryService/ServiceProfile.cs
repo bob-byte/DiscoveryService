@@ -28,9 +28,9 @@ namespace LUC.DiscoveryService
         /// <param name="addresses">
         /// <see cref="IPAddress"/> of network interfaces of current machine 
         /// </param>
-        public ServiceProfile(UInt32 minValueTcpPort, UInt32 maxValueTcpPort, UInt32 udpPort, 
+        public ServiceProfile(UInt32 minValueTcpPort, UInt32 maxValueTcpPort, UInt32 udpPort, UInt32 kadPort,
             UInt32 protocolVersion, ConcurrentDictionary<String, String> groupsSupported, 
-            ConcurrentDictionary<String, String> knownIps, IEnumerable<IPAddress> addresses = null)
+            IEnumerable<IPAddress> addresses = null)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
             MachineId = deviceIdBuilder.MachineId();
@@ -43,20 +43,11 @@ namespace LUC.DiscoveryService
             {
                 GroupsSupported = new ConcurrentDictionary<String, String>();
             }
-
-            if (knownIps != null)
-            {
-                KnownIps = knownIps;
-            }
-            else
-            {
-                KnownIps = new ConcurrentDictionary<String, String>();
-            }
-
             ProtocolVersion = protocolVersion;
 
             RunningUdpPort = udpPort;
             runningTcpPort = minValueTcpPort;
+            KadPort = kadPort;
             this.minValueTcpPort = minValueTcpPort;
             this.maxValueTcpPort = maxValueTcpPort;
         }
@@ -72,7 +63,7 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Integer.
         /// </value>
-	    public UInt32 ProtocolVersion { get; }
+        public UInt32 ProtocolVersion { get; }
 
         /// <summary>
         ///   A unique identifier for the service instance.
@@ -101,6 +92,11 @@ namespace LUC.DiscoveryService
         internal UInt32 RunningUdpPort { get; }
 
         /// <summary>
+        /// Kademilia port, that we send to other computers.
+        /// </summary>
+        internal UInt32 KadPort { get; }
+
+        /// <summary>
         /// Groups which current peer supports.
         /// Key is a name of group, which current peer supports.
         /// Value is a SSL certificate of group
@@ -111,13 +107,13 @@ namespace LUC.DiscoveryService
         public ConcurrentDictionary<String, String> GroupsSupported { get; }
 
         /// <summary>
-        /// IP address of groups which were discovered.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a network in a format "IP-address:port"
+        /// Flag indicating whether Discovery Service should use IPv4 protocol.
         /// </summary>
-        /// <remarks>
-        /// This property is used in internal classes and allows to avoid strong connectivity. It is weaker, because we don't use object type <seealso cref="ServiceDiscovery"/> in the different classes.
-        /// </remarks>
-        public ConcurrentDictionary<String, String> KnownIps { get; }
+        public Boolean useIpv4 { get; }
+
+        /// <summary>
+        /// Flag indicating whether Discovery Service should use IPv6 protocol.
+        /// </summary>
+        public Boolean useIpv6 { get; }
     }
 }

@@ -31,6 +31,10 @@ namespace LUC.DiscoveryService
 
         private Boolean isDiscoveryServiceStarted = false;
 
+        private Boolean useIpv4 = true;
+        private Boolean useIpv6 = true;
+        public String MachineId { get; set; }
+
         /// <summary>
         ///   Raised when a servive instance is shutting down.
         /// </summary>
@@ -43,20 +47,16 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public event EventHandler<MessageEventArgs> ServiceInstanceShutdown;
 
-        private ServiceDiscovery(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, String> groupsSupported = null, ConcurrentDictionary<String, String> knownIps = null)
-            : this(groupsSupported, knownIps)
+        private ServiceDiscovery(ServiceProfile profile)
         {
-            Service.UseIpv4 = useIpv4;
-            Service.UseIpv6 = useIpv6;
-        }
+            KadPort = profile.KadPort;
+            useIpv4 = profile.useIpv4;
+            useIpv6 = profile.useIpv6;
+            GroupsSupported = profile.GroupsSupported;
 
-        private ServiceDiscovery(ConcurrentDictionary<String, String> groupsSupported = null, ConcurrentDictionary<String, String> knownIps = null)
-        {
-            Profile = new ServiceProfile(MinValueTcpPort, MaxValueTcpPort, UdpPort,
-                Messages.Message.ProtocolVersion, groupsSupported, knownIps);
+            machineId = profile.MachineId;
 
-            Service = new Service(UdpPort, MinValueTcpPort, Profile.MachineId);
-            Service.TcpPortChanged += OnTcpPortChanged;
+            Service = new Service(UdpPort, profile.MachineId);
             Service.QueryReceived += SendTcpMessOnQuery;
         }
 
@@ -69,9 +69,19 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// Info of current peer
+        /// Kademilia port, that we send to other computers.
         /// </summary>
-        public ServiceProfile Profile { get; }
+        public UInt32 KadPort { get; }
+
+        /// <summary>
+        /// Flag indicating whether Discovery Service should use IPv4 protocol.
+        /// </summary>
+        public Boolean useIpv4 { get; }
+
+        /// <summary>
+        /// Flag indicating whether Discovery Service should use IPv6 protocol.
+        /// </summary>
+        public Boolean useIpv6 { get; }
 
         /// <summary>
         ///   LightUpon.Cloud Service.
@@ -88,32 +98,11 @@ namespace LUC.DiscoveryService
         public Service Service { get; private set; }
 
         /// <summary>
-        /// IP address of groups which were discovered.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a network in a format "IP-address:port"
-        /// </summary>
-        public ConcurrentDictionary<String, String> KnownIps => Profile.KnownIps;
-
-        /// <summary>
         /// Groups which current peer supports.
         /// Key is a name of group, which current peer supports.
         /// Value is a SSL certificate of group
         /// </summary>
-        public ConcurrentDictionary<String, String> GroupsSupported => Profile.GroupsSupported;
-
-        /// <summary>
-        /// Change field <see cref="ServiceProfile.RunningTcpPort"/> to current run TCP port
-        /// </summary>
-        /// <param name="sender">
-        /// Object which invoked this event
-        /// </param>
-        /// <param name="tcpPort">
-        /// New TCP port
-        /// </param>
-        private void OnTcpPortChanged(Object sender, UInt32 tcpPort)
-        {
-            Profile.RunningTcpPort = tcpPort;
-        }
+        public ConcurrentDictionary<String, String> GroupsSupported;
 
         //TODO: check SSL certificate with SNI
         /// <summary>
@@ -141,10 +130,12 @@ namespace LUC.DiscoveryService
                 var message = e.Message as MulticastMessage;
                 client = new TcpClient(e.RemoteEndPoint.AddressFamily);
                 client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
-                
+
                 stream = client.GetStream();
-                var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue), 
-                    Profile.RunningTcpPort, Profile.GroupsSupported.Keys.ToList());
+                var tcpMess = new TcpMessage(
+                    messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                    KadPort,
+                    GroupsSupported.Keys.ToList());
                 var bytes = tcpMess.ToByteArray();
                 if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
                 {
@@ -186,15 +177,9 @@ namespace LUC.DiscoveryService
         /// Key is a name of group, which current peer supports.
         /// Value is a SSL certificate of group
         /// </param>
-        /// <param name="knownIps">
-        /// IP address of groups which were discovered.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a network in a format "IPAddress:port"
-        /// </param>
-        public static ServiceDiscovery Instance(ConcurrentDictionary<String, String> groupsSupported = null,
-            ConcurrentDictionary<String, String> knownIps = null)
+        public static ServiceDiscovery Instance(ConcurrentDictionary<String, String> groupsSupported = null)
         {
-            Lock.InitWithLock(Lock.LockService, new ServiceDiscovery(groupsSupported, knownIps), ref instance);
+            Lock.InitWithLock(Lock.LockService, new ServiceDiscovery(groupsSupported), ref instance);
             return instance;
         }
 
@@ -218,29 +203,22 @@ namespace LUC.DiscoveryService
         /// Key is a name of group, which current peer supports.
         /// Value is a SSL certificate of group
         /// </param>
-        /// <param name="knownIps">
-        /// IP address of groups which were discovered.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a network in a format "IPAddress:port"
-        /// </param>
-        public static ServiceDiscovery Instance(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, String> groupsSupported = null, ConcurrentDictionary<String, String> knownIps = null)
+        public static ServiceDiscovery Instance(Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, String> groupsSupported = null)
         {
-            Lock.InitWithLock(Lock.LockService, new ServiceDiscovery(useIpv4, useIpv6, groupsSupported, knownIps), ref instance);
+            Lock.InitWithLock(Lock.LockService, new ServiceDiscovery(useIpv4, useIpv6, groupsSupported), ref instance);
             return instance;
         }
 
         /// <summary>
         ///    Start listening TCP, UDP messages and sending them
         /// </summary>
-        public void Start(out String machineId)
+        public void Start()
         {
             if(!isDiscoveryServiceStarted)
             {
                 Service.Start();
                 isDiscoveryServiceStarted = true;
             }
-
-            machineId = Profile.MachineId;
         }
 
         /// <summary>

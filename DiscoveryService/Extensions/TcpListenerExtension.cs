@@ -18,7 +18,7 @@ namespace LUC.DiscoveryService.Extensions
             return Task.Run(async () =>
             {
                 var localEndpoint = receiver.LocalEndpoint as IPEndPoint;
-                
+
                 //TODO add try...catch...finally
                 var client = await receiver.AcceptTcpClientAsync();
                 var stream = client.GetStream();
