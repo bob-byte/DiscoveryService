@@ -244,7 +244,7 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// Sends query to all services in local network
+        /// Sends query to all services in a local network
         /// </summary>
         public void QueryAllServices()
         {
