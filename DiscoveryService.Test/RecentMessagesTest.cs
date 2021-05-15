@@ -49,7 +49,7 @@ namespace DiscoveryService.Test
 
             Assert.IsTrue(condition: messages.TryAdd(byteOfClassA));
             Assert.IsTrue(messages.TryAdd(byteOfClassB));
-            Assert.IsFalse(messages.TryAdd(byteOfClassA));
+            Assert.IsFalse(condition: messages.TryAdd(byteOfClassA));
             await Task.Delay(millisecondsDelay: 200);
             Assert.IsTrue(messages.TryAdd(byteOfClassA));
         }

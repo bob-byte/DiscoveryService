@@ -20,9 +20,9 @@ namespace DiscoveryService.Test
             MemoryStream ms = new MemoryStream();
             WireWriter writer = null;
 
-            var exception = Assert.Throws<ArgumentNullException>(() => tcp.Write(writer));
+            var exception = Assert.Throws<ArgumentNullException>(code: () => tcp.Write(writer));
 
-            Assert.That(exception.ParamName, Is.EqualTo(nameof(writer)));
+            Assert.That(actual: exception.ParamName, expression: Is.EqualTo(nameof(writer)));
         }
 
         [Test]
