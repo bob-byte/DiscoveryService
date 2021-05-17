@@ -93,6 +93,7 @@ namespace LUC.DiscoveryService
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
         internal Service(UInt32 udpPort, UInt32 tcpPort, String machineId,
+                         Boolean useIpv4, Boolean useIpv6,
                          Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
             this.udpPort = udpPort;

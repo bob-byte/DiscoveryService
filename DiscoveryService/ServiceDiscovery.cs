@@ -56,7 +56,8 @@ namespace LUC.DiscoveryService
 
             machineId = profile.MachineId;
 
-            Service = new Service(UdpPort, profile.MachineId);
+            Service = new Service(UdpPort, profile.minValueTcpPort, profile.MachineId,
+                                  useIpv4, useIpv6);
             Service.QueryReceived += SendTcpMessOnQuery;
         }
 
