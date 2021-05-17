@@ -25,3 +25,5 @@ TODO
 * to add events:
     - on groups change
     - on tcp port change
+
+* to add function for checking what IP versions are supported: 4 and 6
