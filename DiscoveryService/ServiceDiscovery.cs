@@ -203,7 +203,7 @@ namespace LUC.DiscoveryService
 
                     if(e.RemoteEndPoint is IPEndPoint iPEndPoint)
                     {
-                        client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
+                        client.Connect(iPEndPoint.Address, (Int32)message.TcpPort);
                         stream = client.GetStream();
 
                         var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
