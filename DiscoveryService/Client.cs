@@ -165,7 +165,7 @@ namespace LUC.DiscoveryService
                 }
                 catch (Exception e)
                 {
-                    //log.LogError($"Cannot setup send socket for {address}: {e.Message}");
+                    log.LogError($"Cannot setup send socket for {address}: {e.Message}");
                     senderUdp.Dispose();
                 }
             }
@@ -204,11 +204,11 @@ namespace LUC.DiscoveryService
                 }
                 catch(SocketException e)
                 {
-                    //log.LogError($"Failed to send UDP message, SocketException: {e.Message}");
+                    log.LogError($"Failed to send UDP message, SocketException: {e.Message}");
                 }
                 catch (InvalidOperationException e)
                 {
-                    //log.LogError($"Failed to send UDP message, InvalidOperationException: {e.Message}");
+                    log.LogError($"Failed to send UDP message, InvalidOperationException: {e.Message}");
                 }
                 catch(Exception ex)
                 {
@@ -241,7 +241,7 @@ namespace LUC.DiscoveryService
                 }
                 catch
                 {
-                    //TODO don't return. Change socket
+                    // TODO: increment tcp port, but take into account maxValueTcpPort
                     return;
                 }
             });

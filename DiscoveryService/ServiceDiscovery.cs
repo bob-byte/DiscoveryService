@@ -194,44 +194,33 @@ namespace LUC.DiscoveryService
             {
                 TcpClient client = null;
                 NetworkStream stream = null;
-                try
+
+                Random random = new Random();
+                var message = e.Message as MulticastMessage;
+                client = new TcpClient(e.RemoteEndPoint.AddressFamily);
+
+                if(e.RemoteEndPoint is IPEndPoint iPEndPoint)
                 {
-                    Random random = new Random();
+                    client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
+                    stream = client.GetStream();
 
-                    var message = e.Message as MulticastMessage;
-                    client = new TcpClient(e.RemoteEndPoint.AddressFamily);
+                    var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                    KadPort, groupsIds: GroupsSupported?.Keys?.ToList());
+                    var bytes = tcpMess.ToByteArray();
 
-                    if(e.RemoteEndPoint is IPEndPoint iPEndPoint)
+                    if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
                     {
-                        client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
-                        stream = client.GetStream();
-
-                        var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                        KadPort, groupsIds: GroupsSupported?.Keys?.ToList());
-                        var bytes = tcpMess.ToByteArray();
-
-                        if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
-                        {
-                            return;
-                        }
-
-                        stream.WriteAsync(bytes, offset: 0, bytes.Length);
+                        return;
                     }
-                    else
-                    {
-                        throw new InvalidCastException($"Can\'t convert {nameof(e.RemoteEndPoint)} to {nameof(IPEndPoint)}");
-                    }
-                    
+
+                    stream.WriteAsync(bytes, offset: 0, bytes.Length);
                 }
-                catch (SocketException)
+                else
                 {
-                    throw;
+                    throw new InvalidCastException($"Can\'t convert {nameof(e.RemoteEndPoint)} to {nameof(IPEndPoint)}");
                 }
-                finally
-                {
-                    stream?.Close();
-                    client?.Close();
-                }
+                stream?.Close();
+                client?.Close();
             }
         }
 
