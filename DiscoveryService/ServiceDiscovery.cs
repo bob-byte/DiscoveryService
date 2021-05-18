@@ -186,7 +186,8 @@ namespace LUC.DiscoveryService
         /// </param>
         public void SendTcpMess(Object sender, MessageEventArgs e)
         {
-            if((e?.Message == null) || (e?.RemoteEndPoint == null) || (!(e?.Message is MulticastMessage)))
+            if((e?.Message == null) || (!(e?.Message is MulticastMessage message)) || 
+                (e?.RemoteEndPoint == null) || (!(e.RemoteEndPoint is IPEndPoint iPEndPoint)))
             {
                 throw new ArgumentException($"Bad format of {nameof(e)}");
             }
@@ -194,44 +195,25 @@ namespace LUC.DiscoveryService
             {
                 TcpClient client = null;
                 NetworkStream stream = null;
-                try
+
+                Random random = new Random();
+                var message = e.Message as MulticastMessage;
+                client = new TcpClient(iPEndPoint.AddressFamily);
+                client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
+                stream = client.GetStream();
+
+                var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                KadPort, groupsIds: GroupsSupported?.Keys?.ToList());
+                var bytes = tcpMess.ToByteArray();
+
+                if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
                 {
-                    Random random = new Random();
-
-                    var message = e.Message as MulticastMessage;
-                    client = new TcpClient(e.RemoteEndPoint.AddressFamily);
-
-                    if(e.RemoteEndPoint is IPEndPoint iPEndPoint)
-                    {
-                        client.Connect(iPEndPoint.Address, (Int32)message.TcpPort);
-                        stream = client.GetStream();
-
-                        var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                        KadPort, groupsIds: GroupsSupported?.Keys?.ToList());
-                        var bytes = tcpMess.ToByteArray();
-
-                        //if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
-                        //{
-                        //    return;
-                        //}
-
-                        stream.WriteAsync(bytes, offset: 0, bytes.Length);
-                    }
-                    else
-                    {
-                        throw new InvalidCastException($"Can\'t convert {nameof(e.RemoteEndPoint)} to {nameof(IPEndPoint)}");
-                    }
-                    
+                    return;
                 }
-                catch (SocketException)
-                {
-                    throw;
-                }
-                finally
-                {
-                    stream?.Close();
-                    client?.Close();
-                }
+
+                stream.WriteAsync(bytes, offset: 0, bytes.Length);
+                stream?.Close();
+                client?.Close();
             }
         }
 

@@ -25,23 +25,14 @@ namespace LUC.DiscoveryService.Extensions
                 NetworkStream stream = null;
                 TcpMessage message = new TcpMessage();
 
-                try
-                {
-                    client = await receiver.AcceptTcpClientAsync();
-                    stream = client.GetStream();
-                    message.Read(new WireReader(stream));
+                client = await receiver.AcceptTcpClientAsync();
+                stream = client.GetStream();
+                message.Read(new WireReader(stream));
 
-                    iPEndPoint = client.Client.RemoteEndPoint as IPEndPoint;
-                }
-                catch
-                {
-                    throw;
-                }
-                finally
-                {
-                    stream?.Close();
-                    client?.Close();
-                }
+                iPEndPoint = client.Client.RemoteEndPoint as IPEndPoint;
+
+                stream?.Close();
+                client?.Close();
 
                 MessageEventArgs receiveResult = new MessageEventArgs();
                 if (iPEndPoint != null)

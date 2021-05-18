@@ -209,7 +209,7 @@ namespace LUC.DiscoveryService
 
         private void FindNetworkInterfaces()
         {
-            //log.Debug("Finding network interfaces");
+            log.Debug("Finding network interfaces");
 
             try
             {
@@ -222,20 +222,20 @@ namespace LUC.DiscoveryService
                 {
                     oldNics.Add(nic);
 
-                    //if (log.IsDebugEnabled)
-                    //{
-                    //    log.Debug($"Removed nic '{nic.Name}'.");
-                    //}
+                    if (log.IsDebugEnabled)
+                    {
+                        log.Debug($"Removed nic '{nic.Name}'.");
+                    }
                 }
 
                 foreach (var nic in currentNics.Where(nic => !KnownNics.Any(k => k.Id == nic.Id)))
                 {
                     newNics.Add(nic);
 
-                    //if (log.IsDebugEnabled)
-                    //{
-                    //    log.Debug($"Found nic '{nic.Name}'.");
-                    //}
+                    if (log.IsDebugEnabled)
+                    {
+                        log.Debug($"Found nic '{nic.Name}'.");
+                    }
                 }
 
                 KnownNics = currentNics;
@@ -267,7 +267,7 @@ namespace LUC.DiscoveryService
             }
             catch (Exception e)
             {
-                //log.Error("FindNics failed", e);
+                log.Error("FindNics failed", e);
             }
         }
 
@@ -294,7 +294,7 @@ namespace LUC.DiscoveryService
         /// </remarks>
         private void OnUdpMessage(object sender, UdpReceiveResult result)
         {
-            // If recently received, then ignore.
+            // TODO: If recently received, then ignore.
             //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
             //{
             //    return;
@@ -312,6 +312,7 @@ namespace LUC.DiscoveryService
                 return;
             }
 
+            // TODO
             //if ((message.VersionOfProtocol != Message.ProtocolVersion) ||
             //    (message.MachineId == machineId))
             //{
