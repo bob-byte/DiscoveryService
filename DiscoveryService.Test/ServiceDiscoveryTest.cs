@@ -167,7 +167,7 @@ namespace DiscoveryService.Test
             Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
                 Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
-                RemoteEndPoint = new DnsEndPoint(Dns.GetHostName(), (Int32)ServiceProfile.DefaultPort, AddressFamily.InterNetwork)
+                RemoteEndPoint = new DnsEndPoint(Dns.GetHostName(), (Int32)ServiceProfile.DefaultTcpPort, AddressFamily.InterNetwork)
             }),
             Throws.TypeOf(typeof(InvalidCastException)));
         }
