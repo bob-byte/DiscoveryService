@@ -87,28 +87,20 @@ namespace LUC.DiscoveryService
         public event EventHandler<Byte[]> MalformedMessage;
 
         /// <summary>
-        /// Raised when TCP port is changed
-        /// </summary>
-        /// <value>
-        /// New TCP port
-        /// </value>
-        public event EventHandler<UInt32> TcpPortChanged;
-
-        /// <summary>
         ///   Create a new instance of the <see cref="Service"/> class.
         /// </summary>
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        internal Service(UInt32 udpPort, UInt32 tcpPort, String machineId, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
+        internal Service(UInt32 udpPort, UInt32 tcpPort, String machineId, Boolean useIpv4, Boolean useIpv6, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
             this.udpPort = udpPort;
             this.tcpPort = tcpPort;
             this.machineId = machineId;
 
             networkInterfacesFilter = filter;
-            UseIpv4 = Socket.OSSupportsIPv4;
-            UseIpv6 = Socket.OSSupportsIPv6;
+            UseIpv4 = useIpv4;
+            UseIpv6 = useIpv6;
 
             IgnoreDuplicateMessages = true;
         }
@@ -211,21 +203,6 @@ namespace LUC.DiscoveryService
                     (a.AddressFamily == AddressFamily.InterNetworkV6 && a.IsIPv6LinkLocal));
         }
 
-        /// <summary>
-        /// Change field <see cref="tcpPort"/> to current run TCP port
-        /// </summary>
-        /// <param name="sender">
-        /// Object which invoked this event
-        /// </param>
-        /// <param name="tcpPort">
-        /// New TCP port
-        /// </param>
-        private void OnTcpPortChanged(Object sender, UInt32 tcpPort)
-        {
-            this.tcpPort = tcpPort;
-            TcpPortChanged?.Invoke(sender, tcpPort);
-        }
-
         private void OnNetworkAddressChanged(object sender, EventArgs e) => FindNetworkInterfaces();
 
         private void FindNetworkInterfaces()
@@ -266,7 +243,6 @@ namespace LUC.DiscoveryService
                 {
                     client?.Dispose();
                     client = new Client(udpPort, tcpPort, UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
-                    client.TcpPortChanged += OnTcpPortChanged;
                     client.UdpMessageReceived += OnUdpMessage;
                     client.TcpMessageReceived += OnTcpMessage;
                 }
@@ -316,10 +292,10 @@ namespace LUC.DiscoveryService
         private void OnUdpMessage(object sender, UdpReceiveResult result)
         {
             // If recently received, then ignore.
-            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-            {
-                return;
-            }
+            //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+            //{
+            //    return;
+            //}
 
             MulticastMessage message = new MulticastMessage();
             try
@@ -333,11 +309,11 @@ namespace LUC.DiscoveryService
                 return;
             }
 
-            if ((message.VersionOfProtocol != Message.ProtocolVersion) ||
-                (message.MachineId == machineId))
-            {
-                return;
-            }
+            //if ((message.VersionOfProtocol != Message.ProtocolVersion) ||
+            //    (message.MachineId == machineId))
+            //{
+            //    return;
+            //}
 
             // Dispatch the message.
             try
@@ -372,7 +348,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Start the service.
         /// </summary>
-        public void Start()
+        internal void Start()
         {
             KnownNics.Clear();
 
@@ -385,7 +361,7 @@ namespace LUC.DiscoveryService
         /// <remarks>
         ///   Clears all the event handlers.
         /// </remarks>
-        public void Stop()
+        internal void Stop()
         {
             // All event handlers are cleared.
             QueryReceived = null;

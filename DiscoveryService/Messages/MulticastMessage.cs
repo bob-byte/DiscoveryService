@@ -30,8 +30,9 @@ namespace LUC.DiscoveryService.Messages
         /// TCP port which is being run in machine with <see cref="MachineId"/>
         /// </param>
         public MulticastMessage(UInt32 messageId, UInt32 tcpPort, String machineId)
-            : base(messageId, tcpPort)
+            : base(messageId)
         {
+            TcpPort = tcpPort;
             MachineId = machineId;
         }
 
@@ -40,6 +41,11 @@ namespace LUC.DiscoveryService.Messages
         /// </summary>
         public String MachineId { get; set; }
 
+        /// <summary>
+        /// TCP port which is being run in machine with machineId
+        /// </summary>
+        public UInt32 TcpPort { get; set; }
+
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)
         {
@@ -47,8 +53,8 @@ namespace LUC.DiscoveryService.Messages
             {
                 MessageId = reader.ReadUInt32();
                 VersionOfProtocol = reader.ReadUInt32();
-                MachineId = reader.ReadString();
                 TcpPort = reader.ReadUInt32();
+                MachineId = reader.ReadString();
 
                 return this;
             }
@@ -65,8 +71,8 @@ namespace LUC.DiscoveryService.Messages
             {
                 writer.Write(MessageId);
                 writer.Write(VersionOfProtocol);
-                writer.Write(MachineId);
                 writer.Write(TcpPort);
+                writer.Write(MachineId);
             }
             else
             {
@@ -81,7 +87,8 @@ namespace LUC.DiscoveryService.Messages
             {
                 writer.WriteLine("Multicast message:");
                 writer.WriteLine($"{base.ToString()};");
-                writer.WriteLine($"MachineId = {MachineId}");
+                writer.WriteLine($"TCP port = {TcpPort};\n" +
+                                 $"MachineId = {MachineId}");
 
                 return writer.ToString();
             }

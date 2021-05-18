@@ -13,7 +13,9 @@ namespace LUC.DiscoveryService
     /// </summary>
     public class ServiceProfile
     {
-        private readonly UInt32 minValueTcpPort, maxValueTcpPort;
+        public const UInt32 DefaultPort = 17500;
+        public const UInt32 CountAvailablePorts = 10;
+
         private UInt32 runningTcpPort;
 
         static ServiceProfile()
@@ -28,9 +30,10 @@ namespace LUC.DiscoveryService
         /// <param name="addresses">
         /// <see cref="IPAddress"/> of network interfaces of current machine 
         /// </param>
-        public ServiceProfile(UInt32 minValueTcpPort, UInt32 maxValueTcpPort, UInt32 udpPort, 
-            UInt32 protocolVersion, ConcurrentDictionary<String, String> groupsSupported, 
-            ConcurrentDictionary<String, String> knownIps, IEnumerable<IPAddress> addresses = null)
+        public ServiceProfile(Boolean useIpv4, Boolean useIpv6, UInt32 protocolVersion, 
+            ConcurrentDictionary<String, String> groupsSupported = null, 
+            ConcurrentDictionary<String, String> knownIps = null, 
+            IEnumerable<IPAddress> addresses = null)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
             MachineId = deviceIdBuilder.MachineId();
@@ -55,11 +58,25 @@ namespace LUC.DiscoveryService
 
             ProtocolVersion = protocolVersion;
 
-            RunningUdpPort = udpPort;
-            runningTcpPort = minValueTcpPort;
-            this.minValueTcpPort = minValueTcpPort;
-            this.maxValueTcpPort = maxValueTcpPort;
+            runningTcpPort = DefaultPort;
+            MinValueTcpPort = DefaultPort;
+            MaxValueTcpPort = DefaultPort + CountAvailablePorts;
+            KadPort = DefaultPort;
+            RunningUdpPort = DefaultPort;
+
+            UseIpv4 = useIpv4;
+            UseIpv6 = useIpv6;
         }
+
+        /// <summary>
+        /// Flag indicating whether Discovery Service should use IPv4 protocol.
+        /// </summary>
+        public Boolean UseIpv4 { get; private set; } = true;
+
+        /// <summary>
+        /// Flag indicating whether Discovery Service should use IPv6 protocol.
+        /// </summary>
+        public Boolean UseIpv6 { get; private set; } = true;
 
         /// <summary>
         /// Known network interfaces
@@ -80,7 +97,13 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public String MachineId { get; set; }
+        public String MachineId { get; }
+
+        public UInt32 KadPort { get; }
+
+        public UInt32 MinValueTcpPort { get; }
+
+        public UInt32 MaxValueTcpPort { get; }
 
         /// <summary>
         /// TCP port which current peer is using in TCP connections
@@ -88,10 +111,10 @@ namespace LUC.DiscoveryService
         public UInt32 RunningTcpPort
         {
             get => runningTcpPort;
-            set
+            internal set
             {
-                runningTcpPort = (value < minValueTcpPort) || (maxValueTcpPort < value) ? 
-                    minValueTcpPort : value;
+                runningTcpPort = (value < MinValueTcpPort) || (MaxValueTcpPort < value) ? 
+                    MinValueTcpPort : value;
             }
         }
 

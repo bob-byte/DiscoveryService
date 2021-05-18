@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.Messages;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -18,22 +19,40 @@ namespace LUC.DiscoveryService.Extensions
             return Task.Run(async () =>
             {
                 var localEndpoint = receiver.LocalEndpoint as IPEndPoint;
-                
-                //TODO add try...catch...finally
-                var client = await receiver.AcceptTcpClientAsync();
-                var stream = client.GetStream();
+                IPEndPoint iPEndPoint = null;
+                TcpClient client = null;
+                NetworkStream stream = null;
                 TcpMessage message = new TcpMessage();
-                message.Read(new CodingData.WireReader(stream));
+
+                //TODO add try...catch...finally
+                try
+                {
+                    client = await receiver.AcceptTcpClientAsync();
+                    stream = client.GetStream();
+                    message.Read(new CodingData.WireReader(stream));
+
+                    iPEndPoint = client.Client.RemoteEndPoint as IPEndPoint;
+                }
+                catch
+                {
+                    throw;
+                }
+                finally
+                {
+                    stream?.Close();
+                    client?.Close();
+                }
 
                 MessageEventArgs receiveResult = new MessageEventArgs();
-                if (client.Client.RemoteEndPoint is IPEndPoint iPEndPoint)
+                if (iPEndPoint != null)
                 {
                     receiveResult.Message = message;
                     receiveResult.RemoteEndPoint = iPEndPoint;
                 }
-
-                stream.Close();
-                client.Close();
+                else
+                {
+                    throw new InvalidOperationException("Cannot convert remote end point to IPEndPoint");
+                }
 
                 return receiveResult;
             });

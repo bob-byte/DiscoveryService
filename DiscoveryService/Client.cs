@@ -47,14 +47,6 @@ namespace LUC.DiscoveryService
         public event EventHandler<MessageEventArgs> TcpMessageReceived;
 
         /// <summary>
-        /// Raised when TCP port is changed
-        /// </summary>
-        /// <value>
-        /// New TCP port
-        /// </value>
-        public event EventHandler<UInt32> TcpPortChanged;
-
-        /// <summary>
         ///   Creates a new instance of the <see cref="Client"/> class.
         /// </summary>
         /// <param name="profile">
@@ -217,12 +209,10 @@ namespace LUC.DiscoveryService
                 }
                 catch(SocketException)
                 {
-                    TcpPortChanged?.Invoke(this, ++tcpPort);
                     //log.LogError($"Sender {sender.Key} failure: {e.Message}");
                 }
                 catch(InvalidOperationException)
                 {
-                    TcpPortChanged?.Invoke(this, ++tcpPort);
                     //log.LogError($"Sender {sender.Key} failure: {e.Message}");
                 }
             }
@@ -280,10 +270,13 @@ namespace LUC.DiscoveryService
 
                     await task.ConfigureAwait(false);
                 }
-                catch
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
+                catch (SocketException)
                 {
                     //TODO don't return. Change absolutely TCP port (in TcpListener)
-                    TcpPortChanged?.Invoke(this, ++tcpPort);
                     return;
                 }
             });

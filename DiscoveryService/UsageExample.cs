@@ -56,7 +56,7 @@ namespace LUC.DiscoveryService
 
                 if ((e.Message is TcpMessage message) && (e.RemoteEndPoint is IPEndPoint endPoint))
                 {
-                    var network = $"{endPoint.Address}:{message.TcpPort}";
+                    var network = $"{endPoint.Address}:{message.KadPort}";
                     foreach (var group in message.GroupIds)
                     {
                         if(!GroupsDiscovered.TryAdd(network, group))
@@ -106,8 +106,8 @@ namespace LUC.DiscoveryService
             groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
             groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
 
-            var serviceDiscovery = ServiceDiscovery.Instance(groupsSupported, knownIps);
-            serviceDiscovery.Start(out _);
+            var serviceDiscovery = ServiceDiscovery.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
+            serviceDiscovery.Start();
 
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;
             serviceDiscovery.Service.QueryReceived += OnGoodUdpMessage;

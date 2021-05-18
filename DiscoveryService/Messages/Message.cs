@@ -26,10 +26,9 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="tcpPort">
         /// TCP port which is being run in machine with machineId
         /// </param>
-        public Message(UInt32 messageId, UInt32 tcpPort)
+        public Message(UInt32 messageId)
         {
             MessageId = messageId;
-            TcpPort = tcpPort;
             VersionOfProtocol = ProtocolVersion;
         }
 
@@ -42,11 +41,6 @@ namespace LUC.DiscoveryService.Messages
         ///   Supported version of protocol of the remote application.
         /// </summary>
         public UInt32 VersionOfProtocol { get; set; }
-
-        /// <summary>
-        /// TCP port which is being run in machine with machineId
-        /// </summary>
-        public UInt32 TcpPort { get; set; }
 
         /// <summary>
         ///   Length in bytes of the object when serialised.
@@ -162,7 +156,6 @@ namespace LUC.DiscoveryService.Messages
             using (var writer = new StringWriter())
             {
                 writer.Write($"MessageId = {MessageId};\n" +
-                                 $"Tcp port = {TcpPort};\n" +
                                  $"Protocol version = {VersionOfProtocol}");
 
                 return writer.ToString();

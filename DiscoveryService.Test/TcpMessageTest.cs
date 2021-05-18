@@ -46,8 +46,9 @@ namespace DiscoveryService.Test
 
             writer.WriteLine("TCP message:");
             writer.WriteLine($"MessageId = {messageId};\n" +
-                             $"Tcp port = {tcpPort};\n" +
-                             $"Protocol version = {versionOfProtocol};");
+                             $"Protocol version = {versionOfProtocol};\r\n" +
+                             $"TCP port of the Kademilia service = {tcpPort};");
+
             writer.WriteLine($"GroupIds:");
             for (Int32 id = 0; id < groupsIds.Count; id++)
             {
@@ -60,8 +61,8 @@ namespace DiscoveryService.Test
                     writer.WriteLine($"{groupsIds[id]};");
                 }
             }
-            var expected = writer.ToString();
 
+            var expected = writer.ToString();
             return expected;
         }
 

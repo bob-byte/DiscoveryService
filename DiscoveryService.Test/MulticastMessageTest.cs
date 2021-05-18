@@ -34,8 +34,8 @@ namespace DiscoveryService.Test
             var writer = new StringWriter();
             writer.WriteLine("Multicast message:");
             writer.WriteLine($"MessageId = {messageId};\n" +
-                             $"Tcp port = {tcpPort};\n" +
                              $"Protocol version = {versionOfProtocol};\r\n" +
+                             $"TCP port = {tcpPort};\n" +
                              $"MachineId = {machineId}");
             var expected = writer.ToString();
             MulticastMessage multicast = new MulticastMessage(messageId, tcpPort, machineId);
@@ -71,8 +71,8 @@ namespace DiscoveryService.Test
 
             writer.Write(messageId);
             writer.Write(versionOfProtocol);
-            writer.Write(machineId);
             writer.Write(tcpPort);
+            writer.Write(machineId);
             stream.Position=0;
             var actual = message.Read(new WireReader(stream)).ToString();
 

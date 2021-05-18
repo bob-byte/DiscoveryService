@@ -25,8 +25,8 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="messageId">
         ///   Unique message identifier. It is used to detect duplicate messages.
         /// </param>
-        public TcpMessage(UInt32 messageId, UInt32 tcpPort, List<String> groupsIds)
-            : base(messageId, tcpPort)
+        public TcpMessage(UInt32 messageId, UInt32 kadPort, List<String> groupsIds)
+            : base(messageId)
         {
             if(groupsIds != null)
             {
@@ -36,6 +36,8 @@ namespace LUC.DiscoveryService.Messages
             {
                 GroupIds = new List<String>();
             }
+
+            KadPort = kadPort;
         }
 
         /// <summary>
@@ -43,13 +45,18 @@ namespace LUC.DiscoveryService.Messages
         /// </summary>
         public List<String> GroupIds { get; set; }
 
+        /// <summary>
+        /// TCP port of the Kademilia service.
+        /// </summary>
+        public UInt32 KadPort { get; set; }
+
         public override IWireSerialiser Read(WireReader reader)
         {
             if(reader != null)
             {
                 MessageId = reader.ReadUInt32();
                 VersionOfProtocol = reader.ReadUInt32();
-                TcpPort = reader.ReadUInt32();
+                KadPort = reader.ReadUInt32();
                 GroupIds = reader.ReadListOfStrings();
 
                 return this;
@@ -82,7 +89,7 @@ namespace LUC.DiscoveryService.Messages
             {
                 writer.Write(MessageId);
                 writer.Write(VersionOfProtocol);
-                writer.Write(TcpPort);
+                writer.Write(KadPort);
                 writer.WriteEnumerable(GroupIds);
             }
             else
@@ -97,6 +104,7 @@ namespace LUC.DiscoveryService.Messages
             {
                 writer.WriteLine("TCP message:");
                 writer.WriteLine($"{base.ToString()};");
+                writer.WriteLine($"TCP port of the Kademilia service = {KadPort};");
 
                 writer.WriteLine($"{nameof(GroupIds)}:");
                 for (Int32 id = 0; id < GroupIds.Count; id++)
