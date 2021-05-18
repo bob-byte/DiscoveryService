@@ -323,7 +323,6 @@ namespace LUC.DiscoveryService
             try
             {
                 QueryReceived?.Invoke(this, new MessageEventArgs { Message = message, RemoteEndPoint = result.RemoteEndPoint });
-                throw new Exception();
             }
             catch (Exception e)
             {

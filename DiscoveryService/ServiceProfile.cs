@@ -13,7 +13,9 @@ namespace LUC.DiscoveryService
     /// </summary>
     public class ServiceProfile
     {
-        public const UInt32 DefaultPort = 17500;
+        public const UInt32 DefaultTcpPort = 17500;
+        public const UInt32 DefaultUdpPort = 17500;
+        public const UInt32 DefaultKadPort = 2720;
         public const UInt32 CountAvailablePorts = 10;
 
         private UInt32 runningTcpPort;
@@ -58,11 +60,11 @@ namespace LUC.DiscoveryService
 
             ProtocolVersion = protocolVersion;
 
-            runningTcpPort = DefaultPort;
-            MinValueTcpPort = DefaultPort;
-            MaxValueTcpPort = DefaultPort + CountAvailablePorts;
-            KadPort = DefaultPort;
-            RunningUdpPort = DefaultPort;
+            runningTcpPort = DefaultTcpPort;
+            MinValueTcpPort = DefaultTcpPort;
+            MaxValueTcpPort = DefaultTcpPort + CountAvailablePorts;
+            KadPort = DefaultKadPort;
+            RunningUdpPort = DefaultUdpPort;
 
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;
