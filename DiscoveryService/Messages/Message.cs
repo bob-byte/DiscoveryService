@@ -10,6 +10,9 @@ namespace LUC.DiscoveryService.Messages
     /// </summary>
     public abstract class Message : IWireSerialiser
     {
+        /// <summary>
+        ///   Supported version of protocol
+        /// </summary>
         public const UInt32 ProtocolVersion = 1;
 
         public Message()
@@ -156,7 +159,7 @@ namespace LUC.DiscoveryService.Messages
             using (var writer = new StringWriter())
             {
                 writer.Write($"MessageId = {MessageId};\n" +
-                                 $"Protocol version = {VersionOfProtocol}");
+                             $"Protocol version = {VersionOfProtocol}");
 
                 return writer.ToString();
             }

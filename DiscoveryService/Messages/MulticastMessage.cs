@@ -18,6 +18,11 @@ namespace LUC.DiscoveryService.Messages
         }
 
         /// <summary>
+        /// TCP port of Discovery Service
+        /// </summary>
+        public UInt32 TcpPort { get; set; }
+
+        /// <summary>
         /// Create a new instance of the <see cref="MulticastMessage"/> class. This constructor is often used to write message to a stream
         /// </summary>
         /// <param name="messageId">

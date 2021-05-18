@@ -31,8 +31,15 @@ namespace LUC.DiscoveryService
 
         public static ConcurrentDictionary<String, String> GroupsDiscovered { get; set; }
 
-        public static ConcurrentDictionary<String, String> KnownIps { get; set; }
-
+        /// <summary>
+        /// IP address of groups which were discovered.
+        /// Key is a network in a format "IP-address:port"
+        /// Value is the list of groups, which peer supports.
+        /// </summary>
+        /// <remarks>
+        /// This property is populated when OnGoodTcpMessage event arrives.
+        /// </remarks>
+        public static ConcurrentDictionary<String, List<String>> KnownIps { get; set; }
 
         private static void OnBadMessage(Object sender, Byte[] packet)
         {
@@ -98,15 +105,11 @@ namespace LUC.DiscoveryService
                 Console.WriteLine($"IP address {a}");
             }
 
-            ConcurrentDictionary<String, String> knownIps = new ConcurrentDictionary<String, String>();
-            knownIps.TryAdd("the-dubstack-engineers-res", "192.168.1.100:17500");
-            knownIps.TryAdd("the-dubstack-architects-res", "192.168.13.140:17500");
-
             ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
             groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
             groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
 
-            var serviceDiscovery = ServiceDiscovery.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
+            var serviceDiscovery = ServiceDiscovery.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported, KnownIps));
             serviceDiscovery.Start();
 
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;

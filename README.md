@@ -22,4 +22,8 @@ TODO
 * in case ip or port of "known IP" changes, we have to remove that IP from knownIPs and let DS to discover the new address on the next check
   KAD request is supposed to raise exception if it fails to connect.
 
+* to add events:
+    - on groups change
+    - on tcp port change
 
+* to add function for checking what IP versions are supported: 4 and 6

@@ -37,7 +37,8 @@ namespace LUC.DiscoveryService
         private readonly ConcurrentDictionary<IPAddress, UdpClient> sendersUdp = new ConcurrentDictionary<IPAddress, UdpClient>();
 
         /// <summary>
-        /// It calls method OnUdpMessage, which run SendTcp
+        /// It calls method OnUdpMessage, which run SendTcp,
+        /// in order to connect back to the host, that sends muticast
         /// </summary>
         public event EventHandler<UdpReceiveResult> UdpMessageReceived;
 
@@ -169,23 +170,17 @@ namespace LUC.DiscoveryService
                 }
             }
 
-            Task.Run(() =>
+            foreach (var r in udpReceivers)
             {
-                foreach (var r in udpReceivers)
-                {
-                    ListenUdp(r);
-                }
-            });
+                ListenUdp(r);
+            }
 
             // TODO: add SSL support
-            Task.Run(() =>
+            foreach (var tcpReceiver in tcpReceivers)
             {
-                foreach (var tcpReceiver in tcpReceivers)
-                {
-                    tcpReceiver.Start();
-                    ListenTcp(tcpReceiver);
-                }
-            });
+                tcpReceiver.Start();
+                ListenTcp(tcpReceiver);
+            }
         }
 
         /// <summary>
@@ -207,19 +202,19 @@ namespace LUC.DiscoveryService
                         MulticastEndpointIp4 : MulticastEndpointIp6;
                     await sender.Value.SendAsync(message, message.Length, endpoint).ConfigureAwait(false);
                 }
-                catch(SocketException)
+                catch(SocketException e)
                 {
-                    //log.LogError($"Sender {sender.Key} failure: {e.Message}");
+                    log.LogError($"Failed to send UDP message, SocketException: {e.Message}");
                 }
-                catch(InvalidOperationException)
+                catch (InvalidOperationException e)
                 {
-                    //log.LogError($"Sender {sender.Key} failure: {e.Message}");
+                    log.LogError($"Failed to send UDP message, InvalidOperationException: {e.Message}");
                 }
             }
         }
 
         /// <summary>
-        /// It listens UDP messages in another task
+        /// Listens for UDP messages asynchronously
         /// </summary>
         /// <param name="receiver">
         /// Object which returns data of the messages
@@ -249,7 +244,7 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// It listens TCP messages in another task
+        /// Listens for TCP messages asynchronously
         /// </summary>
         /// <param name="receiver">
         /// Object which returns data of the messages
@@ -277,6 +272,7 @@ namespace LUC.DiscoveryService
                 catch (SocketException)
                 {
                     //TODO don't return. Change absolutely TCP port (in TcpListener)
+                    TcpPortChanged?.Invoke(this, ++tcpPort);
                     return;
                 }
             });
