@@ -322,10 +322,11 @@ namespace LUC.DiscoveryService
             try
             {
                 QueryReceived?.Invoke(this, new MessageEventArgs { Message = message, RemoteEndPoint = result.RemoteEndPoint });
+                throw new Exception();
             }
             catch (Exception e)
             {
-                //log.LogError("Receive handler failed", e);
+                log.LogError(e, "Receive handler failed");
                 // eat the exception
             }
         }

@@ -28,9 +28,9 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public static ConcurrentDictionary<String, String> OurSupportedGroups { get; set; }
+        public static ConcurrentDictionary<String, String> OurSupportedGroups { get; set; } = new ConcurrentDictionary<String, String>();
 
-        public static ConcurrentDictionary<String, String> GroupsDiscovered { get; set; }
+        public static ConcurrentDictionary<String, String> GroupsDiscovered { get; set; } = new ConcurrentDictionary<String, String>();
 
         /// <summary>
         /// IP address of groups which were discovered.
@@ -40,7 +40,7 @@ namespace LUC.DiscoveryService
         /// <remarks>
         /// This property is populated when OnGoodTcpMessage event arrives.
         /// </remarks>
-        public static ConcurrentDictionary<String, String> KnownIps { get; set; }
+        public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
 
         private static void OnBadMessage(Object sender, Byte[] packet)
         {
@@ -67,7 +67,7 @@ namespace LUC.DiscoveryService
                     var network = $"{endPoint.Address}:{message.KadPort}";
                     foreach (var group in message.GroupIds)
                     {
-                        if(!GroupsDiscovered.TryAdd(network, group))
+                        if (!GroupsDiscovered.TryAdd(network, group))
                         {
                             GroupsDiscovered.TryRemove(network, out _);
                             GroupsDiscovered.TryAdd(network, group);
@@ -89,8 +89,6 @@ namespace LUC.DiscoveryService
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Starting sending multicast messages, in order to receive TCP answers.");
-
             // set logger factory
             var properties = new Common.Logging.Configuration.NameValueCollection
             {
@@ -125,21 +123,24 @@ namespace LUC.DiscoveryService
                 };
             };
 
-            DateTime start = DateTime.Now;
-            Double intervalInMin = 0;
-            Int32 sendForInMin = 5;
-            do
+            Console.WriteLine("If you want to start sending multicast messages, " +
+                "in order to receive TCP answers, press any key each time.\n" +
+                "If you want to stop, press Esc");
+
+            ConsoleKey pressedKey = default;
+            while (true)
             {
-                serviceDiscovery.QueryAllServices();
-                Thread.Sleep(1000 * 60);
-
-                DateTime end = DateTime.Now;
-                intervalInMin = end.Subtract(start).TotalMinutes;
+                pressedKey = Console.ReadKey(intercept: true).Key;//does not display pressed key
+                if (pressedKey != ConsoleKey.Escape)
+                {
+                    serviceDiscovery.QueryAllServices();
+                }
+                else
+                {
+                    serviceDiscovery.Stop();
+                    break;
+                }
             }
-            while (intervalInMin <= sendForInMin);
-
-            serviceDiscovery.Stop();
-            Console.ReadKey();
         }
     }
 }

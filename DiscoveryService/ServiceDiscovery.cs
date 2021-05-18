@@ -210,10 +210,10 @@ namespace LUC.DiscoveryService
                         KadPort, groupsIds: GroupsSupported?.Keys?.ToList());
                         var bytes = tcpMess.ToByteArray();
 
-                        if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
-                        {
-                            return;
-                        }
+                        //if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
+                        //{
+                        //    return;
+                        //}
 
                         stream.WriteAsync(bytes, offset: 0, bytes.Length);
                     }
