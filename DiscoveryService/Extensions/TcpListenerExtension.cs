@@ -1,4 +1,5 @@
-﻿using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Messages;
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -24,12 +25,11 @@ namespace LUC.DiscoveryService.Extensions
                 NetworkStream stream = null;
                 TcpMessage message = new TcpMessage();
 
-                //TODO add try...catch...finally
                 try
                 {
                     client = await receiver.AcceptTcpClientAsync();
                     stream = client.GetStream();
-                    message.Read(new CodingData.WireReader(stream));
+                    message.Read(new WireReader(stream));
 
                     iPEndPoint = client.Client.RemoteEndPoint as IPEndPoint;
                 }

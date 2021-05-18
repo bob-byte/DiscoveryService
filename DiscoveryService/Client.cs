@@ -204,11 +204,15 @@ namespace LUC.DiscoveryService
                 }
                 catch(SocketException e)
                 {
-                    log.LogError($"Failed to send UDP message, SocketException: {e.Message}");
+                    //log.LogError($"Failed to send UDP message, SocketException: {e.Message}");
                 }
                 catch (InvalidOperationException e)
                 {
-                    log.LogError($"Failed to send UDP message, InvalidOperationException: {e.Message}");
+                    //log.LogError($"Failed to send UDP message, InvalidOperationException: {e.Message}");
+                }
+                catch(Exception ex)
+                {
+
                 }
             }
         }
@@ -272,7 +276,6 @@ namespace LUC.DiscoveryService
                 catch (SocketException)
                 {
                     //TODO don't return. Change absolutely TCP port (in TcpListener)
-                    TcpPortChanged?.Invoke(this, ++tcpPort);
                     return;
                 }
             });

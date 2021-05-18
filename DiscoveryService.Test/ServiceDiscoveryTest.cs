@@ -20,6 +20,12 @@ namespace DiscoveryService.Test
             serviceDiscovery = ServiceDiscovery.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
         }
 
+        [TearDown]
+        public void TearDownService()
+        {
+            serviceDiscovery?.Stop();
+        }
+
         [Test]
         public void Ctor_PassNullPar_GetException()
         {
@@ -105,10 +111,8 @@ namespace DiscoveryService.Test
             {
                 done.Set();
             };
-            Thread.Sleep(millisecondsTimeout: 1000 * 3);
             var availableIps = Service.GetIPAddresses().ToArray();
 
-            //exception in method TcpClient.Connect. Try using UDPTest
             serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
                 Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
@@ -116,20 +120,6 @@ namespace DiscoveryService.Test
             });
 
             Assert.IsTrue(done.WaitOne());
-        }
-
-        [Test]
-        public void SendTcpMess_SendTcpMessageToMyself_GetException()
-        {
-            serviceDiscovery.Start();
-            var availableIps = Service.GetIPAddresses().ToArray();
-
-            Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
-            {
-                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
-                RemoteEndPoint = new IPEndPoint(availableIps[0], (Int32)serviceDiscovery.RunningTcpPort)
-            }), 
-            Throws.TypeOf(typeof(SocketException)));
         }
 
         [Test]
@@ -167,6 +157,19 @@ namespace DiscoveryService.Test
                 RemoteEndPoint = null
             }),
             Throws.TypeOf(typeof(ArgumentException)));
+        }
+
+        [Test]
+        public void SendTcpMess_EndPointIsDns_GetException()
+        {
+            serviceDiscovery.Start();
+
+            Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
+            {
+                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
+                RemoteEndPoint = new DnsEndPoint(Dns.GetHostName(), (Int32)ServiceProfile.DefaultPort, AddressFamily.InterNetwork)
+            }),
+            Throws.TypeOf(typeof(InvalidCastException)));
         }
     }
 }

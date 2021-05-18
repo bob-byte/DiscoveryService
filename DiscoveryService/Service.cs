@@ -24,7 +24,7 @@ namespace LUC.DiscoveryService
     ///   raised when a <see cref="Message"/> is received.
     ///   </para>
     /// </remarks>
-    public class Service : IDisposable
+    public class Service
     {
         [Import(typeof(ILoggingService))]
         private static readonly ILoggingService log = new LoggingService();
@@ -92,7 +92,9 @@ namespace LUC.DiscoveryService
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        internal Service(UInt32 udpPort, UInt32 tcpPort, String machineId, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
+        internal Service(UInt32 udpPort, UInt32 tcpPort, 
+            String machineId, Boolean useIpv4, Boolean useIpv6, 
+            Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
             this.udpPort = udpPort;
             this.tcpPort = tcpPort;
@@ -207,7 +209,7 @@ namespace LUC.DiscoveryService
 
         private void FindNetworkInterfaces()
         {
-            log.Debug("Finding network interfaces");
+            //log.Debug("Finding network interfaces");
 
             try
             {
@@ -220,20 +222,20 @@ namespace LUC.DiscoveryService
                 {
                     oldNics.Add(nic);
 
-                    if (log.IsDebugEnabled)
-                    {
-                        log.Debug($"Removed nic '{nic.Name}'.");
-                    }
+                    //if (log.IsDebugEnabled)
+                    //{
+                    //    log.Debug($"Removed nic '{nic.Name}'.");
+                    //}
                 }
 
                 foreach (var nic in currentNics.Where(nic => !KnownNics.Any(k => k.Id == nic.Id)))
                 {
                     newNics.Add(nic);
 
-                    if (log.IsDebugEnabled)
-                    {
-                        log.Debug($"Found nic '{nic.Name}'.");
-                    }
+                    //if (log.IsDebugEnabled)
+                    //{
+                    //    log.Debug($"Found nic '{nic.Name}'.");
+                    //}
                 }
 
                 KnownNics = currentNics;
@@ -243,7 +245,6 @@ namespace LUC.DiscoveryService
                 {
                     client?.Dispose();
                     client = new Client(udpPort, tcpPort, UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
-                    client.TcpPortChanged += OnTcpPortChanged;
                     client.UdpMessageReceived += OnUdpMessage;
                     client.TcpMessageReceived += OnTcpMessage;
                 }
@@ -266,7 +267,7 @@ namespace LUC.DiscoveryService
             }
             catch (Exception e)
             {
-                log.Error("FindNics failed", e);
+                //log.Error("FindNics failed", e);
             }
         }
 
@@ -294,10 +295,10 @@ namespace LUC.DiscoveryService
         private void OnUdpMessage(object sender, UdpReceiveResult result)
         {
             // If recently received, then ignore.
-            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-            {
-                return;
-            }
+            //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+            //{
+            //    return;
+            //}
 
             MulticastMessage message = new MulticastMessage();
             try
@@ -311,11 +312,11 @@ namespace LUC.DiscoveryService
                 return;
             }
 
-            if ((message.VersionOfProtocol != Message.ProtocolVersion) ||
-                (message.MachineId == machineId))
-            {
-                return;
-            }
+            //if ((message.VersionOfProtocol != Message.ProtocolVersion) ||
+            //    (message.MachineId == machineId))
+            //{
+            //    return;
+            //}
 
             // Dispatch the message.
             try
@@ -378,11 +379,12 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Sends out UDP multicast messages
         /// </summary>
-        public void SendQuery()
+        internal void SendQuery()
         {
             Random random = new Random();
             var msg = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), tcpPort, machineId);
             var packet = msg.ToByteArray();
+
             client?.SendUdpAsync(packet).GetAwaiter().GetResult();
         }
     }

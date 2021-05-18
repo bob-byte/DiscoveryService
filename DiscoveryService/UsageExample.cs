@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using Common.Logging;
@@ -39,7 +40,7 @@ namespace LUC.DiscoveryService
         /// <remarks>
         /// This property is populated when OnGoodTcpMessage event arrives.
         /// </remarks>
-        public static ConcurrentDictionary<String, List<String>> KnownIps { get; set; }
+        public static ConcurrentDictionary<String, String> KnownIps { get; set; }
 
         private static void OnBadMessage(Object sender, Byte[] packet)
         {

@@ -13,8 +13,15 @@ namespace LUC.DiscoveryService.Extensions
         /// </returns>
         public static String MachineId(this DeviceIdBuilder idBuilder)
         {
-            var motherboard = idBuilder.AddMotherboardSerialNumber();
-            return $"{motherboard}-{Guid.NewGuid()}";
+            if(idBuilder != null)
+            {
+                var motherboard = idBuilder.AddMotherboardSerialNumber();
+                return $"{motherboard}-{Guid.NewGuid()}";
+            }
+            else
+            {
+                throw new NullReferenceException(nameof(idBuilder));
+            }
         }
     }
 }

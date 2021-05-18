@@ -50,11 +50,6 @@ namespace LUC.DiscoveryService.Messages
         /// </summary>
         public List<String> GroupIds { get; set; }
 
-        /// <summary>
-        /// TCP port of the Kademilia service.
-        /// </summary>
-        public UInt32 KadPort { get; set; }
-
         public override IWireSerialiser Read(WireReader reader)
         {
             if(reader != null)

@@ -57,8 +57,11 @@ namespace LUC.DiscoveryService
 
                 MachineId = profile.MachineId;
 
+                RunningUdpPort = profile.RunningUdpPort;
                 MinValueTcpPort = profile.MinValueTcpPort;
-                KadPort = profile.KadPort;
+                MaxValueTcpPort = profile.MaxValueTcpPort;
+                RunningTcpPort = profile.RunningTcpPort;
+                KadPort = profile.KadPort;                
 
                 InitService();
             }
@@ -119,11 +122,12 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// UDP port which current peer is using in UDP connections
         /// </summary>
-        internal UInt32 RunningUdpPort { get; }
+        public UInt32 RunningUdpPort { get; }
+
         /// <summary>
         /// Kademilia port, that we send to other computers.
         /// </summary>
-        public UInt32 KadPort { get; }
+        public UInt32 KadPort { get; private set; }
 
         /// <summary>
         ///   LightUpon.Cloud Service.
@@ -142,12 +146,12 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Flag indicating whether Discovery Service should use IPv4 protocol.
         /// </summary>
-        public Boolean UseIpv4 { get; private set; } = Socket.OSSupportsIPv4;
+        public Boolean UseIpv4 { get; private set; }/* = Socket.OSSupportsIPv4;*/
 
         /// <summary>
         /// Flag indicating whether Discovery Service should use IPv6 protocol.
         /// </summary>
-        public Boolean UseIpv6 { get; private set; } = Socket.OSSupportsIPv6;
+        public Boolean UseIpv6 { get; private set; }/* = Socket.OSSupportsIPv6;*/
 
         /// <summary>
         /// IP address of groups which were discovered.
@@ -196,13 +200,14 @@ namespace LUC.DiscoveryService
 
                     var message = e.Message as MulticastMessage;
                     client = new TcpClient(e.RemoteEndPoint.AddressFamily);
-                    client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
-                    stream = client.GetStream();
 
-                    if(GroupsSupported.Keys != null)
+                    if(e.RemoteEndPoint is IPEndPoint iPEndPoint)
                     {
+                        client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
+                        stream = client.GetStream();
+
                         var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                        KadPort, groupsIds: GroupsSupported.Keys.ToList());
+                        KadPort, groupsIds: GroupsSupported?.Keys?.ToList());
                         var bytes = tcpMess.ToByteArray();
 
                         //if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
@@ -214,8 +219,9 @@ namespace LUC.DiscoveryService
                     }
                     else
                     {
-                        throw new NullReferenceException($"{nameof(GroupsSupported.Keys)} is null");
+                        throw new InvalidCastException($"Can\'t convert {nameof(e.RemoteEndPoint)} to {nameof(IPEndPoint)}");
                     }
+                    
                 }
                 catch (SocketException)
                 {

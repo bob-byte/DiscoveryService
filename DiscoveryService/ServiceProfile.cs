@@ -71,12 +71,12 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Flag indicating whether Discovery Service should use IPv4 protocol.
         /// </summary>
-        public Boolean UseIpv4 { get; private set; } = true;
+        public Boolean UseIpv4 { get; private set; }
 
         /// <summary>
         /// Flag indicating whether Discovery Service should use IPv6 protocol.
         /// </summary>
-        public Boolean UseIpv6 { get; private set; } = true;
+        public Boolean UseIpv6 { get; private set; }
 
         /// <summary>
         /// Known network interfaces
