@@ -24,21 +24,14 @@ namespace LUC.DiscoveryService
     ///   raised when a <see cref="Message"/> is received.
     ///   </para>
     /// </remarks>
-    public class Service
+    public class Service : AbstractService
     {
-        [Import(typeof(ILoggingService))]
-        private static readonly ILoggingService log = new LoggingService();
-
         /// <summary>
         ///   Recently received messages.
         /// </summary>
         private readonly RecentMessages receivedMessages = new RecentMessages();
 
         private Client client;
-
-        private readonly String machineId;
-        private readonly UInt32 udpPort;
-        private UInt32 tcpPort;
 
         /// <summary>
         ///   Function used for listening filtered network interfaces.
@@ -92,17 +85,14 @@ namespace LUC.DiscoveryService
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        internal Service(UInt32 udpPort, UInt32 tcpPort, 
-            String machineId, Boolean useIpv4, Boolean useIpv6, 
-            Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
+        internal Service(String machineId, Boolean useIpv4, Boolean useIpv6, UInt32 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
-            this.udpPort = udpPort;
-            this.tcpPort = tcpPort;
-            this.machineId = machineId;
+            MachineId = machineId;
 
-            networkInterfacesFilter = filter;
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;
+            ProtocolVersion = protocolVersion;
+            networkInterfacesFilter = filter;
 
             IgnoreDuplicateMessages = true;
         }
@@ -111,22 +101,6 @@ namespace LUC.DiscoveryService
         /// Known network interfaces
         /// </summary>
         internal static List<NetworkInterface> KnownNics { get; private set; } = new List<NetworkInterface>();
-
-        /// <summary>
-        ///   Send and receive on IPv4.
-        /// </summary>
-        /// <value>
-        ///   Defaults to <b>true</b> if the OS supports it.
-        /// </value>
-        public Boolean UseIpv4 { get; set; }
-
-        /// <summary>
-        ///   Send and receive on IPv6.
-        /// </summary>
-        /// <value>
-        ///   Defaults to <b>true</b> if the OS supports it.
-        /// </value>
-        public Boolean UseIpv6 { get; set; }
 
         /// <summary>
         ///   Determines if received messages are checked for duplicates.
@@ -209,7 +183,7 @@ namespace LUC.DiscoveryService
 
         private void FindNetworkInterfaces()
         {
-            log.Debug("Finding network interfaces");
+            log.LogInfo("Finding network interfaces");
 
             try
             {
@@ -222,20 +196,22 @@ namespace LUC.DiscoveryService
                 {
                     oldNics.Add(nic);
 
-                    if (log.IsDebugEnabled)
-                    {
-                        log.Debug($"Removed nic '{nic.Name}'.");
-                    }
+                    log.LogInfo($"Removed nic \'{nic.Name}\'.");
+                    //if (log.IsDebugEnabled)
+                    //{
+                    //    log.Debug($"Removed nic '{nic.Name}'.");
+                    //}
                 }
 
                 foreach (var nic in currentNics.Where(nic => !KnownNics.Any(k => k.Id == nic.Id)))
                 {
                     newNics.Add(nic);
 
-                    if (log.IsDebugEnabled)
-                    {
-                        log.Debug($"Found nic '{nic.Name}'.");
-                    }
+                    log.LogInfo($"Found nic '{nic.Name}'.");
+                    //if (log.IsDebugEnabled)
+                    //{
+                    //    log.Debug($"Found nic '{nic.Name}'.");
+                    //}
                 }
 
                 KnownNics = currentNics;
@@ -244,7 +220,7 @@ namespace LUC.DiscoveryService
                 if (newNics.Any() || oldNics.Any())
                 {
                     client?.Dispose();
-                    client = new Client(udpPort, tcpPort, UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
+                    client = new Client(UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
                     client.UdpMessageReceived += OnUdpMessage;
                     client.TcpMessageReceived += OnTcpMessage;
                 }
@@ -267,7 +243,7 @@ namespace LUC.DiscoveryService
             }
             catch (Exception e)
             {
-                log.Error("FindNics failed", e);
+                log.LogError(e, "FindNics failed");
             }
         }
 
@@ -294,36 +270,35 @@ namespace LUC.DiscoveryService
         /// </remarks>
         private void OnUdpMessage(object sender, UdpReceiveResult result)
         {
-            // TODO: If recently received, then ignore.
-            //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-            //{
-            //    return;
-            //}
+            //If recently received, then ignore.
+            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+            {
+                return;
+            }
 
             MulticastMessage message = new MulticastMessage();
             try
             {
                 message.Read(result.Buffer);
             }
-            catch (Exception e)
+            catch (ArgumentNullException e)
             {
-                //log.LogError("Received malformed message", e);
+                log.LogError(e, "Received malformed message");
                 MalformedMessage.Invoke(sender, result.Buffer);
+
                 return;
             }
 
-            // TODO
-            //if ((message.VersionOfProtocol != Message.ProtocolVersion) ||
-            //    (message.MachineId == machineId))
-            //{
-            //    return;
-            //}
+            if ((message.ProtocolVersion != ProtocolVersion) ||
+                (message.MachineId == MachineId))
+            {
+                return;
+            }
 
             // Dispatch the message.
             try
             {
                 QueryReceived?.Invoke(this, new MessageEventArgs { Message = message, RemoteEndPoint = result.RemoteEndPoint });
-                throw new Exception();
             }
             catch (Exception e)
             {
@@ -384,7 +359,8 @@ namespace LUC.DiscoveryService
         internal void SendQuery()
         {
             Random random = new Random();
-            var msg = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), tcpPort, machineId);
+            var msg = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), 
+                RunningTcpPort, ProtocolVersion, MachineId);
             var packet = msg.ToByteArray();
 
             client?.SendUdpAsync(packet).GetAwaiter().GetResult();

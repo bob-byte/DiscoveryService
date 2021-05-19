@@ -11,13 +11,8 @@ namespace LUC.DiscoveryService
     /// <summary>
     ///   Contains info about current peer
     /// </summary>
-    public class ServiceProfile
+    public class ServiceProfile : CollectedInfoInLan
     {
-        public const UInt32 DefaultPort = 17500;
-        public const UInt32 CountAvailablePorts = 10;
-
-        private UInt32 runningTcpPort;
-
         static ServiceProfile()
         {
             // Make sure Service is inited.
@@ -58,89 +53,13 @@ namespace LUC.DiscoveryService
 
             ProtocolVersion = protocolVersion;
 
-            runningTcpPort = DefaultPort;
-            MinValueTcpPort = DefaultPort;
-            MaxValueTcpPort = DefaultPort + CountAvailablePorts;
-            KadPort = DefaultPort;
-            RunningUdpPort = DefaultPort;
-
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;
         }
 
         /// <summary>
-        /// Flag indicating whether Discovery Service should use IPv4 protocol.
-        /// </summary>
-        public Boolean UseIpv4 { get; private set; }
-
-        /// <summary>
-        /// Flag indicating whether Discovery Service should use IPv6 protocol.
-        /// </summary>
-        public Boolean UseIpv6 { get; private set; }
-
-        /// <summary>
         /// Known network interfaces
         /// </summary>
         public ICollection<NetworkInterface> NetworkInterfaces => Service.KnownNics;
-
-        /// <summary>
-        ///   Protocol version.
-        /// </summary>
-        /// <value>
-        ///   Integer.
-        /// </value>
-	    public UInt32 ProtocolVersion { get; }
-
-        /// <summary>
-        ///   A unique identifier for the service instance.
-        /// </summary>
-        /// <value>
-        ///   Some unique value.
-        /// </value>
-        public String MachineId { get; }
-
-        public UInt32 KadPort { get; }
-
-        public UInt32 MinValueTcpPort { get; }
-
-        public UInt32 MaxValueTcpPort { get; }
-
-        /// <summary>
-        /// TCP port which current peer is using in TCP connections
-        /// </summary>
-        public UInt32 RunningTcpPort
-        {
-            get => runningTcpPort;
-            internal set
-            {
-                runningTcpPort = (value < MinValueTcpPort) || (MaxValueTcpPort < value) ? 
-                    MinValueTcpPort : value;
-            }
-        }
-
-        /// <summary>
-        /// UDP port which current peer is using in UDP connections
-        /// </summary>
-        internal UInt32 RunningUdpPort { get; }
-
-        /// <summary>
-        /// Groups which current peer supports.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a SSL certificate of group
-        /// </summary>
-        /// <remarks>
-        /// This property is used in internal classes and allow to avoid strong connectivity. It is weaker, because we don't use object type <seealso cref="ServiceDiscovery"/>  in the different classes.
-        /// </remarks>
-        public ConcurrentDictionary<String, String> GroupsSupported { get; }
-
-        /// <summary>
-        /// IP address of groups which were discovered.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a network in a format "IP-address:port"
-        /// </summary>
-        /// <remarks>
-        /// This property is used in internal classes and allows to avoid strong connectivity. It is weaker, because we don't use object type <seealso cref="ServiceDiscovery"/> in the different classes.
-        /// </remarks>
-        public ConcurrentDictionary<String, String> KnownIps { get; }
     }
 }

@@ -10,11 +10,6 @@ namespace LUC.DiscoveryService.Messages
     /// </summary>
     public abstract class Message : IWireSerialiser
     {
-        /// <summary>
-        ///   Supported version of protocol
-        /// </summary>
-        public const UInt32 ProtocolVersion = 1;
-
         public Message()
         {
             ;
@@ -29,10 +24,10 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="tcpPort">
         /// TCP port which is being run in machine with machineId
         /// </param>
-        public Message(UInt32 messageId)
+        public Message(UInt32 messageId, UInt32 protocolVersion)
         {
             MessageId = messageId;
-            VersionOfProtocol = ProtocolVersion;
+            ProtocolVersion = protocolVersion;
         }
 
         /// <summary>
@@ -43,7 +38,7 @@ namespace LUC.DiscoveryService.Messages
         /// <summary>
         ///   Supported version of protocol of the remote application.
         /// </summary>
-        public UInt32 VersionOfProtocol { get; set; }
+        public UInt32 ProtocolVersion { get; set; }
 
         /// <summary>
         ///   Length in bytes of the object when serialised.
@@ -159,7 +154,7 @@ namespace LUC.DiscoveryService.Messages
             using (var writer = new StringWriter())
             {
                 writer.Write($"MessageId = {MessageId};\n" +
-                             $"Protocol version = {VersionOfProtocol}");
+                             $"Protocol version = {ProtocolVersion}");
 
                 return writer.ToString();
             }

@@ -33,7 +33,7 @@ namespace DiscoveryService.Test
             UInt32 tcpPort = 17500;
             List<String> groupsIds = new List<String> { "a", "b" };
             var expected = ExpectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
-            var message = new TcpMessage(messageId, tcpPort, groupsIds);
+            var message = new TcpMessage(messageId, tcpPort, versionOfProtocol, groupsIds);
 
             var actual = message.ToString();
 
@@ -74,7 +74,7 @@ namespace DiscoveryService.Test
             UInt32 tcpPort = 17500;
             List<String> groupsIds = new List<String>();
             var expected = ExpectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
-            var message = new TcpMessage(messageId, tcpPort, groupsIds: null);
+            var message = new TcpMessage(messageId, tcpPort, versionOfProtocol, groupsIds: null);
 
             var actual = message.ToString();
 

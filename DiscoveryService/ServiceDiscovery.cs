@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using LUC.DiscoveryService.Messages;
-using LUC.Interfaces;
-using LUC.Services.Implementation;
-using System.ComponentModel.Composition;
 using System.Linq;
 
 namespace LUC.DiscoveryService
@@ -13,13 +9,8 @@ namespace LUC.DiscoveryService
     /// <summary>
     ///   LightUpon.Cloud Service Discovery maintens the list of IP addresses in LAN. It realizes pattern Singleton
     /// </summary>
-    public class ServiceDiscovery
-    {
-        [Import(typeof(ILoggingService))]
-        private static readonly ILoggingService log = new LoggingService();
-
-        private UInt32 runningTcpPort;
-
+    public class ServiceDiscovery : CollectedInfoInLan
+    {       
         private static ServiceDiscovery instance;
 
         /// <summary>
@@ -49,19 +40,13 @@ namespace LUC.DiscoveryService
             }
             else
             {
-                UseIpv4 = profile.UseIpv4;
-                UseIpv6 = profile.UseIpv6;
-
                 GroupsSupported = profile.GroupsSupported;
                 KnownIps = profile.KnownIps;
 
+                UseIpv4 = profile.UseIpv4;
+                UseIpv6 = profile.UseIpv6;
+                ProtocolVersion = profile.ProtocolVersion;
                 MachineId = profile.MachineId;
-
-                RunningUdpPort = profile.RunningUdpPort;
-                MinValueTcpPort = profile.MinValueTcpPort;
-                MaxValueTcpPort = profile.MaxValueTcpPort;
-                RunningTcpPort = profile.RunningTcpPort;
-                KadPort = profile.KadPort;                
 
                 InitService();
             }
@@ -95,41 +80,6 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        ///   A unique identifier for the service instance.
-        /// </summary>
-        /// <value>
-        ///   Some unique value.
-        /// </value>
-        public String MachineId { get; }
-
-        public UInt32 MinValueTcpPort { get; }
-
-        public UInt32 MaxValueTcpPort { get; }
-
-        /// <summary>
-        /// TCP port which current peer is using in TCP connections
-        /// </summary>
-        public UInt32 RunningTcpPort
-        {
-            get => runningTcpPort;
-            internal set
-            {
-                runningTcpPort = (value < MinValueTcpPort) || (MaxValueTcpPort < value) ?
-                    MinValueTcpPort : value;
-            }
-        }
-
-        /// <summary>
-        /// UDP port which current peer is using in UDP connections
-        /// </summary>
-        public UInt32 RunningUdpPort { get; }
-
-        /// <summary>
-        /// Kademilia port, that we send to other computers.
-        /// </summary>
-        public UInt32 KadPort { get; private set; }
-
-        /// <summary>
         ///   LightUpon.Cloud Service.
         /// </summary>
         /// <remarks>
@@ -143,34 +93,9 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public Service Service { get; private set; }
 
-        /// <summary>
-        /// Flag indicating whether Discovery Service should use IPv4 protocol.
-        /// </summary>
-        public Boolean UseIpv4 { get; private set; }/* = Socket.OSSupportsIPv4;*/
-
-        /// <summary>
-        /// Flag indicating whether Discovery Service should use IPv6 protocol.
-        /// </summary>
-        public Boolean UseIpv6 { get; private set; }/* = Socket.OSSupportsIPv6;*/
-
-        /// <summary>
-        /// IP address of groups which were discovered.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a network in a format "IP-address:port"
-        /// </summary>
-        public ConcurrentDictionary<String, String> KnownIps { get; private set; }
-
-        /// <summary>
-        /// Groups which current peer supports.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a SSL certificate of group
-        /// </summary>
-        public ConcurrentDictionary<String, String> GroupsSupported { get; private set; }
-
         private void InitService()
         {
-            Service = new Service(RunningUdpPort, MinValueTcpPort, 
-                MachineId, UseIpv4, UseIpv6);
+            Service = new Service(MachineId, UseIpv4, UseIpv6, ProtocolVersion);
             Service.QueryReceived += SendTcpMess;
         }
 
@@ -186,8 +111,8 @@ namespace LUC.DiscoveryService
         /// </param>
         public void SendTcpMess(Object sender, MessageEventArgs e)
         {
-            if((e?.Message == null) || (!(e?.Message is MulticastMessage message)) || 
-                (e?.RemoteEndPoint == null) || (!(e.RemoteEndPoint is IPEndPoint iPEndPoint)))
+            if((!(e?.Message is MulticastMessage message)) || 
+               (!(e.RemoteEndPoint is IPEndPoint iPEndPoint)))
             {
                 throw new ArgumentException($"Bad format of {nameof(e)}");
             }
@@ -196,24 +121,30 @@ namespace LUC.DiscoveryService
                 TcpClient client = null;
                 NetworkStream stream = null;
 
-                Random random = new Random();
-                var message = e.Message as MulticastMessage;
-                client = new TcpClient(iPEndPoint.AddressFamily);
-                client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
-                stream = client.GetStream();
-
-                var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                KadPort, groupsIds: GroupsSupported?.Keys?.ToList());
-                var bytes = tcpMess.ToByteArray();
-
-                if (Service.IgnoreDuplicateMessages && sentMessages.TryAdd(bytes))
+                try
                 {
-                    return;
-                }
+                    client = new TcpClient(iPEndPoint.AddressFamily);
+                    client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
 
-                stream.WriteAsync(bytes, offset: 0, bytes.Length);
-                stream?.Close();
-                client?.Close();
+                    stream = client.GetStream();
+
+                    Random random = new Random();
+                    var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                    KadPort, ProtocolVersion, groupsIds: GroupsSupported?.Keys?.ToList());
+                    var bytes = tcpMess.ToByteArray();
+
+                    if ((Service.IgnoreDuplicateMessages) && (sentMessages.TryAdd(bytes)))
+                    {
+                        return;
+                    }
+
+                    stream.WriteAsync(bytes, offset: 0, bytes.Length);
+                }
+                finally
+                {
+                    client?.Close();
+                    stream?.Close();
+                }
             }
         }
 

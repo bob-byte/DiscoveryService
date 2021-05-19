@@ -25,8 +25,8 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="messageId">
         ///   Unique message identifier. It is used to detect duplicate messages.
         /// </param>
-        public TcpMessage(UInt32 messageId, UInt32 kadPort, List<String> groupsIds)
-            : base(messageId)
+        public TcpMessage(UInt32 messageId, UInt32 kadPort, UInt32 protocolVersion, List<String> groupsIds)
+            : base(messageId, protocolVersion)
         {
             if(groupsIds != null)
             {
@@ -55,7 +55,7 @@ namespace LUC.DiscoveryService.Messages
             if(reader != null)
             {
                 MessageId = reader.ReadUInt32();
-                VersionOfProtocol = reader.ReadUInt32();
+                ProtocolVersion = reader.ReadUInt32();
                 KadPort = reader.ReadUInt32();
                 GroupIds = reader.ReadListOfStrings();
 
@@ -88,7 +88,7 @@ namespace LUC.DiscoveryService.Messages
             if (writer != null)
             {
                 writer.Write(MessageId);
-                writer.Write(VersionOfProtocol);
+                writer.Write(ProtocolVersion);
                 writer.Write(KadPort);
                 writer.WriteEnumerable(GroupIds);
             }

@@ -1,9 +1,6 @@
-﻿using LUC.Interfaces;
-using LUC.Services.Implementation;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -18,13 +15,8 @@ namespace LUC.DiscoveryService
     ///
     ///    Also listens on TCP/IP port for receiving side to establish connection.
     /// </summary>
-    class Client : IDisposable
+    class Client : AbstractService, IDisposable
     {
-        [Import(typeof(ILoggingService))]
-        private static readonly ILoggingService log = new LoggingService();
-
-        private UInt32 tcpPort;
-
         private static readonly IPAddress MulticastAddressIp4 = IPAddress.Parse("224.0.0.251");
         private readonly IPEndPoint MulticastEndpointIp4;
 
@@ -68,38 +60,40 @@ namespace LUC.DiscoveryService
         /// <param name="nics">
         /// NetworkInterfaces wherefrom we should send to
         /// </param>
-        public Client(UInt32 udpPort, UInt32 runningTcpPort, Boolean useIpv4, Boolean useIpv6, IEnumerable<NetworkInterface> nics)
+        public Client(Boolean useIpv4, Boolean useIpv6, IEnumerable<NetworkInterface> nics)
         {
-            MulticastEndpointIp4 = new IPEndPoint(MulticastAddressIp4, (Int32)udpPort);
-            MulticastEndpointIp6 = new IPEndPoint(MulticastAddressIp6, (Int32)udpPort);
-            tcpPort = runningTcpPort;
+            MulticastEndpointIp4 = new IPEndPoint(MulticastAddressIp4, (Int32)RunningUdpPort);
+            MulticastEndpointIp6 = new IPEndPoint(MulticastAddressIp6, (Int32)RunningUdpPort);
+
+            UseIpv4 = useIpv4;
+            UseIpv6 = useIpv6;
 
             udpReceivers = new List<UdpClient>();
             tcpReceivers = new List<TcpListener>();
             UdpClient udpReceiver4 = null;
 
-            if (useIpv4)
+            if (UseIpv4)
             {
                 udpReceiver4 = new UdpClient(AddressFamily.InterNetwork);
                 udpReceiver4.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, optionValue: true);
-                udpReceiver4.Client.Bind(new IPEndPoint(IPAddress.Any, (Int32)udpPort));
+                udpReceiver4.Client.Bind(new IPEndPoint(IPAddress.Any, (Int32)RunningUdpPort));
                 udpReceivers.Add(udpReceiver4);
             }
 
             UdpClient udpReceiver6 = null;
-            if (useIpv6)
+            if (UseIpv6)
             {
                 udpReceiver6 = new UdpClient(AddressFamily.InterNetworkV6);
                 udpReceiver6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, optionValue: true);
-                udpReceiver6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, (Int32)udpPort));
+                udpReceiver6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, (Int32)RunningUdpPort));
                 udpReceivers.Add(udpReceiver6);
             }
 
             // Get the IP addresses that we should send to.
             var addresses = nics
                 .SelectMany(GetNetworkInterfaceLocalAddresses)
-                .Where(a => (useIpv4 && a.AddressFamily == AddressFamily.InterNetwork)
-                    || (useIpv6 && a.AddressFamily == AddressFamily.InterNetworkV6));
+                .Where(a => (UseIpv4 && a.AddressFamily == AddressFamily.InterNetwork)
+                    || (UseIpv6 && a.AddressFamily == AddressFamily.InterNetworkV6));
 
             foreach (var address in addresses)
             {
@@ -108,10 +102,10 @@ namespace LUC.DiscoveryService
                     continue;
                 }
 
-                var localEndpoint = new IPEndPoint(address, (Int32)udpPort);
+                var localEndpoint = new IPEndPoint(address, (Int32)RunningUdpPort);
                 var senderUdp = new UdpClient(address.AddressFamily);
                 var senderTcp = new TcpClient(address.AddressFamily);
-                TcpListener receiverTcp = new TcpListener(address, (Int32)tcpPort);
+                TcpListener receiverTcp = new TcpListener(address, (Int32)RunningUdpPort);
 
                 try
                 {
@@ -210,10 +204,6 @@ namespace LUC.DiscoveryService
                 {
                     log.LogError($"Failed to send UDP message, InvalidOperationException: {e.Message}");
                 }
-                catch(Exception ex)
-                {
-
-                }
             }
         }
 
@@ -239,9 +229,13 @@ namespace LUC.DiscoveryService
 
                     await task.ConfigureAwait(false);
                 }
-                catch
+                catch(ObjectDisposedException)
                 {
-                    // TODO: increment tcp port, but take into account maxValueTcpPort
+                    return;
+                }
+                catch (SocketException e)
+                {
+                    log.LogError($"Failed to listen UDP message, SocketException: {e.Message}");
                     return;
                 }
             });
@@ -273,9 +267,10 @@ namespace LUC.DiscoveryService
                 {
                     return;
                 }
-                catch (SocketException)
+                catch (SocketException e)
                 {
-                    //TODO don't return. Change absolutely TCP port (in TcpListener)
+                    //TODO don't return. Change absolutely TCP port (in TcpListener), but take into account maxValueTcpPort
+                    log.LogError($"Failed to listen TCP message, SocketException: {e.Message}");
                     return;
                 }
             });

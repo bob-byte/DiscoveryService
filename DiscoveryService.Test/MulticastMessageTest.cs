@@ -38,7 +38,7 @@ namespace DiscoveryService.Test
                              $"TCP port = {tcpPort};\n" +
                              $"MachineId = {machineId}");
             var expected = writer.ToString();
-            MulticastMessage multicast = new MulticastMessage(messageId, tcpPort, machineId);
+            MulticastMessage multicast = new MulticastMessage(messageId, tcpPort, versionOfProtocol, machineId);
 
             var actual = multicast.ToString();
 
@@ -64,7 +64,7 @@ namespace DiscoveryService.Test
             String machineId = "001";
             UInt32 tcpPort = 17500;
             UInt32 versionOfProtocol = 1;
-            MulticastMessage message = new MulticastMessage(messageId, tcpPort, machineId);
+            MulticastMessage message = new MulticastMessage(messageId, tcpPort, versionOfProtocol, machineId);
             MemoryStream stream = new MemoryStream();
             WireWriter writer = new WireWriter(stream);
             var expected = message.ToString();

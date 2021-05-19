@@ -14,10 +14,12 @@ namespace DiscoveryService.Test
     {
         private ServiceDiscovery serviceDiscovery;
 
+        private readonly UInt32 protocolVersion = 1;
+
         [SetUp]
         public void SetupService()
         {
-            serviceDiscovery = ServiceDiscovery.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
+            serviceDiscovery = ServiceDiscovery.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion));
         }
 
         [TearDown]
@@ -115,7 +117,7 @@ namespace DiscoveryService.Test
 
             serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
-                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
+                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, protocolVersion, null),
                 RemoteEndPoint = new IPEndPoint(availableIps[1], (Int32)serviceDiscovery.RunningTcpPort)
             });
 
@@ -129,7 +131,7 @@ namespace DiscoveryService.Test
 
             Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
-                Message = new TcpMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
+                Message = new TcpMessage(messageId: 123, serviceDiscovery.RunningTcpPort, protocolVersion, null),
             }),
             Throws.TypeOf(typeof(ArgumentException)));
         }
@@ -153,7 +155,7 @@ namespace DiscoveryService.Test
 
             Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
-                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
+                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, protocolVersion, null),
                 RemoteEndPoint = null
             }),
             Throws.TypeOf(typeof(ArgumentException)));
@@ -166,10 +168,10 @@ namespace DiscoveryService.Test
 
             Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
-                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
-                RemoteEndPoint = new DnsEndPoint(Dns.GetHostName(), (Int32)ServiceProfile.DefaultPort, AddressFamily.InterNetwork)
+                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, protocolVersion, null),
+                RemoteEndPoint = new DnsEndPoint(Dns.GetHostName(), (Int32)AbstractService.DefaultPort, AddressFamily.InterNetwork)
             }),
-            Throws.TypeOf(typeof(InvalidCastException)));
+            Throws.TypeOf(typeof(ArgumentException)));
         }
     }
 }

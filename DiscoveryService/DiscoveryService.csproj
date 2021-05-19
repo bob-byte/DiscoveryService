@@ -45,10 +45,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>bin\Debug\LUC.Interfaces.dll</HintPath>
     </Reference>
-    <Reference Include="LUC.Services.Implementation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\LUC.Services.Implementation.dll</HintPath>
-    </Reference>
     <Reference Include="SimpleBase, Version=1.3.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\UDPtest\packages\SimpleBase.1.3.1\lib\net45\SimpleBase.dll</HintPath>
     </Reference>
@@ -64,11 +60,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AbstractService.cs" />
     <Compile Include="CodingData\IWireSerialiser.cs" />
     <Compile Include="CodingData\WireReader.cs" />
     <Compile Include="CodingData\WireWriter.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\TcpListenerExtension.cs" />
+    <Compile Include="CollectedInfoInLan.cs" />
     <Compile Include="MessageEventArgs.cs" />
     <Compile Include="Messages\MulticastMessage.cs" />
     <Compile Include="Messages\Message.cs" />
@@ -86,6 +84,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\win10dev-middleware-win-6d0e74f79d69\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
+      <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
+      <Name>LUC.Services.Implementation</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
