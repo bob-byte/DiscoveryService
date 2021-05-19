@@ -138,7 +138,7 @@ namespace LUC.DiscoveryService
                 else
                 {
                     serviceDiscovery.Stop();
-                    break;
+                    return;
                 }
             }
         }
