@@ -30,6 +30,7 @@ namespace LUC.DiscoveryService
         ///   Recently received messages.
         /// </summary>
         private readonly RecentMessages receivedMessages = new RecentMessages();
+        const int maxDatagramSize = Message.MaxLength;
 
         private Client client;
 
@@ -270,6 +271,12 @@ namespace LUC.DiscoveryService
         /// </remarks>
         private void OnUdpMessage(object sender, UdpReceiveResult result)
         {
+            var packet = result.ToByteArray();
+            if (packet.Length > maxDatagramSize)
+            {
+                return;
+            }
+
             //If recently received, then ignore.
             if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
             {
