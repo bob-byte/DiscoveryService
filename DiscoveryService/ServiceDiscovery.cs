@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using LUC.DiscoveryService.Messages;
 using System.Linq;
+using System.Collections.Concurrent;
 
 namespace LUC.DiscoveryService
 {
@@ -41,7 +42,6 @@ namespace LUC.DiscoveryService
             else
             {
                 GroupsSupported = profile.GroupsSupported;
-                KnownIps = profile.KnownIps;
 
                 UseIpv4 = profile.UseIpv4;
                 UseIpv6 = profile.UseIpv6;
@@ -78,6 +78,14 @@ namespace LUC.DiscoveryService
         {
             Stop();
         }
+
+        /// <summary>
+        /// IP address of peers which were discovered.
+        /// Key is a network in a format "IP-address:port".
+        /// Value is a list of group names, which peer supports
+        /// </summary>
+        public ConcurrentDictionary<String, String> KnownIps { get; protected set; } = 
+            new ConcurrentDictionary<String, String>();
 
         /// <summary>
         ///   LightUpon.Cloud Service.
@@ -133,7 +141,7 @@ namespace LUC.DiscoveryService
                     KadPort, ProtocolVersion, groupsIds: GroupsSupported?.Keys?.ToList());
                     var bytes = tcpMess.ToByteArray();
 
-                    if ((Service.IgnoreDuplicateMessages) && (sentMessages.TryAdd(bytes)))
+                    if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytes)))
                     {
                         return;
                     }

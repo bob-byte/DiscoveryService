@@ -270,6 +270,12 @@ namespace LUC.DiscoveryService
         /// </remarks>
         private void OnUdpMessage(object sender, UdpReceiveResult result)
         {
+            var maxDatagramSize = Message.MaxLength;
+            if(result.Buffer.Length > maxDatagramSize)
+            {
+                return;
+            }
+
             //If recently received, then ignore.
             if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
             {

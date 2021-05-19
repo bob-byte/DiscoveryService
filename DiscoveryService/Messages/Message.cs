@@ -10,6 +10,14 @@ namespace LUC.DiscoveryService.Messages
     /// </summary>
     public abstract class Message : IWireSerialiser
     {
+        /// <summary>
+        /// Maximum bytes of a message.
+        /// </summary>
+        /// <remarks>
+        /// In reality the max length is dictated by the network MTU.
+        /// </remarks>
+        public const Int32 MaxLength = 10240;
+
         public Message()
         {
             ;

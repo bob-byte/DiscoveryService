@@ -40,12 +40,12 @@ namespace LUC.DiscoveryService
         /// <remarks>
         /// This property is populated when OnGoodTcpMessage event arrives.
         /// </remarks>
-        public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
+        private static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
 
         private static void OnBadMessage(Object sender, Byte[] packet)
         {
             lock (ttyLock)
-            {
+            {                
                 Console.WriteLine(">>> {0:O} <<<", DateTime.Now);
                 Console.WriteLine("Malformed message (base64)");
                 Console.WriteLine(Convert.ToBase64String(packet));
@@ -108,7 +108,7 @@ namespace LUC.DiscoveryService
             groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
             groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
 
-            var serviceDiscovery = ServiceDiscovery.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported, KnownIps));
+            var serviceDiscovery = ServiceDiscovery.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
             serviceDiscovery.Start();
 
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;

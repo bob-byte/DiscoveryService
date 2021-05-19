@@ -121,7 +121,7 @@ namespace DiscoveryService.Test
                 RemoteEndPoint = new IPEndPoint(availableIps[1], (Int32)serviceDiscovery.RunningTcpPort)
             });
 
-            Assert.IsTrue(done.WaitOne());
+            Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(3)));
         }
 
         [Test]

@@ -27,7 +27,6 @@ namespace LUC.DiscoveryService
         /// </param>
         public ServiceProfile(Boolean useIpv4, Boolean useIpv6, UInt32 protocolVersion, 
             ConcurrentDictionary<String, String> groupsSupported = null, 
-            ConcurrentDictionary<String, String> knownIps = null, 
             IEnumerable<IPAddress> addresses = null)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
@@ -40,15 +39,6 @@ namespace LUC.DiscoveryService
             else
             {
                 GroupsSupported = new ConcurrentDictionary<String, String>();
-            }
-
-            if (knownIps != null)
-            {
-                KnownIps = knownIps;
-            }
-            else
-            {
-                KnownIps = new ConcurrentDictionary<String, String>();
             }
 
             ProtocolVersion = protocolVersion;
