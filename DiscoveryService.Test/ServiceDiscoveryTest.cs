@@ -115,7 +115,7 @@ namespace DiscoveryService.Test
 
             serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
-                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
+                Message = new MulticastMessage(messageId: 123,tcpPort: serviceDiscovery.RunningTcpPort,protocolVersion: 1,machineId:  null),
                 RemoteEndPoint = new IPEndPoint(availableIps[1], (Int32)serviceDiscovery.RunningTcpPort)
             });
 
@@ -129,7 +129,7 @@ namespace DiscoveryService.Test
 
             Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
-                Message = new TcpMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
+                Message = new TcpMessage(messageId: 123,kadPort: serviceDiscovery.RunningTcpPort, protocolVersion: 1,groupsIds: null),
             }),
             Throws.TypeOf(typeof(ArgumentException)));
         }
@@ -153,7 +153,7 @@ namespace DiscoveryService.Test
 
             Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
-                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
+                Message = new MulticastMessage(messageId: 123, tcpPort: serviceDiscovery.RunningTcpPort, protocolVersion: 1, machineId: null),
                 RemoteEndPoint = null
             }),
             Throws.TypeOf(typeof(ArgumentException)));
@@ -166,7 +166,7 @@ namespace DiscoveryService.Test
 
             Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
-                Message = new MulticastMessage(messageId: 123, serviceDiscovery.RunningTcpPort, null),
+                Message = new MulticastMessage(messageId: 123, tcpPort: serviceDiscovery.RunningTcpPort, protocolVersion: 1, machineId: null),
                 RemoteEndPoint = new DnsEndPoint(Dns.GetHostName(), (Int32)ServiceProfile.DefaultPort, AddressFamily.InterNetwork)
             }),
             Throws.TypeOf(typeof(InvalidCastException)));
