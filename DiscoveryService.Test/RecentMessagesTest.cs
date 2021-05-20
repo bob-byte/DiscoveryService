@@ -5,12 +5,11 @@ using System.Threading.Tasks;
 
 namespace DiscoveryService.Test
 {
-    //TODO rename methods to format <Test_method>_<Scenery>_<Expected_behavior>
     [TestFixture]
     public class RecentMessagesTest
     {
         [Test]
-        public void Prunning()
+        public void Prune_GeneralTest_Equals()
         {
             var messages = new RecentMessages();
             var timeNow = DateTime.Now;
@@ -25,7 +24,7 @@ namespace DiscoveryService.Test
         }
 
         [Test]
-        public void MessageId()
+        public void GetId_GeneralTest_Equals()
         {
             var messages = new RecentMessages();
 
@@ -38,7 +37,7 @@ namespace DiscoveryService.Test
         }
 
         [Test]
-        public async Task DuplicateCheck()
+        public async Task TryAdd_Async_DuplicateCheck()
         {
             var messages = new RecentMessages
             {
@@ -48,10 +47,10 @@ namespace DiscoveryService.Test
             var byteOfClassB = new Byte[] { 2 };
 
             Assert.IsTrue(condition: messages.TryAdd(byteOfClassA));
-            Assert.IsTrue(messages.TryAdd(byteOfClassB));
+            Assert.IsTrue(condition: messages.TryAdd(byteOfClassB));
             Assert.IsFalse(condition: messages.TryAdd(byteOfClassA));
             await Task.Delay(millisecondsDelay: 200);
-            Assert.IsTrue(messages.TryAdd(byteOfClassA));
+            Assert.IsTrue(condition: messages.TryAdd(byteOfClassA));
         }
     }
 }

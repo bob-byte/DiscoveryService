@@ -8,46 +8,19 @@ using System.IO;
 namespace DiscoveryService.Test
 {
     /// <summary>
-    /// Сводное описание для UnitTest4
+    /// TcpMessageTest
     /// </summary>
     [TestFixture]
     public class TcpMessageTest
     {
-        [Test]
-        public void Writer_null()
-        {
-            TcpMessage tcp = new TcpMessage();
-            MemoryStream ms = new MemoryStream();
-            WireWriter writer = null;
-
-            var exception = Assert.Throws<ArgumentNullException>(code: () => tcp.Write(writer));
-
-            Assert.That(actual: exception.ParamName, expression: Is.EqualTo(nameof(writer)));
-        }
-
-        [Test]
-        public void Message()
-        {
-            UInt32 messageId = 1111;
-            UInt32 versionOfProtocol = 1;
-            UInt32 tcpPort = 17500;
-            List<String> groupsIds = new List<String> { "a", "b" };
-            var expected = ExpectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
-            var message = new TcpMessage(messageId, tcpPort, versionOfProtocol, groupsIds);
-
-            var actual = message.ToString();
-
-            Assert.AreEqual(expected, actual);
-        }
-
-        private String ExpectedMessage(UInt32 messageId, UInt32 versionOfProtocol, UInt32 tcpPort, List<String> groupsIds)
+        private String ExpectedMessage(UInt32 messageId, UInt32 versionOfProtocol, UInt32 kadPort, List<String> groupsIds)
         {
             var writer = new StringWriter();
 
             writer.WriteLine("TCP message:");
             writer.WriteLine($"MessageId = {messageId};\n" +
                              $"Protocol version = {versionOfProtocol};\r\n" +
-                             $"TCP port of the Kademilia service = {tcpPort};");
+                             $"TCP port of the Kademilia service = {kadPort};");
 
             writer.WriteLine($"GroupIds:");
             for (Int32 id = 0; id < groupsIds.Count; id++)
@@ -67,14 +40,33 @@ namespace DiscoveryService.Test
         }
 
         [Test]
-        public void Message_GroupsIsNULL()
+        public void Write_NullWireWriter_WriterNullException()
         {
-            UInt32 messageId = 1111;
-            UInt32 versionOfProtocol = 1;
-            UInt32 tcpPort = 17500;
-            List<String> groupsIds = new List<String>();
-            var expected = ExpectedMessage(messageId, versionOfProtocol, tcpPort, groupsIds);
-            var message = new TcpMessage(messageId, tcpPort, versionOfProtocol, groupsIds: null);
+            var tcp = new TcpMessage();
+
+            var exception = Assert.Throws<ArgumentNullException>(code: () => tcp.Write(writer: null));
+
+            Assert.That(actual: exception.ParamName, expression: Is.EqualTo("WriterNullException"));
+        }
+
+        [Test]
+        public void Ctor_NormalInput_StringEqual()
+        {
+            var expected = ExpectedMessage(messageId: 1111, versionOfProtocol: 1, kadPort: 17500, groupsIds: new List<String> { "a", "b" });
+
+            var message = new TcpMessage(messageId: 1111, kadPort: 17500, new List<String> { "a", "b" });
+
+            var actual = message.ToString();
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void Ctor_NullGroupIds_StringEqual()
+        {
+            var expected = ExpectedMessage(messageId: 1111, versionOfProtocol: 1, kadPort: 17500, groupsIds: null);
+
+            var message = new TcpMessage(messageId: 1111, kadPort: 17500, groupsIds: null);
 
             var actual = message.ToString();
 
