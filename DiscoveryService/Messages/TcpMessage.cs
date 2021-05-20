@@ -25,8 +25,14 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="messageId">
         ///   Unique message identifier. It is used to detect duplicate messages.
         /// </param>
-        public TcpMessage(UInt32 messageId, UInt32 kadPort, UInt32 protocolVersion, List<String> groupsIds)
-            : base(messageId, protocolVersion)
+        /// /// <param name="groupsIds">
+        /// Names of user groups
+        /// </param>
+        /// <param name="kadPort">
+        /// TCP port of the Kademilia service.
+        /// </param>
+        public TcpMessage(UInt32 messageId, UInt32 kadPort, List<String> groupsIds)
+            : base(messageId)
         {
             if(groupsIds != null)
             {
@@ -55,7 +61,7 @@ namespace LUC.DiscoveryService.Messages
             if(reader != null)
             {
                 MessageId = reader.ReadUInt32();
-                ProtocolVersion = reader.ReadUInt32();
+                VersionOfProtocol = reader.ReadUInt32();
                 KadPort = reader.ReadUInt32();
                 GroupIds = reader.ReadListOfStrings();
 
@@ -63,7 +69,7 @@ namespace LUC.DiscoveryService.Messages
             }
             else
             {
-                throw new ArgumentNullException(nameof(reader));
+                throw new ArgumentNullException("ReaderNullException");
             }
         }
 
@@ -88,13 +94,13 @@ namespace LUC.DiscoveryService.Messages
             if (writer != null)
             {
                 writer.Write(MessageId);
-                writer.Write(ProtocolVersion);
+                writer.Write(VersionOfProtocol);
                 writer.Write(KadPort);
                 writer.WriteEnumerable(GroupIds);
             }
             else
             {
-                throw new ArgumentNullException(nameof(writer));
+                throw new ArgumentNullException("WriterNullException");
             }
         }
 
