@@ -13,13 +13,13 @@ namespace DiscoveryService.Test
     [TestFixture]
     public class TcpMessageTest
     {
-        private String ExpectedMessage(UInt32 messageId, UInt32 versionOfProtocol, UInt32 kadPort, List<String> groupsIds)
+        private String ExpectedMessage(UInt32 messageId, UInt32 protocolVersion, UInt32 kadPort, List<String> groupsIds)
         {
             var writer = new StringWriter();
 
             writer.WriteLine("TCP message:");
             writer.WriteLine($"MessageId = {messageId};\n" +
-                             $"Protocol version = {versionOfProtocol};\r\n" +
+                             $"Protocol version = {protocolVersion};\r\n" +
                              $"TCP port of the Kademilia service = {kadPort};");
 
             writer.WriteLine($"GroupIds:");
@@ -52,9 +52,9 @@ namespace DiscoveryService.Test
         [Test]
         public void Ctor_NormalInput_StringEqual()
         {
-            var expected = ExpectedMessage(messageId: 1111, versionOfProtocol: 1, kadPort: 17500, groupsIds: new List<String> { "a", "b" });
+            var expected = ExpectedMessage(messageId: 1111, protocolVersion: 1, kadPort: 17500, groupsIds: new List<String> { "a", "b" });
 
-            var message = new TcpMessage(messageId: 1111, kadPort: 17500, new List<String> { "a", "b" });
+            var message = new TcpMessage(messageId: 1111, kadPort: 17500, protocolVersion: 1, new List<String> { "a", "b" });
 
             var actual = message.ToString();
 
@@ -64,9 +64,9 @@ namespace DiscoveryService.Test
         [Test]
         public void Ctor_NullGroupIds_StringEqual()
         {
-            var expected = ExpectedMessage(messageId: 1111, versionOfProtocol: 1, kadPort: 17500, groupsIds: null);
+            var expected = ExpectedMessage(messageId: 1111, protocolVersion: 1, kadPort: 17500, groupsIds: null);
 
-            var message = new TcpMessage(messageId: 1111, kadPort: 17500, groupsIds: null);
+            var message = new TcpMessage(messageId: 1111, kadPort: 17500, protocolVersion: 1, groupsIds: null);
 
             var actual = message.ToString();
 
