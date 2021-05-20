@@ -128,7 +128,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
-        public void Write(String value)
+        public void WriteString(String value)
         {
             if(value != null)
             {
@@ -166,7 +166,7 @@ namespace LUC.DiscoveryService.CodingData
                 Write((UInt32)array.Length);
                 foreach (var item in array)
                 {
-                    Write(item);
+                    WriteString(item);
                 }
             }
             else
