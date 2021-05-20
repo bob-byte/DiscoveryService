@@ -60,7 +60,7 @@ namespace LUC.DiscoveryService.Messages
             }
             else
             {
-                throw new ArgumentNullException(nameof(reader));
+                throw new ArgumentNullException("ReaderNullException");
             }
         }
 
@@ -72,11 +72,11 @@ namespace LUC.DiscoveryService.Messages
                 writer.Write(MessageId);
                 writer.Write(ProtocolVersion);
                 writer.Write(TcpPort);
-                writer.Write(MachineId);
+                writer.WriteString(MachineId);
             }
             else
             {
-                throw new ArgumentNullException(nameof(writer));
+                throw new ArgumentNullException("WriterNullException");
             }
         }
 
