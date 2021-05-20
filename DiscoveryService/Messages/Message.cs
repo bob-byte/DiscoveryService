@@ -49,17 +49,6 @@ namespace LUC.DiscoveryService.Messages
         public UInt32 ProtocolVersion { get; set; }
 
         /// <summary>
-        ///   Maximum bytes of a message.
-        /// </summary>
-        /// <value>
-        ///   10240 bytes.
-        /// </value>
-        /// <remarks>
-        ///   In reality the max length is dictated by the network MTU.
-        /// </remarks>
-        public const int MaxLength = 10240;
-
-        /// <summary>
         ///   Length in bytes of the object when serialised.
         /// </summary>
         /// <returns>
