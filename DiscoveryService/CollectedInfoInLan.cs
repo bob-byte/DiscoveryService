@@ -10,13 +10,13 @@ namespace LUC.DiscoveryService
     {
         public CollectedInfoInLan()
         {
-            KadPort = DefaultPort;
+            TcpPort = DefaultPort;
         }
 
         /// <summary>
-        /// Kademilia port, that we send to other computers.
+        /// TCP port, that we send to other computers.
         /// </summary>
-        public UInt32 KadPort { get; protected set; }
+        public UInt32 TcpPort { get; protected set; }
 
         /// <summary>
         /// Groups which current peer supports.

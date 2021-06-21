@@ -129,7 +129,7 @@ namespace DiscoveryService.Test
 
             Assert.That(() => serviceDiscovery.SendTcpMess(this, new MessageEventArgs
             {
-                Message = new TcpMessage(messageId: 123,kadPort: serviceDiscovery.RunningTcpPort, protocolVersion: 1,groupsIds: null),
+                Message = new TcpMessage(messageId: 123,tcpPort: serviceDiscovery.RunningTcpPort, protocolVersion: 1,groupsIds: null),
             }),
             Throws.TypeOf(typeof(ArgumentException)));
         }

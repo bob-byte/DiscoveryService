@@ -23,11 +23,11 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="messageId">
         /// Unique message identifier. It is used to detect duplicate messages.
         /// </param>
-        /// <param name="machineId">
-        /// Id of machine which is sending this messege
-        /// </param>
         /// <param name="tcpPort">
         /// TCP port which is being run in machine with <see cref="MachineId"/>
+        /// </param>
+        /// <param name="machineId">
+        /// Id of machine which is sending this messege
         /// </param>
         public MulticastMessage(UInt32 messageId, UInt32 tcpPort, String machineId)
             : base(messageId)
@@ -40,11 +40,6 @@ namespace LUC.DiscoveryService.Messages
         /// Id of machine which is sending this messege
         /// </summary>
         public String MachineId { get; set; }
-
-        /// <summary>
-        /// TCP port which is being run in machine with machineId
-        /// </summary>
-        public UInt32 TcpPort { get; set; }
 
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)

@@ -104,20 +104,21 @@ namespace LUC.DiscoveryService
         private void InitService()
         {
             Service = new Service(MachineId, UseIpv4, UseIpv6, ProtocolVersion);
-            Service.QueryReceived += SendTcpMess;
+            Service.QueryReceived += SendTcpMessage;
         }
 
         //TODO: check SSL certificate with SNI
         /// <summary>
-        /// It is added to <seealso cref="Service.QueryReceived"/>. It sends TCP message to <seealso cref="MessageEventArgs.RemoteEndPoint"/> using <seealso cref="MulticastMessage.TcpPort"/>
+        ///  Sends TCP message of "acknowledge" custom type to <seealso cref="MessageEventArgs.RemoteEndPoint"/> using <seealso cref="MulticastMessage.TcpPort"/>
+        ///  It is added to <seealso cref="Service.QueryReceived"/>. 
         /// </summary>
         /// <param name="sender">
-        /// Object which invoked event <seealso cref="Service.QueryReceived"/>
+        ///  Object which invoked event <seealso cref="Service.QueryReceived"/>
         /// </param>
         /// <param name="e">
-        /// Info about peer which sent UDP message to current machine
+        ///  Information about UDP sender, that we have received.
         /// </param>
-        public void SendTcpMess(Object sender, MessageEventArgs e)
+        public void SendTcpMessage(Object sender, MessageEventArgs e)
         {
             if((!(e?.Message is MulticastMessage message)) || 
                (!(e.RemoteEndPoint is IPEndPoint iPEndPoint)))
@@ -137,8 +138,11 @@ namespace LUC.DiscoveryService
                     stream = client.GetStream();
 
                     Random random = new Random();
-                    var tcpMess = new TcpMessage(messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                    KadPort, ProtocolVersion, groupsIds: GroupsSupported?.Keys?.ToList());
+                    var tcpMess = new TcpMessage(
+                        messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                        TcpPort,
+                        ProtocolVersion,
+                        groupsIds: GroupsSupported?.Keys?.ToList());
                     var bytes = tcpMess.ToByteArray();
 
                     if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytes)))

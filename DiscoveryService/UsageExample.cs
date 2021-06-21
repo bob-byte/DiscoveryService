@@ -64,7 +64,7 @@ namespace LUC.DiscoveryService
 
                 if ((e.Message is TcpMessage message) && (e.RemoteEndPoint is IPEndPoint endPoint))
                 {
-                    var network = $"{endPoint.Address}:{message.KadPort}";
+                    var network = $"{endPoint.Address}:{message.TcpPort}";
                     foreach (var group in message.GroupIds)
                     {
                         if (!GroupsDiscovered.TryAdd(network, group))

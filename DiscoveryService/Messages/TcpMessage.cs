@@ -28,10 +28,10 @@ namespace LUC.DiscoveryService.Messages
         /// /// <param name="groupsIds">
         /// Names of user groups
         /// </param>
-        /// <param name="kadPort">
-        /// TCP port of the Kademilia service.
+        /// <param name="tcpPort">
+        /// TCP port for Kademilia requests.
         /// </param>
-        public TcpMessage(UInt32 messageId, UInt32 kadPort, List<String> groupsIds)
+        public TcpMessage(UInt32 messageId, UInt32 tcpPort, List<String> groupsIds)
             : base(messageId)
         {
             if(groupsIds != null)
@@ -43,13 +43,21 @@ namespace LUC.DiscoveryService.Messages
                 GroupIds = new List<String>();
             }
 
-            KadPort = kadPort;
+            TcpPort = tcpPort;
         }
 
         /// <summary>
-        /// TCP port of the Kademilia service.
+        ///   The kind of message.
         /// </summary>
-        public UInt32 KadPort { get; set; }
+        /// <value>
+        ///   Defaults to <see cref="MessageOperation.Acknowledge"/>.
+        /// </value>
+        public MessageOperation Opcode { get; set; } = MessageOperation.Acknowledge;
+
+        /// <summary>
+        /// TCP port for inter-service communications.
+        /// </summary>
+        public UInt32 TcpPort { get; set; }
 
         /// <summary>
         /// Names of groups
@@ -60,9 +68,10 @@ namespace LUC.DiscoveryService.Messages
         {
             if(reader != null)
             {
+                Opcode = reader.ReadUInt32();
                 MessageId = reader.ReadUInt32();
                 VersionOfProtocol = reader.ReadUInt32();
-                KadPort = reader.ReadUInt32();
+                TcpPort = reader.ReadUInt32();
                 GroupIds = reader.ReadListOfStrings();
 
                 return this;
@@ -93,9 +102,10 @@ namespace LUC.DiscoveryService.Messages
         {
             if (writer != null)
             {
+                writer.Write(Opcode);
                 writer.Write(MessageId);
                 writer.Write(VersionOfProtocol);
-                writer.Write(KadPort);
+                writer.Write(TcpPort);
                 writer.WriteEnumerable(GroupIds);
             }
             else
@@ -108,9 +118,9 @@ namespace LUC.DiscoveryService.Messages
         {
             using(var writer = new StringWriter())
             {
-                writer.WriteLine("TCP message:");
+                writer.WriteLine("TCP message {Opcode}:");
                 writer.WriteLine($"{base.ToString()};");
-                writer.WriteLine($"TCP port of the Kademilia service = {KadPort};");
+                writer.WriteLine($"TCP port = {TcpPort};");
 
                 writer.WriteLine($"{nameof(GroupIds)}:");
                 for (Int32 id = 0; id < GroupIds.Count; id++)

@@ -29,8 +29,8 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="messageId">
         ///   Unique message identifier. It is used to detect duplicate messages.
         /// </param>
-        /// <param name="tcpPort">
-        /// TCP port which is being run in machine with machineId
+        /// <param name="protocolVersion">
+        ///   Supported version of protocol
         /// </param>
         public Message(UInt32 messageId, UInt32 protocolVersion)
         {
@@ -47,6 +47,11 @@ namespace LUC.DiscoveryService.Messages
         ///   Supported version of protocol of the remote application.
         /// </summary>
         public UInt32 ProtocolVersion { get; set; }
+
+        /// <summary>
+        /// TCP port which is being run in machine with machineId
+        /// </summary>
+        public UInt32 TcpPort { get; set; }
 
         /// <summary>
         ///   Length in bytes of the object when serialised.
