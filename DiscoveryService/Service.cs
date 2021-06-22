@@ -61,7 +61,8 @@ namespace LUC.DiscoveryService
         public event EventHandler<NetworkInterfaceEventArgs> NetworkInterfaceDiscovered;
 
         /// <summary>
-        ///   Raised when any link-local service responds to a query.
+        ///   Raised when any link-local service responds to a query ( MessageOperation.Acknowledge ).
+        ///   This is an answer to UDP multicast.
         /// </summary>
         /// <value>
         ///   Contains the answer <see cref="TcpMessage"/>.
@@ -71,6 +72,54 @@ namespace LUC.DiscoveryService
         ///   then forgotten.
         /// </remarks>
         public event EventHandler<MessageEventArgs> AnswerReceived;
+
+        /// <summary>
+        ///   Raised when any link-local service sends PING ( MessageOperation.Ping ).
+        ///   This is a Kadamilia ping request.
+        /// </summary>
+        public event EventHandler<MessageEventArgs> PingReceived;
+
+        /// <summary>
+        ///   Raised when any link-local service sends PONG ( MessageOperation.PingResponse ).
+        ///   This is a Kadamilia pong answer to ping.
+        /// </summary>
+        public event EventHandler<MessageEventArgs> PongReceived;
+
+        /// <summary>
+        ///   Raised when any link-local service sends STORE ( MessageOperation.Store ).
+        ///   This is a Kadamilia STORE RPC call.
+        /// </summary>
+        public event EventHandler<MessageEventArgs> StoreReceived;
+
+        /// <summary>
+        ///   Raised when any link-local service responds to STORE request ( MessageOperation.StoreResponse ).
+        ///   This is a response to Kadamilia's STORE RPC call.
+        /// </summary>
+        public event EventHandler<MessageEventArgs> StoreResponseReceived;
+
+        /// <summary>
+        ///   Raised when any link-local service sends FindNode node request ( MessageOperation.FindNode ).
+        ///   This is a Kadamilia's FindNode RPC call.
+        /// </summary>
+        public event EventHandler<MessageEventArgs> FindNodeReceived;
+
+        /// <summary>
+        ///   Raised when any link-local service answers to FindNode RPC ( MessageOperation.FindNodeResponse ).
+        ///   This is a response to Kadamilia's FindNode RPC call.
+        /// </summary>
+        public event EventHandler<MessageEventArgs> FindNodeResponseReceived;
+
+        /// <summary>
+        ///   Raised when any link-local service asends FindValue RPC ( MessageOperation.FindValue ).
+        ///   This is a Kadamilia's FindValue RPC call.
+        /// </summary>
+        public event EventHandler<MessageEventArgs> FindValueReceived;
+
+        /// <summary>
+        ///   Raised when any link-local service answers to FindValue RPC ( MessageOperation.FindValueResponse ).
+        ///   This is a response to Kadamilia's FindValue RPC call.
+        /// </summary>
+        public event EventHandler<MessageEventArgs> FindValueResponseReceived;
 
         /// <summary>
         ///   Raised when message is received that cannot be decoded.
@@ -314,20 +363,82 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// Called by <see cref="Client.TcpMessageReceived"/> in method <see cref="Client.ListenTcp(TcpListener)"/>
+        ///   Called by <see cref="Client.TcpMessageReceived"/> in method <see cref="Client.ListenTcp(TcpListener)"/>
         /// </summary>
         /// <param name="message">
-        /// Received message
+        ///   Received message is then processed by corresponding event handler, depending on type of message
         /// </param>
         private void OnTcpMessage(Object sender, MessageEventArgs receiveResult)
         {
+
             if(receiveResult.Message is TcpMessage message)
             {
-                AnswerReceived?.Invoke(sender, new MessageEventArgs
+                switch(receiveResult.Message.Opcode)
                 {
-                    Message = message,
-                    RemoteEndPoint = receiveResult.RemoteEndPoint
-                });
+                    case MessageOperation.Ping:
+                        PingReceived?.Invoke(sender, new MessageEventArgs
+                        {
+                            Message = message,
+                            RemoteEndPoint = receiveResult.RemoteEndPoint
+                        });
+                        break;
+                    case MessageOperation.PingResponse:
+                        PongReceived?.Invoke(sender, new MessageEventArgs
+                        {
+                            Message = message,
+                            RemoteEndPoint = receiveResult.RemoteEndPoint
+                        });
+                        break;
+                    case MessageOperation.Store:
+                        StoreReceived?.Invoke(sender, new MessageEventArgs
+                        {
+                            Message = message,
+                            RemoteEndPoint = receiveResult.RemoteEndPoint
+                        });
+                        break;
+                    case MessageOperation.StoreResponse:
+                        StoreResponseReceived?.Invoke(sender, new MessageEventArgs
+                        {
+                            Message = message,
+                            RemoteEndPoint = receiveResult.RemoteEndPoint
+                        });
+                        break;
+                    case MessageOperation.FindNode:
+                        FindNodeReceived?.Invoke(sender, new MessageEventArgs
+                        {
+                            Message = message,
+                            RemoteEndPoint = receiveResult.RemoteEndPoint
+                        });
+                        break;
+                    case MessageOperation.FindNodeResponse:
+                        FindNodeResponseReceived?.Invoke(sender, new MessageEventArgs
+                        {
+                            Message = message,
+                            RemoteEndPoint = receiveResult.RemoteEndPoint
+                        });
+                        break;
+                    case MessageOperation.FindValue:
+                        FindValueReceived?.Invoke(sender, new MessageEventArgs
+                        {
+                            Message = message,
+                            RemoteEndPoint = receiveResult.RemoteEndPoint
+                        });
+                        break;
+                    case MessageOperation.FindValueResponse:
+                        FindValueResponseReceived?.Invoke(sender, new MessageEventArgs
+                        {
+                            Message = message,
+                            RemoteEndPoint = receiveResult.RemoteEndPoint
+                        });
+                        break;
+                    default:
+                        AnswerReceived?.Invoke(sender, new MessageEventArgs
+                        {
+                            Message = message,
+                            RemoteEndPoint = receiveResult.RemoteEndPoint
+                        });
+                        break;
+                }
             }
         }
 
@@ -352,6 +463,15 @@ namespace LUC.DiscoveryService
             // All event handlers are cleared.
             QueryReceived = null;
             AnswerReceived = null;
+            PingReceived = null;
+            PongReceived = null;
+            StoreReceived = null;
+            StoreResponseReceived = null;
+            FindNodeReceived = null;
+            FindNodeResponseReceived = null;
+            FindValueReceived = null;
+            FindValueResponseReceived = null;
+
             NetworkInterfaceDiscovered = null;
 
             // Stop current UDP and TCP listeners and senders

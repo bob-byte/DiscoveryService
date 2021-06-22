@@ -87,6 +87,78 @@ namespace LUC.DiscoveryService
             }
         }
 
+        private static void OnPingReceived(Object sender, MessageEventArgs e)
+        {
+            lock (ttyLock)
+            {
+                Console.WriteLine("=== Kad PING received {0:O} ===", DateTime.Now);
+                Console.WriteLine(e.Message.ToString());
+            }
+        }
+
+        private static void OnPongReceived(Object sender, MessageEventArgs e)
+        {
+            lock (ttyLock)
+            {
+                Console.WriteLine("=== Kad PONG received {0:O} ===", DateTime.Now);
+                Console.WriteLine(e.Message.ToString());
+            }
+        }
+
+        private static void OnStoreReceived(Object sender, MessageEventArgs e)
+        {
+            lock (ttyLock)
+            {
+                Console.WriteLine("=== Kad STORE received {0:O} ===", DateTime.Now);
+                Console.WriteLine(e.Message.ToString());
+            }
+        }
+
+        private static void OnStoreResponseReceived(Object sender, MessageEventArgs e)
+        {
+            lock (ttyLock)
+            {
+                Console.WriteLine("=== Kad STORE response received {0:O} ===", DateTime.Now);
+                Console.WriteLine(e.Message.ToString());
+            }
+        }
+
+        private static void OnFindNodeReceived(Object sender, MessageEventArgs e)
+        {
+            lock (ttyLock)
+            {
+                Console.WriteLine("=== Kad FindNode received {0:O} ===", DateTime.Now);
+                Console.WriteLine(e.Message.ToString());
+            }
+        }
+
+        private static void OnFindNodeResponseReceived(Object sender, MessageEventArgs e)
+        {
+            lock (ttyLock)
+            {
+                Console.WriteLine("=== Kad FindNode response received {0:O} ===", DateTime.Now);
+                Console.WriteLine(e.Message.ToString());
+            }
+        }
+
+        private static void OnFindValueReceived(Object sender, MessageEventArgs e)
+        {
+            lock (ttyLock)
+            {
+                Console.WriteLine("=== Kad FindValue received {0:O} ===", DateTime.Now);
+                Console.WriteLine(e.Message.ToString());
+            }
+        }
+
+        private static void OnFindValueResponseReceived(Object sender, MessageEventArgs e)
+        {
+            lock (ttyLock)
+            {
+                Console.WriteLine("=== Kad FindValue response received {0:O} ===", DateTime.Now);
+                Console.WriteLine(e.Message.ToString());
+            }
+        }
+
         static void Main(string[] args)
         {
             // set logger factory
@@ -114,6 +186,16 @@ namespace LUC.DiscoveryService
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;
             serviceDiscovery.Service.QueryReceived += OnGoodUdpMessage;
             serviceDiscovery.Service.MalformedMessage += OnBadMessage;
+
+            // Kademilia event types
+            serviceDiscovery.Service.PingReceived += OnPingReceived;
+            serviceDiscovery.Service.PongReceived += OnPongReceived;
+            serviceDiscovery.Service.StoreReceived += OnStoreReceived;
+            serviceDiscovery.Service.StoreResponseReceived += OnStoreResponseReceived;
+            serviceDiscovery.Service.FindNodeReceived += OnFindNodeReceived;
+            serviceDiscovery.Service.FindNodeResponseReceived += OnFindNodeResponseReceived;
+            serviceDiscovery.Service.FindValueReceived += OnFindValueReceived;
+            serviceDiscovery.Service.FindValueResponseReceived += OnFindValueResponseReceived;
 
             serviceDiscovery.Service.NetworkInterfaceDiscovered += (s, e) =>
             {
