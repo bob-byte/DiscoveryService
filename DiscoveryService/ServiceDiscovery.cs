@@ -122,7 +122,7 @@ namespace LUC.DiscoveryService
             if((!(e?.Message is MulticastMessage message)) || 
                (!(e.RemoteEndPoint is IPEndPoint iPEndPoint)))
             {
-                throw new ArgumentException($"Bad format of {nameof(e)}");
+                throw new InvalidCastException($"Bad format of {nameof(e)}");
             }
             else
             {

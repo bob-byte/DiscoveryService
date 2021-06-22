@@ -131,7 +131,7 @@ namespace DiscoveryService.Test
             {
                 Message = new TcpMessage(messageId: 123,kadPort: serviceDiscovery.RunningTcpPort, protocolVersion: 1,groupsIds: null),
             }),
-            Throws.TypeOf(typeof(ArgumentException)));
+            Throws.TypeOf(typeof(InvalidCastException)));
         }
 
         [Test]
@@ -143,7 +143,7 @@ namespace DiscoveryService.Test
             {
                 Message = null
             }),
-            Throws.TypeOf(typeof(ArgumentException)));
+            Throws.TypeOf(typeof(InvalidCastException)));
         }
 
         [Test]
@@ -156,7 +156,7 @@ namespace DiscoveryService.Test
                 Message = new MulticastMessage(messageId: 123, tcpPort: serviceDiscovery.RunningTcpPort, protocolVersion: 1, machineId: null),
                 RemoteEndPoint = null
             }),
-            Throws.TypeOf(typeof(ArgumentException)));
+            Throws.TypeOf(typeof(InvalidCastException)));
         }
 
         [Test]

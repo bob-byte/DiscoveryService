@@ -23,7 +23,7 @@ namespace DiscoveryService.Test
                              $"TCP port of the Kademilia service = {kadPort};");
 
             writer.WriteLine($"GroupIds:");
-            for (Int32 id = 0; id < groupsIds.Count; id++)
+            for (Int32 id = 0; id < groupsIds?.Count; id++)
             {
                 if (id == groupsIds.Count - 1)
                 {

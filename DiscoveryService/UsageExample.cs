@@ -127,10 +127,9 @@ namespace LUC.DiscoveryService
                 "in order to receive TCP answers, press any key each time.\n" +
                 "If you want to stop, press Esc");
 
-            ConsoleKey pressedKey = default;
             while (true)
             {
-                pressedKey = Console.ReadKey(intercept: true).Key;//does not display pressed key
+                ConsoleKey pressedKey = Console.ReadKey(intercept: true).Key;//does not display pressed key
                 if (pressedKey != ConsoleKey.Escape)
                 {
                     serviceDiscovery.QueryAllServices();
