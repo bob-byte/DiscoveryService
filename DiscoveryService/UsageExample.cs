@@ -108,7 +108,7 @@ namespace LUC.DiscoveryService
             groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
             groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
 
-            var serviceDiscovery = ServiceDiscovery.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
+            var serviceDiscovery = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
             serviceDiscovery.Start();
 
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;

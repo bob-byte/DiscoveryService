@@ -6,6 +6,9 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Kademlia.Routers;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
@@ -31,6 +34,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         private readonly RecentMessages receivedMessages = new RecentMessages();
         private const Int32 MaxDatagramSize = Message.MaxLength;
+        private Dht distributedHashTable;
 
         private Client client;
 
@@ -86,9 +90,19 @@ namespace LUC.DiscoveryService
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        internal Service(String machineId, Boolean useIpv4, Boolean useIpv6, UInt32 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
+        internal Service(ID machineId, Boolean useIpv4, Boolean useIpv6, 
+            UInt32 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
             MachineId = machineId;
+
+            var ipAddresses = GetIPAddresses().ToArray();
+            var protocols = new List<IProtocol>();
+            for (int i = 0; i < ipAddresses.Length; i++)
+            {
+                protocols.Add(new TcpProtocol(url: ipAddresses[i].ToString(), RunningTcpPort));
+            }
+
+            distributedHashTable = new Dht(machineId,  protocols, () => new VirtualStorage(), new Router());
 
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;
@@ -223,7 +237,7 @@ namespace LUC.DiscoveryService
                     client?.Dispose();
                     client = new Client(UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
                     client.UdpMessageReceived += OnUdpMessage;
-                    client.TcpMessageReceived += OnTcpMessage;
+                    client.TcpMessageReceived += RaiseAnswerReceived;
                 }
 
                 if(newNics.Any())
@@ -277,10 +291,10 @@ namespace LUC.DiscoveryService
             }
 
             //If recently received, then ignore.
-            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-            {
-                return;
-            }
+            //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+            //{
+            //    return;
+            //}
 
             MulticastMessage message = new MulticastMessage();
             try
@@ -295,11 +309,11 @@ namespace LUC.DiscoveryService
                 return;
             }
 
-            if ((message.ProtocolVersion != ProtocolVersion) ||
-                (message.MachineId == MachineId))
-            {
-                return;
-            }
+            //if ((message.ProtocolVersion != ProtocolVersion) ||
+            //    (message.MachineId == MachineId))
+            //{
+            //    return;
+            //}
 
             // Dispatch the message.
             try
@@ -319,7 +333,7 @@ namespace LUC.DiscoveryService
         /// <param name="message">
         /// Received message
         /// </param>
-        private void OnTcpMessage(Object sender, MessageEventArgs receiveResult)
+        private void RaiseAnswerReceived(Object sender, MessageEventArgs receiveResult)
         {
             if(receiveResult.Message is TcpMessage message)
             {
@@ -328,6 +342,15 @@ namespace LUC.DiscoveryService
                     Message = message,
                     RemoteEndPoint = receiveResult.RemoteEndPoint
                 });
+            }
+        }
+
+        private void Bootstrap(Object sender, MessageEventArgs receiveResult)
+        {
+            if(receiveResult.Message is TcpMessage tcpMess && receiveResult.RemoteEndPoint is IPEndPoint endPoint)
+            {
+                var url = endPoint.Address.ToString();
+                distributedHashTable.Bootstrap(knownPeer: new Contact(new TcpProtocol(url, tcpMess.TcpPort), tcpMess.MachineId));
             }
         }
 
@@ -365,8 +388,8 @@ namespace LUC.DiscoveryService
         internal void SendQuery()
         {
             Random random = new Random();
-            var msg = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), 
-                RunningTcpPort, ProtocolVersion, MachineId);
+            var msg = new MulticastMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), ProtocolVersion,
+                RunningTcpPort, MachineId);
             var packet = msg.ToByteArray();
 
             client?.SendUdpAsync(packet).GetAwaiter().GetResult();

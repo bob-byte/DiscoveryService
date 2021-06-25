@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscoveryService", "Discove
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{AC51C97E-E790-4319-B13B-001BE3557408}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscoveryService.Test", "DiscoveryService.Test\DiscoveryService.Test.csproj", "{454C1F48-1D17-4080-BE99-C18D08D1EAA4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscoveryService.Test", "test\DiscoveryService.Test\DiscoveryService.Test.csproj", "{454C1F48-1D17-4080-BE99-C18D08D1EAA4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

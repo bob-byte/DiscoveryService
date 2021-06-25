@@ -7,6 +7,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using LUC.DiscoveryService.Extensions;
+using LUC.DiscoveryService.Kademlia;
 
 namespace LUC.DiscoveryService
 {
@@ -25,6 +26,7 @@ namespace LUC.DiscoveryService
 
         private readonly List<UdpClient> udpReceivers;
         private readonly List<TcpListener> tcpReceivers;
+        private Dht distributedHashTable;
 
         private readonly ConcurrentDictionary<IPAddress, UdpClient> sendersUdp = new ConcurrentDictionary<IPAddress, UdpClient>();
 
@@ -163,6 +165,8 @@ namespace LUC.DiscoveryService
                     senderUdp.Dispose();
                 }
             }
+
+            //add call method DiscoveryRunAsync (realization in KUdpMulticastDiscovery). We don't need chain of methods to realize DiscoveryRunAsync, we only need SocketSendToAsync
 
             foreach (var r in udpReceivers)
             {

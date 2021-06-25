@@ -1,4 +1,5 @@
-﻿using LUC.Interfaces;
+﻿using LUC.DiscoveryService.Kademlia;
+using LUC.Interfaces;
 using LUC.Services.Implementation;
 using System;
 using System.Collections.Concurrent;
@@ -56,7 +57,7 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public String MachineId { get; protected set; }
+        public ID MachineId { get; protected set; }
 
         /// <summary>
         /// Min available TCP port in the LAN

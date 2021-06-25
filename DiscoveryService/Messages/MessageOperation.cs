@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Messages
     ///   Defines the standard operations.
     /// </remarks>
     /// <seealso cref="Message.Opcode"/>
-    public enum MessageOperation : ushort
+    public enum MessageOperation : Byte
     {
         /// <summary>
         ///   Acknowledge operation is type of TCP packet, sent on response to UDP message.
@@ -26,6 +26,5 @@ namespace LUC.DiscoveryService.Messages
         FindNodeResponse = 6,
         FindValue = 7,
         FindValueResponse = 8
-
     }
 }

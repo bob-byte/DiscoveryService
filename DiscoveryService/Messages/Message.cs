@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Kademlia;
 using System;
 using System.IO;
 using System.Text;
@@ -44,12 +45,18 @@ namespace LUC.DiscoveryService.Messages
         public UInt32 MessageId { get; set; }
 
         /// <summary>
+        /// Id of machine which is sending this messege
+        /// </summary>
+        public ID MachineId { get; set; }
+
+        /// <summary>
         ///   Supported version of protocol of the remote application.
         /// </summary>
         public UInt32 ProtocolVersion { get; set; }
 
         /// <summary>
-        /// TCP port which is being run in machine with machineId
+        /// TCP port which is being run in machine with machineId.
+        /// TCP port for inter-service communications.
         /// </summary>
         public UInt32 TcpPort { get; set; }
 

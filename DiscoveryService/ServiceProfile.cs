@@ -1,5 +1,6 @@
 ﻿using DeviceId;
 using LUC.DiscoveryService.Extensions;
+using LUC.DiscoveryService.Kademlia;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -29,8 +30,8 @@ namespace LUC.DiscoveryService
             ConcurrentDictionary<String, String> groupsSupported = null, 
             IEnumerable<IPAddress> addresses = null)
         {
-            DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
-            MachineId = deviceIdBuilder.MachineId();
+            //DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
+            MachineId = ID.RandomID;
 
             if(groupsSupported != null)
             {

@@ -1,6 +1,8 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Kademlia;
 using System;
 using System.IO;
+using System.Numerics;
 
 namespace LUC.DiscoveryService.Messages
 {
@@ -29,17 +31,12 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="machineId">
         /// Id of machine which is sending this messege
         /// </param>
-        public MulticastMessage(UInt32 messageId, UInt32 tcpPort, String machineId)
-            : base(messageId)
+        public MulticastMessage(UInt32 messageId, UInt32 protocolVersion, UInt32 tcpPort, ID machineId)
+            : base(messageId, protocolVersion)
         {
             TcpPort = tcpPort;
             MachineId = machineId;
         }
-
-        /// <summary>
-        /// Id of machine which is sending this messege
-        /// </summary>
-        public String MachineId { get; set; }
 
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)
@@ -47,9 +44,12 @@ namespace LUC.DiscoveryService.Messages
             if (reader != null)
             {
                 MessageId = reader.ReadUInt32();
-                VersionOfProtocol = reader.ReadUInt32();
-                TcpPort = reader.ReadUInt32();
-                MachineId = reader.ReadString();
+
+                var idAsBigInt = BigInteger.Parse(reader.ReadString());
+                MachineId = new ID(idAsBigInt);
+
+                ProtocolVersion = reader.ReadUInt32();
+                TcpPort = reader.ReadUInt32();                
 
                 return this;
             }
@@ -65,9 +65,9 @@ namespace LUC.DiscoveryService.Messages
             if(writer != null)
             {
                 writer.Write(MessageId);
-                writer.Write(VersionOfProtocol);
+                writer.WriteString(MachineId.Value.ToString());
+                writer.Write(ProtocolVersion);
                 writer.Write(TcpPort);
-                writer.WriteString(MachineId);
             }
             else
             {
