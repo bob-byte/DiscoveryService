@@ -38,8 +38,8 @@ namespace LUC.DiscoveryService.Kademlia
 
     public interface INode
     {
-        Contact OurContact { get; }
-        IBucketList BucketList { get; }
+        List<Contact> OurContacts { get; }
+        List<IBucketList> BucketLists { get; }
     }
 
     public interface IStorage

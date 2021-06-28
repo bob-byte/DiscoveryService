@@ -26,7 +26,6 @@ namespace LUC.DiscoveryService
 
         private readonly List<UdpClient> udpReceivers;
         private readonly List<TcpListener> tcpReceivers;
-        private Dht distributedHashTable;
 
         private readonly ConcurrentDictionary<IPAddress, UdpClient> sendersUdp = new ConcurrentDictionary<IPAddress, UdpClient>();
 

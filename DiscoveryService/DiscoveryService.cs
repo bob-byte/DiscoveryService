@@ -145,13 +145,10 @@ namespace LUC.DiscoveryService
                         groupsIds: GroupsSupported?.Keys?.ToList());
                     var bytes = tcpMess.ToByteArray();
 
-                    //if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytes)))
-                    //{
-                    //    return;
-                    //}
-
-                    var taskWriteMess = stream.WriteAsync(bytes, offset: 0, bytes.Length);
-                    taskWriteMess.Wait();
+                    if (!(Service.IgnoreDuplicateMessages) || (sentMessages.TryAdd(bytes)))
+                    {
+                        stream.Write(bytes, offset: 0, bytes.Length);
+                    }
                 }
                 finally
                 {

@@ -146,9 +146,9 @@ namespace LUC.DiscoveryService
 
             var ipAddresses = GetIPAddresses().ToArray();
             var protocols = new List<IProtocol>();
-            for (int i = 0; i < ipAddresses.Length; i++)
+            for (Int32 numAddress = 0; numAddress < ipAddresses.Length; numAddress++)
             {
-                protocols.Add(new TcpProtocol(url: ipAddresses[i].ToString(), RunningTcpPort));
+                protocols.Add(new TcpProtocol(url: ipAddresses[numAddress].ToString(), RunningTcpPort));
             }
 
             distributedHashTable = new Dht(machineId,  protocols, () => new VirtualStorage(), new Router());
@@ -260,7 +260,9 @@ namespace LUC.DiscoveryService
                 {
                     oldNics.Add(nic);
 
+#if DEBUG
                     log.LogInfo($"Removed nic \'{nic.Name}\'.");
+#endif
                     //if (log.IsDebugEnabled)
                     //{
                     //    log.Debug($"Removed nic '{nic.Name}'.");
@@ -271,11 +273,9 @@ namespace LUC.DiscoveryService
                 {
                     newNics.Add(nic);
 
+#if DEBUG
                     log.LogInfo($"Found nic '{nic.Name}'.");
-                    //if (log.IsDebugEnabled)
-                    //{
-                    //    log.Debug($"Found nic '{nic.Name}'.");
-                    //}
+#endif
                 }
 
                 KnownNics = currentNics;
@@ -284,9 +284,12 @@ namespace LUC.DiscoveryService
                 if (newNics.Any() || oldNics.Any())
                 {
                     client?.Dispose();
+
                     client = new Client(UseIpv4, UseIpv6, networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
+
                     client.UdpMessageReceived += OnUdpMessage;
                     client.TcpMessageReceived += RaiseAnswerReceived;
+                    client.TcpMessageReceived += Bootstrap;
                 }
 
                 if(newNics.Any())
@@ -353,7 +356,7 @@ namespace LUC.DiscoveryService
             catch (ArgumentNullException e)
             {
                 log.LogError(e, "Received malformed message");
-                MalformedMessage.Invoke(sender, result.Buffer);
+                MalformedMessage?.Invoke(sender, result.Buffer);
 
                 return;
             }
@@ -387,7 +390,7 @@ namespace LUC.DiscoveryService
 
             if(receiveResult.Message is TcpMessage message)
             {
-                switch(receiveResult.Message.Opcode)
+                switch(message.Opcode)
                 {
                     case MessageOperation.Ping:
                         PingReceived?.Invoke(sender, new MessageEventArgs

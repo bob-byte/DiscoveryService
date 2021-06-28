@@ -8,11 +8,13 @@ namespace LUC.DiscoveryService
     static class Lock
     {
         internal static Object LockService { get; }
+        internal static Object LockGetCloseContacts { get; }
 
         //if we don't use static constructor we will not actually know when fields are inizialized
         static Lock()
         {
             LockService = new Object();
+            LockGetCloseContacts = new Object();
         }
 
         /// <summary>

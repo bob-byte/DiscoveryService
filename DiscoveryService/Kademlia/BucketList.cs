@@ -10,6 +10,9 @@ namespace LUC.DiscoveryService.Kademlia
 {
     public class BucketList : IBucketList
     {
+        /// <summary>
+        /// For splitting
+        /// </summary>
         public List<KBucket> Buckets { get { return buckets; } set { buckets = value; } }
 
         [JsonIgnore]
@@ -145,7 +148,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             lock (this)
             {
-                return kbucket.HasInRange(ourID) || ((kbucket.Depth() % Constants.B) != 0);
+                return kbucket.HasInRange(ourID) || ((kbucket.Depth() % Constants.B) != 0);//why not "kbucket.HasInRange(ourID) || (kbucket.Depth() < Constants.B)"
             }
         }
 

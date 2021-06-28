@@ -2,6 +2,9 @@
 {
 	public static class Constants
 	{
+        /// <summary>
+        /// Max threshold mutual bits in prefix of contacts in a bucket
+        /// </summary>
 		public const int B = 5;
 		public const int K = 20;
 		public const int ID_LENGTH_BYTES = 20;

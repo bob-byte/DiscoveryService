@@ -103,13 +103,10 @@
     <Compile Include="Kademlia\Protocols\Protocol.cs" />
     <Compile Include="Kademlia\Protocols\Requests.cs" />
     <Compile Include="Kademlia\Protocols\Responses.cs" />
-    <Compile Include="Kademlia\Protocols\RestCall.cs" />
-    <Compile Include="Kademlia\Protocols\Server.cs" />
     <Compile Include="Kademlia\Routers\Router.cs" />
     <Compile Include="Kademlia\RpcError.cs" />
     <Compile Include="Kademlia\StoreValue.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\TcpProtocol.cs" />
-    <Compile Include="Kademlia\Protocols\Tcp\TcpServer.cs" />
     <Compile Include="Kademlia\Validate.cs" />
     <Compile Include="Kademlia\VirtualProtocol.cs" />
     <Compile Include="Kademlia\VirtualStorage.cs" />

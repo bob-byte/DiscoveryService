@@ -11,6 +11,9 @@ using LUC.DiscoveryService.Kademlia.Routers;
 
 namespace LUC.DiscoveryService.Kademlia
 {
+    /// <summary>
+    /// The “server” — the entry point for instantiating our peer
+    /// </summary>
     public class Dht : IDht
     {
         public BaseRouter Router { get { return router; } set { router = value; } }
@@ -358,7 +361,7 @@ namespace LUC.DiscoveryService.Kademlia
             SetupTimers();
         }
 
-        protected void FinishInitialization(ID id, List<IProtocol> protocols, BaseRouter router)
+        protected void FinishInitialization(ID id, IEnumerable<IProtocol> protocols, BaseRouter router)
         {
             evictionCount = new ConcurrentDictionary<BigInteger, int>();
             pendingContacts = new List<Contact>();
