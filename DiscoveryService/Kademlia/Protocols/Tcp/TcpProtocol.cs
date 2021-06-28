@@ -36,7 +36,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 #endif
         }
 
-        public void SendTcpMessage(Object sender, MessageEventArgs e)
+        public void SendTcpMessage(Message msg)
         {
             TcpClient client = null;
             NetworkStream stream = null;
@@ -49,9 +49,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 stream = client.GetStream();
 
                 Random random = new Random();
-                var tcpMessage = new PingMessage(
-                    messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                    ProtocolVersion);
                 var bytes = tcpMessage.ToByteArray();
 
                 var taskWriteMessage = stream.WriteAsync(bytes, offset: 0, bytes.Length);
@@ -63,7 +60,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 stream?.Close();
             }
         }
-
 
         /// <summary>
         /// This operation has two purposes:
@@ -184,7 +180,13 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             ID id = ID.RandomID;
             bool timeoutError;
 
-            var ret = RestCall.Post<FindValueResponse, ErrorResponse>(url + ":" + port + "//Ping",
+            var tcpMessage = new PingMessage(
+                messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                ProtocolVersion);
+
+            SendTcpMessage(tcpMessage);
+
+/*            var ret = RestCall.Post<FindValueResponse, ErrorResponse>(url + ":" + port + "//Ping",
                 new PingSubnetRequest()
                 {
                     Protocol = sender.Protocol,
@@ -192,7 +194,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                     Sender = sender.ID.Value,
                     RandomID = id.Value
                 }, 
-                out error, out timeoutError);
+                out error, out timeoutError);*/
 
             return GetRpcError(id, ret, timeoutError, error);
         }
