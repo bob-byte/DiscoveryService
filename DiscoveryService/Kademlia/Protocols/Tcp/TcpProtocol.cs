@@ -36,6 +36,35 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 #endif
         }
 
+        public void SendTcpMessage(Object sender, MessageEventArgs e)
+        {
+            TcpClient client = null;
+            NetworkStream stream = null;
+
+            try
+            {
+                client = new TcpClient(iPEndPoint.AddressFamily);
+                client.Connect(((IPEndPoint)e.RemoteEndPoint).Address, (Int32)message.TcpPort);
+
+                stream = client.GetStream();
+
+                Random random = new Random();
+                var tcpMessage = new PingMessage(
+                    messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                    ProtocolVersion);
+                var bytes = tcpMessage.ToByteArray();
+
+                var taskWriteMessage = stream.WriteAsync(bytes, offset: 0, bytes.Length);
+                taskWriteMess.Wait();
+            }
+            finally
+            {
+                client?.Close();
+                stream?.Close();
+            }
+        }
+
+
         /// <summary>
         /// This operation has two purposes:
         /// <list type="bullet">
