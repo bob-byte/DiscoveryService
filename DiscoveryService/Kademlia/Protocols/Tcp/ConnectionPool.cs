@@ -13,13 +13,13 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
     {
         private readonly ConcurrentDictionary<BigInteger, DiscoveryServiceSocket> availableSockets;
 
-        private readonly IEqualityComparer<T> comparer;
+        private readonly IEqualityComparer<T> comparerEndPoint;
 
-        public ConnectionPool(Int32 poolMaxSize, IEqualityComparer<T> comparer)
+        public ConnectionPool(Int32 poolMaxSize, IEqualityComparer<T> comparerEndPoint)
         {
             availableSockets = new ConcurrentDictionary<BigInteger, DiscoveryServiceSocket>(Constants.MAX_THREADS, poolMaxSize);
             PoolMaxSize = poolMaxSize;
-            this.comparer = comparer;
+            this.comparer = comparerEndPoint;
         }
 
         public Int32 PoolMaxSize { get; }
@@ -42,7 +42,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                     {
                         var remoteConnectedPoint = client.RemoteEndPoint as T;
 
-                        if(comparer.Equals(remoteConnectedPoint, remoteWantConnectPoint))
+                        if(comparerEndPoint.Equals(remoteConnectedPoint, remoteWantConnectPoint))
                         {
                             isConnected = true;
                             isNowAdded = false;
@@ -84,7 +84,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 searchedClient = availableSockets[idOfClient];
                 var remoteEndPointInPool = searchedClient.RemoteEndPoint as T;
 
-                if(!comparer.Equals(remoteEndPoint, remoteEndPointInPool))
+                if(!comparerEndPoint.Equals(remoteEndPoint, remoteEndPointInPool))
                 {
                     Connect(idOfClient, remoteEndPoint, timeoutToConnect, out isConnected);
                 }
