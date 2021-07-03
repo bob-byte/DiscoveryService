@@ -24,8 +24,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
         public Int32 PoolMaxSize { get; }
 
-        public TimeSpan TimeoutToConnect { get; }
-
         public Boolean IsPoolFull() =>
             availableSockets.Count == PoolMaxSize;
 
