@@ -1,5 +1,5 @@
 ﻿using System;
-
+using LUC.DiscoveryService.Kademlia.Interfaces;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 

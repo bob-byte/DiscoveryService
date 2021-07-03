@@ -55,14 +55,14 @@ namespace LUC.DiscoveryService
             Environment.Exit(1);
         }
 
-        private static void OnGoodTcpMessage(Object sender, MessageEventArgs e)
+        private static void OnGoodTcpMessage(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
                 Console.WriteLine("=== TCP {0:O} ===", DateTime.Now);
                 Console.WriteLine(e.Message.ToString());
 
-                if ((e.Message is TcpMessage message) && (e.RemoteEndPoint is IPEndPoint endPoint))
+                if ((e.Message is TcpMessage message) && (e.RemoteContact is IPEndPoint endPoint))
                 {
                     var network = $"{endPoint.Address}:{message.TcpPort}";
                     foreach (var group in message.GroupIds)
@@ -77,7 +77,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnGoodUdpMessage(Object sender, MessageEventArgs e)
+        private static void OnGoodUdpMessage(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -87,7 +87,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnPingReceived(Object sender, MessageEventArgs e)
+        private static void OnPingReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -96,7 +96,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnPongReceived(Object sender, MessageEventArgs e)
+        private static void OnPongReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -105,7 +105,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnStoreReceived(Object sender, MessageEventArgs e)
+        private static void OnStoreReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -114,7 +114,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnStoreResponseReceived(Object sender, MessageEventArgs e)
+        private static void OnStoreResponseReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -123,7 +123,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnFindNodeReceived(Object sender, MessageEventArgs e)
+        private static void OnFindNodeReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -132,7 +132,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnFindNodeResponseReceived(Object sender, MessageEventArgs e)
+        private static void OnFindNodeResponseReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -141,7 +141,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnFindValueReceived(Object sender, MessageEventArgs e)
+        private static void OnFindValueReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -150,7 +150,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnFindValueResponseReceived(Object sender, MessageEventArgs e)
+        private static void OnFindValueResponseReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
             {
@@ -189,7 +189,7 @@ namespace LUC.DiscoveryService
 
             // Kademilia event types
             serviceDiscovery.Service.PingReceived += OnPingReceived;
-            serviceDiscovery.Service.PongReceived += OnPongReceived;
+            serviceDiscovery.Service.PingResponseReceived += OnPongReceived;
             serviceDiscovery.Service.StoreReceived += OnStoreReceived;
             serviceDiscovery.Service.StoreResponseReceived += OnStoreResponseReceived;
             serviceDiscovery.Service.FindNodeReceived += OnFindNodeReceived;

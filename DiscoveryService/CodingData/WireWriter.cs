@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LUC.DiscoveryService.Kademlia;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -128,7 +129,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
-        public void WriteString(String value)
+        public void Write(String value)
         {
             if(value != null)
             {
@@ -166,13 +167,47 @@ namespace LUC.DiscoveryService.CodingData
                 Write((UInt32)array.Length);
                 foreach (var item in array)
                 {
-                    WriteString(item);
+                    Write(item);
                 }
             }
             else
             {
                 throw new ArgumentNullException(nameof(enumerable));
             }
+        }
+
+        /// <summary>
+        /// Writes enumerable of data
+        /// </summary>
+        /// <param name="enumerable">
+        /// Enumerable to write
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="enumerable"/> is equal to null
+        /// </exception>
+        public void WriteEnumerable(IEnumerable<Contact> enumerable)
+        {
+            if (enumerable != null)
+            {
+                var array = enumerable.ToArray();
+
+                Write((UInt32)array.Length);
+                foreach (var item in array)
+                {
+                    Write(item);
+                }
+            }
+            else
+            {
+                throw new ArgumentNullException(nameof(enumerable));
+            }
+        }
+
+        public void Write(Contact contact)
+        {
+            Write(contact.ID.Value.ToString());
+            Write(contact.IPAddress.ToString());
+            Write(contact.TcpPort);
         }
 
         public void Dispose() =>

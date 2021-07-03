@@ -1,12 +1,10 @@
-﻿// #define TRY_CLOSEST_BUCKET
+﻿#define TRY_CLOSEST_BUCKET
 
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
-
-using Clifton.Kademlia.Common;
 
 namespace LUC.DiscoveryService.Kademlia.Routers
 {

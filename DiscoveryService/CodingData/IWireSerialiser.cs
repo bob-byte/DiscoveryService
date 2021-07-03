@@ -9,10 +9,10 @@ namespace LUC.DiscoveryService.CodingData
     public interface IWireSerialiser
     {
         /// <summary>
-        ///   Reads the <see cref="Message"/> object that is encoded in the wire format.
+        ///   Reads the <see cref="DiscoveryServiceMessage"/> object that is encoded in the wire format.
         /// </summary>
         /// <param name="reader">
-        ///   The source of the <see cref="Message"/> object.
+        ///   The source of the <see cref="DiscoveryServiceMessage"/> object.
         /// </param>
         /// <returns>
         ///   The final Message object.
@@ -20,10 +20,10 @@ namespace LUC.DiscoveryService.CodingData
         IWireSerialiser Read(WireReader reader);
 
         /// <summary>
-        ///   Writes the <see cref="Message"/> object encoded in the wire format.
+        ///   Writes the <see cref="DiscoveryServiceMessage"/> object encoded in the wire format.
         /// </summary>
         /// <param name="writer">
-        ///   The destination of the <see cref="Message"/> object.
+        ///   The destination of the <see cref="DiscoveryServiceMessage"/> object.
         /// </param>
         void Write(WireWriter writer);
     }

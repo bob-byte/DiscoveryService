@@ -1,59 +1,18 @@
 ﻿using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Kademlia;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Numerics;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages
 {
-    /// <summary>
-    /// <b>Abstract</b> class for messages
-    /// </summary>
     public abstract class Message : IWireSerialiser
     {
-        /// <summary>
-        /// Maximum bytes of a message.
-        /// </summary>
-        /// <remarks>
-        /// In reality the max length is dictated by the network MTU.
-        /// </remarks>
-        public const Int32 MaxLength = 10240;
-
-        public Message()
-        {
-            ;
-        }
-
-        /// <summary>
-        ///   Create a new instance of the <see cref="Message"/> class.
-        /// </summary>
-        /// <param name="messageId">
-        ///   Unique message identifier. It is used to detect duplicate messages.
-        /// </param>
-        /// <param name="protocolVersion">
-        ///   Supported version of protocol
-        /// </param>
-        public Message(UInt32 messageId, UInt32 protocolVersion)
-        {
-            MessageId = messageId;
-            ProtocolVersion = protocolVersion;
-        }
-
-        /// <summary>
-        ///   Unique message identifier. It is used to detect duplicate messages.
-        /// </summary>
-        public UInt32 MessageId { get; set; }
-
-        /// <summary>
-        /// Id of machine which is sending this messege
-        /// </summary>
-        public ID MachineId { get; set; }
-
-        /// <summary>
-        ///   Supported version of protocol of the remote application.
-        /// </summary>
-        public UInt32 ProtocolVersion { get; set; }
-
         /// <summary>
         /// TCP port which is being run in machine with machineId.
         /// TCP port for inter-service communications.
@@ -103,7 +62,7 @@ namespace LUC.DiscoveryService.Messages
         /// </exception>
         public IWireSerialiser Read(Byte[] buffer, Int32 offset, Int32 count)
         {
-            using(var stream = new MemoryStream(buffer, offset, count))
+            using (var stream = new MemoryStream(buffer, offset, count))
             {
                 return Read(new CodingData.WireReader(stream));
             }
@@ -132,7 +91,7 @@ namespace LUC.DiscoveryService.Messages
         /// </returns>
         public Byte[] ToByteArray()
         {
-            using(var stream = new MemoryStream())
+            using (var stream = new MemoryStream())
             {
                 Write(stream);
                 return stream.ToArray();
@@ -149,7 +108,7 @@ namespace LUC.DiscoveryService.Messages
         /// When <paramref name="writer"/> is equal to null
         /// </exception>
         /// <exception cref="ArgumentException">
-        /// If <seealso cref="Message"/> has string, which cannot be encoded to ASCII
+        /// If <seealso cref="DiscoveryServiceMessage"/> has string, which cannot be encoded to ASCII
         /// </exception>
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
@@ -162,22 +121,11 @@ namespace LUC.DiscoveryService.Messages
         /// When <paramref name="writer"/> is equal to null
         /// </exception>
         /// <exception cref="ArgumentException">
-        /// If <seealso cref="Message"/> has string, which cannot be encoded to ASCII
+        /// If <seealso cref="DiscoveryServiceMessage"/> has string, which cannot be encoded to ASCII
         /// </exception>
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
         public abstract void Write(WireWriter writer);
-
-        public override string ToString()
-        {
-            using (var writer = new StringWriter())
-            {
-                writer.Write($"MessageId = {MessageId};\n" +
-                             $"Protocol version = {ProtocolVersion}");
-
-                return writer.ToString();
-            }
-        }
     }
 }

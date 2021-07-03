@@ -1,29 +1,24 @@
-﻿using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Messages;
 using System;
 using System.Net;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Messages
 {
     /// <summary>
     ///   The event data for <see cref="Service.QueryReceived"/> or
     ///   <see cref="Service.AnswerReceived"/>.
     /// </summary>
-    public class MessageEventArgs : EventArgs
+    public class TcpMessageEventArgs : MessageEventArgs
     {
-        /// <summary>
-        ///   The LightUpon.Cloud app message.
-        /// </summary>
-        /// <value>
-        ///   The received message.
-        /// </value>
-        public Message Message { get; set; }
-
         /// <summary>
         ///   Message sender endpoint. It is used to store source IP address.
         /// </summary>
         /// <value>
         ///   The endpoint from the message was received.
         /// </value>
-        public EndPoint RemoteEndPoint { get; set; }
+        public Contact RemoteContact { get; set; }
+
+        public Contact LocalContact { get; set; }
     }
 }

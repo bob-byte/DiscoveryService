@@ -21,7 +21,7 @@ namespace LUC.DiscoveryService.Test
             var memoryStream = new MemoryStream();
             var writer = new WireWriter(memoryStream);
 
-            writer.WriteString(expectedStrValue);
+            writer.Write(expectedStrValue);
             writer.Write(expectedUintValue);
             writer.WriteBytes(expectedBytes);
             writer.WriteByteLengthPrefixedBytes(expectedBytes);
@@ -57,7 +57,7 @@ namespace LUC.DiscoveryService.Test
         {
             var writer = new WireWriter(Stream.Null);
 
-            Assert.That(code: () => writer.WriteString("δοκιμή"), constraint: Throws.TypeOf(typeof(ArgumentException))); // test in Greek
+            Assert.That(code: () => writer.Write("δοκιμή"), constraint: Throws.TypeOf(typeof(ArgumentException))); // test in Greek
         }
 
         [Test]
@@ -65,7 +65,7 @@ namespace LUC.DiscoveryService.Test
         {
             var writer = new WireWriter(Stream.Null);
 
-            Assert.That(code: () => writer.WriteString(new String('a', count: 256)), constraint: Throws.TypeOf(typeof(ArgumentException)));
+            Assert.That(code: () => writer.Write(new String('a', count: 256)), constraint: Throws.TypeOf(typeof(ArgumentException)));
         }
 
         [Test]

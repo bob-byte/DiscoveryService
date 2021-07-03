@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Numerics;
 
 namespace LUC.DiscoveryService.Kademlia
@@ -26,14 +27,6 @@ namespace LUC.DiscoveryService.Kademlia
         KBucket GetKBucket(ID otherID);
         List<Contact> GetCloseContacts(ID key, ID exclude);
         bool ContactExists(Contact contact);
-    }
-
-    public interface IProtocol
-    {
-        RpcError Ping(Contact sender);
-        (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID key);
-        (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID key);
-        RpcError Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0);
     }
 
     public interface INode

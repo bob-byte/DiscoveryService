@@ -1,4 +1,6 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
 using LUC.DiscoveryService.Messages;
 using System;
 using System.Net;
@@ -15,15 +17,18 @@ namespace LUC.DiscoveryService.Extensions
         /// <returns>
         /// Task which return data of <see cref="TcpMessage"/> and remote IP address where from we received message
         /// </returns>
-        public static Task<MessageEventArgs> ReceiveAsync(this TcpListener receiver)
+        public static Task<TcpMessageEventArgs> ReceiveAsync<T>(this TcpListener receiver, Contact receivingContact = null)
+            where T: TcpMessage, new()
         {
+
+
             return Task.Run(async () =>
             {
                 var localEndpoint = receiver.LocalEndpoint as IPEndPoint;
                 IPEndPoint iPEndPoint = null;
                 TcpClient client = null;
                 NetworkStream stream = null;
-                TcpMessage message = new TcpMessage();
+                T message = new T();
 
                 try
                 {
@@ -39,11 +44,12 @@ namespace LUC.DiscoveryService.Extensions
                     stream?.Close();
                 }
 
-                MessageEventArgs receiveResult = new MessageEventArgs();
+                TcpMessageEventArgs receiveResult = new TcpMessageEventArgs();
                 if (iPEndPoint != null)
                 {
                     receiveResult.Message = message;
-                    receiveResult.RemoteEndPoint = iPEndPoint;
+                    receiveResult.RemoteContact = new Contact(new TcpProtocol(), new ID(message.IdOfSendingContact), iPEndPoint.Address, message.TcpPort);
+                    receiveResult.LocalContact = receivingContact;
                 }
                 else
                 {

@@ -1,7 +1,10 @@
-﻿using System;
+﻿using LUC.DiscoveryService.Kademlia;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Numerics;
 using System.Text;
 
 namespace LUC.DiscoveryService.CodingData
@@ -162,6 +165,42 @@ namespace LUC.DiscoveryService.CodingData
             }
 
             return list;
+        }
+
+        /// <summary>
+        /// Read string list of rank 1
+        /// (jagged arrays not supported atm)
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public List<Contact> ReadListOfContacts()
+        {
+            List<Contact> list = new List<Contact>();
+            var length = ReadUInt32();
+            if (length > 0)
+            {
+                for (Int32 i = 0; i < length; i++)
+                {
+                    list.Add(ReadContact());
+                }
+            }
+
+            return list;
+        }
+
+        public Contact ReadContact()
+        {
+            var idAsBigInt = BigInteger.Parse(ReadString());
+
+            Contact contact = new Contact
+            {
+                ID = new ID(idAsBigInt),
+                IPAddress = IPAddress.Parse(ReadString()),
+                TcpPort = ReadUInt32()
+            };
+
+            return contact;
         }
 
         public void Dispose() =>

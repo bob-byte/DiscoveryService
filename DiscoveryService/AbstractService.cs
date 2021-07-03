@@ -57,7 +57,7 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Some unique value.
         /// </value>
-        public ID MachineId { get; protected set; }
+        public String MachineId { get; protected set; }
 
         /// <summary>
         /// Min available TCP port in the LAN
@@ -77,8 +77,8 @@ namespace LUC.DiscoveryService
             get => runningTcpPort;
             protected set
             {
-                runningTcpPort = (value < MinValueTcpPort) || (MaxValueTcpPort < value) ?
-                    MinValueTcpPort : value;
+                runningTcpPort = (MinValueTcpPort <= value) && (value <= MaxValueTcpPort) ?
+                    value : MinValueTcpPort;
             }
         }
 

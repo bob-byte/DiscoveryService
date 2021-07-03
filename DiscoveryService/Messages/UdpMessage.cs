@@ -9,18 +9,18 @@ namespace LUC.DiscoveryService.Messages
     /// <summary>
     /// Allows to write and read multicast message to/from <see cref="Stream"/>
     /// </summary>
-    public class MulticastMessage : Message
+    public class UdpMessage : DiscoveryServiceMessage
     {
         /// <summary>
-        /// Create a new instance of the <see cref="MulticastMessage"/> class. This constructor is often used to read message
+        /// Create a new instance of the <see cref="UdpMessage"/> class. This constructor is often used to read message
         /// </summary>
-        public MulticastMessage()
+        public UdpMessage()
         {
-            ;
+            ;//do nothing
         }
 
         /// <summary>
-        /// Create a new instance of the <see cref="MulticastMessage"/> class. This constructor is often used to write message to a stream
+        /// Create a new instance of the <see cref="UdpMessage"/> class. This constructor is often used to write message to a stream
         /// </summary>
         /// <param name="messageId">
         /// Unique message identifier. It is used to detect duplicate messages.
@@ -31,11 +31,10 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="machineId">
         /// Id of machine which is sending this messege
         /// </param>
-        public MulticastMessage(UInt32 messageId, UInt32 protocolVersion, UInt32 tcpPort, ID machineId)
-            : base(messageId, protocolVersion)
+        public UdpMessage(UInt32 messageId, UInt32 protocolVersion, UInt32 tcpPort, String machineId)
+            : base(messageId, machineId, protocolVersion)
         {
             TcpPort = tcpPort;
-            MachineId = machineId;
         }
 
         /// <inheritdoc/>
@@ -65,7 +64,7 @@ namespace LUC.DiscoveryService.Messages
             if(writer != null)
             {
                 writer.Write(MessageId);
-                writer.WriteString(MachineId.Value.ToString());
+                writer.Write(MachineId.Value.ToString());
                 writer.Write(ProtocolVersion);
                 writer.Write(TcpPort);
             }

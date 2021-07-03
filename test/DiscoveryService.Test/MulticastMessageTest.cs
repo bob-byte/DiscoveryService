@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using NUnit.Framework;
 using System;
@@ -15,7 +16,7 @@ namespace LUC.DiscoveryService.Test
         /// <summary>
         /// Returns the expected string
         /// </summary>
-        private String ExpectedMessage(UInt32 messageId, UInt32 tcpPort, UInt32 protocolVersion, String machineId)
+        private String ExpectedMessage(UInt32 messageId, UInt32 tcpPort, UInt32 protocolVersion, ID machineId)
         {
             var writer = new StringWriter();
             writer.WriteLine("Multicast message:");
@@ -31,7 +32,7 @@ namespace LUC.DiscoveryService.Test
         /// <summary>
         /// Returns the actual string of the read stream
         /// </summary>
-        private String ActualMessage(UInt32 messageId, UInt32 tcpPort, UInt32 protocolVersion, String machineId, MulticastMessage message)
+        private String ActualMessage(UInt32 messageId, UInt32 tcpPort, UInt32 protocolVersion, ID machineId, UdpMessage message)
         {
             MemoryStream stream = new MemoryStream();
             WireWriter writer = new WireWriter(stream);
@@ -39,7 +40,7 @@ namespace LUC.DiscoveryService.Test
             writer.Write(messageId);
             writer.Write(protocolVersion);
             writer.Write(tcpPort);
-            writer.WriteString(machineId);
+            writer.Write(machineId.ToString());
             stream.Position = 0;
 
             var actual = message.Read(new WireReader(stream)).ToString();
@@ -50,7 +51,7 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Write_NullWireWriter_WriterNullException()
         {
-            MulticastMessage multicast = new MulticastMessage();
+            UdpMessage multicast = new UdpMessage();
             WireWriter writer = null;
 
             var exception = Assert.Throws<ArgumentNullException>(code: () => multicast.Write(writer));
@@ -61,9 +62,9 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Ctor_NormalInput_StringEqual()
         {
-            var expected = ExpectedMessage(messageId: 1111, tcpPort: 17500, protocolVersion: 1, machineId: "001");
+            var expected = ExpectedMessage(messageId: 1111, tcpPort: 17500, protocolVersion: 1, machineId: ID.RandomID);
 
-            MulticastMessage multicast = new MulticastMessage(messageId: 1111, tcpPort: 17500, protocolVersion: 1, machineId: "001");
+            UdpMessage multicast = new MulticastMessage(messageId: 1111, tcpPort: 17500, protocolVersion: 1, machineId: ID.RandomID);
 
             var actual = multicast.ToString();
 
@@ -73,7 +74,7 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Read_NullWireReader_ReaderNullException()
         {
-            MulticastMessage Multicast = new MulticastMessage();
+            UdpMessage Multicast = new UdpMessage();
             WireReader reader = null;
 
             var exception = Assert.Throws<ArgumentNullException>(code: () => Multicast.Read(reader));
@@ -84,11 +85,11 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Read_NormalInput_StringEqual()
         {
-            MulticastMessage message = new MulticastMessage(messageId: 1111, tcpPort: 17500, protocolVersion:1, machineId: "001");
+            UdpMessage message = new MulticastMessage(messageId: 1111, tcpPort: 17500, protocolVersion:1, machineId: ID.RandomID);
 
             var expected = message.ToString();
 
-            var actual = ActualMessage(messageId: 1111, tcpPort: 17500, protocolVersion: 1, machineId: "001", message);
+            var actual = ActualMessage(messageId: 1111, tcpPort: 17500, protocolVersion: 1, machineId: ID.RandomID, message);
 
             Assert.AreEqual(expected, actual);
         }

@@ -64,7 +64,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         public void AddContact(Contact contact)
         {
-            Validate.IsFalse<OurNodeCannotBeAContactException>(ourID == contact.ID, "Cannot add ourselves as a contact!");
+            //Validate.IsFalse<OurNodeCannotBeAContactException>(ourID == contact.ID, "Cannot add ourselves as a contact!");
             contact.Touch();            // Update the LastSeen to now.
 
             lock (this)
@@ -92,7 +92,7 @@ namespace LUC.DiscoveryService.Kademlia
                     else
                     {
                         Contact lastSeenContact = kbucket.Contacts.OrderBy(c => c.LastSeen).First();
-                        RpcError error = lastSeenContact.Protocol.Ping(ourContact);
+                        RpcError error = lastSeenContact.Protocol.Ping(ourContact, lastSeenContact.IPAddress, lastSeenContact.TcpPort);
 
                         if (error.HasError)
                         {

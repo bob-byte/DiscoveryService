@@ -5,12 +5,12 @@ using System.Text;
 namespace LUC.DiscoveryService.Messages
 {
     /// <summary>
-    ///   The requested operation of a <see cref="Message"/>.
+    ///   The requested operation of a <see cref="DiscoveryServiceMessage"/>.
     /// </summary>
     /// <remarks>
     ///   Defines the standard operations.
     /// </remarks>
-    /// <seealso cref="Message.Opcode"/>
+    /// <seealso cref="DiscoveryServiceMessage.Opcode"/>
     public enum MessageOperation : Byte
     {
         /// <summary>

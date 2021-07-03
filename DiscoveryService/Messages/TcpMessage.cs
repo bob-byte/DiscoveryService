@@ -3,22 +3,25 @@ using LUC.DiscoveryService.Kademlia;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages
 {
     /// <summary>
     /// Allows to write and read TCP message to/from <see cref="Stream"/>
     /// </summary>
-    public class TcpMessage : Message
+    public class TcpMessage : DiscoveryServiceMessage
     {
         /// <summary>
         /// Create a new instance of the <see cref="TcpMessage"/> class. This constructor is often used to read message
         /// </summary>
         public TcpMessage()
         {
-            ;
+            ;//do nothing
         }
 
         /// <summary>
@@ -33,8 +36,8 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="tcpPort">
         /// TCP port for Kademilia requests.
         /// </param>
-        public TcpMessage(UInt32 messageId, UInt32 tcpPort, UInt32 protocolVersion, List<String> groupsIds)
-            : base(messageId, protocolVersion)
+        public TcpMessage(UInt32 messageId, String machineId, BigInteger idOfSendingContact, UInt32 tcpPort, UInt32 protocolVersion, List<String> groupsIds)
+            : base(messageId, machineId, protocolVersion)
         {
             if(groupsIds != null)
             {
@@ -46,6 +49,7 @@ namespace LUC.DiscoveryService.Messages
             }
 
             TcpPort = tcpPort;
+            IdOfSendingContact = idOfSendingContact;
         }
 
         /// <summary>
@@ -54,22 +58,63 @@ namespace LUC.DiscoveryService.Messages
         /// <value>
         ///   Defaults to <see cref="MessageOperation.Acknowledge"/>.
         /// </value>
-        public MessageOperation Opcode { get; set; } = MessageOperation.Acknowledge;
+        public MessageOperation MessageOperation { get; set; } = MessageOperation.Acknowledge;
+
+        public BigInteger IdOfSendingContact { get; set; }
 
         /// <summary>
         /// Names of groups
         /// </summary>
         public List<String> GroupIds { get; set; }
 
+        public virtual async Task Send(IPEndPoint endPoint, Byte[] bytes)
+        {
+            TcpClient client = null;
+            NetworkStream stream = null;
+
+            try
+            {
+                client = new TcpClient(endPoint.AddressFamily);
+
+                client.Connect(endPoint.Address, endPoint.Port);
+
+                stream = client.GetStream();
+                await stream.WriteAsync(bytes, offset: 0, bytes.Length);
+            }
+            finally
+            {
+                client?.Close();
+                stream?.Close();
+            }
+            //Socket socket = null;
+            //NetworkStream stream = null;
+
+            //try
+            //{
+            //    socket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+            //    client.Connect(endPoint.Address, endPoint.Port);
+
+            //    stream = client.GetStream();
+            //    var bytes = ToByteArray();
+            //    await stream.WriteAsync(bytes, offset: 0, bytes.Length);
+            //}
+            //finally
+            //{
+            //    client?.Close();
+            //    stream?.Close();
+            //}
+        }
+
         public override IWireSerialiser Read(WireReader reader)
         {
             if(reader != null)
             {
-                Opcode = (MessageOperation)reader.ReadByte();
+                MessageOperation = (MessageOperation)reader.ReadByte();
                 MessageId = reader.ReadUInt32();
 
-                var idAsBigInt = BigInteger.Parse(reader.ReadString());
-                MachineId = new ID(idAsBigInt);
+                IdOfSendingContact = BigInteger.Parse(reader.ReadString());
+                MachineId = reader.ReadString();
 
                 ProtocolVersion = reader.ReadUInt32();
                 TcpPort = reader.ReadUInt32();
@@ -103,9 +148,10 @@ namespace LUC.DiscoveryService.Messages
         {
             if (writer != null)
             {
-                writer.WriteByte((Byte)Opcode);
+                writer.WriteByte((Byte)MessageOperation);
                 writer.Write(MessageId);
-                writer.WriteString(MachineId.Value.ToString());
+                writer.Write(IdOfSendingContact.ToString());
+                writer.Write(MachineId);
                 writer.Write(ProtocolVersion);
                 writer.Write(TcpPort);
                 writer.WriteEnumerable(GroupIds);
@@ -120,10 +166,10 @@ namespace LUC.DiscoveryService.Messages
         {
             using(var writer = new StringWriter())
             {
-                writer.WriteLine($"TCP message:\n" +
-                    $"Message operation: {Opcode};");
+                writer.WriteLine($"TCP message:\n");
                 writer.WriteLine($"{base.ToString()};");
-                writer.WriteLine($"TCP port = {TcpPort};");
+                writer.WriteLine($"Message operation: {MessageOperation};\n" +
+                                   $"TCP port = {TcpPort};");
 
                 writer.WriteLine($"{nameof(GroupIds)}:");
                 for (Int32 id = 0; id < GroupIds.Count; id++)

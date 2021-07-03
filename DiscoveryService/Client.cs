@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Messages;
 
 namespace LUC.DiscoveryService
 {
@@ -34,12 +35,12 @@ namespace LUC.DiscoveryService
         /// It calls method OnUdpMessage, which run SendTcp,
         /// in order to connect back to the host, that sends muticast
         /// </summary>
-        public event EventHandler<UdpReceiveResult> UdpMessageReceived;
+        public event EventHandler<UdpMessageEventArgs> UdpMessageReceived;
 
         /// <summary>
         /// It calls method OnTcpMessage, which add new groups to ServiceDiscovery.GroupsSupported
         /// </summary>
-        public event EventHandler<MessageEventArgs> TcpMessageReceived;
+        public event EventHandler<TcpMessageEventArgs> TcpMessageReceived;
 
         /// <summary>
         ///   Creates a new instance of the <see cref="Client"/> class.
@@ -229,7 +230,13 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x => ListenUdp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
-                    _ = task.ContinueWith(x => UdpMessageReceived?.Invoke(this, x.Result), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
+                    _ = task.ContinueWith(x =>
+                    {
+                        UdpMessage response = new UdpMessage();
+                        response.Read(x.Result.Buffer);
+
+                        UdpMessageReceived?.Invoke(this, new UdpMessageEventArgs { Message = response, IdOfReceivingContact =  })
+                    }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);
                 }
@@ -259,11 +266,13 @@ namespace LUC.DiscoveryService
             {
                 try
                 {
-                    var task = receiver.ReceiveAsync();
+                    var task = receiver.ReceiveAsync<TcpMessage>();
 
                     _ = task.ContinueWith(x => ListenTcp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     _ = task.ContinueWith(x => TcpMessageReceived?.Invoke(this, x.Result), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
+
+                    //if MessageOperation != Acknowladge than send Kademlia repsonse according to MessageOperation
 
                     await task.ConfigureAwait(false);
                 }

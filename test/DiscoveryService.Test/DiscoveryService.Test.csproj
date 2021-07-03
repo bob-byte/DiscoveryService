@@ -64,7 +64,7 @@
     <Compile Include="MulticastMessageTest.cs" />
     <Compile Include="RecentMessagesTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServiceDiscoveryTest.cs" />
+    <Compile Include="DiscoveryServiceTest.cs" />
     <Compile Include="Logging.cs" />
     <Compile Include="TcpMessageTest.cs" />
     <Compile Include="WireReaderWriterTest.cs" />

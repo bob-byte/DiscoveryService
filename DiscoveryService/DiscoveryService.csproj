@@ -45,6 +45,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>bin\Debug\LUC.Interfaces.dll</HintPath>
     </Reference>
+    <Reference Include="LUC.Services.Implementation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\LUC.Services.Implementation.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\..\LUC\WpfClient\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -80,11 +84,29 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AbstractService.cs" />
+    <Compile Include="Messages\DiscoveryServiceMessage.cs" />
+    <Compile Include="Messages\KademliaRequests\FindNodeRequest.cs" />
+    <Compile Include="Messages\KademliaRequests\FindValueRequest.cs" />
+    <Compile Include="Messages\KademliaRequests\PingRequest.cs" />
+    <Compile Include="Messages\KademliaRequests\Request.cs" />
+    <Compile Include="Messages\KademliaResponses\ErrorResponse.cs" />
+    <Compile Include="Messages\KademliaResponses\FindNodeResponse.cs" />
+    <Compile Include="Messages\KademliaResponses\FindValueResponse.cs" />
+    <Compile Include="Messages\KademliaResponses\PingResponse.cs" />
+    <Compile Include="Messages\KademliaResponses\Response.cs" />
+    <Compile Include="Messages\MessageEventArgs.cs" />
+    <Compile Include="Messages\UdpMessageEventArgs.cs" />
+    <Compile Include="Messages\UdpMessage.cs" />
+    <Compile Include="Messages\TcpMessage.cs" />
+    <Compile Include="DiscoveryServiceSocket.cs" />
     <Compile Include="CodingData\IWireSerialiser.cs" />
     <Compile Include="CodingData\WireReader.cs" />
     <Compile Include="CodingData\WireWriter.cs" />
     <Compile Include="Extensions\TcpListenerExtension.cs" />
     <Compile Include="CollectedInfoInLan.cs" />
+    <Compile Include="Kademlia\Interfaces\IProtocol.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\ConnectionPool.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\CustomSocket.cs" />
     <Compile Include="Kademlia\Routers\BaseRouter.cs" />
     <Compile Include="Kademlia\BucketList.cs" />
     <Compile Include="Kademlia\CommonRequest.cs" />
@@ -101,23 +123,16 @@
     <Compile Include="Kademlia\Node.cs" />
     <Compile Include="Kademlia\Routers\ParallelRouter.cs" />
     <Compile Include="Kademlia\Protocols\Protocol.cs" />
-    <Compile Include="Kademlia\Protocols\Requests.cs" />
-    <Compile Include="Kademlia\Protocols\Responses.cs" />
-    <Compile Include="Kademlia\Protocols\RestCall.cs" />
-    <Compile Include="Kademlia\Protocols\Server.cs" />
+    <Compile Include="Messages\AcknowledgeTcpMessage.cs" />
     <Compile Include="Kademlia\Routers\Router.cs" />
     <Compile Include="Kademlia\RpcError.cs" />
     <Compile Include="Kademlia\StoreValue.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\TcpProtocol.cs" />
-    <Compile Include="Kademlia\Protocols\Tcp\TcpServer.cs" />
     <Compile Include="Kademlia\Validate.cs" />
-    <Compile Include="Kademlia\VirtualProtocol.cs" />
     <Compile Include="Kademlia\VirtualStorage.cs" />
-    <Compile Include="MessageEventArgs.cs" />
-    <Compile Include="Messages\MessageOperation.cs" />
-    <Compile Include="Messages\MulticastMessage.cs" />
+    <Compile Include="Messages\TcpMessageEventArgs.cs" />
     <Compile Include="Messages\Message.cs" />
-    <Compile Include="Messages\TcpMessage.cs" />
+    <Compile Include="Messages\MessageOperation.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="Messages\RecentMessages.cs" />
     <Compile Include="NetworkInterfaceEventArgs.cs" />
@@ -127,21 +142,12 @@
     <Compile Include="SslTcp.cs" />
     <Compile Include="DiscoveryService.cs" />
     <Compile Include="ServiceProfile.cs" />
+    <Compile Include="StateObjectForReceivingData.cs" />
     <Compile Include="UsageExample.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\LUC\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
-      <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
-      <Name>LUC.Services.Implementation</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\The-Kademlia-Protocol-Succinctly-master\Clifton.Kademlia.Common\Clifton.Kademlia.Common.csproj">
-      <Project>{01939341-c23f-4ce4-91d3-26f6e5611dc2}</Project>
-      <Name>Clifton.Kademlia.Common</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

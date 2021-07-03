@@ -1,223 +1,247 @@
-﻿using System;
+﻿using LUC.DiscoveryService.Extensions;
+using LUC.DiscoveryService.Kademlia.Interfaces;
+using LUC.DiscoveryService.Messages;
+using LUC.DiscoveryService.Messages.KademliaRequests;
+using LUC.DiscoveryService.Messages.KademliaResponses;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 {
     // ==========================
 
-    public class TcpProtocol : IProtocol
+    class TcpProtocol<T> : IProtocol
+        where T: EndPoint
     {
-#if DEBUG       // for unit tests
-        public bool Responds { get; set; }
-#endif
+        private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
 
-        // For serialization:
-        public string Url { get { return url; } set { url = value; } }
-        public UInt32 Port { get { return port; } set { port = value; } }
+        private readonly ConnectionPool<T> connectionPool;
 
-        protected string url;
-        protected UInt32 port;
+        //private static int REQUEST_TIMEOUT = 500;       // 500 ms for response.
 
-        /// <summary>
-        /// For serialization.
-        /// </summary>
-        public TcpProtocol()
+        public TcpProtocol(IEqualityComparer<T> comparerEndPoint)
         {
+            connectionPool = new ConnectionPool<T>(poolMaxSize: 100, comparerEndPoint);
         }
 
-        public TcpProtocol(string url, UInt32 port)
+        /// <inheritdoc/>
+        public RpcError Ping(Contact sender, T endPointOfClient)
         {
-            this.url = url;
-            this.port = port;
+            var id = ID.RandomID;
 
-#if DEBUG
-            Responds = true;
-#endif
+            ErrorResponse error = new ErrorResponse();
+            PingRequest request = new PingRequest
+            {
+                RandomID = id.Value,
+                Sender = sender.ID.Value
+            };
+            PingResponse response = null;
+
+            GetClient(sender.ID, endPointOfClient, out var client, out var isInPool, out var isConnected);
+            Boolean timeout;
+            if(isConnected)
+            {
+                try
+                {
+                    ClientStart(isInPool, client, sender.ID, sender.EndPoint, request, out response);
+                }
+                catch (Exception ex)
+                {
+                    error.ErrorMessage = ex.Message;
+                }
+                finally
+                {
+                    client.Shutdown(SocketShutdown.Both);
+                    client.Close();
+                }
+
+                timeout = response == null;
+            }
+            else
+            {
+                timeout = false;
+            }
+            
+            return GetRpcError(id, response, timeout, peerError: null);
         }
 
-        /// <summary>
-        /// This operation has two purposes:
-        /// <list type="bullet">
-        /// <item>
-        /// A peer can issue this RPC(remote procedure call) on contacts it knows about, updating its own list of "close" peers
-        /// </item>
-        /// <item>
-        /// A peer may issue this RPC to discover other peers on the network
-        /// </item>
-        /// </list>
-        /// </summary>
-        /// <param name="sender">
-        /// Current peer
-        /// </param>
-        /// <param name="key">
-        /// 160-bit ID near which you want to get list of contacts
-        /// </param>
-        /// <returns>
-        /// <see cref="Constants.K"/> nodes the recipient of the RPC  knows about closest to the target <paramref name="key"/>. 
-        /// Contacts can come from a single k-bucket, or they may come from multiple k-buckets if the closest k-bucket is not full. 
-        /// In any case, the RPC recipient must return k items 
-        /// (unless there are fewer than k nodes in all its k-buckets combined, in which case it returns every node it knows about).
-        /// Also this operation returns <seealso cref="RpcError"/> to inform about the errors which maybe happened
-        /// </returns>
-        public (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID key)
+        private void GetClient(ID idOfClient, T endPointOfClient, out DiscoveryServiceSocket client, out Boolean isInPool, out Boolean isConnected)
+        {
+            connectionPool.TakeClient(idOfClient.Value, endPointOfClient, ConnectTimeout, out client, out isConnected, out isInPool);
+            if (client == null)
+            {
+                client = new DiscoveryServiceSocket(endPointOfClient.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            }
+        }
+
+        private void ClientStart<TResponse>(Boolean isInPool, DiscoveryServiceSocket client, ID idOfClient, T endPointOfClient, Request request, out TResponse response)
+            where TResponse: Response
+        {
+            Boolean isConnected = client.Connected;
+            if(!isInPool)
+            {
+                connectionPool.PutSocketInPool(client, idOfClient.Value, endPointOfClient, ConnectTimeout, out _, out _, out isConnected);
+            }
+            response = null;
+
+            if (isConnected)
+            {
+
+                client.Send(request.ToByteArray(), SendTimeout, out var isSent);
+
+                if (isSent)
+                {
+                    var bytesOfResponse = client.Receive(ReceiveTimeout, out var isReceived);
+                    if (isReceived)
+                    {
+                        response.Read(bytesOfResponse);
+                    }
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID keyToFindContacts, IPAddress host, UInt32 tcpPort)
         {
             ErrorResponse error;
             ID id = ID.RandomID;
-            bool timeoutError;
-
-            var ret = RestCall.Post<FindNodeResponse, ErrorResponse>(url + ":" + port + "//FindNode",
-                new FindNodeSubnetRequest()
-                {
-                    Protocol = sender.Protocol,
-                    ProtocolName = sender.Protocol.GetType().Name,
-                    Sender = sender.ID.Value,
-                    Key = key.Value,
-                    RandomID = id.Value
-                }, out error, out timeoutError);
+            bool timeoutError = false;
+            DiscoveryServiceSocket client = new DiscoveryServiceSocket(host.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            var request = new FindNodeRequest
+            {
+                Sender = sender.ID.Value,
+                Key = keyToFindContacts.Value,
+                RandomID = id.Value,
+                MessageOperation = MessageOperation.FindNode
+            };
+            var remoteContact = DiscoveryService.KnownContacts.Single(c => c.ID == keyToFindContacts);
+            FindNodeResponse response = null;
 
             try
             {
-                var contacts = ret?.Contacts?.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList();
+                ClientStart(client, remoteContact.EndPoint, request, out response);
+                
+                //get close contacts near key
+                var closeContacts = response.Contacts;
 
-                // Return only contacts with supported protocols.
-                return (contacts?.Where(c => c.Protocol != null).ToList() ?? EmptyContactList(), GetRpcError(id, ret, timeoutError, error));
+                return (closeContacts ?? EmptyContactList(), GetRpcError(id, response, timeoutError, peerError: null));
             }
-            catch (Exception ex)
+            catch (SocketException ex)
             {
-                return (null, new RpcError() { ProtocolError = true, ProtocolErrorMessage = ex.Message });
+                error = new ErrorResponse
+                {
+                    ErrorMessage = ex.Message
+                };
+                timeoutError = true;
+
+                return (EmptyContactList(), GetRpcError(id, null, timeoutError, error));
+            }
+            finally
+            {
+                client.Shutdown(SocketShutdown.Both);
+                client.Close();
             }
         }
 
-        /// <summary>
-        /// Attempt to find the value in the peer network. Also this operation has two purposes:
-        /// <list type="bullet">
-        /// <item>
-        /// A peer can issue this RPC(remote procedure call) on contacts it knows about, updating its own list of "close" peers
-        /// </item>
-        /// <item>
-        /// A peer may issue this RPC to discover other peers on the network
-        /// </item>
-        /// </list>
-        /// </summary>
-        /// <param name="sender">
-        /// Current peer
-        /// </param>
-        /// <param name="key">
-        /// 160-bit ID near which you want to get list of contacts
-        /// </param>
-        /// <returns>A null contact list is acceptable here as it is a valid return if the value is found.
-        /// The caller is responsible for checking the timeoutError flag to make sure null contacts is not
-        /// the result of a timeout error.
-        /// Also this operation returns <seealso cref="RpcError"/> to inform about the errors which maybe happened
-        /// </returns>
-        public (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID key)
+        /// <inheritdoc/>
+        public (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID keyToFindContact)
         {
             ErrorResponse error;
             ID id = ID.RandomID;
-            bool timeoutError;
-
-            var ret = RestCall.Post<FindValueResponse, ErrorResponse>(url + ":" + port + "//FindValue",
-                new FindValueSubnetRequest()
-                {
-                    Protocol = sender.Protocol,
-                    ProtocolName = sender.Protocol.GetType().Name,
-                    Sender = sender.ID.Value,
-                    Key = key.Value,
-                    RandomID = id.Value
-                }, out error, out timeoutError);
+            bool timeoutError = false;
+            DiscoveryServiceSocket client = new DiscoveryServiceSocket(sender.IPAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            var request = new FindValueRequest
+            {
+                IdOfContact = keyToFindContact.Value,
+                IdOfSendingContact = sender.ID.Value,
+                MessageOperation = MessageOperation.FindValue,
+                Sender = sender.ID.Value,
+                RandomID = id.Value,
+            };
+            
+            var remoteContact = DiscoveryService.KnownContacts.Single(c => c.ID == keyToFindContact);
+            FindValueResponse response = null;
 
             try
             {
-                var contacts = ret?.Contacts?.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList();
+                ClientStart(client, remoteContact.IPAddress, remoteContact.TcpPort, request, out response);
+
+                //get close contacts near key
+                var closeContacts = response?.CloseContactsToRepsonsingPeer/*.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList()*/;
 
                 // Return only contacts with supported protocols.
-                return (contacts?.Where(c => c.Protocol != null).ToList(), ret.Value, GetRpcError(id, ret, timeoutError, error));
+                //return (contacts?.Where(c => c.Protocol != null).ToList(), ret.Value, GetRpcError(id, ret, timeoutError, error));
+
+                return (closeContacts ?? EmptyContactList(), response.ValueInResponsingPeer, GetRpcError(id, response, timeoutError, peerError: null));
             }
-            catch (Exception ex)
+            catch (SocketException ex)
             {
-                return (null, null, new RpcError() { ProtocolError = true, ProtocolErrorMessage = ex.Message });
+                error = new ErrorResponse
+                {
+                    ErrorMessage = ex.Message
+                };
+                timeoutError = true;
+
+                return (EmptyContactList(), val: null, GetRpcError(id, null, timeoutError, error));
+            }
+            finally
+            {
+                client.Shutdown(SocketShutdown.Both);
+                client.Close();
             }
         }
 
-        /// <summary>
-        /// Someone is pinging us.  Register the contact and respond.
-        /// </summary>
-        /// <param name="sender">
-        /// Current peer
-        /// </param>
-        /// <returns>
-        /// Information about the errors which maybe happened
-        /// </returns>
-        public RpcError Ping(Contact sender)
-        {
-            ErrorResponse error;
-            ID id = ID.RandomID;
-            bool timeoutError;
-
-            var ret = RestCall.Post<FindValueResponse, ErrorResponse>(url + ":" + port + "//Ping",
-                new PingSubnetRequest()
-                {
-                    Protocol = sender.Protocol,
-                    ProtocolName = sender.Protocol.GetType().Name,
-                    Sender = sender.ID.Value,
-                    RandomID = id.Value
-                }, 
-                out error, out timeoutError);
-
-            return GetRpcError(id, ret, timeoutError, error);
-        }
-
-        /// <summary>
-        /// Insturcts a node to store a (<paramref name="key"/>, <paramref name="val"/>) pair for later retrieval. 
-        /// “To store a (<paramref name="key"/>, <paramref name="val"/>) pair, a participant locates the k closest nodes to the key and sends them STORE RPCS.” 
-        /// The participant does this by inspecting its own k-closest nodes to the key.
-        /// Store a key-value pair in the republish or cache storage.
-        /// </summary>
-        /// <param name="sender">
-        /// Current peer
-        /// </param>
-        /// <param name="key">
-        /// 160-bit <seealso cref="ID"/> which we want to store
-        /// </param>
-        /// <param name="val">
-        /// Value of the peer which we want to store
-        /// </param>
-        /// <param name="isCached">
-        /// Whether cach a (<paramref name="key"/>, <paramref name="val"/>) pair
-        /// </param>
-        /// <param name="expirationTimeSec">
-        /// Time of expiration cach in seconds
-        /// </param>
-        /// <returns>
-        /// Information about the errors which maybe happened
-        /// </returns>
+        ///<inheritdoc/>
         public RpcError Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
         {
-            ErrorResponse error;
-            ID id = ID.RandomID;
-            bool timeoutError;
+            //ErrorResponse error;
+            //ID id = ID.RandomID;
+            //bool timeoutError;
 
-            var ret = RestCall.Post<FindValueResponse, ErrorResponse>(url + ":" + port + "//Store",
-                    new StoreSubnetRequest()
-                    {
-                        Protocol = sender.Protocol,
-                        ProtocolName = sender.Protocol.GetType().Name,
-                        Sender = sender.ID.Value,
-                        Key = key.Value,
-                        Value = val,
-                        IsCached = isCached,
-                        ExpirationTimeSec = expirationTimeSec,
-                        RandomID = id.Value
-                    }, 
-                    out error, out timeoutError);
+            //var ret = RestCall.Post<FindValueResponse, ErrorResponse>(url + ":" + port + "//Store",
+            //        new StoreSubnetRequest()
+            //        {
+            //            Protocol = sender.Protocol,
+            //            ProtocolName = sender.Protocol.GetType().Name,
+            //            Sender = sender.ID.Value,
+            //            Key = key.Value,
+            //            Value = val,
+            //            IsCached = isCached,
+            //            ExpirationTimeSec = expirationTimeSec,
+            //            RandomID = id.Value
+            //        }, 
+            //        out error, out timeoutError);
 
-            return GetRpcError(id, ret, timeoutError, error);
+            return new RpcError(/*id, ret, timeoutError, error*/);
         }
 
-        protected RpcError GetRpcError(ID id, BaseResponse resp, bool timeoutError, ErrorResponse peerError)
+        protected RpcError GetRpcError(ID id, Response resp, bool timeoutError, ErrorResponse peerError)
         {
-            return new RpcError() { IDMismatchError = id != resp.RandomID, TimeoutError = timeoutError, PeerError = peerError != null, PeerErrorMessage = peerError?.ErrorMessage };
+            RpcError rpcError = new RpcError
+            {
+                TimeoutError = timeoutError,
+                PeerError = peerError != null,
+                PeerErrorMessage = peerError?.ErrorMessage
+            };
+
+            if(resp == null)
+            {
+                rpcError.IDMismatchError = false;
+            }
+            else
+            {
+                rpcError.IDMismatchError = id != resp.RandomID;
+            }
+
+            return rpcError;
         }
 
         protected List<Contact> EmptyContactList()

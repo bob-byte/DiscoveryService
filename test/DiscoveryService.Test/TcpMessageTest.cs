@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using NUnit.Framework;
 using System;
@@ -24,26 +25,27 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Ctor_NormalInput_StringEqual()
         {
-            var expected = ExpectedMessage(messageId: 1111, protocolVersion: 1, tcpPort: 17500, groupsIds: new List<String> { "a", "b" });
+            var expected = ExpectedMessage(MessageOperation.Acknowledge, messageId: 1111, machineId: ID.RandomID, protocolVersion: 1, tcpPort: 17500, groupsIds: new List<String> { "a", "b" });
 
-            var message = new TcpMessage(messageId: 1111, tcpPort: 17500, protocolVersion: 1, new List<String> { "a", "b" });
+            var message = new TcpMessage(messageId: 1111, ID.RandomID, tcpPort: 17500, protocolVersion: 1, new List<String> { "a", "b" });
 
             var actual = message.ToString();
 
             Assert.AreEqual(expected, actual);
         }
 
-        private String ExpectedMessage(UInt32 messageId, UInt32 protocolVersion, UInt32 tcpPort, List<String> groupsIds)
+        private String ExpectedMessage(MessageOperation messOperation, UInt32 messageId, ID machineId, UInt32 protocolVersion, UInt32 tcpPort, List<String> groupsIds)
         {
             var writer = new StringWriter();
 
             writer.WriteLine("TCP message:");
-            writer.WriteLine($"MessageId = {messageId};\n" +
+            writer.WriteLine($"MachineId = {machineId}\n" +
                              $"Protocol version = {protocolVersion};\r\n" +
+                             $"Message operation: {messOperation};\n" +
                              $"TCP = {tcpPort};");
 
             writer.WriteLine($"GroupIds:");
-            for (Int32 id = 0; id < groupsIds.Count; id++)
+            for (Int32 id = 0; id < groupsIds?.Count; id++)
             {
                 if (id == groupsIds.Count - 1)
                 {
@@ -62,9 +64,9 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Ctor_NullGroupIds_StringEqual()
         {
-            var expected = ExpectedMessage(messageId: 1111, protocolVersion: 1, tcpPort: 17500, groupsIds: null);
+            var expected = ExpectedMessage(MessageOperation.Acknowledge, messageId: 1111, machineId: ID.RandomID, protocolVersion: 1, tcpPort: 17500, groupsIds: null);
 
-            var message = new TcpMessage(messageId: 1111, tcpPort: 17500, protocolVersion: 1, groupsIds: null);
+            var message = new TcpMessage(messageId: 1111, machineId: ID.RandomID, tcpPort: 17500, protocolVersion: 1, groupsIds: null);
 
             var actual = message.ToString();
 
