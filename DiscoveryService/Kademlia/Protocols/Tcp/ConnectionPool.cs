@@ -19,7 +19,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         {
             availableSockets = new ConcurrentDictionary<BigInteger, DiscoveryServiceSocket>(Constants.MAX_THREADS, poolMaxSize);
             PoolMaxSize = poolMaxSize;
-            this.comparer = comparerEndPoint;
+            this.comparerEndPoint = comparerEndPoint;
         }
 
         public Int32 PoolMaxSize { get; }
