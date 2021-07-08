@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,24 +6,25 @@ using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 {
-    class ConnectionPool
-    {
+	internal sealed class ConnectionPool
+	{
 		public int Id { get; }
 
 		public ConnectionSettings ConnectionSettings { get; }
 
 		public SslProtocols SslProtocols { get; set; }
 
-		public async ValueTask<ServerSession> GetSessionAsync(MySqlConnection connection, int startTickCount, IOBehavior ioBehavior, CancellationToken cancellationToken)
+		public async ValueTask<ServerSession> GetSessionAsync(TcpConnection connection, int startTickCount, IOBehavior ioBehavior, CancellationToken cancellationToken)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
 			// if all sessions are used, see if any have been leaked and can be recovered
 			// check at most once per second (although this isn't enforced via a mutex so multiple threads might block
 			// on the lock in RecoverLeakedSessions in high-concurrency situations
-			if (IsEmpty && unchecked(((uint)Environment.TickCount) - m_lastRecoveryTime) >= 1000u)
+			if (IsEmpty && unchecked(((uint) Environment.TickCount) - m_lastRecoveryTime) >= 1000u)
 			{
 				Log.Info("Pool{0} is empty; recovering leaked sessions", m_logArguments);
 				await RecoverLeakedSessionsAsync(ioBehavior).ConfigureAwait(false);
@@ -67,7 +68,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 						{
 							reuseSession = await session.TryResetConnectionAsync(ConnectionSettings, null, false, ioBehavior, cancellationToken).ConfigureAwait(false);
 						}
-						else if ((unchecked((uint)Environment.TickCount) - session.LastReturnedTicks) >= ConnectionSettings.ConnectionIdlePingTime)
+						else if ((unchecked((uint) Environment.TickCount) - session.LastReturnedTicks) >= ConnectionSettings.ConnectionIdlePingTime)
 						{
 							reuseSession = await session.TryPingAsync(logInfo: false, ioBehavior, cancellationToken).ConfigureAwait(false);
 						}
@@ -149,7 +150,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			if (session.PoolGeneration != m_generation)
 				return 2;
 			if (ConnectionSettings.ConnectionLifeTime > 0
-				&& unchecked((uint)Environment.TickCount) - session.CreatedTicks >= ConnectionSettings.ConnectionLifeTime)
+				&& unchecked((uint) Environment.TickCount) - session.CreatedTicks >= ConnectionSettings.ConnectionLifeTime)
 				return 3;
 
 			return 0;
@@ -209,7 +210,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 		{
 			Log.Debug("Pool{0} reaping connection pool", m_logArguments);
 			await RecoverLeakedSessionsAsync(ioBehavior).ConfigureAwait(false);
-			await CleanPoolAsync(ioBehavior, session => (unchecked((uint)Environment.TickCount) - session.LastReturnedTicks) / 1000 >= ConnectionSettings.ConnectionIdleTimeout, true, cancellationToken).ConfigureAwait(false);
+			await CleanPoolAsync(ioBehavior, session => (unchecked((uint) Environment.TickCount) - session.LastReturnedTicks) / 1000 >= ConnectionSettings.ConnectionIdleTimeout, true, cancellationToken).ConfigureAwait(false);
 		}
 
 		/// <summary>
@@ -231,7 +232,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
 		/// <summary>
 		/// Examines all the <see cref="ServerSession"/> objects in <see cref="m_leasedSessions"/> to determine if any
-		/// have an owning <see cref="MySqlConnection"/> that has been garbage-collected. If so, assumes that the connection
+		/// have an owning <see cref="TcpConnection"/> that has been garbage-collected. If so, assumes that the connection
 		/// was not properly disposed and returns the session to the pool.
 		/// </summary>
 		private async Task RecoverLeakedSessionsAsync(IOBehavior ioBehavior)
@@ -239,7 +240,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			var recoveredSessions = new List<ServerSession>();
 			lock (m_leasedSessions)
 			{
-				m_lastRecoveryTime = unchecked((uint)Environment.TickCount);
+				m_lastRecoveryTime = unchecked((uint) Environment.TickCount);
 				foreach (var session in m_leasedSessions.Values)
 				{
 					if (!session.OwningConnection!.TryGetTarget(out var _))
@@ -370,64 +371,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			var session = new ServerSession(this, m_generation, Interlocked.Increment(ref m_lastSessionId));
 			if (Log.IsInfoEnabled())
 				Log.Info(logMessage, m_logArguments[0], session.Id);
-			var statusInfo = await session.ConnectAsync(ConnectionSettings, startTickCount, m_loadBalancer, ioBehavior, cancellationToken).ConfigureAwait(false);
-			Exception? redirectionException = null;
-
-			if (statusInfo is not null && statusInfo.StartsWith("Location: mysql://", StringComparison.Ordinal))
-			{
-				// server redirection string has the format "Location: mysql://{host}:{port}/user={userId}[&ttl={ttl}]"
-				Log.Info("Session{0} has server redirection header {1}", session.Id, statusInfo);
-
-				if (ConnectionSettings.ServerRedirectionMode == MySqlServerRedirectionMode.Disabled)
-				{
-					Log.Info("Pool{0} server redirection is disabled; ignoring redirection", m_logArguments);
-				}
-				else if (Utility.TryParseRedirectionHeader(statusInfo, out var host, out var port, out var user))
-				{
-					if (host != ConnectionSettings.HostNames![0] || port != ConnectionSettings.Port || user != ConnectionSettings.UserID)
-					{
-						var redirectedSettings = ConnectionSettings.CloneWith(host, port, user);
-						Log.Info("Pool{0} opening new connection to Host={1}; Port={2}; User={3}", m_logArguments[0], host, port, user);
-						var redirectedSession = new ServerSession(this, m_generation, Interlocked.Increment(ref m_lastSessionId));
-						try
-						{
-							await redirectedSession.ConnectAsync(redirectedSettings, startTickCount, m_loadBalancer, ioBehavior, cancellationToken).ConfigureAwait(false);
-						}
-						catch (Exception ex)
-						{
-							Log.Warn(ex, "Pool{0} failed to connect redirected Session{1}", m_logArguments[0], redirectedSession.Id);
-							redirectionException = ex;
-						}
-
-						if (redirectionException is null)
-						{
-							Log.Info("Pool{0} closing Session{1} to use redirected Session{2} instead", m_logArguments[0], session.Id, redirectedSession.Id);
-							await session.DisposeAsync(ioBehavior, cancellationToken).ConfigureAwait(false);
-							return redirectedSession;
-						}
-						else
-						{
-							try
-							{
-								await redirectedSession.DisposeAsync(ioBehavior, cancellationToken).ConfigureAwait(false);
-							}
-							catch (Exception)
-							{
-							}
-						}
-					}
-					else
-					{
-						Log.Info("Session{0} is already connected to this server; ignoring redirection", session.Id);
-					}
-				}
-			}
-
-			if (ConnectionSettings.ServerRedirectionMode == MySqlServerRedirectionMode.Required)
-			{
-				Log.Error("Pool{0} requires server redirection but server doesn't support it", m_logArguments);
-				throw new MySqlException(MySqlErrorCode.UnableToConnectToHost, "Server does not support redirection", redirectionException);
-			}
+			await session.ConnectAsync(ConnectionSettings, startTickCount, m_loadBalancer, ioBehavior, cancellationToken).ConfigureAwait(false);
 			return session;
 		}
 
@@ -446,48 +390,25 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 				return pool;
 			}
 
-			// parse connection string and check for 'Pooling' setting; return 'null' if pooling is disabled
-			var connectionStringBuilder = new MySqlConnectionStringBuilder(connectionString);
-			if (!connectionStringBuilder.Pooling)
-			{
-				s_pools.GetOrAdd(connectionString, default(ConnectionPool));
-				s_mruCache = new(connectionString, null);
-				return null;
-			}
-
-			// check for pool using normalized form of connection string
-			var normalizedConnectionString = connectionStringBuilder.ConnectionString;
-			if (normalizedConnectionString != connectionString && s_pools.TryGetValue(normalizedConnectionString, out pool))
-			{
-				// try to set the pool for the connection string to the canonical pool; if someone else
-				// beats us to it, just use the existing value
-				pool = s_pools.GetOrAdd(connectionString, pool)!;
-				s_mruCache = new(connectionString, pool);
-				return pool;
-			}
+			// try to set the pool for the connection string to the canonical pool; if someone else
+			// beats us to it, just use the existing value
+			pool = s_pools.GetOrAdd(connectionString, pool)!;
+			s_mruCache = new(connectionString, pool);
+			return pool;
 
 			// create a new pool and attempt to insert it; if someone else beats us to it, just use their value
 			var connectionSettings = new ConnectionSettings(connectionStringBuilder);
-			var newPool = new ConnectionPool(connectionSettings);
-			pool = s_pools.GetOrAdd(normalizedConnectionString, newPool);
+			var newPool = s_pools.GetOrAdd(connectionString, newPool);
 
-			if (pool == newPool)
-			{
-				s_mruCache = new(connectionString, pool);
-				pool.StartReaperTask();
+			s_mruCache = new(connectionString, pool);
+			pool.StartReaperTask();
 
-				// if we won the race to create the new pool, also store it under the original connection string
-				if (connectionString != normalizedConnectionString)
-					s_pools.GetOrAdd(connectionString, pool);
+			// if we won the race to create the new pool, also store it under the original connection string
+			if (connectionString != normalizedConnectionString)
+				s_pools.GetOrAdd(connectionString, pool);
 
-				if (connectionSettings.ConnectionReset)
-					BackgroundConnectionResetHelper.Start();
-			}
-			else if (pool != newPool && Log.IsInfoEnabled())
-			{
-				Log.Info("Pool{0} was created but will not be used (due to race)", newPool.m_logArguments);
-			}
-
+			if (connectionSettings.ConnectionReset)
+				BackgroundConnectionResetHelper.Start();
 			return pool;
 		}
 
@@ -518,18 +439,18 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			m_sessionSemaphore = new(cs.MaximumPoolSize);
 			m_sessions = new();
 			m_leasedSessions = new();
-			if (cs.ConnectionProtocol == MySqlConnectionProtocol.Sockets && cs.LoadBalance == MySqlLoadBalance.LeastConnections)
+			if (cs.ConnectionProtocol == TcpConnectionProtocol.Sockets && cs.LoadBalance == MySqlLoadBalance.LeastConnections)
 			{
 				m_hostSessions = new();
 				foreach (var hostName in cs.HostNames!)
 					m_hostSessions[hostName] = 0;
 			}
 
-			m_loadBalancer = cs.ConnectionProtocol != MySqlConnectionProtocol.Sockets ? null :
+			m_loadBalancer = cs.ConnectionProtocol != TcpConnectionProtocol.Sockets ? null :
 				cs.HostNames!.Count == 1 || cs.LoadBalance == MySqlLoadBalance.FailOver ? FailOverLoadBalancer.Instance :
 				cs.LoadBalance == MySqlLoadBalance.Random ? RandomLoadBalancer.Instance :
 				cs.LoadBalance == MySqlLoadBalance.LeastConnections ? new LeastConnectionsLoadBalancer(m_hostSessions!) :
-				(ILoadBalancer)new RoundRobinLoadBalancer();
+				(ILoadBalancer) new RoundRobinLoadBalancer();
 
 			Id = Interlocked.Increment(ref s_poolId);
 			m_logArguments = new object[] { "{0}".FormatInvariant(Id) };

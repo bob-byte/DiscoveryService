@@ -405,6 +405,8 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
+        ///   TCP message received.
+        ///
         ///   Called by <see cref="Client.TcpMessageReceived"/> in method <see cref="Client.ListenTcp(TcpListener)"/>
         /// </summary>
         /// <param name="message">
