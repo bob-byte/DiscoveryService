@@ -554,14 +554,10 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 				}
 				else
 				{
-					// only "fail over" and "random" load balancers supported without connection pooling
-					var loadBalancer = connectionSettings.LoadBalance == MySqlLoadBalance.Random && connectionSettings.HostNames!.Count > 1 ?
-						RandomLoadBalancer.Instance : FailOverLoadBalancer.Instance;
-
 					var session = new ServerSession();
 					session.OwningConnection = new WeakReference<TcpConnection>(this);
 					Log.Info("Created new non-pooled Session{0}", session.Id);
-					await session.ConnectAsync(connectionSettings, startTickCount, loadBalancer, actualIOBehavior, connectToken).ConfigureAwait(false);
+					await session.ConnectAsync(connectionSettings, startTickCount, actualIOBehavior, connectToken).ConfigureAwait(false);
 					return session;
 				}
 			}

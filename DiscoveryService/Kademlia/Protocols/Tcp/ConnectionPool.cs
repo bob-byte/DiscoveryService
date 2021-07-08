@@ -201,7 +201,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			// increment the generation of the connection pool
 			Log.Info("Pool{0} clearing connection pool", m_logArguments);
 			Interlocked.Increment(ref m_generation);
-			m_procedureCache = null;
 			await RecoverLeakedSessionsAsync(ioBehavior).ConfigureAwait(false);
 			await CleanPoolAsync(ioBehavior, session => session.PoolGeneration != m_generation, false, cancellationToken).ConfigureAwait(false);
 		}
@@ -211,23 +210,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			Log.Debug("Pool{0} reaping connection pool", m_logArguments);
 			await RecoverLeakedSessionsAsync(ioBehavior).ConfigureAwait(false);
 			await CleanPoolAsync(ioBehavior, session => (unchecked((uint) Environment.TickCount) - session.LastReturnedTicks) / 1000 >= ConnectionSettings.ConnectionIdleTimeout, true, cancellationToken).ConfigureAwait(false);
-		}
-
-		/// <summary>
-		/// Returns the stored procedure cache for this <see cref="ConnectionPool"/>, lazily creating it on demand.
-		/// This method may return a different object after <see cref="ClearAsync"/> has been called. The returned
-		/// object is shared between multiple threads and is only safe to use after taking a <c>lock</c> on the
-		/// object itself.
-		/// </summary>
-		public Dictionary<string, CachedProcedure?> GetProcedureCache()
-		{
-			var procedureCache = m_procedureCache;
-			if (procedureCache is null)
-			{
-				var newProcedureCache = new Dictionary<string, CachedProcedure?>();
-				procedureCache = Interlocked.CompareExchange(ref m_procedureCache, newProcedureCache, null) ?? newProcedureCache;
-			}
-			return procedureCache;
 		}
 
 		/// <summary>
@@ -371,12 +353,15 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			var session = new ServerSession(this, m_generation, Interlocked.Increment(ref m_lastSessionId));
 			if (Log.IsInfoEnabled())
 				Log.Info(logMessage, m_logArguments[0], session.Id);
-			await session.ConnectAsync(ConnectionSettings, startTickCount, m_loadBalancer, ioBehavior, cancellationToken).ConfigureAwait(false);
+			await session.ConnectAsync(ConnectionSettings, startTickCount, ioBehavior, cancellationToken).ConfigureAwait(false);
 			return session;
 		}
 
 		public static ConnectionPool? GetPool(string connectionString)
 		{
+			m_hostSessions = new();
+			m_hostSessions[connectionString] = 0;
+
 			// check single-entry MRU cache for this exact connection string; most applications have just one
 			// connection string and will get a cache hit here
 			var cache = s_mruCache;
@@ -439,18 +424,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			m_sessionSemaphore = new(cs.MaximumPoolSize);
 			m_sessions = new();
 			m_leasedSessions = new();
-			if (cs.ConnectionProtocol == TcpConnectionProtocol.Sockets && cs.LoadBalance == MySqlLoadBalance.LeastConnections)
-			{
-				m_hostSessions = new();
-				foreach (var hostName in cs.HostNames!)
-					m_hostSessions[hostName] = 0;
-			}
-
-			m_loadBalancer = cs.ConnectionProtocol != TcpConnectionProtocol.Sockets ? null :
-				cs.HostNames!.Count == 1 || cs.LoadBalance == MySqlLoadBalance.FailOver ? FailOverLoadBalancer.Instance :
-				cs.LoadBalance == MySqlLoadBalance.Random ? RandomLoadBalancer.Instance :
-				cs.LoadBalance == MySqlLoadBalance.LeastConnections ? new LeastConnectionsLoadBalancer(m_hostSessions!) :
-				(ILoadBalancer) new RoundRobinLoadBalancer();
 
 			Id = Interlocked.Increment(ref s_poolId);
 			m_logArguments = new object[] { "{0}".FormatInvariant(Id) };
@@ -492,19 +465,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			}
 		}
 
-		private sealed class LeastConnectionsLoadBalancer : ILoadBalancer
-		{
-			public LeastConnectionsLoadBalancer(Dictionary<string, int> hostSessions) => m_hostSessions = hostSessions;
-
-			public IEnumerable<string> LoadBalance(IReadOnlyList<string> hosts)
-			{
-				lock (m_hostSessions)
-					return m_hostSessions.OrderBy(static x => x.Value).Select(static x => x.Key).ToList();
-			}
-
-			readonly Dictionary<string, int> m_hostSessions;
-		}
-
 		private sealed class ConnectionStringPool
 		{
 			public ConnectionStringPool(string connectionString, ConnectionPool? pool)
@@ -542,12 +502,10 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 		readonly SemaphoreSlim m_sessionSemaphore;
 		readonly LinkedList<ServerSession> m_sessions;
 		readonly Dictionary<string, ServerSession> m_leasedSessions;
-		readonly ILoadBalancer? m_loadBalancer;
 		readonly Dictionary<string, int>? m_hostSessions;
 		readonly object[] m_logArguments;
 		Task? m_reaperTask;
 		uint m_lastRecoveryTime;
 		int m_lastSessionId;
-		Dictionary<string, CachedProcedure?>? m_procedureCache;
 	}
 }
