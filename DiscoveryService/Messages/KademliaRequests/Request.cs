@@ -20,13 +20,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             RandomID = ID.RandomID.Value;
         }
 
-        public void Send(ID keyToFindContact)
-        {
-            var remoteContact = DiscoveryService.KnownContacts.Single(c => c.ID == keyToFindContact);
-            Send(new IPEndPoint(remoteContact.IPAddress, (Int32)remoteContact.TcpPort)).Wait();
-        }
-
-
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)
         {

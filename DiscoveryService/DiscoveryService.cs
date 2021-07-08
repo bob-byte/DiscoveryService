@@ -17,7 +17,9 @@ namespace LUC.DiscoveryService
     ///   LightUpon.Cloud Service Discovery maintens the list of IP addresses in LAN. It realizes pattern Singleton
     /// </summary>
     public class DiscoveryService : CollectedInfoInLan
-    {       
+    {
+        private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
+
         private static DiscoveryService instance;
 
         private IProtocol protocol = new TcpProtocol();
@@ -117,28 +119,42 @@ namespace LUC.DiscoveryService
 
             Service.QueryReceived += SendTcpMessage;
             Service.AnswerReceived += AddNewContact;
-            Service.AnswerReceived += Service.Bootstrap;
-            Service.FindNodeReceived += SendOurCloseContactsAndPort;
-            Service.PingReceived += SendSameRandomId;
+            //Service.AnswerReceived += Service.Bootstrap;
+            Service.PingReceived += (s, e) =>
+            {
+                PingResponse.SendSameRandomId( , SendTimeout, e.Message);
+            };
 
-            //Service.FindValueReceived += (sender, messageArgs) => FindValueResponse.SendOurCloseContactsAndMachineId(
-            //    messageArgs.Message as FindValueRequest,
-            //    messageArgs.RemoteContact.IPAddress,
-            //    Service.DistributedHashTable.Node.BucketList.GetCloseContacts(messageArgs.LocalContact.ID, messageArgs.LocalContact.ID),
-            //    MachineId,
-            //    RunningTcpPort);
+            Service.StoreReceived += (s, e) =>
+            {
+                StoreResponse.SendSameRandomId( , SendTimeout, e.Message);
+            };
+
+            Service.FindNodeReceived += (s, e) =>
+            {
+                FindNodeResponse.SendOurCloseContactsAndPort( , , RunningTcpPort, SendTimeout, e.Message);
+            };
+
+            Service.FindValueReceived += (sender, messageArgs) =>
+            {
+                FindValueResponse.SendOurCloseContactsAndMachineValue(
+                messageArgs.Message as FindValueRequest,
+                ,
+                Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(messageArgs.LocalContactId), new ID(messageArgs.LocalContactId)),
+                MachineId,
+                RunningTcpPort);
+            };
         }
 
         public void AddNewContact(Object sender, TcpMessageEventArgs e)
         {
-            if ((!(e?.Message is TcpMessage tcpMessage)) ||
-               (!(e.RemoteContact is IPEndPoint iPEndPoint)))
+            if ((e?.Message is TcpMessage tcpMessage) && (e.RemoteContact is IPEndPoint iPEndPoint))
             {
-                throw new ArgumentException($"Bad format of {nameof(e)}");
+                KnownContacts.Add(new Contact(new TcpProtocol(), new ID(tcpMessage.IdOfSendingContact), iPEndPoint.Address, tcpMessage.TcpPort));
             }
             else
             {
-                KnownContacts.Add(new Contact(new TcpProtocol(), tcpMessage.MachineId, iPEndPoint.Address, tcpMessage.TcpPort));
+                throw new ArgumentException($"Bad format of {nameof(e)}");
             }
         }
 
@@ -183,45 +199,6 @@ namespace LUC.DiscoveryService
             }
         }
 
-        public void SendOurCloseContactsAndPort(Object sender, TcpMessageEventArgs e)
-        {
-            if (((e?.Message is FindNodeRequest message)) &&
-               ((e.RemoteContact is IPEndPoint iPEndPoint)))
-            {
-                var response = new FindNodeResponse
-                {
-                    RandomID = ID.RandomID.Value,
-                    Contacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(MachineId, MachineId),
-                    TcpPort = RunningTcpPort
-                };
-
-                response.Send(new IPEndPoint(iPEndPoint.Address, (Int32)message.TcpPort)).ConfigureAwait(false);
-            }
-            else
-            {
-                throw new ArgumentException($"Bad format of {nameof(e)}");
-            }
-        }
-
-        private void SendSameRandomId(Object sender, TcpMessageEventArgs e)
-        {
-            if (e?.Message is PingRequest message)
-            {
-                var response = new FindNodeResponse
-                {
-                    RandomID = ID.RandomID.Value,
-                    Contacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(MachineId, MachineId),
-                    TcpPort = RunningTcpPort
-                };
-
-                response.Send(new IPEndPoint(e.RemoteContact.IPAddress, (Int32)e.RemoteContact.TcpPort), response.ToByteArray()).ConfigureAwait(false);
-            }
-            else
-            {
-                throw new ArgumentException($"Bad format of {nameof(e)}");
-            }
-        }
-
         /// <summary>
         ///    Start listening TCP, UDP messages and sending them
         /// </summary>
@@ -253,6 +230,11 @@ namespace LUC.DiscoveryService
                 throw new InvalidOperationException("First you need to start discovery service");
             }
         }
+
+        //internal static List<Contact> KnownContacts(UInt32 protocolVersion)
+        //{
+            
+        //}
 
         /// <summary>
         ///    Stop listening TCP, UDP messages and sending them

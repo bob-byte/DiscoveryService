@@ -43,9 +43,7 @@ namespace LUC.DiscoveryService.Messages
             if (reader != null)
             {
                 MessageId = reader.ReadUInt32();
-
-                var idAsBigInt = BigInteger.Parse(reader.ReadString());
-                MachineId = new ID(idAsBigInt);
+                MachineId = reader.ReadString();
 
                 ProtocolVersion = reader.ReadUInt32();
                 TcpPort = reader.ReadUInt32();                
@@ -64,7 +62,7 @@ namespace LUC.DiscoveryService.Messages
             if(writer != null)
             {
                 writer.Write(MessageId);
-                writer.Write(MachineId.Value.ToString());
+                writer.Write(MachineId);
                 writer.Write(ProtocolVersion);
                 writer.Write(TcpPort);
             }

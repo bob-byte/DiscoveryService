@@ -16,28 +16,27 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 {
     // ==========================
 
-    class TcpProtocol<T> : IProtocol
-        where T: EndPoint
+    class TcpProtocol : IProtocol
     {
         private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
 
-        private readonly ConnectionPool<T> connectionPool;
+        //private readonly ConnectionPool<T> connectionPool;
 
         //private static int REQUEST_TIMEOUT = 500;       // 500 ms for response.
 
-        public TcpProtocol(IEqualityComparer<T> comparerEndPoint)
-        {
-            connectionPool = new ConnectionPool<T>(poolMaxSize: 100, comparerEndPoint);
-        }
+        //public TcpProtocol(IEqualityComparer<T> comparerEndPoint)
+        //{
+        //    //connectionPool = new ConnectionPool<T>(poolMaxSize: 100, comparerEndPoint);
+        //}
 
         /// <inheritdoc/>
-        public RpcError Ping(Contact sender, T endPointOfClient)
+        public RpcError Ping(Contact sender, EndPoint endPointOfClient)
         {
             var id = ID.RandomID;
 
-            ErrorResponse error = new ErrorResponse();
+            ErrorResponse peerError = new ErrorResponse();
             PingRequest request = new PingRequest
             {
                 RandomID = id.Value,
@@ -45,7 +44,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             };
             PingResponse response = null;
 
-            GetClient(sender.ID, endPointOfClient, out var client, out var isInPool, out var isConnected);
+            //GetClient(sender.ID, endPointOfClient, out var client, out var isInPool, out var isConnected);
             Boolean timeout;
             if(isConnected)
             {
@@ -55,13 +54,13 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 }
                 catch (Exception ex)
                 {
-                    error.ErrorMessage = ex.Message;
+                    peerError.ErrorMessage = ex.Message;
                 }
-                finally
-                {
-                    client.Shutdown(SocketShutdown.Both);
-                    client.Close();
-                }
+                //finally
+                //{
+                //    client.Shutdown(SocketShutdown.Both);
+                //    client.Close();
+                //}
 
                 timeout = response == null;
             }
@@ -70,7 +69,53 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 timeout = false;
             }
             
-            return GetRpcError(id, response, timeout, peerError: null);
+            return GetRpcError(id, response, timeout, peerError);
+        }
+
+        ///<inheritdoc/>
+        public RpcError Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
+        {
+
+            ErrorResponse peerError = new ErrorResponse();
+            ID id = ID.RandomID;
+            var request = new StoreRequest
+            {
+                IdOfSendingContact = sender.ID.Value,
+                Key = key.Value,
+                Value = val,
+                IsCached = isCached,
+                ExpirationTimeSec = expirationTimeSec,
+                RandomID = id.Value,
+                MessageOperation = MessageOperation.Store
+            };
+
+            //GetClient(sender.ID, endPointOfClient, out var client, out var isInPool, out var isConnected);
+            Boolean timeout;
+            StoreResponse response = null;
+            if (isConnected)
+            {
+                try
+                {
+                    ClientStart(isInPool, client, sender.ID, sender.EndPoint, request, out response);
+                }
+                catch (Exception ex)
+                {
+                    peerError.ErrorMessage = ex.Message;
+                }
+                //finally
+                //{
+                //    client.Shutdown(SocketShutdown.Both);
+                //    client.Close();
+                //}
+
+                timeout = response == null;
+            }
+            else
+            {
+                timeout = false;
+            }
+
+            return GetRpcError(id, response, timeout, peerError);
         }
 
         private void GetClient(ID idOfClient, T endPointOfClient, out DiscoveryServiceSocket client, out Boolean isInPool, out Boolean isConnected)
@@ -124,7 +169,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             };
             var remoteContact = DiscoveryService.KnownContacts.Single(c => c.ID == keyToFindContacts);
             FindNodeResponse response = null;
-
+            GetClient(idOfClient: , , out var client);
             try
             {
                 ClientStart(client, remoteContact.EndPoint, request, out response);
@@ -197,30 +242,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 client.Shutdown(SocketShutdown.Both);
                 client.Close();
             }
-        }
-
-        ///<inheritdoc/>
-        public RpcError Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
-        {
-            //ErrorResponse error;
-            //ID id = ID.RandomID;
-            //bool timeoutError;
-
-            //var ret = RestCall.Post<FindValueResponse, ErrorResponse>(url + ":" + port + "//Store",
-            //        new StoreSubnetRequest()
-            //        {
-            //            Protocol = sender.Protocol,
-            //            ProtocolName = sender.Protocol.GetType().Name,
-            //            Sender = sender.ID.Value,
-            //            Key = key.Value,
-            //            Value = val,
-            //            IsCached = isCached,
-            //            ExpirationTimeSec = expirationTimeSec,
-            //            RandomID = id.Value
-            //        }, 
-            //        out error, out timeoutError);
-
-            return new RpcError(/*id, ret, timeoutError, error*/);
         }
 
         protected RpcError GetRpcError(ID id, Response resp, bool timeoutError, ErrorResponse peerError)
