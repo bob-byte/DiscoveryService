@@ -86,24 +86,6 @@ namespace LUC.DiscoveryService.Messages
                 client?.Close();
                 stream?.Close();
             }
-            //Socket socket = null;
-            //NetworkStream stream = null;
-
-            //try
-            //{
-            //    socket = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
-            //    client.Connect(endPoint.Address, endPoint.Port);
-
-            //    stream = client.GetStream();
-            //    var bytes = ToByteArray();
-            //    await stream.WriteAsync(bytes, offset: 0, bytes.Length);
-            //}
-            //finally
-            //{
-            //    client?.Close();
-            //    stream?.Close();
-            //}
         }
 
         public override IWireSerialiser Read(WireReader reader)

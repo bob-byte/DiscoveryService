@@ -12,6 +12,9 @@ using LUC.DiscoveryService.Kademlia.Interfaces;
 
 namespace LUC.DiscoveryService.Kademlia
 {
+    /// <summary>
+    /// DHT - distributed hash table. It minimize settings count of messages, which <seealso cref="Contact"/>s should send to learn each other 
+    /// </summary>
     public class Dht : IDht
     {
         public BaseRouter Router { get { return router; } set { router = value; } }
@@ -22,6 +25,9 @@ namespace LUC.DiscoveryService.Kademlia
         [JsonIgnore]
         public List<Contact> PendingContacts { get { return pendingContacts; } }
 
+        /// <summary>
+        /// Current Peer
+        /// </summary>
         [JsonIgnore]
         public Node Node { get { return node; } set { node = value; } }
 
@@ -42,7 +48,11 @@ namespace LUC.DiscoveryService.Kademlia
 
         public IStorage RepublishStorage { get { return republishStorage; } set { republishStorage = value; } }
         public IStorage OriginatorStorage { get { return originatorStorage; } set { originatorStorage = value; } }
-        public Contact Contact { get { return ourContact; } set { ourContact = value; } }
+
+        /// <summary>
+        /// IP-address TCP port and ID where we listen and send messages 
+        /// </summary>
+        public Contact OurContact { get { return ourContact; } set { ourContact = value; } }
 
         protected BaseRouter router;
         protected IStorage originatorStorage;
@@ -128,8 +138,8 @@ namespace LUC.DiscoveryService.Kademlia
 
         /// <summary>
         /// Bootstrap our peer by contacting another peer, adding its contacts
-        /// to our list, then getting the contacts for other peers not in the
-        /// bucket range of our known peer we're joining.
+        /// to our list, then refresh all buckets of the <see cref="ourContact"/>, 
+        /// except bucket of the <paramref name="knownPeer"/> not to include additional contact
         /// </summary>
         public RpcError Bootstrap(Contact knownPeer)
         {
@@ -140,15 +150,11 @@ namespace LUC.DiscoveryService.Kademlia
             if (!error.HasError)
             {
                 contacts.ForEach(c => node.BucketList.AddContact(c));
+
                 KBucket knownPeerBucket = node.BucketList.GetKBucket(knownPeer.ID);
                 // Resolve the list now, so we don't include additional contacts as we add to our bucket additional contacts.
                 var otherBuckets = node.BucketList.Buckets.Where(b => b != knownPeerBucket).ToList();
                 otherBuckets.ForEach(b => RefreshBucket(b));
-
-                foreach (KBucket otherBucket in otherBuckets)
-                {
-                    RefreshBucket(otherBucket);
-                }
             }
 
             return error;

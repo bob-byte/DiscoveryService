@@ -20,11 +20,8 @@ namespace LUC.DiscoveryService.Extensions
         public static Task<TcpMessageEventArgs> ReceiveAsync<T>(this TcpListener receiver, Contact receivingContact = null)
             where T: TcpMessage, new()
         {
-
-
             return Task.Run(async () =>
             {
-                var localEndpoint = receiver.LocalEndpoint as IPEndPoint;
                 IPEndPoint iPEndPoint = null;
                 TcpClient client = null;
                 NetworkStream stream = null;

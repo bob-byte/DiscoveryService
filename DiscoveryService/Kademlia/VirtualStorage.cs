@@ -6,8 +6,6 @@ using System.Numerics;
 
 using Newtonsoft.Json;
 
-using Clifton.Kademlia.Common;
-
 namespace LUC.DiscoveryService.Kademlia
 {
     /// <summary>

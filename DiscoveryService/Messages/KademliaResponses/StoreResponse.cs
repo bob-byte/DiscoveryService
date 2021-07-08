@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
-    class PingResponse : Response 
+    class StoreResponse : Response
     {
-        public static void SendSameRandomId(DiscoveryServiceSocket sender, TimeSpan timeoutToSend, PingRequest request)
+        public static void SendSameRandomId(DiscoveryServiceSocket sender, TimeSpan timeoutToSend, StoreRequest request)
         {
             if (request?.RandomID != default)
             {

@@ -15,23 +15,24 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         public List<Contact> CloseContactsToRepsonsingPeer { get; set; }
         public String ValueInResponsingPeer { get; set; }
 
-        public static void SendOurCloseContactsAndMachineId(FindValueRequest request, IPAddress remoteHost, IEnumerable<Contact> closeContacts, String machineId, UInt32 tcpPort)
+        public static void SendOurCloseContactsAndMachineValue(FindValueRequest request, DiscoveryServiceSocket sender, 
+            IEnumerable<Contact> closeContacts, String machineValue)
         {
-            if ((request != null) && (remoteHost != null))
+            if ((request?.RandomID != default) && (sender != null))
             {
-                var response = new FindNodeResponse
+                var response = new FindValueResponse
                 {
                     RandomID = request.RandomID,
-                    Contacts = closeContacts.ToList(),
-                    TcpPort = tcpPort,
-                    MachineId = machineId
+                    CloseContactsToRepsonsingPeer = closeContacts.ToList(),
+                    ValueInResponsingPeer = machineValue
                 };
                 
-                response.Send(new IPEndPoint(remoteHost, (Int32)tcpPort)).ConfigureAwait(false);
+                sender.Send(response.ToByteArray(), )
+                //response.Send(new IPEndPoint(remoteHost, (Int32)tcpPort)).ConfigureAwait(false);
             }
             else
             {
-                throw new ArgumentNullException($"Any parameter(-s) in method {nameof(SendOurCloseContactsAndMachineId)} is(are) null");
+                throw new ArgumentNullException($"Any parameter(-s) in method {nameof(SendOurCloseContactsAndMachineValue)} is(are) null");
             }
         }
     }

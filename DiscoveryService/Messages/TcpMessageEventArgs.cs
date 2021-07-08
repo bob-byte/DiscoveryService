@@ -2,6 +2,7 @@
 using LUC.DiscoveryService.Messages;
 using System;
 using System.Net;
+using System.Numerics;
 
 namespace LUC.DiscoveryService.Messages
 {
@@ -17,8 +18,9 @@ namespace LUC.DiscoveryService.Messages
         /// <value>
         ///   The endpoint from the message was received.
         /// </value>
-        public Contact RemoteContact { get; set; }
+        public EndPoint RemoteContact { get; set; }
 
-        public Contact LocalContact { get; set; }
+        public BigInteger LocalContactId { get; set; }
+        //public Contact LocalContact { get; set; }
     }
 }

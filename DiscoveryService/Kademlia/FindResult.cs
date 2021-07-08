@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 
-using Clifton.Kademlia.Common;
-
 namespace LUC.DiscoveryService.Kademlia
 {
     public class FindResult

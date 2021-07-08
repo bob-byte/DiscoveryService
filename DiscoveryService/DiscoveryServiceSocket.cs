@@ -1,9 +1,13 @@
-﻿using LUC.Interfaces;
+﻿using LUC.DiscoveryService.Messages;
+using LUC.Interfaces;
 using System;
+using System.Collections;
 using System.ComponentModel.Composition;
 using System.Net;
 using System.Net.Sockets;
+using System.Numerics;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService
 {
@@ -19,7 +23,7 @@ namespace LUC.DiscoveryService
         private readonly AutoResetEvent sendDone = new AutoResetEvent(initialState: false);
 
         [Import(typeof(ILoggingService))]
-        public ILoggingService LoggingService { get; set; }
+        private ILoggingService LoggingService;
 
         /// <inheritdoc/>
         public DiscoveryServiceSocket(SocketType socketType, ProtocolType protocolType)
@@ -33,6 +37,51 @@ namespace LUC.DiscoveryService
             : base(addressFamily, socketType, protocolType)
         {
             ;//do nothing
+        }
+
+        public DiscoveryServiceSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, BigInteger contactId)
+            : base(addressFamily, socketType, protocolType)
+        {
+            ContactId = contactId;
+        }
+
+        public BigInteger ContactId { get; set; }
+
+        public async Task<TcpMessageEventArgs> ReceiveAsync<T>()
+            where T : TcpMessage, new()
+        {
+            IPEndPoint iPEndPoint = null;
+            Socket remoteSocket = null;
+            T message = new T();
+
+            try
+            {
+                remoteSocket = await this.AcceptAsync();
+
+                ArraySegment<Byte> receivedBytes = new ArraySegment<Byte>();
+                await this.ReceiveAsync(receivedBytes, SocketFlags.None);
+                message.Read(receivedBytes.Array);
+
+                iPEndPoint = remoteSocket.RemoteEndPoint as IPEndPoint;
+            }
+            finally
+            {
+                remoteSocket?.Close();
+            }
+
+            TcpMessageEventArgs receiveResult = new TcpMessageEventArgs();
+            if (iPEndPoint != null)
+            {
+                receiveResult.Message = message;
+                receiveResult.RemoteContact = iPEndPoint;
+                receiveResult.LocalContactId = ContactId;
+            }
+            else
+            {
+                throw new InvalidOperationException("Cannot convert remote end point to IPEndPoint");
+            }
+
+            return receiveResult;
         }
 
         public void Connect(EndPoint remoteEndPoint, TimeSpan timeout, out Boolean isConnected)

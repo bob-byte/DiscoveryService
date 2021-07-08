@@ -84,16 +84,19 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AbstractService.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\ConnectionPool.cs" />
     <Compile Include="Messages\DiscoveryServiceMessage.cs" />
     <Compile Include="Messages\KademliaRequests\FindNodeRequest.cs" />
     <Compile Include="Messages\KademliaRequests\FindValueRequest.cs" />
     <Compile Include="Messages\KademliaRequests\PingRequest.cs" />
     <Compile Include="Messages\KademliaRequests\Request.cs" />
+    <Compile Include="Messages\KademliaRequests\StoreRequest.cs" />
     <Compile Include="Messages\KademliaResponses\ErrorResponse.cs" />
     <Compile Include="Messages\KademliaResponses\FindNodeResponse.cs" />
     <Compile Include="Messages\KademliaResponses\FindValueResponse.cs" />
     <Compile Include="Messages\KademliaResponses\PingResponse.cs" />
     <Compile Include="Messages\KademliaResponses\Response.cs" />
+    <Compile Include="Messages\KademliaResponses\StoreResponse.cs" />
     <Compile Include="Messages\MessageEventArgs.cs" />
     <Compile Include="Messages\UdpMessageEventArgs.cs" />
     <Compile Include="Messages\UdpMessage.cs" />
@@ -105,7 +108,6 @@
     <Compile Include="Extensions\TcpListenerExtension.cs" />
     <Compile Include="CollectedInfoInLan.cs" />
     <Compile Include="Kademlia\Interfaces\IProtocol.cs" />
-    <Compile Include="Kademlia\Protocols\Tcp\ConnectionPool.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\CustomSocket.cs" />
     <Compile Include="Kademlia\Routers\BaseRouter.cs" />
     <Compile Include="Kademlia\BucketList.cs" />
