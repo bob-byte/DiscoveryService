@@ -13,7 +13,7 @@ namespace LUC.DiscoveryService.Messages
 
         public Byte[] Buffer { get; set; }
 
-        public Boolean IsReadMessage { get; }
+        public Boolean IsReadMessage => message != null;
 
         /// <summary>
         ///   The LightUpon.Cloud app message.
@@ -27,7 +27,7 @@ namespace LUC.DiscoveryService.Messages
         public T Message<T>(Boolean whetherReadMessage = true)
             where T: Message, new()
         {
-            if (whetherReadMessage && message == null)
+            if (whetherReadMessage && !IsReadMessage)
             {
                 message = new T();
                 message.Read(Buffer);

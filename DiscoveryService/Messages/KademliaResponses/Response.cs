@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
-    public abstract class Response : TcpMessage
+    public abstract class Response : Message
     {
         public BigInteger RandomID { get; set; }
 

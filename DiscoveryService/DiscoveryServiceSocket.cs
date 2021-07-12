@@ -51,7 +51,7 @@ namespace LUC.DiscoveryService
 
         public async Task<TcpMessageEventArgs> ReceiveAsync()
         {
-            IPEndPoint iPEndPoint = null;
+            IPEndPoint ipEndPoint = null;
             Socket remoteSocket = null;
             StateObjectForReceivingData stateObjectForReceiving;
 
@@ -62,15 +62,11 @@ namespace LUC.DiscoveryService
                 {
                     WorkSocket = remoteSocket
                 };
-                
-                //lock(Lock.LockInitPool)
-                //{
-                    remoteSocket.BeginReceive(stateObjectForReceiving.Buffer, offset: 0, stateObjectForReceiving.BufferSize, SocketFlags.None, new AsyncCallback(ReceiveCallback), stateObjectForReceiving);
-                    receiveDone.WaitOne();
-                    //message.Read(stateObjectForReceiving.ResultMessage.ToArray());
 
-                    iPEndPoint = remoteSocket.LocalEndPoint as IPEndPoint;
-                //}
+                remoteSocket.BeginReceive(stateObjectForReceiving.Buffer, offset: 0, stateObjectForReceiving.BufferSize, SocketFlags.None, new AsyncCallback(ReceiveCallback), stateObjectForReceiving);
+                receiveDone.WaitOne();
+
+                ipEndPoint = remoteSocket.RemoteEndPoint as IPEndPoint;
             }
             catch (ObjectDisposedException)
             {
@@ -94,10 +90,10 @@ namespace LUC.DiscoveryService
             }
 
             TcpMessageEventArgs receiveResult = new TcpMessageEventArgs();
-            if (iPEndPoint != null)
+            if (ipEndPoint != null)
             {
                 receiveResult.Buffer = stateObjectForReceiving.ResultMessage.ToArray();
-                receiveResult.RemoteContact = iPEndPoint;
+                receiveResult.RemoteContact = ipEndPoint;
                 receiveResult.LocalContactId = ContactId;
             }
             else

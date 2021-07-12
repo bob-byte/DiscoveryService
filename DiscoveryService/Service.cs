@@ -135,8 +135,6 @@ namespace LUC.DiscoveryService
         /// </value>
         public event EventHandler<Byte[]> MalformedMessage;
 
-        public List<Contact> OurContacts { get; } = new List<Contact>();
-
         /// <summary>
         ///   Create a new instance of the <see cref="Service"/> class.
         /// </summary>
@@ -156,6 +154,8 @@ namespace LUC.DiscoveryService
 
             IgnoreDuplicateMessages = true;
         }
+
+        public List<Contact> OurContacts { get; } = new List<Contact>();
 
         public Dht DistributedHashTable { get; private set; }
 
@@ -389,11 +389,11 @@ namespace LUC.DiscoveryService
                     return;
                 }
 
-                //if ((message.ProtocolVersion != ProtocolVersion) ||
-                //    (message.MachineId == MachineId))
-                //{
-                //    return;
-                //}
+                if ((message.ProtocolVersion != ProtocolVersion) ||
+                    (message.MachineId == MachineId))
+                {
+                    return;
+                }
 
                 // Dispatch the message.
                 try
@@ -419,84 +419,85 @@ namespace LUC.DiscoveryService
         /// </param>
         private void RaiseAnswerReceived(Object sender, TcpMessageEventArgs receiveResult)
         {
-            
-            Message message = receiveResult.Message<Message>();
-                lock (sender)
-                {
+
+            lock (sender)
+            {
+                Message message = receiveResult.Message<Message>();
+
                 switch (message.MessageOperation)
                 {
                     case MessageOperation.Acknowledge:
                         {
-                            AcknowledgeTcpMessage request = new AcknowledgeTcpMessage();
-                            request.Read(receiveResult.Buffer);
-                            receiveResult.SetMessage(request);
-                            AnswerReceived?.Invoke(sender, receiveResult);
+                            AcknowledgeTcpMessage receivedMessage = new AcknowledgeTcpMessage();
+                            receivedMessage.Read(receiveResult.Buffer);
 
+                            receiveResult.SetMessage(receivedMessage);
+                            AnswerReceived?.Invoke(sender, receiveResult);
 
                             //Protocol..PingReceived = () => requestManagement.SendSameRandomId(receiveResult.Message as PingRequest);
                             break;
                         }
-                    //case MessageOperation.Ping:
-                    //    {
-                    //        PingRequest request = new PingRequest();
-                    //        request.Read(receiveResult.Buffer);
-                    //        receiveResult.SetMessage(request);
-                    //        PingReceived?.Invoke(sender, receiveResult);
+                        //case MessageOperation.Ping:
+                        //    {
+                        //        PingRequest request = new PingRequest();
+                        //        request.Read(receiveResult.Buffer);
+                        //        receiveResult.SetMessage(request);
+                        //        PingReceived?.Invoke(sender, receiveResult);
 
 
-                    //        //Protocol..PingReceived = () => requestManagement.SendSameRandomId(receiveResult.Message as PingRequest);
-                    //        break;
-                    //    }
+                        //        //Protocol..PingReceived = () => requestManagement.SendSameRandomId(receiveResult.Message as PingRequest);
+                        //        break;
+                        //    }
 
-                    //case MessageOperation.PingResponse:
-                    //    PingResponseReceived?.Invoke(sender, new TcpMessageEventArgs
-                    //    {
-                    //        Message = message,
-                    //        RemoteContact = receiveResult.RemoteContact
-                    //    });
-                    //    break;
-                    //case MessageOperation.Store:
-                    //    StoreReceived?.Invoke(sender, new TcpMessageEventArgs
-                    //    {
-                    //        Message = message,
-                    //        RemoteContact = receiveResult.RemoteContact
-                    //    });
-                    //    break;
-                    //case MessageOperation.StoreResponse:
-                    //    StoreResponseReceived?.Invoke(sender, new TcpMessageEventArgs
-                    //    {
-                    //        Message = message,
-                    //        RemoteContact = receiveResult.RemoteContact
-                    //    });
-                    //    break;
-                    //case MessageOperation.FindNode:
-                    //    FindNodeReceived?.Invoke(sender, new TcpMessageEventArgs
-                    //    {
-                    //        Message = message,
-                    //        RemoteContact = receiveResult.RemoteContact
-                    //    });
-                    //    break;
-                    //case MessageOperation.FindNodeResponse:
-                    //    FindNodeResponseReceived?.Invoke(sender, new TcpMessageEventArgs
-                    //    {
-                    //        Message = message,
-                    //        RemoteContact = receiveResult.RemoteContact
-                    //    });
-                    //    break;
-                    //case MessageOperation.FindValue:
-                    //    FindValueReceived?.Invoke(sender, new TcpMessageEventArgs
-                    //    {
-                    //        Message = message,
-                    //        RemoteContact = receiveResult.RemoteContact
-                    //    });
-                    //    break;
-                    //case MessageOperation.FindValueResponse:
-                    //    FindValueResponseReceived?.Invoke(sender, new TcpMessageEventArgs
-                    //    {
-                    //        Message = message,
-                    //        RemoteContact = receiveResult.RemoteContact
-                    //    });
-                    //    break;
+                        //case MessageOperation.PingResponse:
+                        //    PingResponseReceived?.Invoke(sender, new TcpMessageEventArgs
+                        //    {
+                        //        Message = message,
+                        //        RemoteContact = receiveResult.RemoteContact
+                        //    });
+                        //    break;
+                        //case MessageOperation.Store:
+                        //    StoreReceived?.Invoke(sender, new TcpMessageEventArgs
+                        //    {
+                        //        Message = message,
+                        //        RemoteContact = receiveResult.RemoteContact
+                        //    });
+                        //    break;
+                        //case MessageOperation.StoreResponse:
+                        //    StoreResponseReceived?.Invoke(sender, new TcpMessageEventArgs
+                        //    {
+                        //        Message = message,
+                        //        RemoteContact = receiveResult.RemoteContact
+                        //    });
+                        //    break;
+                        //case MessageOperation.FindNode:
+                        //    FindNodeReceived?.Invoke(sender, new TcpMessageEventArgs
+                        //    {
+                        //        Message = message,
+                        //        RemoteContact = receiveResult.RemoteContact
+                        //    });
+                        //    break;
+                        //case MessageOperation.FindNodeResponse:
+                        //    FindNodeResponseReceived?.Invoke(sender, new TcpMessageEventArgs
+                        //    {
+                        //        Message = message,
+                        //        RemoteContact = receiveResult.RemoteContact
+                        //    });
+                        //    break;
+                        //case MessageOperation.FindValue:
+                        //    FindValueReceived?.Invoke(sender, new TcpMessageEventArgs
+                        //    {
+                        //        Message = message,
+                        //        RemoteContact = receiveResult.RemoteContact
+                        //    });
+                        //    break;
+                        //case MessageOperation.FindValueResponse:
+                        //    FindValueResponseReceived?.Invoke(sender, new TcpMessageEventArgs
+                        //    {
+                        //        Message = message,
+                        //        RemoteContact = receiveResult.RemoteContact
+                        //    });
+                        //    break;
                 }
 
                 //AnswerReceived?.Invoke(sender, new TcpMessageEventArgs
@@ -504,20 +505,20 @@ namespace LUC.DiscoveryService
                 //        Message = message,
                 //        RemoteContact = receiveResult.RemoteContact
                 //    });
-                }
+            }
         }
 
         public void Bootstrap(Object sender, TcpMessageEventArgs receiveResult)
         {
             lock(sender)
             {
-                var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>();
-                if ((receiveResult.RemoteContact is IPEndPoint ipEndPoint))
-                {
-                    //Protocol.Ping(DistributedHashTable.Contact, DistributedHashTable.Contact.IPAddress, DistributedHashTable.Contact.TcpPort);
+                //var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>();
+                //if ((receiveResult.RemoteContact is IPEndPoint ipEndPoint))
+                //{
+                //    //Protocol.Ping(DistributedHashTable.Contact, DistributedHashTable.Contact.IPAddress, DistributedHashTable.Contact.TcpPort);
 
-                    DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
-                }
+                //    DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
+                //}
             }
         }
 

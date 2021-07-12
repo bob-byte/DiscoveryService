@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Net;
-using System.Threading;
-using Common.Logging;
-using Common.Logging.Simple;
 using LUC.DiscoveryService.Messages;
 
 namespace LUC.DiscoveryService
@@ -40,12 +36,12 @@ namespace LUC.DiscoveryService
         /// <remarks>
         /// This property is populated when OnGoodTcpMessage event arrives.
         /// </remarks>
-        private static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
+        public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
 
         private static void OnBadMessage(Object sender, Byte[] packet)
         {
             lock (ttyLock)
-            {                
+            {
                 Console.WriteLine(">>> {0:O} <<<", DateTime.Now);
                 Console.WriteLine("Malformed message (base64)");
                 Console.WriteLine(Convert.ToBase64String(packet));
@@ -60,9 +56,9 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== TCP {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
-
                 var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
+                Console.WriteLine(tcpMessage.ToString());
+
                 if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint endPoint))
                 {
                     var realEndPoint = $"{endPoint.Address}:{tcpMessage.TcpPort}";
@@ -84,95 +80,14 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== UDP {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
+                var udpMessage = e.Message<UdpMessage>(whetherReadMessage: false);
+                Console.WriteLine(udpMessage.ToString());
                 // do nothing, this is for debugging only
-            }
-        }
-
-        private static void OnPingReceived(Object sender, TcpMessageEventArgs e)
-        {
-            lock (ttyLock)
-            {
-                Console.WriteLine("=== Kad PING received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
-            }
-        }
-
-        private static void OnPongReceived(Object sender, TcpMessageEventArgs e)
-        {
-            lock (ttyLock)
-            {
-                Console.WriteLine("=== Kad PONG received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
-            }
-        }
-
-        private static void OnStoreReceived(Object sender, TcpMessageEventArgs e)
-        {
-            lock (ttyLock)
-            {
-                Console.WriteLine("=== Kad STORE received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
-            }
-        }
-
-        private static void OnStoreResponseReceived(Object sender, TcpMessageEventArgs e)
-        {
-            lock (ttyLock)
-            {
-                Console.WriteLine("=== Kad STORE response received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
-            }
-        }
-
-        private static void OnFindNodeReceived(Object sender, TcpMessageEventArgs e)
-        {
-            lock (ttyLock)
-            {
-                Console.WriteLine("=== Kad FindNode received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
-            }
-        }
-
-        private static void OnFindNodeResponseReceived(Object sender, TcpMessageEventArgs e)
-        {
-            lock (ttyLock)
-            {
-                Console.WriteLine("=== Kad FindNode response received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
-            }
-        }
-
-        private static void OnFindValueReceived(Object sender, TcpMessageEventArgs e)
-        {
-            lock (ttyLock)
-            {
-                Console.WriteLine("=== Kad FindValue received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
-            }
-        }
-
-        private static void OnFindValueResponseReceived(Object sender, TcpMessageEventArgs e)
-        {
-            lock (ttyLock)
-            {
-                Console.WriteLine("=== Kad FindValue response received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Buffer.ToString());
             }
         }
 
         static void Main(string[] args)
         {
-            // set logger factory
-            var properties = new Common.Logging.Configuration.NameValueCollection
-            {
-                ["level"] = "TRACE",
-                ["showLogName"] = "true",
-                ["showDateTime"] = "true",
-                ["dateTimeFormat"] = "HH:mm:ss.fff"
-            };
-            LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-
             foreach (var a in Service.GetIPAddresses())
             {
                 Console.WriteLine($"IP address {a}");
@@ -189,16 +104,6 @@ namespace LUC.DiscoveryService
             serviceDiscovery.Service.QueryReceived += OnGoodUdpMessage;
             serviceDiscovery.Service.MalformedMessage += OnBadMessage;
 
-            // Kademilia event types
-            serviceDiscovery.Service.PingReceived += OnPingReceived;
-            serviceDiscovery.Service.PingResponseReceived += OnPongReceived;
-            serviceDiscovery.Service.StoreReceived += OnStoreReceived;
-            serviceDiscovery.Service.StoreResponseReceived += OnStoreResponseReceived;
-            serviceDiscovery.Service.FindNodeReceived += OnFindNodeReceived;
-            serviceDiscovery.Service.FindNodeResponseReceived += OnFindNodeResponseReceived;
-            serviceDiscovery.Service.FindValueReceived += OnFindValueReceived;
-            serviceDiscovery.Service.FindValueResponseReceived += OnFindValueResponseReceived;
-
             serviceDiscovery.Service.NetworkInterfaceDiscovered += (s, e) =>
             {
                 foreach (var nic in e.NetworkInterfaces)
@@ -211,10 +116,9 @@ namespace LUC.DiscoveryService
                 "in order to receive TCP answers, press any key each time.\n" +
                 "If you want to stop, press Esc");
 
-            ConsoleKey pressedKey = default;
             while (true)
             {
-                pressedKey = Console.ReadKey(intercept: true).Key;//does not display pressed key
+                var pressedKey = Console.ReadKey(intercept: true).Key;//does not display pressed key
                 if (pressedKey != ConsoleKey.Escape)
                 {
                     serviceDiscovery.QueryAllServices();
@@ -222,7 +126,7 @@ namespace LUC.DiscoveryService
                 else
                 {
                     serviceDiscovery.Stop();
-                    return;
+                    break;
                 }
             }
         }

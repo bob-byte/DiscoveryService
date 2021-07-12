@@ -200,7 +200,7 @@ namespace LUC.DiscoveryService
                 //get socket
                 SocketInConnetionPool client = new SocketInConnetionPool(ipEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 client.Connect(ipEndPoint, Constants.ConnectTimeout, out _);
-                connectionPool.ReturnAsync(IOBehavior.Synchronous, client).ConfigureAwait(continueOnCapturedContext: false);
+                //connectionPool.ReturnAsync(IOBehavior.Synchronous, client).ConfigureAwait(continueOnCapturedContext: false);
 
                 client.Send(bytesToSend, Constants.SendTimeout, out _);
                 //tcpMessage.Send(new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort), bytesToSend).ConfigureAwait(false);

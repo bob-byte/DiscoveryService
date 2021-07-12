@@ -97,7 +97,6 @@
     <Compile Include="Kademlia\Protocols\Tcp\TcpConnection.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\TcpException.cs" />
     <Compile Include="Messages\DiscoveryServiceMessage.cs" />
-    <Compile Include="Messages\TcpMessage.cs" />
     <Compile Include="Messages\KademliaRequests\FindNodeRequest.cs" />
     <Compile Include="Messages\KademliaRequests\FindValueRequest.cs" />
     <Compile Include="Messages\KademliaRequests\PingRequest.cs" />

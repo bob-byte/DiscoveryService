@@ -26,7 +26,7 @@ namespace LUC.DiscoveryService.Messages
         /// <summary>
         ///   The time interval used to determine if a message is recent.
         /// </summary>
-        public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(1);
+        public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
         ///   Try adding a message to the recent message list.
