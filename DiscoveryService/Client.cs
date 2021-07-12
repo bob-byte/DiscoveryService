@@ -31,15 +31,16 @@ namespace LUC.DiscoveryService
 
         private readonly List<UdpClient> udpReceivers;
         private readonly List<DiscoveryServiceSocket> tcpReceivers;
-        private Dht distributedHashTable;
 
         private readonly ConcurrentDictionary<IPAddress, UdpClient> sendersUdp = new ConcurrentDictionary<IPAddress, UdpClient>();
+
+        //public delegate void MessageHandler(Socket receiver, M messageArgs);
 
         /// <summary>
         /// It calls method OnUdpMessage, which run SendTcp,
         /// in order to connect back to the host, that sends muticast
         /// </summary>
-        public event EventHandler<UdpReceiveResult> UdpMessageReceived;
+        public event EventHandler<UdpMessageEventArgs> UdpMessageReceived;
 
         /// <summary>
         /// It calls method OnTcpMessage, which add new groups to ServiceDiscovery.GroupsSupported
@@ -96,6 +97,7 @@ namespace LUC.DiscoveryService
                 udpReceivers.Add(udpReceiver6);
             }
 
+            RunningIpAddresses = runningIpAddresses;
             foreach (var idOfAddress in runningIpAddresses.Keys)
             {
                 if (sendersUdp.Keys.Contains(runningIpAddresses[idOfAddress]))
@@ -184,7 +186,9 @@ namespace LUC.DiscoveryService
             }
         }
 
-        internal static List<IPAddress> RunningIpAddresses(IEnumerable<NetworkInterface> nics, Boolean useIpv4, Boolean useIpv6) =>
+        public Dictionary<BigInteger, IPAddress> RunningIpAddresses { get; }
+
+        internal static List<IPAddress> IpAddressesOfInterfaces(IEnumerable<NetworkInterface> nics, Boolean useIpv4, Boolean useIpv6) =>
             nics.SelectMany(GetNetworkInterfaceLocalAddresses)
                 .Where(a => (useIpv4 && a.AddressFamily == AddressFamily.InterNetwork)
                     || (useIpv6 && a.AddressFamily == AddressFamily.InterNetworkV6))
@@ -238,7 +242,17 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x => ListenUdp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
-                    _ = task.ContinueWith(x => UdpMessageReceived.Invoke(this, x.Result), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
+                    _ = task.ContinueWith(x =>
+                    {
+                        UdpMessageEventArgs eventArgs = new UdpMessageEventArgs
+                        {
+                            Buffer = x.Result.Buffer,
+                            LocalContactId = RunningIpAddresses.First(c => c.Value.AddressFamily == receiver.Client.AddressFamily).Key,
+                            RemoteEndPoint = x.Result.RemoteEndPoint
+                        };
+
+                        UdpMessageReceived.Invoke(this, eventArgs);
+                    }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);
                 }
@@ -268,7 +282,7 @@ namespace LUC.DiscoveryService
             {
                 try
                 {
-                    var task = receiver.ReceiveAsync<AcknowledgeTcpMessage>();
+                    var task = receiver.ReceiveAsync();
 
                     _ = task.ContinueWith(x => ListenTcp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 

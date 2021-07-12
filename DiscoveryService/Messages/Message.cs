@@ -11,8 +11,13 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages
 {
-    public abstract class Message : IWireSerialiser
+    public class Message : IWireSerialiser
     {
+        /// <summary>
+        ///   The kind of message.
+        /// </summary>
+        public virtual MessageOperation MessageOperation { get; set; }
+
         /// <summary>
         ///   Length in bytes of the object when serialised.
         /// </summary>
@@ -75,7 +80,18 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="IOException">
         /// 
         /// </exception>
-        public abstract IWireSerialiser Read(CodingData.WireReader reader);
+        public virtual IWireSerialiser Read(CodingData.WireReader reader)
+        {
+            if(reader != null)
+            {
+                MessageOperation = (MessageOperation)reader.ReadByte();
+                return this;
+            }
+            else
+            {
+                throw new ArgumentNullException("ReaderNullException");
+            }
+        }
 
         /// <summary>
         ///   Writes the Message object to a byte array.
@@ -120,6 +136,16 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
-        public abstract void Write(WireWriter writer);
+        public virtual void Write(WireWriter writer)
+        {
+            if(writer != null)
+            {
+                writer.WriteByte((Byte)MessageOperation);
+            }
+            else
+            {
+                throw new ArgumentNullException("WriterNullException");
+            }
+        }
     }
 }

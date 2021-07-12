@@ -60,17 +60,19 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== TCP {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
 
-                if ((e.Message is AcknowledgeTcpMessage message) && (e.RemoteContact is IPEndPoint endPoint))
+                var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
+                if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint endPoint))
                 {
-                    var network = $"{endPoint.Address}:{message.TcpPort}";
-                    foreach (var group in message.GroupIds)
+                    var realEndPoint = $"{endPoint.Address}:{tcpMessage.TcpPort}";
+
+                    foreach (var group in tcpMessage.GroupIds)
                     {
-                        if (!GroupsDiscovered.TryAdd(network, group))
+                        if (!GroupsDiscovered.TryAdd(realEndPoint, group))
                         {
-                            GroupsDiscovered.TryRemove(network, out _);
-                            GroupsDiscovered.TryAdd(network, group);
+                            GroupsDiscovered.TryRemove(realEndPoint, out _);
+                            GroupsDiscovered.TryAdd(realEndPoint, group);
                         }
                     }
                 }
@@ -82,7 +84,7 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== UDP {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
                 // do nothing, this is for debugging only
             }
         }
@@ -92,7 +94,7 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== Kad PING received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
             }
         }
 
@@ -101,7 +103,7 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== Kad PONG received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
             }
         }
 
@@ -110,7 +112,7 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== Kad STORE received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
             }
         }
 
@@ -119,7 +121,7 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== Kad STORE response received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
             }
         }
 
@@ -128,7 +130,7 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== Kad FindNode received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
             }
         }
 
@@ -137,7 +139,7 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== Kad FindNode response received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
             }
         }
 
@@ -146,7 +148,7 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== Kad FindValue received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
             }
         }
 
@@ -155,7 +157,7 @@ namespace LUC.DiscoveryService
             lock (ttyLock)
             {
                 Console.WriteLine("=== Kad FindValue response received {0:O} ===", DateTime.Now);
-                Console.WriteLine(e.Message.ToString());
+                Console.WriteLine(e.Buffer.ToString());
             }
         }
 

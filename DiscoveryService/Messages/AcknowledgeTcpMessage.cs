@@ -58,7 +58,7 @@ namespace LUC.DiscoveryService.Messages
         /// <value>
         ///   Defaults to <see cref="MessageOperation.Acknowledge"/>.
         /// </value>
-        public MessageOperation MessageOperation { get; set; } = MessageOperation.Acknowledge;
+        public override MessageOperation MessageOperation { get; set; } = MessageOperation.Acknowledge;
 
         public BigInteger IdOfSendingContact { get; set; }
 

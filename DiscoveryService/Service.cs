@@ -239,7 +239,7 @@ namespace LUC.DiscoveryService
         }
 
         public List<IPAddress> RunningIpAddresses() =>
-            Client.RunningIpAddresses(networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics, UseIpv4, UseIpv6);
+            Client.IpAddressesOfInterfaces(networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics, UseIpv4, UseIpv6);
 
         /// <summary>
         ///   Get the link local IP addresses of the local machine.
@@ -361,7 +361,7 @@ namespace LUC.DiscoveryService
         ///   event is raised.
         ///   </para>
         /// </remarks>
-        private void OnUdpMessage(object sender, UdpReceiveResult result)
+        private void OnUdpMessage(object sender, UdpMessageEventArgs result)
         {
             lock(sender)
             {
@@ -398,7 +398,8 @@ namespace LUC.DiscoveryService
                 // Dispatch the message.
                 try
                 {
-                    QueryReceived?.Invoke(this, new UdpMessageEventArgs { Message = message, RemoteEndPoint = result.RemoteEndPoint });
+                    result.SetMessage(message);
+                    QueryReceived?.Invoke(sender, result);
                 }
                 catch (Exception e)
                 {
@@ -418,90 +419,100 @@ namespace LUC.DiscoveryService
         /// </param>
         private void RaiseAnswerReceived(Object sender, TcpMessageEventArgs receiveResult)
         {
-            if(receiveResult.Message is AcknowledgeTcpMessage message)
-            {
+            
+            Message message = receiveResult.Message<Message>();
                 lock (sender)
                 {
-                    switch (message.MessageOperation)
-                    {
-                        case MessageOperation.Ping:
-                            {
-                                PingReceived?.Invoke(sender, new TcpMessageEventArgs
-                                {
-                                    Message = message,
-                                    RemoteContact = receiveResult.RemoteContact
-                                });
+                switch (message.MessageOperation)
+                {
+                    case MessageOperation.Acknowledge:
+                        {
+                            AcknowledgeTcpMessage request = new AcknowledgeTcpMessage();
+                            request.Read(receiveResult.Buffer);
+                            receiveResult.SetMessage(request);
+                            AnswerReceived?.Invoke(sender, receiveResult);
 
 
-                                //Protocol..PingReceived = () => requestManagement.SendSameRandomId(receiveResult.Message as PingRequest);
-                                break;
-                            }
+                            //Protocol..PingReceived = () => requestManagement.SendSameRandomId(receiveResult.Message as PingRequest);
+                            break;
+                        }
+                    //case MessageOperation.Ping:
+                    //    {
+                    //        PingRequest request = new PingRequest();
+                    //        request.Read(receiveResult.Buffer);
+                    //        receiveResult.SetMessage(request);
+                    //        PingReceived?.Invoke(sender, receiveResult);
 
-                        case MessageOperation.PingResponse:
-                            PingResponseReceived?.Invoke(sender, new TcpMessageEventArgs
-                            {
-                                Message = message,
-                                RemoteContact = receiveResult.RemoteContact
-                            });
-                            break;
-                        case MessageOperation.Store:
-                            StoreReceived?.Invoke(sender, new TcpMessageEventArgs
-                            {
-                                Message = message,
-                                RemoteContact = receiveResult.RemoteContact
-                            });
-                            break;
-                        case MessageOperation.StoreResponse:
-                            StoreResponseReceived?.Invoke(sender, new TcpMessageEventArgs
-                            {
-                                Message = message,
-                                RemoteContact = receiveResult.RemoteContact
-                            });
-                            break;
-                        case MessageOperation.FindNode:
-                            FindNodeReceived?.Invoke(sender, new TcpMessageEventArgs
-                            {
-                                Message = message,
-                                RemoteContact = receiveResult.RemoteContact
-                            });
-                            break;
-                        case MessageOperation.FindNodeResponse:
-                            FindNodeResponseReceived?.Invoke(sender, new TcpMessageEventArgs
-                            {
-                                Message = message,
-                                RemoteContact = receiveResult.RemoteContact
-                            });
-                            break;
-                        case MessageOperation.FindValue:
-                            FindValueReceived?.Invoke(sender, new TcpMessageEventArgs
-                            {
-                                Message = message,
-                                RemoteContact = receiveResult.RemoteContact
-                            });
-                            break;
-                        case MessageOperation.FindValueResponse:
-                            FindValueResponseReceived?.Invoke(sender, new TcpMessageEventArgs
-                            {
-                                Message = message,
-                                RemoteContact = receiveResult.RemoteContact
-                            });
-                            break;
-                    }
 
-                    AnswerReceived?.Invoke(sender, new TcpMessageEventArgs
-                    {
-                        Message = message,
-                        RemoteContact = receiveResult.RemoteContact
-                    });
+                    //        //Protocol..PingReceived = () => requestManagement.SendSameRandomId(receiveResult.Message as PingRequest);
+                    //        break;
+                    //    }
+
+                    //case MessageOperation.PingResponse:
+                    //    PingResponseReceived?.Invoke(sender, new TcpMessageEventArgs
+                    //    {
+                    //        Message = message,
+                    //        RemoteContact = receiveResult.RemoteContact
+                    //    });
+                    //    break;
+                    //case MessageOperation.Store:
+                    //    StoreReceived?.Invoke(sender, new TcpMessageEventArgs
+                    //    {
+                    //        Message = message,
+                    //        RemoteContact = receiveResult.RemoteContact
+                    //    });
+                    //    break;
+                    //case MessageOperation.StoreResponse:
+                    //    StoreResponseReceived?.Invoke(sender, new TcpMessageEventArgs
+                    //    {
+                    //        Message = message,
+                    //        RemoteContact = receiveResult.RemoteContact
+                    //    });
+                    //    break;
+                    //case MessageOperation.FindNode:
+                    //    FindNodeReceived?.Invoke(sender, new TcpMessageEventArgs
+                    //    {
+                    //        Message = message,
+                    //        RemoteContact = receiveResult.RemoteContact
+                    //    });
+                    //    break;
+                    //case MessageOperation.FindNodeResponse:
+                    //    FindNodeResponseReceived?.Invoke(sender, new TcpMessageEventArgs
+                    //    {
+                    //        Message = message,
+                    //        RemoteContact = receiveResult.RemoteContact
+                    //    });
+                    //    break;
+                    //case MessageOperation.FindValue:
+                    //    FindValueReceived?.Invoke(sender, new TcpMessageEventArgs
+                    //    {
+                    //        Message = message,
+                    //        RemoteContact = receiveResult.RemoteContact
+                    //    });
+                    //    break;
+                    //case MessageOperation.FindValueResponse:
+                    //    FindValueResponseReceived?.Invoke(sender, new TcpMessageEventArgs
+                    //    {
+                    //        Message = message,
+                    //        RemoteContact = receiveResult.RemoteContact
+                    //    });
+                    //    break;
                 }
-            }
+
+                //AnswerReceived?.Invoke(sender, new TcpMessageEventArgs
+                //    {
+                //        Message = message,
+                //        RemoteContact = receiveResult.RemoteContact
+                //    });
+                }
         }
 
         public void Bootstrap(Object sender, TcpMessageEventArgs receiveResult)
         {
             lock(sender)
             {
-                if ((receiveResult.Message is AcknowledgeTcpMessage tcpMessage) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
+                var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>();
+                if ((receiveResult.RemoteContact is IPEndPoint ipEndPoint))
                 {
                     //Protocol.Ping(DistributedHashTable.Contact, DistributedHashTable.Contact.IPAddress, DistributedHashTable.Contact.TcpPort);
 

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
-    abstract class Request : KademliaMessage
+    abstract class Request : TcpMessage
     {
         public BigInteger RandomID { get; set; }
         public BigInteger Sender { get; set; }

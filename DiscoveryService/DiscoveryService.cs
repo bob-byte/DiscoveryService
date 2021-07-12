@@ -151,7 +151,8 @@ namespace LUC.DiscoveryService
 
         public void AddNewContact(Object sender, TcpMessageEventArgs e)
         {
-            if ((e?.Message is AcknowledgeTcpMessage tcpMessage) && (e.RemoteContact is IPEndPoint iPEndPoint))
+            var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
+            if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint iPEndPoint))
             {
                 KnownContacts.Add(new Contact(new TcpProtocol(log), new ID(tcpMessage.IdOfSendingContact), iPEndPoint.Address, tcpMessage.TcpPort));
             }
@@ -174,10 +175,12 @@ namespace LUC.DiscoveryService
         /// </param>
         public void SendTcpMessage(Object sender, UdpMessageEventArgs e)
         {
-            if((e?.Message is UdpMessage udpMessage) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
+            var udpMessage = e.Message<UdpMessage>(whetherReadMessage: false);
+
+            if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
             {
                 Random random = new Random();
-                var sendingContact = Service.OurContacts.Single(c => c.EndPoint.Address.Equals(ipEndPoint.Address));
+                var sendingContact = Service.OurContacts.Single(c => c.ID.Value == e.LocalContactId);
 
                 var tcpMessage = new AcknowledgeTcpMessage(
                     messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
