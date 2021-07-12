@@ -36,7 +36,7 @@ namespace LUC.DiscoveryService
         ///   Recently received messages.
         /// </summary>
         private readonly RecentMessages receivedMessages = new RecentMessages();
-        private const Int32 MaxDatagramSize = DiscoveryServiceMessage.MaxLength;
+        private const Int32 MaxDatagramSize = UdpMessage.MaxLength;
 
         private Client client;
 
@@ -71,7 +71,7 @@ namespace LUC.DiscoveryService
         ///   This is an answer to UDP multicast.
         /// </summary>
         /// <value>
-        ///   Contains the answer <see cref="TcpMessage"/>.
+        ///   Contains the answer <see cref="AcknowledgeTcpMessage"/>.
         /// </value>
         /// <remarks>
         ///   Any exception throw by the event handler is simply logged and
@@ -239,7 +239,7 @@ namespace LUC.DiscoveryService
         }
 
         public List<IPAddress> RunningIpAddresses() =>
-            client.RunningIpAddresses(networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics);
+            Client.RunningIpAddresses(networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics, UseIpv4, UseIpv6);
 
         /// <summary>
         ///   Get the link local IP addresses of the local machine.
@@ -298,13 +298,14 @@ namespace LUC.DiscoveryService
                 // Only create client if something has change.
                 if (newNics.Any() || oldNics.Any())
                 {
+                    OurContacts.Clear();
                     InitKademliaProtocol(Protocol);
 
                     client?.Dispose();
                     InitClient();
                 }
 
-                if(newNics.Any())
+                if (newNics.Any())
                 {
                     NetworkInterfaceDiscovered?.Invoke(this, new NetworkInterfaceEventArgs
                     {
@@ -331,7 +332,7 @@ namespace LUC.DiscoveryService
             var runningIpAddresses = new Dictionary<BigInteger, IPAddress>();
             foreach (var contact in OurContacts)
             {
-                runningIpAddresses.Add(contact.ID.Value, contact.IPAddress);
+                runningIpAddresses.Add(contact.ID.Value, contact.EndPoint.Address);
             }
 
             client = new Client(UseIpv4, UseIpv6, runningIpAddresses);
@@ -360,47 +361,50 @@ namespace LUC.DiscoveryService
         ///   event is raised.
         ///   </para>
         /// </remarks>
-        private void OnUdpMessage(object sender, UdpMessageEventArgs result)
+        private void OnUdpMessage(object sender, UdpReceiveResult result)
         {
-            if (result.Buffer.Length > MaxDatagramSize)
+            lock(sender)
             {
-                return;
-            }
+                if (result.Buffer.Length > MaxDatagramSize)
+                {
+                    return;
+                }
 
-            //If recently received, then ignore.
-            //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-            //{
-            //    return;
-            //}
+                //If recently received, then ignore.
+                //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+                //{
+                //    return;
+                //}
 
-            UdpMessage message = new UdpMessage();
-            try
-            {
-                message.Read(result.Buffer);
-            }
-            catch (ArgumentNullException e)
-            {
-                log.LogError(e, "Received malformed message");
-                MalformedMessage.Invoke(sender, result.Buffer);
+                UdpMessage message = new UdpMessage();
+                try
+                {
+                    message.Read(result.Buffer);
+                }
+                catch (ArgumentNullException e)
+                {
+                    log.LogError(e, "Received malformed message");
+                    MalformedMessage.Invoke(sender, result.Buffer);
 
-                return;
-            }
+                    return;
+                }
 
-            //if ((message.ProtocolVersion != ProtocolVersion) ||
-            //    (message.MachineId == MachineId))
-            //{
-            //    return;
-            //}
+                //if ((message.ProtocolVersion != ProtocolVersion) ||
+                //    (message.MachineId == MachineId))
+                //{
+                //    return;
+                //}
 
-            // Dispatch the message.
-            try
-            {
-                QueryReceived?.Invoke(this, new UdpMessageEventArgs { Message = message, RemoteEndPoint = result.RemoteEndPoint, IdOfReceivingContact =  });
-            }
-            catch (Exception e)
-            {
-                log.LogError(e, "Receive handler failed");
-                // eat the exception
+                // Dispatch the message.
+                try
+                {
+                    QueryReceived?.Invoke(this, new UdpMessageEventArgs { Message = message, RemoteEndPoint = result.RemoteEndPoint });
+                }
+                catch (Exception e)
+                {
+                    log.LogError(e, "Receive handler failed");
+                    // eat the exception
+                }
             }
         }
 
@@ -414,7 +418,7 @@ namespace LUC.DiscoveryService
         /// </param>
         private void RaiseAnswerReceived(Object sender, TcpMessageEventArgs receiveResult)
         {
-            if(receiveResult.Message is TcpMessage message)
+            if(receiveResult.Message is AcknowledgeTcpMessage message)
             {
                 lock (sender)
                 {
@@ -497,7 +501,7 @@ namespace LUC.DiscoveryService
         {
             lock(sender)
             {
-                if ((receiveResult.Message is TcpMessage tcpMessage) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
+                if ((receiveResult.Message is AcknowledgeTcpMessage tcpMessage) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
                 {
                     //Protocol.Ping(DistributedHashTable.Contact, DistributedHashTable.Contact.IPAddress, DistributedHashTable.Contact.TcpPort);
 

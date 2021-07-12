@@ -31,7 +31,7 @@ namespace LUC.DiscoveryService
             IEnumerable<IPAddress> addresses = null)
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
-            MachineId = ID.RandomID;
+            MachineId = deviceIdBuilder.MachineId();
 
             if(groupsSupported != null)
             {

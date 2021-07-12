@@ -84,8 +84,20 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AbstractService.cs" />
+    <Compile Include="DiscoveryServiceSocket.cs" />
+    <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
+    <Compile Include="Extensions\StringExtension.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\BackgroundConnectionResetHelper.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\ConnectionPool.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\ConnectionSettings.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\IOBehavior.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\SocketHealth.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\SocketInConnetionPool.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\SocketState.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\TcpConnection.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\TcpException.cs" />
     <Compile Include="Messages\DiscoveryServiceMessage.cs" />
+    <Compile Include="Messages\KademliaMessage.cs" />
     <Compile Include="Messages\KademliaRequests\FindNodeRequest.cs" />
     <Compile Include="Messages\KademliaRequests\FindValueRequest.cs" />
     <Compile Include="Messages\KademliaRequests\PingRequest.cs" />
@@ -100,15 +112,12 @@
     <Compile Include="Messages\MessageEventArgs.cs" />
     <Compile Include="Messages\UdpMessageEventArgs.cs" />
     <Compile Include="Messages\UdpMessage.cs" />
-    <Compile Include="Messages\TcpMessage.cs" />
-    <Compile Include="DiscoveryServiceSocket.cs" />
+    <Compile Include="Messages\AcknowledgeTcpMessage.cs" />
     <Compile Include="CodingData\IWireSerialiser.cs" />
     <Compile Include="CodingData\WireReader.cs" />
     <Compile Include="CodingData\WireWriter.cs" />
-    <Compile Include="Extensions\TcpListenerExtension.cs" />
     <Compile Include="CollectedInfoInLan.cs" />
     <Compile Include="Kademlia\Interfaces\IProtocol.cs" />
-    <Compile Include="Kademlia\Protocols\Tcp\CustomSocket.cs" />
     <Compile Include="Kademlia\Routers\BaseRouter.cs" />
     <Compile Include="Kademlia\BucketList.cs" />
     <Compile Include="Kademlia\CommonRequest.cs" />
@@ -125,7 +134,6 @@
     <Compile Include="Kademlia\Node.cs" />
     <Compile Include="Kademlia\Routers\ParallelRouter.cs" />
     <Compile Include="Kademlia\Protocols\Protocol.cs" />
-    <Compile Include="Messages\AcknowledgeTcpMessage.cs" />
     <Compile Include="Kademlia\Routers\Router.cs" />
     <Compile Include="Kademlia\RpcError.cs" />
     <Compile Include="Kademlia\StoreValue.cs" />

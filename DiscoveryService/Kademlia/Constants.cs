@@ -1,4 +1,6 @@
-﻿namespace LUC.DiscoveryService.Kademlia
+﻿using System;
+
+namespace LUC.DiscoveryService.Kademlia
 {
 	public static class Constants
 	{
@@ -28,5 +30,9 @@
         public const int EXPIRATION_TIME_SECONDS = 24 * 60 * 60;                // every 24 hours in seconds.
         public const int EVICTION_LIMIT = 5;
 #endif
+
+        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(1);
+        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(1);
+        public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
     }
 }

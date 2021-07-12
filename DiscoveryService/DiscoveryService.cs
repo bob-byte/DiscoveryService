@@ -21,8 +21,9 @@ namespace LUC.DiscoveryService
         private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
 
         private static DiscoveryService instance;
+        private readonly ConnectionPool connectionPool;
 
-        private IProtocol protocol = new TcpProtocol();
+        private IProtocol protocol;
 
         /// <summary>
         /// To avoid sending recent duplicate messages
@@ -57,6 +58,8 @@ namespace LUC.DiscoveryService
                 UseIpv6 = profile.UseIpv6;
                 ProtocolVersion = profile.ProtocolVersion;
                 MachineId = profile.MachineId;
+                protocol = new TcpProtocol(log);
+                connectionPool = ConnectionPool.Instance(log);
 
                 InitService();
             }
@@ -120,37 +123,37 @@ namespace LUC.DiscoveryService
             Service.QueryReceived += SendTcpMessage;
             Service.AnswerReceived += AddNewContact;
             //Service.AnswerReceived += Service.Bootstrap;
-            Service.PingReceived += (s, e) =>
-            {
-                PingResponse.SendSameRandomId( , SendTimeout, e.Message);
-            };
+            //Service.PingReceived += (s, e) =>
+            //{
+            //    PingResponse.SendSameRandomId( , SendTimeout, e.Message);
+            //};
 
-            Service.StoreReceived += (s, e) =>
-            {
-                StoreResponse.SendSameRandomId( , SendTimeout, e.Message);
-            };
+            //Service.StoreReceived += (s, e) =>
+            //{
+            //    StoreResponse.SendSameRandomId( , SendTimeout, e.Message);
+            //};
 
-            Service.FindNodeReceived += (s, e) =>
-            {
-                FindNodeResponse.SendOurCloseContactsAndPort( , , RunningTcpPort, SendTimeout, e.Message);
-            };
+            //Service.FindNodeReceived += (s, e) =>
+            //{
+            //    FindNodeResponse.SendOurCloseContactsAndPort( , , RunningTcpPort, SendTimeout, e.Message);
+            //};
 
-            Service.FindValueReceived += (sender, messageArgs) =>
-            {
-                FindValueResponse.SendOurCloseContactsAndMachineValue(
-                messageArgs.Message as FindValueRequest,
-                ,
-                Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(messageArgs.LocalContactId), new ID(messageArgs.LocalContactId)),
-                MachineId,
-                RunningTcpPort);
-            };
+            //Service.FindValueReceived += (sender, messageArgs) =>
+            //{
+            //    FindValueResponse.SendOurCloseContactsAndMachineValue(
+            //    messageArgs.Message as FindValueRequest,
+            //    ,
+            //    Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(messageArgs.LocalContactId), new ID(messageArgs.LocalContactId)),
+            //    MachineId,
+            //    RunningTcpPort);
+            //};
         }
 
         public void AddNewContact(Object sender, TcpMessageEventArgs e)
         {
-            if ((e?.Message is TcpMessage tcpMessage) && (e.RemoteContact is IPEndPoint iPEndPoint))
+            if ((e?.Message is AcknowledgeTcpMessage tcpMessage) && (e.RemoteContact is IPEndPoint iPEndPoint))
             {
-                KnownContacts.Add(new Contact(new TcpProtocol(), new ID(tcpMessage.IdOfSendingContact), iPEndPoint.Address, tcpMessage.TcpPort));
+                KnownContacts.Add(new Contact(new TcpProtocol(log), new ID(tcpMessage.IdOfSendingContact), iPEndPoint.Address, tcpMessage.TcpPort));
             }
             else
             {
@@ -174,9 +177,9 @@ namespace LUC.DiscoveryService
             if((e?.Message is UdpMessage udpMessage) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
             {
                 Random random = new Random();
-                var sendingContact = Service.OurContacts.Single(c => c.IPAddress.Equals(ipEndPoint.Address));
+                var sendingContact = Service.OurContacts.Single(c => c.EndPoint.Address.Equals(ipEndPoint.Address));
 
-                var tcpMessage = new TcpMessage(
+                var tcpMessage = new AcknowledgeTcpMessage(
                     messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
                     MachineId,
                     sendingContact.ID.Value,
@@ -191,7 +194,13 @@ namespace LUC.DiscoveryService
                     return;
                 }
 
-                tcpMessage.Send(new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort), bytesToSend).ConfigureAwait(false);
+                //get socket
+                SocketInConnetionPool client = new SocketInConnetionPool(ipEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                client.Connect(ipEndPoint, Constants.ConnectTimeout, out _);
+                connectionPool.ReturnAsync(IOBehavior.Synchronous, client).ConfigureAwait(continueOnCapturedContext: false);
+
+                client.Send(bytesToSend, Constants.SendTimeout, out _);
+                //tcpMessage.Send(new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort), bytesToSend).ConfigureAwait(false);
             }
             else
             {

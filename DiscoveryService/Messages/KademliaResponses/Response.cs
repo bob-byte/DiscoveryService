@@ -8,36 +8,36 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
-    public abstract class Response : TcpMessage
+    public abstract class Response : KademliaMessage
     {
         public BigInteger RandomID { get; set; }
 
-        ///// <inheritdoc/>
-        //public override IWireSerialiser Read(WireReader reader)
-        //{
-        //    if (reader != null)
-        //    {
-        //        RandomID = BigInteger.Parse(reader.ReadString());
+        /// <inheritdoc/>
+        public override IWireSerialiser Read(WireReader reader)
+        {
+            if (reader != null)
+            {
+                RandomID = BigInteger.Parse(reader.ReadString());
 
-        //        return this;
-        //    }
-        //    else
-        //    {
-        //        throw new ArgumentNullException("ReaderNullException");
-        //    }
-        //}
+                return this;
+            }
+            else
+            {
+                throw new ArgumentNullException("ReaderNullException");
+            }
+        }
 
-        ///// <inheritdoc/>
-        //public override void Write(WireWriter writer)
-        //{
-        //    if (writer != null)
-        //    {
-        //        writer.Write(RandomID.ToString());
-        //    }
-        //    else
-        //    {
-        //        throw new ArgumentNullException("WriterNullException");
-        //    }
-        //}
+        /// <inheritdoc/>
+        public override void Write(WireWriter writer)
+        {
+            if (writer != null)
+            {
+                writer.Write(RandomID.ToString());
+            }
+            else
+            {
+                throw new ArgumentNullException("WriterNullException");
+            }
+        }
     }
 }

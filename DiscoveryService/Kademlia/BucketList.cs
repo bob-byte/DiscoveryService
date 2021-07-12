@@ -90,7 +90,7 @@ namespace LUC.DiscoveryService.Kademlia
                     else
                     {
                         Contact lastSeenContact = kbucket.Contacts.OrderBy(c => c.LastSeen).First();
-                        RpcError error = lastSeenContact.Protocol.Ping(ourContact, lastSeenContact.IPAddress, lastSeenContact.TcpPort);
+                        RpcError error = lastSeenContact.Protocol.Ping(ourContact, lastSeenContact.EndPoint.Address, lastSeenContact.EndPoint.Port);
 
                         if (error.HasError)
                         {

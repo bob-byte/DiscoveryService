@@ -1,4 +1,5 @@
-﻿using LUC.DiscoveryService.Messages.KademliaRequests;
+﻿using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Messages.KademliaRequests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     class PingResponse : Response 
     {
-        public static void SendSameRandomId(DiscoveryServiceSocket sender, TimeSpan timeoutToSend, PingRequest request)
+        public static void SendSameRandomId(SocketInConnetionPool sender, TimeSpan timeoutToSend, PingRequest request)
         {
             if (request?.RandomID != default)
             {

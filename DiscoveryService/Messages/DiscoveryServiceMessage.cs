@@ -8,14 +8,6 @@ namespace LUC.DiscoveryService.Messages
     /// </summary>
     public abstract class DiscoveryServiceMessage : Message
     {
-        /// <summary>
-        /// Maximum bytes of a message.
-        /// </summary>
-        /// <remarks>
-        /// In reality the max length is dictated by the network MTU.
-        /// </remarks>
-        public const Int32 MaxLength = 10240;
-
         public DiscoveryServiceMessage()
         {
             ;//do nothing
@@ -35,8 +27,13 @@ namespace LUC.DiscoveryService.Messages
             MessageId = messageId;
             MachineId = machineId;
             ProtocolVersion = protocolVersion;
-
         }
+
+        /// <summary>
+        /// TCP port which is being run in machine with machineId.
+        /// TCP port for inter-service communications.
+        /// </summary>
+        public UInt32 TcpPort { get; set; }
 
         /// <summary>
         ///   Unique message identifier. It is used to detect duplicate messages.

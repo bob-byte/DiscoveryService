@@ -6,8 +6,6 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 
-using Clifton.Kademlia.Common;
-
 namespace LUC.DiscoveryService.Kademlia.Routers
 {
     public class Router : BaseRouter

@@ -1,5 +1,6 @@
 ﻿using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using System;
 using System.Collections.Generic;
@@ -15,7 +16,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
     {
         public List<Contact> Contacts { get; set; }
 
-        public static void SendOurCloseContactsAndPort(DiscoveryServiceSocket sender, IEnumerable<Contact> closeContactsToLocalContactId, UInt32 tcpPortOfLocalContact, TimeSpan timeoutToSend, FindNodeRequest message)
+        public static void SendOurCloseContactsAndPort(SocketInConnetionPool sender, IEnumerable<Contact> closeContactsToLocalContactId, UInt32 tcpPortOfLocalContact, TimeSpan timeoutToSend, FindNodeRequest message)
         {
             if (message?.RandomID != default)
             {
@@ -23,7 +24,6 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 {
                     RandomID = message.RandomID,
                     Contacts = closeContactsToLocalContactId.ToList(),
-                    TcpPort = tcpPortOfLocalContact
                 };
 
                 sender.Send(response.ToByteArray(), timeoutToSend, out _);

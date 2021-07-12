@@ -47,8 +47,10 @@ namespace LUC.DiscoveryService
 
         public BigInteger ContactId { get; set; }
 
+        public Boolean IsDisposed { get; private set; } = false;
+
         public async Task<TcpMessageEventArgs> ReceiveAsync<T>()
-            where T : TcpMessage, new()
+            where T : Message, new()
         {
             IPEndPoint iPEndPoint = null;
             Socket remoteSocket = null;
@@ -57,12 +59,35 @@ namespace LUC.DiscoveryService
             try
             {
                 remoteSocket = await this.AcceptAsync();
+                StateObjectForReceivingData stateObjectForReceiving = new StateObjectForReceivingData
+                {
+                    WorkSocket = remoteSocket
+                };
+                
+                //lock(Lock.LockInitPool)
+                //{
+                    remoteSocket.BeginReceive(stateObjectForReceiving.Buffer, offset: 0, stateObjectForReceiving.BufferSize, SocketFlags.None, new AsyncCallback(ReceiveCallback), stateObjectForReceiving);
+                    receiveDone.WaitOne();
+                    message.Read(stateObjectForReceiving.ResultMessage.ToArray());
 
-                ArraySegment<Byte> receivedBytes = new ArraySegment<Byte>();
-                await this.ReceiveAsync(receivedBytes, SocketFlags.None);
-                message.Read(receivedBytes.Array);
-
-                iPEndPoint = remoteSocket.RemoteEndPoint as IPEndPoint;
+                    iPEndPoint = remoteSocket.LocalEndPoint as IPEndPoint;
+                //}
+            }
+            catch (ObjectDisposedException)
+            {
+                throw;
+                //LoggingService.LogFatal(ex.Message);
+            }
+            catch(SocketException)/* when (ex.SocketErrorCode == SocketError.)*/
+            {
+                if(IsDisposed)
+                {
+                    throw new ObjectDisposedException("Socket is disposed");
+                }
+                else
+                {
+                    throw;
+                }
             }
             finally
             {
@@ -86,7 +111,7 @@ namespace LUC.DiscoveryService
 
         public void Connect(EndPoint remoteEndPoint, TimeSpan timeout, out Boolean isConnected)
         {
-            lock(lockerConnect)
+            lock (lockerConnect)
             {
                 BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), this);
                 isConnected = connectDone.WaitOne(timeout);
@@ -108,15 +133,17 @@ namespace LUC.DiscoveryService
                 //Signal that the connection has been made
                 connectDone.Set();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 //LoggingService.LogInfo($"Failed to connect to {client?.RemoteEndPoint}: {e.Message}");
             }
         }
 
+
+
         public Byte[] Receive(TimeSpan timeout, out Boolean isReceived)
         {
-            lock(lockerReceive)
+            lock (lockerReceive)
             {
                 StateObjectForReceivingData stateReceiving = new StateObjectForReceivingData
                 {
@@ -147,23 +174,29 @@ namespace LUC.DiscoveryService
                     stateReceiving.ResultMessage.AddRange(stateReceiving.Buffer);
 
                     //Get the rest of the data
-                    client.BeginReceive(stateReceiving.Buffer, offset: 0, stateReceiving.BufferSize, SocketFlags.None, new AsyncCallback(ReceiveCallback), stateReceiving);
+                    if (client.Available > 0)
+                    {
+                        client.BeginReceive(stateReceiving.Buffer, offset: 0, stateReceiving.BufferSize, SocketFlags.None, new AsyncCallback(ReceiveCallback), stateReceiving);
+                    }
                 }
                 else
                 {
                     //All the data has arrived; put it in response
                     receiveDone.Set();
+                    return;
                 }
             }
             catch (Exception ex)
             {
                 //LoggingService.LogInfo($"Exception occurred during send operation: {ex.Message}");
-            }            
+            }
+
+            receiveDone.Set();
         }
 
         public void Send(Byte[] bytesToSend, TimeSpan timeout, out Boolean isSent)
         {
-            lock(lockerSend)
+            lock (lockerSend)
             {
                 //Begin sending the data to the remote device
                 BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
@@ -184,10 +217,16 @@ namespace LUC.DiscoveryService
 
                 sendDone.Set();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 //LoggingService.LogInfo($"Exception occurred during send operation: {ex.Message}");
             }
+        }
+
+        public new void Dispose()
+        {
+            IsDisposed = true;
+            base.Dispose();
         }
     }
 }

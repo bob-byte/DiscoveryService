@@ -206,8 +206,8 @@ namespace LUC.DiscoveryService.CodingData
         public void Write(Contact contact)
         {
             Write(contact.ID.Value.ToString());
-            Write(contact.IPAddress.ToString());
-            Write(contact.TcpPort);
+            Write(contact.EndPoint.Address.ToString());
+            Write((UInt32)contact.EndPoint.Port);
         }
 
         public void Dispose() =>

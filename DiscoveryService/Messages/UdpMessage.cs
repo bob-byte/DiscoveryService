@@ -12,6 +12,14 @@ namespace LUC.DiscoveryService.Messages
     public class UdpMessage : DiscoveryServiceMessage
     {
         /// <summary>
+        /// Maximum bytes of a message.
+        /// </summary>
+        /// <remarks>
+        /// In reality the max length is dictated by the network MTU.
+        /// </remarks>
+        public const Int32 MaxLength = 10240;
+
+        /// <summary>
         /// Create a new instance of the <see cref="UdpMessage"/> class. This constructor is often used to read message
         /// </summary>
         public UdpMessage()

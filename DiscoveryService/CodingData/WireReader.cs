@@ -193,12 +193,12 @@ namespace LUC.DiscoveryService.CodingData
         {
             var idAsBigInt = BigInteger.Parse(ReadString());
 
-            Contact contact = new Contact
-            {
-                ID = new ID(idAsBigInt),
-                IPAddress = IPAddress.Parse(ReadString()),
-                TcpPort = ReadUInt32()
-            };
+            Contact contact = new Contact();
+            //{
+            //    ID = new ID(idAsBigInt),
+            //    EndPoint = new IPEndPoint( IPAddress.Parse(ReadString()),
+            //    TcpPort = ReadUInt32()
+            //};
 
             return contact;
         }

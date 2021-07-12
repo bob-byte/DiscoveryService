@@ -14,12 +14,6 @@ namespace LUC.DiscoveryService.Messages
     public abstract class Message : IWireSerialiser
     {
         /// <summary>
-        /// TCP port which is being run in machine with machineId.
-        /// TCP port for inter-service communications.
-        /// </summary>
-        public UInt32 TcpPort { get; set; }
-
-        /// <summary>
         ///   Length in bytes of the object when serialised.
         /// </summary>
         /// <returns>

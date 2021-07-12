@@ -41,6 +41,6 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Received data
         /// </summary>
-        public List<Byte> ResultMessage { get; }
+        public List<Byte> ResultMessage { get; } = new List<Byte>();
     }
 }

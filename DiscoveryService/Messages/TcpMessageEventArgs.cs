@@ -21,6 +21,7 @@ namespace LUC.DiscoveryService.Messages
         public EndPoint RemoteContact { get; set; }
 
         public BigInteger LocalContactId { get; set; }
+
         //public Contact LocalContact { get; set; }
     }
 }

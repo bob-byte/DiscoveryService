@@ -62,7 +62,7 @@ namespace LUC.DiscoveryService
                 Console.WriteLine("=== TCP {0:O} ===", DateTime.Now);
                 Console.WriteLine(e.Message.ToString());
 
-                if ((e.Message is TcpMessage message) && (e.RemoteContact is IPEndPoint endPoint))
+                if ((e.Message is AcknowledgeTcpMessage message) && (e.RemoteContact is IPEndPoint endPoint))
                 {
                     var network = $"{endPoint.Address}:{message.TcpPort}";
                     foreach (var group in message.GroupIds)
@@ -77,7 +77,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private static void OnGoodUdpMessage(Object sender, TcpMessageEventArgs e)
+        private static void OnGoodUdpMessage(Object sender, UdpMessageEventArgs e)
         {
             lock (ttyLock)
             {

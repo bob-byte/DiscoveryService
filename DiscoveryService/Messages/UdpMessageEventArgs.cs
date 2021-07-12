@@ -26,6 +26,8 @@ namespace LUC.DiscoveryService.Messages
         /// </value>
         public EndPoint RemoteEndPoint { get; set; }
 
+        //public Byte[] Buffer { get; set; }
+
         //public BigInteger IdOfReceivingContact { get; set; }
     }
 }
