@@ -389,11 +389,11 @@ namespace LUC.DiscoveryService
                     return;
                 }
 
-                if ((message.ProtocolVersion != ProtocolVersion) ||
-                    (message.MachineId == MachineId))
-                {
-                    return;
-                }
+                //if ((message.ProtocolVersion != ProtocolVersion) ||
+                //    (message.MachineId == MachineId))
+                //{
+                //    return;
+                //}
 
                 // Dispatch the message.
                 try

@@ -15,7 +15,7 @@ namespace LUC.DiscoveryService
         /// <value>
         /// Default value 256
         /// </value>
-        public Int32 BufferSize { get; } = 256;
+        public Int32 BufferSize { get; } = 100;
 
         public StateObjectForReceivingData()
         {
@@ -23,9 +23,9 @@ namespace LUC.DiscoveryService
         }
 
         public StateObjectForReceivingData(Int32 bufferSize)
-            : this()
         {
             BufferSize = bufferSize;
+            Buffer = new Byte[bufferSize];
         }
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Receive buffer
         /// </summary>
-        public Byte[] Buffer { get; }
+        public Byte[] Buffer { get; set; }
 
         /// <summary>
         /// Received data

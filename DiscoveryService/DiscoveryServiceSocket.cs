@@ -1,7 +1,9 @@
-﻿using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Net;
 using System.Net.Sockets;
@@ -14,13 +16,15 @@ namespace LUC.DiscoveryService
     class DiscoveryServiceSocket : Socket
     {
         private readonly Object lockerConnect = new Object();
-        private readonly AutoResetEvent connectDone = new AutoResetEvent(initialState: false);
+        private AutoResetEvent connectDone;
 
         private readonly Object lockerReceive = new Object();
-        private readonly AutoResetEvent receiveDone = new AutoResetEvent(initialState: false);
+        private AutoResetEvent receiveDone;
 
         private readonly Object lockerSend = new Object();
-        private readonly AutoResetEvent sendDone = new AutoResetEvent(initialState: false);
+        private AutoResetEvent sendDone;
+
+        private AutoResetEvent disconnectDone;
 
         [Import(typeof(ILoggingService))]
         private ILoggingService LoggingService;
@@ -49,24 +53,32 @@ namespace LUC.DiscoveryService
 
         public Boolean IsDisposed { get; private set; } = false;
 
-        public async Task<TcpMessageEventArgs> ReceiveAsync()
+        public async Task<TcpMessageEventArgs> ReceiveAsync(TimeSpan timeoutToRead)
         {
             IPEndPoint ipEndPoint = null;
-            Socket remoteSocket = null;
-            StateObjectForReceivingData stateObjectForReceiving;
+            Socket clientToReadMessage = null;
+            Byte[] readBytes = null;
 
             try
             {
-                remoteSocket = await this.AcceptAsync();
-                stateObjectForReceiving = new StateObjectForReceivingData
+                clientToReadMessage = await this.AcceptAsync();
+
+                if (receiveDone == null)
                 {
-                    WorkSocket = remoteSocket
-                };
+                    receiveDone = new AutoResetEvent(initialState: false);
+                }
+                var taskReadBytes = ReadBytesAsync(clientToReadMessage);
 
-                remoteSocket.BeginReceive(stateObjectForReceiving.Buffer, offset: 0, stateObjectForReceiving.BufferSize, SocketFlags.None, new AsyncCallback(ReceiveCallback), stateObjectForReceiving);
-                receiveDone.WaitOne();
-
-                ipEndPoint = remoteSocket.RemoteEndPoint as IPEndPoint;
+                var isReceivedInTime = receiveDone.WaitOne(timeoutToRead);
+                if(isReceivedInTime)
+                {
+                    readBytes = taskReadBytes.Result;
+                    ipEndPoint = clientToReadMessage.RemoteEndPoint as IPEndPoint;
+                }
+                else
+                {
+                    throw new TimeoutException($"Timeout to read data from {clientToReadMessage.RemoteEndPoint}");
+                }
             }
             catch (ObjectDisposedException)
             {
@@ -77,7 +89,7 @@ namespace LUC.DiscoveryService
             {
                 if(IsDisposed)
                 {
-                    throw new ObjectDisposedException("Socket is disposed");
+                    throw new ObjectDisposedException($"Socket {LocalEndPoint} is disposed");
                 }
                 else
                 {
@@ -86,13 +98,13 @@ namespace LUC.DiscoveryService
             }
             finally
             {
-                remoteSocket?.Close();
+                clientToReadMessage?.Close();
             }
 
             TcpMessageEventArgs receiveResult = new TcpMessageEventArgs();
             if (ipEndPoint != null)
             {
-                receiveResult.Buffer = stateObjectForReceiving.ResultMessage.ToArray();
+                receiveResult.Buffer = readBytes;
                 receiveResult.RemoteContact = ipEndPoint;
                 receiveResult.LocalContactId = ContactId;
             }
@@ -104,13 +116,45 @@ namespace LUC.DiscoveryService
             return receiveResult;
         }
 
+        /// <summary>
+        ///   Reads all available data
+        /// </summary>
+        private async Task<Byte[]> ReadBytesAsync(Socket socketToRead)
+        {
+            List<Byte> allMessage = new List<Byte>();
+            var availableDataToRead = socketToRead.Available;
+            for (Int32 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0; )
+            {
+                var buffer = new ArraySegment<Byte>(new Byte[availableDataToRead]);
+                countReadBytes = await socketToRead.ReceiveAsync(buffer, SocketFlags.None);
+                allMessage.AddRange(buffer);
+
+                availableDataToRead = socketToRead.Available;
+            }
+
+            receiveDone?.Set();
+
+            return allMessage.ToArray();
+        }
+
+        public async Task<Boolean> ConnectAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect)
+        {
+            return await Task.Run(() =>
+            {
+                Connect(remoteEndPoint, timeoutToConnect, out var isConnected);
+                return isConnected;
+            });
+        }
+
         public void Connect(EndPoint remoteEndPoint, TimeSpan timeout, out Boolean isConnected)
         {
-            lock (lockerConnect)
+            if(connectDone == null)
             {
-                BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), this);
-                isConnected = connectDone.WaitOne(timeout);
+                connectDone = new AutoResetEvent(initialState: false);
             }
+
+            BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), this);
+            isConnected = connectDone.WaitOne(timeout);
         }
 
         private void ConnectCallback(IAsyncResult asyncResult)
@@ -134,23 +178,17 @@ namespace LUC.DiscoveryService
             }
         }
 
-
-
-        public Byte[] Receive(TimeSpan timeout, out Boolean isReceived)
+        public Byte[] ReceiveAsync(TimeSpan timeout, out Boolean isReceived)
         {
-            lock (lockerReceive)
+            if (receiveDone == null)
             {
-                StateObjectForReceivingData stateReceiving = new StateObjectForReceivingData
-                {
-                    WorkSocket = this
-                };
-
-                BeginReceive(stateReceiving.Buffer, offset: 0, stateReceiving.BufferSize,
-                SocketFlags.None, new AsyncCallback(ReceiveCallback), stateReceiving);
-
-                isReceived = receiveDone.WaitOne(timeout);
-                return stateReceiving.ResultMessage.ToArray();
+                receiveDone = new AutoResetEvent(initialState: false);
             }
+
+            var takReadBytes = ReadBytesAsync(this);
+
+            isReceived = receiveDone.WaitOne(timeout);
+            return takReadBytes.Result;
         }
 
         private void ReceiveCallback(IAsyncResult asyncResult)
@@ -171,7 +209,16 @@ namespace LUC.DiscoveryService
                     //Get the rest of the data
                     if (client.Available > 0)
                     {
-                        client.BeginReceive(stateReceiving.Buffer, offset: 0, stateReceiving.BufferSize, SocketFlags.None, new AsyncCallback(ReceiveCallback), stateReceiving);
+                        stateReceiving.Buffer = new Byte[stateReceiving.BufferSize];
+                        List<ArraySegment<Byte>> resultMess = new List<ArraySegment<Byte>>();
+
+                        client.Receive(resultMess, SocketFlags.None);
+                        client.BeginReceive(stateReceiving.Buffer, offset: 0, stateReceiving.BufferSize, SocketFlags.None, out var error, new AsyncCallback(ReceiveCallback), stateReceiving);
+
+                        if(error != SocketError.Success)
+                        {
+                            throw new SocketException((Int32)error);
+                        }
                     }
                 }
                 else
@@ -185,18 +232,18 @@ namespace LUC.DiscoveryService
             {
                 //LoggingService.LogInfo($"Exception occurred during send operation: {ex.Message}");
             }
-
-            receiveDone.Set();
         }
 
         public void Send(Byte[] bytesToSend, TimeSpan timeout, out Boolean isSent)
         {
-            lock (lockerSend)
+            if (sendDone == null)
             {
-                //Begin sending the data to the remote device
-                BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
-                isSent = sendDone.WaitOne(timeout);
+                sendDone = new AutoResetEvent(initialState: false);
             }
+
+            //Begin sending the data to the remote device
+            BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
+            isSent = sendDone.WaitOne(timeout);
         }
 
         private void SendCallback(IAsyncResult asyncResult)
@@ -216,6 +263,33 @@ namespace LUC.DiscoveryService
             {
                 //LoggingService.LogInfo($"Exception occurred during send operation: {ex.Message}");
             }
+        }
+
+        public void Disconnect(Boolean reuseSocket, TimeSpan timeout, out Boolean isConnected)
+        {
+            if (disconnectDone == null)
+            {
+                disconnectDone = new AutoResetEvent(initialState: false);
+            }
+
+            BeginDisconnect(reuseSocket, (asyncResult) =>
+            {
+                var socket = (Socket)asyncResult.AsyncState;
+                socket.EndDisconnect(asyncResult);
+
+                disconnectDone.Set();
+            }, this);
+
+            isConnected = disconnectDone.WaitOne(timeout);
+        }
+
+        public async Task<Boolean> DisconnectAsync(Boolean reuseSocket, TimeSpan timeout)
+        {
+            return await Task.Run(() =>
+            {
+                 Disconnect(reuseSocket, timeout, out var isDisconnected);
+                 return isDisconnected;
+            });
         }
 
         public new void Dispose()

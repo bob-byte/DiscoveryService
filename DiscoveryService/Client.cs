@@ -282,7 +282,7 @@ namespace LUC.DiscoveryService
             {
                 try
                 {
-                    var task = receiver.ReceiveAsync();
+                    var task = receiver.ReceiveAsync(Constants.ReceiveTimeout);
 
                     _ = task.ContinueWith(x => ListenTcp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
@@ -303,7 +303,6 @@ namespace LUC.DiscoveryService
                 catch(TimeoutException e)
                 {
                     log.LogError($"Failed to listen TCP message, {e.GetType()}: {e.Message}");
-                    return;
                 }
             });
         }

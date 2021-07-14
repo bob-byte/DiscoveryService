@@ -21,25 +21,15 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         private readonly Object m_lock = new Object();
         private SocketState m_state;
         private WeakReference<TcpConnection> owningConnection;
+        private ILoggingService log;
 
         /// <inheritdoc/>
-        public SocketInConnetionPool(SocketType socketType, ProtocolType protocolType)
-            : this(default, socketType, protocolType, ID.RandomID.Value)
-        {
-            ;//do nothing
-        }
-
-        /// <inheritdoc/>
-        public SocketInConnetionPool(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType)
-            : this(addressFamily, socketType, protocolType, ID.RandomID.Value)
-        {
-            ;//do nothing
-        }
-
-        public SocketInConnetionPool(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, BigInteger contactId)
+        public SocketInConnetionPool(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log)
             : base(addressFamily, socketType, protocolType)
         {
-            ContactId = contactId;
+            Id = remoteEndPoint;
+            Pool = belongPool;
+            this.log = log;
         }
 
         public WeakReference<TcpConnection> OwningConnection 
@@ -66,7 +56,47 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
         public UInt32 CreatedTicks { get; set; } = unchecked((UInt32)Environment.TickCount);
 
-        public async Task DisposeAsync(IOBehavior ioBehavior, CancellationToken cancellationToken)
+        public UInt32 LastReturnedTicks { get; private set; }
+
+        public EndPoint Id { get; }
+
+        public ConnectionPool Pool { get; }
+
+        public async Task ConnectAsync()
+        {
+            //check status in lock
+            //take work with SslProtocols and TLS
+            //maybe should to check whether remoteEndPoint is Windows
+            //check whether remoteEndPoint supports SSL (send message to ask)
+            //call ConnectAsync with timeout
+            //change state to connected if it is, otherwise to failed
+        }
+
+        public void ReturnToPool(IOBehavior ioBehavior, out Boolean isReturned)
+        {
+#if DEBUG
+            {
+                log.LogInfo($"Socket with id \"{Id}\" returning to Pool");
+            }
+#endif
+            LastReturnedTicks = unchecked((uint)Environment.TickCount);
+
+            if(Pool == null)
+            {
+                isReturned = false;
+            }
+            else if (!Pool.ConnectionSettings.ConnectionReset || Pool.ConnectionSettings.DeferConnectionReset)
+            {
+                Pool.ReturnToPool(ioBehavior, RemoteEndPoint, out isReturned);
+            }
+            else
+            {
+                BackgroundConnectionResetHelper.AddSocket(this, log);
+                isReturned = false;
+            }
+        }
+
+        public new void Dispose()
         {
             // attempt to gracefully close the connection, ignoring any errors (it may have been closed already by the server, etc.)
             SocketState state;
@@ -80,28 +110,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 state = m_state;
             }
 
-            if (state == SocketState.Closing)
-            {
-                try
-                {
-                    //Log.Info("Session{0} sending QUIT command", m_logArguments);
-                    //m_payloadHandler.StartNewConversation();
-                    //await m_payloadHandler.WritePayloadAsync(QuitPayload.Instance.Memory, ioBehavior).ConfigureAwait(false);
-                }
-                catch (IOException)
-                {
-                }
-                catch (NotSupportedException)
-                {
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-                catch (SocketException)
-                {
-                }
-            }
-
             ShutdownSocket();
             lock (m_lock)
             {
@@ -109,22 +117,30 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             }
         }
 
+        public async Task<Boolean> TryResetConnectionAsync(Boolean returnToPool, Boolean reuseSocket, IOBehavior ioBehavior)
+        {
+            if (returnToPool && Pool != null)
+            {
+                Pool.ReturnToPool(ioBehavior, RemoteEndPoint, out _);
+            }
+
+            var waitIndefinitely = TimeSpan.FromMilliseconds(value: -1);
+            var success = await DisconnectAsync(reuseSocket, waitIndefinitely).ConfigureAwait(continueOnCapturedContext: false);
+
+            return success;
+        }
+
         private void ShutdownSocket()
         {
             //            Log.Info("Session{0} closing stream/socket", m_logArguments);
-            Shutdown(SocketShutdown.Both);
-            Dispose(disposing: true);
-
-//            Utility.Dispose(ref m_payloadHandler);
-//            Utility.Dispose(ref m_stream);
-//            SafeDispose(ref m_tcpClient);
-//            SafeDispose(ref m_socket);
-//#if NET45
-//			m_clientCertificate?.Reset();
-//			m_clientCertificate = null;
-//#else
-//            Utility.Dispose(ref m_clientCertificate);
-//#endif
+            try
+            {
+                Shutdown(SocketShutdown.Both);
+            }
+            finally
+            {
+                Dispose(disposing: true);
+            }
         }
 
         /// <summary>

@@ -13,7 +13,13 @@ namespace LUC.DiscoveryService.Messages
 
         public Byte[] Buffer { get; set; }
 
-        public Boolean IsReadMessage => message != null;
+        public Boolean IsReadMessage<T>()
+            where T: Message, new()
+        {
+            return message as T != null;
+        }
+
+        public BigInteger LocalContactId { get; set; }
 
         /// <summary>
         ///   The LightUpon.Cloud app message.
@@ -27,7 +33,7 @@ namespace LUC.DiscoveryService.Messages
         public T Message<T>(Boolean whetherReadMessage = true)
             where T: Message, new()
         {
-            if (whetherReadMessage && !IsReadMessage)
+            if (whetherReadMessage && !IsReadMessage<T>())
             {
                 message = new T();
                 message.Read(Buffer);
@@ -41,7 +47,5 @@ namespace LUC.DiscoveryService.Messages
         {
             this.message = message;
         }
-
-        public BigInteger LocalContactId { get; set; }
     }
 }

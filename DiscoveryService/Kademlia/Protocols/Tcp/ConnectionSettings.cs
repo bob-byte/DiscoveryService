@@ -14,24 +14,9 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
 			// Connection Pooling Options
 			ConnectionLifeTime = uint.MaxValue;
-			// all connections retrieved from the pool will have been reset. 
-			// The default value of <code>true</code> ensures that the 
-			// connection is in the same state whether it’s newly created 
-			// or retrieved from the pool. A value of <code>false</code> 
-			// avoids making an additional server round trip to reset the 
-			// connection, but the connection state is not reset, meaning 
-			// that session variables and other session state changes 
-			// from any previous use of the connection are carried over.
+			
 			ConnectionReset = true; 
-			// <td>When a connection is retrieved from the pool, and <code>ConnectionReset</code> is <code>false</code>, the server
-			// will be pinged if the connection has been idle in the pool for longer than <code>ConnectionIdlePingTime</code> seconds.
-			// If pinging the server fails, a new connection will be opened automatically by the connection pool. This ensures that the
-			// <code>MySqlConnection</code> is in a valid, open state after the call to <code>Open</code>/<code>OpenAsync</code>,
-			// at the cost of an extra server roundtrip. For high-performance scenarios, you may wish to set <code>ConnectionIdlePingTime</code>
-			// to a non-zero value to make the connection pool assume that recently-returned connections are still open. If the
-			// connection is broken, it will throw from the first call to <code>ExecuteNonQuery</code>, <code>ExecuteReader</code>,
-			// etc.; your code should handle that failure and retry the connection. This option has no effect if <code>ConnectionReset</code>
-			//  is <code>true</code>, as that will cause a connection reset packet to be sent to the server, making ping redundant.
+			
 			ConnectionIdlePingTime = uint.MaxValue;
 
 			// The amount of time (in seconds) that a connection can 
@@ -69,11 +54,37 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 			// On Windows, this option is always supported. On non-Windows platforms, this option only takes effect in 
 			// .NET Core 3.0 and later. For earlier versions of .NET Core, the OS Default keepalive settings are used instead.
 			Keepalive = 0;
+
+			MaximumPoolSize = 16;
+			MinimumPoolSize = 0;
 		}
 
 		// Connection Pooling Options
 		public uint ConnectionLifeTime { get; }
+
+		/// <summary>
+		/// all connections retrieved from the pool will have been reset. 
+		/// The default value of <a href="true"></a> ensures that the 
+		/// connection is in the same state whether it’s newly created 
+		/// or retrieved from the pool. A value of <a href="false"></a>
+		/// avoids making an additional server round trip to reset the 
+		/// connection, but the connection state is not reset, meaning 
+		/// that session variables and other session state changes 
+		/// from any previous use of the connection are carried over.
+		/// </summary>
 		public bool ConnectionReset { get; }
+
+		/// <summary>
+		/// When a connection is retrieved from the pool, and <seealso cref="ConnectionReset"/> is <code>false</code>, the server
+		/// will be pinged if the connection has been idle in the pool for longer than <code>ConnectionIdlePingTime</code> seconds.
+		/// If pinging the server fails, a new connection will be opened automatically by the connection pool. This ensures that the
+		/// <code>MySqlConnection</code> is in a valid, open state after the call to <code>Open</code>/<code>OpenAsync</code>,
+		/// at the cost of an extra server roundtrip. For high-performance scenarios, you may wish to set <code>ConnectionIdlePingTime</code>
+		/// to a non-zero value to make the connection pool assume that recently-returned connections are still open. If the
+		/// connection is broken, it will throw from the first call to <code>ExecuteNonQuery</code>, <code>ExecuteReader</code>,
+		/// etc.; your code should handle that failure and retry the connection. This option has no effect if <code>ConnectionReset</code>
+		///  is <code>true</code>, as that will cause a connection reset packet to be sent to the server, making ping redundant.
+		/// </summary>
 		public uint ConnectionIdlePingTime { get; }
 		public int ConnectionIdleTimeout { get; }
 		public bool DeferConnectionReset { get; }
@@ -81,6 +92,9 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 		public int CancellationTimeout { get; }
 		public int ConnectionTimeout { get; }
 		public uint Keepalive { get; }
+
+		public int MinimumPoolSize { get; }
+		public int MaximumPoolSize { get; }
 
 		// Helper Functions
 		int? m_connectionTimeoutMilliseconds;
