@@ -363,8 +363,8 @@ namespace LUC.DiscoveryService
         /// </remarks>
         private void OnUdpMessage(object sender, UdpMessageEventArgs result)
         {
-            lock(sender)
-            {
+            //lock(sender)
+            //{
                 if (result.Buffer.Length > MaxDatagramSize)
                 {
                     return;
@@ -403,10 +403,10 @@ namespace LUC.DiscoveryService
                 }
                 catch (Exception e)
                 {
-                    log.LogError(e, "Receive handler failed");
+                    log.LogError($"Receive handler failed: {e.Message}");
                     // eat the exception
                 }
-            }
+            //}
         }
 
         /// <summary>

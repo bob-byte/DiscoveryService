@@ -154,7 +154,7 @@ namespace LUC.DiscoveryService.Messages
                                    $"TCP port = {TcpPort};");
 
                 writer.WriteLine($"{nameof(GroupIds)}:");
-                for (Int32 id = 0; id < GroupIds.Count; id++)
+                for (Int32 id = 0; id < GroupIds?.Count; id++)
                 {
                     if(id == GroupIds.Count - 1)
                     {

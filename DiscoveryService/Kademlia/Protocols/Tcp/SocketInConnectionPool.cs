@@ -16,45 +16,21 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 {
-    class SocketInConnetionPool : DiscoveryServiceSocket
+    class SocketInConnectionPool : DiscoveryServiceSocket
     {
         private readonly Object m_lock = new Object();
         private SocketState m_state;
-        private WeakReference<TcpConnection> owningConnection;
-        private ILoggingService log;
+        private Boolean isTakenFromPool = false;
 
         /// <inheritdoc/>
-        public SocketInConnetionPool(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log)
-            : base(addressFamily, socketType, protocolType)
+        public SocketInConnectionPool(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log)
+            : base(addressFamily, socketType, protocolType, log)
         {
             Id = remoteEndPoint;
             Pool = belongPool;
-            this.log = log;
         }
 
-        public WeakReference<TcpConnection> OwningConnection 
-        { 
-            get
-            {
-                if(!Connected)
-                {
-                    owningConnection = null;
-                }
-
-                return owningConnection;
-            }
-            set
-            {
-                //if (value == null)
-                //{
-                //    Disconnect(reuseSocket: true);
-                //}
-
-                owningConnection = value;
-            }
-        }
-
-        public UInt32 CreatedTicks { get; set; } = unchecked((UInt32)Environment.TickCount);
+        public UInt32 CreatedTicks { get; } = unchecked((UInt32)Environment.TickCount);
 
         public UInt32 LastReturnedTicks { get; private set; }
 
@@ -62,17 +38,34 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
         public ConnectionPool Pool { get; }
 
-        public async Task ConnectAsync()
+        public Boolean IsTakenFromPool 
         {
-            //check status in lock
-            //take work with SslProtocols and TLS
-            //maybe should to check whether remoteEndPoint is Windows
-            //check whether remoteEndPoint supports SSL (send message to ask)
-            //call ConnectAsync with timeout
-            //change state to connected if it is, otherwise to failed
+            get => isTakenFromPool;
+            set
+            {
+                isTakenFromPool = value;
+
+                if (!isTakenFromPool)
+                {
+                    ReturnedInPool.Release();
+                }
+            }
         }
 
-        public void ReturnToPool(IOBehavior ioBehavior, out Boolean isReturned)
+        public SemaphoreSlim ReturnedInPool { get; } = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+
+        //public async Task ConnectAsync()
+        //{
+        //    //check status in lock
+        //    //add changing status in all methods
+        //    //take work with SslProtocols and TLS
+        //    //maybe should to check whether remoteEndPoint is Windows
+        //    //check whether remoteEndPoint supports SSL (send message to ask)
+        //    //call ConnectAsync with timeout
+        //    //change state to connected if it is, otherwise to failed
+        //}
+
+        public async ValueTask<Boolean> ReturnToPoolAsync(IOBehavior ioBehavior)
         {
 #if DEBUG
             {
@@ -83,16 +76,16 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
             if(Pool == null)
             {
-                isReturned = false;
+                return false;
             }
             else if (!Pool.ConnectionSettings.ConnectionReset || Pool.ConnectionSettings.DeferConnectionReset)
             {
-                Pool.ReturnToPool(ioBehavior, RemoteEndPoint, out isReturned);
+                return await Pool.ReturnToPoolAsync(ioBehavior, RemoteEndPoint).ConfigureAwait(continueOnCapturedContext: false);
             }
             else
             {
                 BackgroundConnectionResetHelper.AddSocket(this, log);
-                isReturned = false;
+                return false;
             }
         }
 
@@ -121,7 +114,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         {
             if (returnToPool && Pool != null)
             {
-                Pool.ReturnToPool(ioBehavior, RemoteEndPoint, out _);
+                await Pool.ReturnToPoolAsync(ioBehavior, RemoteEndPoint).ConfigureAwait(continueOnCapturedContext: false);
             }
 
             var waitIndefinitely = TimeSpan.FromMilliseconds(value: -1);

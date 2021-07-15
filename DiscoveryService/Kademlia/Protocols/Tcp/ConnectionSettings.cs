@@ -6,7 +6,7 @@ using System.Security.Authentication;
 
 namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 {
-	internal sealed class ConnectionSettings
+	sealed class ConnectionSettings
 	{
 		public ConnectionSettings()
 		{

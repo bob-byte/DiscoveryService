@@ -1,8 +1,11 @@
-﻿using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+﻿using LUC.DiscoveryService.Extensions;
+using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Net;
@@ -13,55 +16,102 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService
 {
-    class DiscoveryServiceSocket : Socket
+    public class DiscoveryServiceSocket : Socket
     {
-        private readonly Object lockerConnect = new Object();
+        private readonly Object m_lock = new Object();
+
+        private readonly TimeSpan howOftenCheckAcceptedClient = TimeSpan.FromSeconds(value: 2);
+
+        private AutoResetEvent acceptDone;
         private AutoResetEvent connectDone;
-
-        private readonly Object lockerReceive = new Object();
         private AutoResetEvent receiveDone;
-
-        private readonly Object lockerSend = new Object();
         private AutoResetEvent sendDone;
-
         private AutoResetEvent disconnectDone;
 
         [Import(typeof(ILoggingService))]
-        private ILoggingService LoggingService;
+        protected readonly ILoggingService log;
 
-        /// <inheritdoc/>
-        public DiscoveryServiceSocket(SocketType socketType, ProtocolType protocolType)
-            : base(socketType, protocolType)
-        {
-            ;//do nothing
-        }
-
-        /// <inheritdoc/>
-        public DiscoveryServiceSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType)
+        public DiscoveryServiceSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, ILoggingService loggingService)
             : base(addressFamily, socketType, protocolType)
         {
-            ;//do nothing
+            State = SocketState.Created;
+            log = loggingService;
         }
 
-        public DiscoveryServiceSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, BigInteger contactId)
+        /// <inheritdoc/>
+        public DiscoveryServiceSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, BigInteger contactId, ILoggingService loggingService)
             : base(addressFamily, socketType, protocolType)
         {
             ContactId = contactId;
+            State = SocketState.Created;
+            this.log = loggingService;
         }
 
         public BigInteger ContactId { get; set; }
 
-        public Boolean IsDisposed { get; private set; } = false;
+        public SocketState State { get; private set; }
 
-        public async Task<TcpMessageEventArgs> ReceiveAsync(TimeSpan timeoutToRead)
+        private readonly ConcurrentQueue<Socket> acceptedSockets = new ConcurrentQueue<Socket>();
+
+        private async Task<Socket> AcceptedSocketAsync(Int32 maxAcceptedSockets, TimeSpan howOftenCheckAcceptedClient)
         {
-            IPEndPoint ipEndPoint = null;
-            Socket clientToReadMessage = null;
-            Byte[] readBytes = null;
+            if (acceptDone == null)
+            {
+                acceptDone = new AutoResetEvent(initialState: false);
+            }
+
+            Task.Run(async () =>
+            {
+                if(acceptedSockets.Count >= maxAcceptedSockets)
+                {
+                    acceptedSockets.TryDequeue(out _);
+                }
+
+                acceptedSockets.Enqueue(await this.AcceptAsync());
+                if(acceptedSockets.Count == 1)
+                {
+                    acceptDone.Set();
+                }
+            }).ConfigureAwait(continueOnCapturedContext: false).GetAwaiter();
+
+            Socket acceptedSocket = null;
+            await Task.Run(async () =>
+            {
+                if (acceptedSockets.Count == 0)
+                {
+                    acceptDone.WaitOne();
+                }
+
+                while (acceptedSocket == null)
+                {
+                    foreach (var socket in acceptedSockets)
+                    {
+                        if (socket.Available > 0)
+                        {
+                            acceptedSocket = socket;
+                            break;
+                        }
+                    }
+
+                    if(acceptedSocket == null)
+                    {
+                        await Task.Delay(howOftenCheckAcceptedClient);
+                    }
+                }
+            }).ConfigureAwait(false);
+            
+            return acceptedSocket;
+        }
+
+        public async Task<TcpMessageEventArgs> ReceiveAsync(TimeSpan timeoutToRead, Int32 maxAcceptedSockets)
+        {
+            IPEndPoint ipEndPoint;
+            Socket clientToReadMessage;
+            Byte[] readBytes;
 
             try
             {
-                clientToReadMessage = await this.AcceptAsync();
+                clientToReadMessage = await AcceptedSocketAsync(maxAcceptedSockets, howOftenCheckAcceptedClient);
 
                 if (receiveDone == null)
                 {
@@ -83,11 +133,10 @@ namespace LUC.DiscoveryService
             catch (ObjectDisposedException)
             {
                 throw;
-                //LoggingService.LogFatal(ex.Message);
             }
-            catch(SocketException)/* when (ex.SocketErrorCode == SocketError.)*/
+            catch(SocketException)
             {
-                if(IsDisposed)
+                if(State == SocketState.Closed)
                 {
                     throw new ObjectDisposedException($"Socket {LocalEndPoint} is disposed");
                 }
@@ -95,10 +144,6 @@ namespace LUC.DiscoveryService
                 {
                     throw;
                 }
-            }
-            finally
-            {
-                clientToReadMessage?.Close();
             }
 
             TcpMessageEventArgs receiveResult = new TcpMessageEventArgs();
@@ -153,32 +198,55 @@ namespace LUC.DiscoveryService
                 connectDone = new AutoResetEvent(initialState: false);
             }
 
-            BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), this);
+            VerifyWorkState();
+
+            try
+            {
+                BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), this);
+            }
+            catch(Exception ex)
+            {
+                log.LogError(ex.Message);
+            }
             isConnected = connectDone.WaitOne(timeout);
+
+            if(isConnected)
+            {
+                State = SocketState.Connected;
+            }
+        }
+
+        private void VerifyWorkState()
+        {
+            if((State == SocketState.Closing) | (State == SocketState.Failed))
+            {
+                String messageError = "Wanted to use idle socket";
+
+                //loggingService.LogError(messageError);
+                throw new InvalidOperationException(messageError);
+            }
         }
 
         private void ConnectCallback(IAsyncResult asyncResult)
         {
-            Socket client = null;
-            try
+            //Retrieve the socket from the state object
+            var client = (Socket)asyncResult.AsyncState;
+            if(client != null)
             {
-                //Retrieve the socket from the state object
-                client = (Socket)asyncResult.AsyncState;
-
                 //Complete the connection
                 client.EndConnect(asyncResult);
-                //LoggingService.LogInfo($"Socket connected to {client.RemoteEndPoint}");
+                log.LogInfo($"Socket connected to {client.RemoteEndPoint}");
 
                 //Signal that the connection has been made
                 connectDone.Set();
             }
-            catch (Exception e)
+            else
             {
-                //LoggingService.LogInfo($"Failed to connect to {client?.RemoteEndPoint}: {e.Message}");
+                throw new InvalidCastException($"Cannot convert from {asyncResult.AsyncState.GetType()} to {client.GetType()}");
             }
         }
 
-        public Byte[] ReceiveAsync(TimeSpan timeout, out Boolean isReceived)
+        public Byte[] Receive(TimeSpan timeout, out Boolean isReceived)
         {
             if (receiveDone == null)
             {
@@ -186,56 +254,19 @@ namespace LUC.DiscoveryService
             }
 
             var takReadBytes = ReadBytesAsync(this);
-
             isReceived = receiveDone.WaitOne(timeout);
+            if(isReceived)
+            {
+                State = SocketState.Connected;
+            }
+
             return takReadBytes.Result;
-        }
-
-        private void ReceiveCallback(IAsyncResult asyncResult)
-        {
-            StateObjectForReceivingData stateReceiving = (StateObjectForReceivingData)asyncResult.AsyncState;
-            var client = stateReceiving.WorkSocket;
-
-            try
-            {
-                //Read data from the remote device
-                var bytesRead = client.EndReceive(asyncResult);
-
-                if (bytesRead > 0)
-                {
-                    //There might be more data, so store the data received so far
-                    stateReceiving.ResultMessage.AddRange(stateReceiving.Buffer);
-
-                    //Get the rest of the data
-                    if (client.Available > 0)
-                    {
-                        stateReceiving.Buffer = new Byte[stateReceiving.BufferSize];
-                        List<ArraySegment<Byte>> resultMess = new List<ArraySegment<Byte>>();
-
-                        client.Receive(resultMess, SocketFlags.None);
-                        client.BeginReceive(stateReceiving.Buffer, offset: 0, stateReceiving.BufferSize, SocketFlags.None, out var error, new AsyncCallback(ReceiveCallback), stateReceiving);
-
-                        if(error != SocketError.Success)
-                        {
-                            throw new SocketException((Int32)error);
-                        }
-                    }
-                }
-                else
-                {
-                    //All the data has arrived; put it in response
-                    receiveDone.Set();
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                //LoggingService.LogInfo($"Exception occurred during send operation: {ex.Message}");
-            }
         }
 
         public void Send(Byte[] bytesToSend, TimeSpan timeout, out Boolean isSent)
         {
+            VerifyWorkState();
+
             if (sendDone == null)
             {
                 sendDone = new AutoResetEvent(initialState: false);
@@ -244,6 +275,10 @@ namespace LUC.DiscoveryService
             //Begin sending the data to the remote device
             BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
             isSent = sendDone.WaitOne(timeout);
+            if (isSent)
+            {
+                State = SocketState.Connected;
+            }
         }
 
         private void SendCallback(IAsyncResult asyncResult)
@@ -255,32 +290,39 @@ namespace LUC.DiscoveryService
 
                 //Complete sending the data to the remote device
                 var bytesSent = client.EndSend(asyncResult);
-                //LoggingService.LogInfo($"Sent {bytesSent} bytes to {client.RemoteEndPoint}");
+                log.LogInfo($"Sent {bytesSent} bytes to {client.RemoteEndPoint}");
 
                 sendDone.Set();
             }
             catch (Exception ex)
             {
-                //LoggingService.LogInfo($"Exception occurred during send operation: {ex.Message}");
+                log.LogInfo($"Exception occurred during send operation: {ex.Message}");
             }
         }
 
-        public void Disconnect(Boolean reuseSocket, TimeSpan timeout, out Boolean isConnected)
+        public void Disconnect(Boolean reuseSocket, TimeSpan timeout, out Boolean isDisconnected)
         {
             if (disconnectDone == null)
             {
                 disconnectDone = new AutoResetEvent(initialState: false);
             }
 
-            BeginDisconnect(reuseSocket, (asyncResult) =>
+            VerifyConnected();
+
+            BeginDisconnect(reuseSocket, new AsyncCallback(DisconnectCallback), this);
+            isDisconnected = disconnectDone.WaitOne(timeout);
+            if(isDisconnected)
             {
-                var socket = (Socket)asyncResult.AsyncState;
-                socket.EndDisconnect(asyncResult);
+                State = SocketState.Disconnected;
+            }
+        }
 
-                disconnectDone.Set();
-            }, this);
+        private void DisconnectCallback(IAsyncResult asyncResult)
+        {
+            var socket = (Socket)asyncResult.AsyncState;
+            socket.EndDisconnect(asyncResult);
 
-            isConnected = disconnectDone.WaitOne(timeout);
+            disconnectDone.Set();
         }
 
         public async Task<Boolean> DisconnectAsync(Boolean reuseSocket, TimeSpan timeout)
@@ -292,9 +334,46 @@ namespace LUC.DiscoveryService
             });
         }
 
+        private void VerifyState(SocketState state)
+        {
+            if (State != state)
+            {
+                log.LogError($"Session {RemoteEndPoint} should have SessionStateExpected {state} but was SessionState {State}");
+                throw new InvalidOperationException($"Expected state to be {state} but was {State}."/*.FormatInvariant(state, State)*/);
+            }
+        }
+
+        public void VerifyConnected()
+        {
+            lock (m_lock)
+            {
+                if (State == SocketState.Closed)
+                {
+                    throw new ObjectDisposedException(nameof(DiscoveryServiceSocket));
+                }
+                else if ((State == SocketState.Disconnected) | (State == SocketState.Failed))
+                {
+                    throw new InvalidOperationException("ServerSession is not connected.");
+                }
+            }
+        }
+
         public new void Dispose()
         {
-            IsDisposed = true;
+            State = SocketState.Closed;
+
+            foreach (var acceptedSocket in acceptedSockets)
+            {
+                try
+                {
+                    acceptedSocket.Dispose();
+                }
+                catch
+                {
+                    //eat it
+                }
+            }
+
             base.Dispose();
         }
     }

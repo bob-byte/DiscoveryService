@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     class StoreResponse : Response
     {
-        public static void SendSameRandomId(SocketInConnetionPool sender, TimeSpan timeoutToSend, StoreRequest request)
+        public static void SendSameRandomId(SocketInConnectionPool sender, TimeSpan timeoutToSend, StoreRequest request)
         {
             if (request?.RandomID != default)
             {

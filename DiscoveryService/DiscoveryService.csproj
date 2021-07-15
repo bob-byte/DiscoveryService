@@ -92,10 +92,9 @@
     <Compile Include="Kademlia\Protocols\Tcp\ConnectionSettings.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\IOBehavior.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\SocketHealth.cs" />
-    <Compile Include="Kademlia\Protocols\Tcp\SocketInConnetionPool.cs" />
-    <Compile Include="Kademlia\Protocols\Tcp\SocketState.cs" />
-    <Compile Include="Kademlia\Protocols\Tcp\TcpConnection.cs" />
-    <Compile Include="Kademlia\Protocols\Tcp\TcpException.cs" />
+    <Compile Include="Kademlia\Protocols\Tcp\SocketInConnectionPool.cs" />
+    <Compile Include="SemaphoreLocker.cs" />
+    <Compile Include="SocketState.cs" />
     <Compile Include="Messages\DiscoveryServiceMessage.cs" />
     <Compile Include="Messages\KademliaRequests\FindNodeRequest.cs" />
     <Compile Include="Messages\KademliaRequests\FindValueRequest.cs" />

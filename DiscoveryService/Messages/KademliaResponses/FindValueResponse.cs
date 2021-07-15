@@ -16,7 +16,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         public List<Contact> CloseContactsToRepsonsingPeer { get; set; }
         public String ValueInResponsingPeer { get; set; }
 
-        public static void SendOurCloseContactsAndMachineValue(FindValueRequest request, SocketInConnetionPool sender, 
+        public static void SendOurCloseContactsAndMachineValue(FindValueRequest request, SocketInConnectionPool sender, 
             IEnumerable<Contact> closeContacts, String machineValue)
         {
             if ((request?.RandomID != default) && (sender != null))

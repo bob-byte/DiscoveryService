@@ -10,6 +10,7 @@ using LUC.DiscoveryService.Kademlia;
 using System.Collections.Generic;
 using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
 using LUC.DiscoveryService.Kademlia.Interfaces;
+using System.Threading;
 
 namespace LUC.DiscoveryService
 {
@@ -43,6 +44,12 @@ namespace LUC.DiscoveryService
         ///   When an answer containing type 1 received this event is raised.
         /// </remarks>
         public event EventHandler<TcpMessageEventArgs> ServiceInstanceShutdown;
+
+        static DiscoveryService()
+        {
+            AppDomain.CurrentDomain.DomainUnload += StopDiscovery;
+            AppDomain.CurrentDomain.ProcessExit += StopDiscovery;
+        }
 
         private DiscoveryService(ServiceProfile profile)
         {
@@ -84,13 +91,13 @@ namespace LUC.DiscoveryService
             return instance;
         }
 
-        /// <summary>
-        /// If user of ServiceDiscovery forget to call method Stop
-        /// </summary>
-        ~DiscoveryService()
-        {
-            Stop();
-        }
+        ///// <summary>
+        ///// If user of ServiceDiscovery forget to call method Stop
+        ///// </summary>
+        //~DiscoveryService()
+        //{
+        //    Stop();
+        //}
 
         public static List<Contact> KnownContacts { get; set; } = new List<Contact>();
 
@@ -179,9 +186,9 @@ namespace LUC.DiscoveryService
 
             if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
             {
-                Random random = new Random();
                 var sendingContact = Service.OurContacts.Single(c => c.ID.Value == e.LocalContactId);
 
+                Random random = new Random();
                 var tcpMessage = new AcknowledgeTcpMessage(
                     messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
                     MachineId,
@@ -189,7 +196,6 @@ namespace LUC.DiscoveryService
                     RunningTcpPort,
                     ProtocolVersion,
                     groupsIds: GroupsSupported?.Keys?.ToList());
-
                 var bytesToSend = tcpMessage.ToByteArray();
 
                 if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytesToSend)))
@@ -197,13 +203,11 @@ namespace LUC.DiscoveryService
                     return;
                 }
 
-                //get socket
-                SocketInConnetionPool client = new SocketInConnetionPool(ipEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                client.Connect(ipEndPoint, Constants.ConnectTimeout, out _);
-                //connectionPool.ReturnAsync(IOBehavior.Synchronous, client).ConfigureAwait(continueOnCapturedContext: false);
-
+                var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
+                var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, IOBehavior.Synchronous, CancellationToken.None).GetAwaiter().GetResult();
                 client.Send(bytesToSend, Constants.SendTimeout, out _);
-                //tcpMessage.Send(new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort), bytesToSend).ConfigureAwait(false);
+
+                client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
             }
             else
             {
@@ -245,11 +249,16 @@ namespace LUC.DiscoveryService
 
         //internal static List<Contact> KnownContacts(UInt32 protocolVersion)
         //{
-            
+
         //}
 
+        private static void StopDiscovery(Object sender, EventArgs e)
+        {
+            instance?.Stop();
+        }
+
         /// <summary>
-        ///    Stop listening TCP, UDP messages and sending them
+        ///    Stop listening and sending TCP and UDP messages
         /// </summary>
         public void Stop()
         {
@@ -258,6 +267,7 @@ namespace LUC.DiscoveryService
                 Service.Stop();
                 Service = null;
                 ServiceInstanceShutdown?.Invoke(this, new TcpMessageEventArgs());
+                connectionPool.ClearPoolAsync(IOBehavior.Synchronous, respectMinPoolSize: false, CancellationToken.None).GetAwaiter();
 
                 isDiscoveryServiceStarted = false;
             }

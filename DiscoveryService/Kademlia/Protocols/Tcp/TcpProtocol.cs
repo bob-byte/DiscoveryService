@@ -128,7 +128,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             return GetRpcError(id, response, timeout, peerError);
         }
 
-        private void GetClient(ID idOfClient, IPEndPoint remoteEndPoint, out SocketInConnetionPool client, out Boolean isInPool, out Boolean isConnected)
+        private void GetClient(ID idOfClient, IPEndPoint remoteEndPoint, out SocketInConnectionPool client, out Boolean isInPool, out Boolean isConnected)
         {
             client = null;
             isInPool = false;
@@ -141,7 +141,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             //}
         }
 
-        private void ClientStart<TResponse>(Boolean isInPool, SocketInConnetionPool client, IPEndPoint endPointOfClient, Request request, out TResponse response)
+        private void ClientStart<TResponse>(Boolean isInPool, SocketInConnectionPool client, IPEndPoint endPointOfClient, Request request, out TResponse response)
             where TResponse: Response
         {
             response = null;

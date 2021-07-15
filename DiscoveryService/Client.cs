@@ -22,6 +22,7 @@ namespace LUC.DiscoveryService
     class Client : AbstractService, IDisposable
     {
         private const Int32 BackLog = Int32.MaxValue;
+        private const Int32 CountStoragedAcceptedSockets = 16;
 
         private static readonly IPAddress MulticastAddressIp4 = IPAddress.Parse("224.0.0.251");
         private readonly IPEndPoint MulticastEndpointIp4;
@@ -110,7 +111,7 @@ namespace LUC.DiscoveryService
                 var senderTcp = new TcpClient(runningIpAddresses[idOfAddress].AddressFamily);
 
                 DiscoveryServiceSocket receiverTcp = new DiscoveryServiceSocket(runningIpAddresses[idOfAddress].AddressFamily,
-                    SocketType.Stream, ProtocolType.Tcp, contactId: runningIpAddresses.Single(c => c.Value == runningIpAddresses[idOfAddress]).Key);
+                    SocketType.Stream, ProtocolType.Tcp, contactId: runningIpAddresses.Single(c => c.Value == runningIpAddresses[idOfAddress]).Key, log);
                 try
                 {
                     switch (runningIpAddresses[idOfAddress].AddressFamily)
@@ -212,6 +213,8 @@ namespace LUC.DiscoveryService
                     var endpoint = sender.Key.AddressFamily == AddressFamily.InterNetwork ?
                         MulticastEndpointIp4 : MulticastEndpointIp6;
                     await sender.Value.SendAsync(message, message.Length, endpoint).ConfigureAwait(false);
+
+                    break;
                 }
                 catch(SocketException e)
                 {
@@ -244,10 +247,11 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x =>
                     {
+                        var acceptedContactId = RandomDefiniedAcceptedContactId(receiver);
                         UdpMessageEventArgs eventArgs = new UdpMessageEventArgs
                         {
                             Buffer = x.Result.Buffer,
-                            LocalContactId = RunningIpAddresses.First(c => c.Value.AddressFamily == receiver.Client.AddressFamily).Key,
+                            LocalContactId = RunningIpAddresses.First().Key,
                             RemoteEndPoint = x.Result.RemoteEndPoint
                         };
 
@@ -268,6 +272,16 @@ namespace LUC.DiscoveryService
             });
         }
 
+        private BigInteger RandomDefiniedAcceptedContactId(UdpClient receiver)
+        {
+            Random random = new Random();
+            var runningAddressesWithSameFamily = RunningIpAddresses.Where(c => c.Value.AddressFamily == receiver.Client.AddressFamily).ToArray();
+            var numAcceptedAddress = random.Next(runningAddressesWithSameFamily.Length);
+            var acceptedContactId = runningAddressesWithSameFamily[numAcceptedAddress].Key;
+
+            return acceptedContactId;
+        }
+
         /// <summary>
         /// Listens for TCP messages asynchronously
         /// </summary>
@@ -282,7 +296,7 @@ namespace LUC.DiscoveryService
             {
                 try
                 {
-                    var task = receiver.ReceiveAsync(Constants.ReceiveTimeout);
+                    var task = receiver.ReceiveAsync(Constants.ReceiveTimeout, CountStoragedAcceptedSockets);
 
                     _ = task.ContinueWith(x => ListenTcp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 

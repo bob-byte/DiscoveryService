@@ -3,7 +3,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 	/// <summary>
 	/// Specifies whether to perform synchronous or asynchronous I/O.
 	/// </summary>
-	internal enum IOBehavior
+	enum IOBehavior
 	{
 		/// <summary>
 		/// Use synchronous I/O.

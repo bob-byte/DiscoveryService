@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
+namespace LUC.DiscoveryService
 {
-    enum SocketState
+    public enum SocketState
     {
         /// <summary>
         /// The socket has been created; no connection has been made
@@ -28,6 +28,9 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         /// </summary>
         Querying,
 
+        SendingBytes,
+
+        SentBytes,
 
         /// <summary>
         /// The socked is connected to an another peer and the active query is being cancelled.
@@ -38,6 +41,12 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         /// A cancellation is pending on the connected peer and needs to be cleared
         /// </summary>
         ClearingPendingCancellation,
+
+        Reading,
+
+        AlreadyRead,
+
+        Disconnected,
 
         /// <summary>
         /// The socket is closing

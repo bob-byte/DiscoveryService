@@ -1,5 +1,6 @@
 ﻿using LUC.Interfaces;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,29 +13,33 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 {
-    internal sealed class ConnectionPool
+    sealed class ConnectionPool
     {
+        private const UInt32 PoolRecoveryFrequencyInMs = 1000;
+
         private static ConnectionPool instance;
-        private ILoggingService log;
-        private UInt32 lastRecoveryTime;
+        private readonly ILoggingService log;
 
-        readonly SemaphoreSlim m_cleanSemaphore;
-        readonly SemaphoreSlim m_sessionSemaphore;
-        readonly ConcurrentDictionary<EndPoint, SocketInConnetionPool> m_sessions;
+        private readonly SemaphoreSlim m_cleanSemaphore;
+        private readonly SemaphoreSlim m_sessionSemaphore;
+        private readonly SemaphoreLocker lockLeasedSockets;
 
-        readonly ConcurrentDictionary<EndPoint, SocketInConnetionPool> m_leasedSessions;
-        readonly Dictionary<string, int> m_hostSessions;
-        readonly object[] m_logArguments;
-        Task m_reaperTask;
-        uint m_lastRecoveryTime;
-        int m_lastSessionId;
-        //Dictionary<string, CachedProcedure?>? m_procedureCache;
+        private readonly Dictionary<EndPoint, SocketInConnectionPool> m_sessions;
+        private readonly Dictionary<EndPoint, SocketInConnectionPool> m_leasedSessions;
 
-        //static ConnectionPool()
-        //{
-        //    AppDomain.CurrentDomain.DomainUnload += OnAppDomainShutDown;
-        //    AppDomain.CurrentDomain.ProcessExit += OnAppDomainShutDown;
-        //}
+        private UInt32 m_lastRecoveryTime;
+
+        static ConnectionPool()
+        {
+            AppDomain.CurrentDomain.DomainUnload += CleanPool;
+            AppDomain.CurrentDomain.ProcessExit += CleanPool;
+        }
+
+        private static void CleanPool(object sender, EventArgs e)
+        {
+            instance?.ClearPoolAsync(IOBehavior.Synchronous, respectMinPoolSize: false, CancellationToken.None).GetAwaiter().GetResult();
+            //BackgroundConnectionResetHelper.Stop();
+        }
 
         private ConnectionPool(ConnectionSettings connectionSettings, ILoggingService loggingService)
         {
@@ -44,9 +49,9 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             m_cleanSemaphore = new SemaphoreSlim(initialCount: 1);
             m_sessionSemaphore = new SemaphoreSlim(connectionSettings.MaximumPoolSize);
 
-            m_sessions = new ConcurrentDictionary<EndPoint, SocketInConnetionPool>();
-            m_leasedSessions = new ConcurrentDictionary<EndPoint, SocketInConnetionPool>();
-
+            m_sessions = new Dictionary<EndPoint, SocketInConnectionPool>();
+            m_leasedSessions = new Dictionary<EndPoint, SocketInConnectionPool>();
+            lockLeasedSockets = new SemaphoreLocker();
         }
 
         public ConnectionSettings ConnectionSettings { get; }
@@ -55,13 +60,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 		/// Returns <c>true</c> if the connection pool is empty, i.e., all connections are in use. Note that in a highly-multithreaded
 		/// environment, the value of this property may be stale by the time it's returned.
 		/// </summary>
-		internal bool IsEmpty => m_sessionSemaphore.CurrentCount == 0;
-
-        //static void OnAppDomainShutDown(Object sender, EventArgs eventArguments)
-        //{
-        //    ClearPoolAsync(IOBehavior.Synchronous)
-        //    BackgroundConnectionResetHelper.Stop();
-        //}
+		internal Boolean IsEmpty => m_sessionSemaphore.CurrentCount == 0;
 
         public static ConnectionPool Instance(ILoggingService loggingService)
         {
@@ -73,11 +72,11 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             return instance;
         }
 
-        public async ValueTask<SocketInConnetionPool> SocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, CancellationToken cancellationToken)
+        public async ValueTask<SocketInConnectionPool> SocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (IsEmpty && unchecked(((UInt32)Environment.TickCount) - m_lastRecoveryTime) >= 1000u)
+            if (IsEmpty && (unchecked(((UInt32)Environment.TickCount) - m_lastRecoveryTime) >= PoolRecoveryFrequencyInMs))
             {
                 log.LogInfo("Pool is empty; recovering leaked sessions");
 
@@ -86,7 +85,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
             // wait for an open slot (until the cancellationToken is cancelled, which is typically due to timeout)
 #if DEBUG
-            log.LogInfo("Pool waiting for an available session");
+            log.LogInfo("Pool waiting for a putting in pool");
 #endif
             if (ioBehavior == IOBehavior.Asynchronous)
             {
@@ -97,47 +96,103 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 m_sessionSemaphore.Wait(cancellationToken);
             }
 
-            //try get from dict
-            if(m_sessions.TryRemove(remoteEndPoint, out var desiredSocket))
+            SocketInConnectionPool desiredSocket = null;
+            await lockLeasedSockets.LockAsync(async () =>
             {
-                if(!desiredSocket.Connected)
+                if (m_leasedSessions.ContainsKey(remoteEndPoint))
                 {
-                    await Connect(desiredSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+                    desiredSocket = m_leasedSessions[remoteEndPoint];
+
+                    //wait in different way
+                    if (ioBehavior == IOBehavior.Asynchronous)
+                    {
+                        await desiredSocket.ReturnedInPool.WaitAsync();
+                    }
+                    else if (ioBehavior == IOBehavior.Synchronous)
+                    {
+                        desiredSocket.ReturnedInPool.Wait();
+                    }
+
+                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket);
                 }
+            });
+
+            if(desiredSocket != null)
+            {
+                return desiredSocket;
+            }
+
+            Boolean isInPool = m_sessions.ContainsKey(remoteEndPoint);
+            if (isInPool)
+            {
+                lock (m_sessions)
+                {
+                    desiredSocket = m_sessions[remoteEndPoint];
+                    m_sessions.Remove(remoteEndPoint);
+                }
+
+                desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(continueOnCapturedContext: false);
             }
             else
             {
-                desiredSocket = new SocketInConnetionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
-                await Connect(desiredSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+                desiredSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
+                await ConnectInDifferentWayAsync(desiredSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
             }
 
-            m_leasedSessions.TryAdd(remoteEndPoint, desiredSocket);
+            lock (m_leasedSessions)
+            {
+                m_leasedSessions.Add(remoteEndPoint, desiredSocket);
+                desiredSocket.IsTakenFromPool = true;
+            }
 
             return desiredSocket;
-            //if it is in pool, delete from dict m_sessions and check connection
-            //if not - create, add to dict m_sessions and connect to remoteEndPoint
         }
 
-        private async ValueTask Connect(SocketInConnetionPool socket, EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
+        private async ValueTask<SocketInConnectionPool> ConnectedSocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, SocketInConnectionPool socket)
+        {
+            var connectedSocket = socket;
+            try
+            {
+                connectedSocket.VerifyConnected();
+            }
+            catch(NullReferenceException)
+            {
+                connectedSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
+                    await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+            }
+            catch
+            {
+                try
+                {
+                    await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+                }
+                catch
+                {
+                    connectedSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
+                    await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+                }
+            }
+
+            return connectedSocket;
+        }
+
+        private async ValueTask<Boolean> ConnectInDifferentWayAsync(SocketInConnectionPool socket, EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
         {
             Boolean isConnected;
-            if(ioBehavior == IOBehavior.Asynchronous)
+            if (ioBehavior == IOBehavior.Asynchronous)
             {
                 isConnected = await socket.ConnectAsync(remoteEndPoint, timeoutToConnect).ConfigureAwait(continueOnCapturedContext: false);
             }
-            else if(ioBehavior == IOBehavior.Synchronous)
+            else if (ioBehavior == IOBehavior.Synchronous)
             {
                 socket.Connect(remoteEndPoint, timeoutToConnect, out isConnected);
             }
             else
             {
-                throw new ArgumentException($"ioBehavior has incorrect value");
+                throw new ArgumentException($"{ioBehavior} has incorrect value");
             }
 
-            if (!isConnected)
-            {
-                throw new TimeoutException($"Timeout to connect to {remoteEndPoint}");
-            }
+            return isConnected;
         }
 
         /// <summary>
@@ -147,24 +202,24 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 		/// </summary>
 		private async Task RecoverLeakedSocketsAsync(IOBehavior ioBehavior, TimeSpan timeoutToConnect)
         {
-            var recoveredSockets = new List<SocketInConnetionPool>();
-            lock (m_leasedSessions)
+            var recoveredSockets = new List<SocketInConnectionPool>();
+            await lockLeasedSockets.LockAsync(async () =>
             {
-                m_lastRecoveryTime = unchecked((uint)Environment.TickCount);
+                m_lastRecoveryTime = unchecked((UInt32)Environment.TickCount);
 
                 foreach (var socket in m_leasedSessions.Values)
                 {
-                    if (!socket.Connected)
+                    var recoveredSocket = await ConnectedSocketAsync(socket.Id, timeoutToConnect, ioBehavior, socket).ConfigureAwait(continueOnCapturedContext: false);
+                    try
                     {
-                        socket.Connect(m_leasedSessions.Single(c => c.Value.Id.ToString() == socket.Id.ToString()).Key, timeoutToConnect, out var isConnected);
-
-                        if(isConnected)
-                        {
-                            recoveredSockets.Add(socket);
-                        }
+                        recoveredSocket.VerifyConnected();
+                    }
+                    catch
+                    {
+                        recoveredSockets.Add(socket);
                     }
                 }
-            }
+            });
 
             if(recoveredSockets.Count == 0)
             {
@@ -179,47 +234,56 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
             foreach (var socket in recoveredSockets)
             {
-                socket.ReturnToPool(ioBehavior, out _);
+                await socket.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
             }
         }
 
-        
-
-#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0
-		public async ValueTask<int> ReturnAsync(IOBehavior ioBehavior, ServerSession session)
-#else
-        public void ReturnToPool(IOBehavior ioBehavior, EndPoint remoteEndPoint, out Boolean isReturned)
-#endif
+        public async Task<Boolean> ReturnToPoolAsync(IOBehavior ioBehavior, EndPoint remoteEndPoint)
         {
+#if DEBUG
+            log.LogInfo($"Pool receiving Session with id {remoteEndPoint} back");
+#endif
 
-            //if (Log.IsDebugEnabled())
-            //    Log.Debug("Pool{0} receiving Session{1} back", m_logArguments[0], session.Id);
-
+            Boolean isReturned = false;
             try
             {
-                Boolean wasInPool;
-                SocketInConnetionPool socketInPool;
-                lock (m_leasedSessions)
+                Boolean wasInPool = false;
+                SocketInConnectionPool socketInPool = null;
+                await lockLeasedSockets.LockAsync(() =>
                 {
-                    wasInPool = m_leasedSessions.TryRemove(remoteEndPoint, out socketInPool);
-                }
+                    wasInPool = m_leasedSessions.ContainsKey(remoteEndPoint);
+
+                    if (wasInPool)
+                    {
+                        socketInPool = m_leasedSessions[remoteEndPoint];
+                        m_leasedSessions.Remove(remoteEndPoint);
+                    }
+
+                    return Task.CompletedTask;
+                });
 
                 if(wasInPool)
-                {
-                    //socket.OwningConnection = null;//why do we need this row?
+                {                 
                     var socketHealth = SocketHealth(socketInPool);
                     if (socketHealth == Tcp.SocketHealth.Healthy)
                     {
-                        isReturned = m_sessions.TryAdd(socketInPool.RemoteEndPoint, socketInPool);
+                        lock(m_sessions)
+                        {
+                            m_sessions.Add(remoteEndPoint, socketInPool);
+                            socketInPool.IsTakenFromPool = false;
+                            isReturned = true;
+                        }
                     }
                     else
                     {
                         if (socketHealth == Tcp.SocketHealth.IsNotConnected)
                         {
-                            log.LogInfo($"Pool received invalid Session{1}; destroying it");
+                            log.LogInfo($"Pool received invalid Socket {socketInPool.Id}; destroying it");
                         }
-                        else
-                            log.LogInfo("Pool{0} received expired Session{1}; destroying it");
+                        else if(socketHealth == Tcp.SocketHealth.Expired)
+                        {
+                            log.LogInfo($"Pool received expired Socket {socketInPool.Id}; destroying it");
+                        }
                         socketInPool.Dispose();
 
                         isReturned = false;
@@ -240,21 +304,25 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 m_sessionSemaphore.Release();
             }
 
-#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0
-			return default;
-#endif
+            return isReturned;
         }
 
-        private SocketHealth SocketHealth(SocketInConnetionPool socket)
+        private SocketHealth SocketHealth(SocketInConnectionPool socket)
         {
             SocketHealth socketHealth;
 
-            if(!socket.Connected)
+            try
+            {
+                socket.VerifyConnected();
+            }
+            catch
             {
                 socketHealth = Tcp.SocketHealth.IsNotConnected;
+                return socketHealth;
             }
-            else if((ConnectionSettings.ConnectionLifeTime > 0) && 
-                (unchecked((UInt32)Environment.TickCount) - socket.CreatedTicks >= ConnectionSettings.ConnectionLifeTime))
+
+            if((ConnectionSettings.ConnectionLifeTime > 0) && 
+               (unchecked((UInt32)Environment.TickCount) - socket.CreatedTicks >= ConnectionSettings.ConnectionLifeTime))
             {
                 socketHealth = Tcp.SocketHealth.Expired;
             }
@@ -266,15 +334,75 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             return socketHealth;
         }
 
-        //public async ValueTask<DiscoveryServiceSocket> ClientAsync(IOBehavior ioBehavior)
-        //{
-        //    if(IsEmpty && (unchecked(((UInt32)Environment.TickCount) - lastRecoveryTime) >= 1000u))
-        //    {
-        //        log.LogInfo("Pool is empty; recovering leaked sessions");
-        //        await RecoverLeakedSessionsAsync(ioBehavior)
-        //    }
-        //}
+        public async Task ClearPoolAsync(IOBehavior ioBehavior, bool respectMinPoolSize, CancellationToken cancellationToken)
+        {
+            log.LogInfo($"Pool clearing connection pool");
 
-        //private async ValueTask<>
+            // synchronize access to this method as only one clean routine should be run at a time
+            if (ioBehavior == IOBehavior.Asynchronous)
+            {
+                await m_cleanSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                m_cleanSemaphore.Wait(cancellationToken);
+            }
+
+            try
+            {
+                var waitTimeout = TimeSpan.FromMilliseconds(10);
+                while (true)
+                {
+                    // if respectMinPoolSize is true, return if (leased sessions + waiting sessions <= minPoolSize)
+                    if (respectMinPoolSize)
+                    {
+                        lock (m_sessions)
+                        {
+                            if (ConnectionSettings.MaximumPoolSize - m_sessionSemaphore.CurrentCount + m_sessions.Count <= ConnectionSettings.MinimumPoolSize)
+                            {
+                                return;
+                            }
+                        }
+                    }
+
+                    // try to get an open slot; if this fails, connection pool is full and sessions will be disposed when returned to pool
+                    if (ioBehavior == IOBehavior.Asynchronous)
+                    {
+                        if (!await m_sessionSemaphore.WaitAsync(waitTimeout, cancellationToken).ConfigureAwait(false))
+                        {
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        if (!m_sessionSemaphore.Wait(waitTimeout, cancellationToken))
+                        {
+                            return;
+                        }
+                    }
+
+                    try
+                    {
+                        // check for a waiting session
+                        lock (m_sessions)
+                        {
+                            var waitingSocket = m_sessions.FirstOrDefault();
+                            if(!waitingSocket.Equals(default(KeyValuePair<EndPoint, SocketInConnectionPool>)))
+                            {
+                                waitingSocket.Value.Dispose();
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        m_sessionSemaphore.Release();
+                    }
+                }
+            }
+            finally
+            {
+                m_cleanSemaphore.Release();
+            }
+        }
     }
 }

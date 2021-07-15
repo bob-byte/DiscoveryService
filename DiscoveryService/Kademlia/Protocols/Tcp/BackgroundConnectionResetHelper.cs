@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 		static readonly List<Task<Boolean>> s_resetTasks = new List<Task<Boolean>>();
 		static Task s_workerTask;
 
-		public static void AddSocket(SocketInConnetionPool socket, ILoggingService log)
+		public static void AddSocket(SocketInConnectionPool socket, ILoggingService log)
         {
             SocketAsyncEventArgs disconnetArgs = new SocketAsyncEventArgs();
             var resetTask = socket.TryResetConnectionAsync(returnToPool: true, reuseSocket: true, IOBehavior.Asynchronous);
