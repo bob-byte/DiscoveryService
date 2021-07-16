@@ -251,7 +251,7 @@ namespace LUC.DiscoveryService
                         UdpMessageEventArgs eventArgs = new UdpMessageEventArgs
                         {
                             Buffer = x.Result.Buffer,
-                            LocalContactId = RunningIpAddresses.First().Key,
+                            LocalContactId = acceptedContactId,
                             RemoteEndPoint = x.Result.RemoteEndPoint
                         };
 

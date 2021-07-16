@@ -20,7 +20,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
     {
         private readonly Object m_lock = new Object();
         private SocketState m_state;
-        private Boolean isTakenFromPool = false;
+        private Boolean isInPool = false;
 
         /// <inheritdoc/>
         public SocketInConnectionPool(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log)
@@ -38,21 +38,21 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
         public ConnectionPool Pool { get; }
 
-        public Boolean IsTakenFromPool 
+        public Boolean IsInPool 
         {
-            get => isTakenFromPool;
+            get => isInPool;
             set
             {
-                isTakenFromPool = value;
+                isInPool = value;
 
-                if (!isTakenFromPool)
+                if(isInPool && ReturnedInPool.CurrentCount == 0)
                 {
                     ReturnedInPool.Release();
                 }
             }
         }
 
-        public SemaphoreSlim ReturnedInPool { get; } = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+        public SemaphoreSlim ReturnedInPool { get; } = new SemaphoreSlim(initialCount: 0, maxCount: 1);
 
         //public async Task ConnectAsync()
         //{

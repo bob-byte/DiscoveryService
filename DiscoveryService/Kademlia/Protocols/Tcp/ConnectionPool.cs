@@ -85,7 +85,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
             // wait for an open slot (until the cancellationToken is cancelled, which is typically due to timeout)
 #if DEBUG
-            log.LogInfo("Pool waiting for a putting in pool");
+            log.LogInfo("Pool waiting for a taking from the pool");
 #endif
             if (ioBehavior == IOBehavior.Asynchronous)
             {
@@ -142,7 +142,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             lock (m_leasedSessions)
             {
                 m_leasedSessions.Add(remoteEndPoint, desiredSocket);
-                desiredSocket.IsTakenFromPool = true;
+                desiredSocket.IsInPool = false;
             }
 
             return desiredSocket;
@@ -270,7 +270,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                         lock(m_sessions)
                         {
                             m_sessions.Add(remoteEndPoint, socketInPool);
-                            socketInPool.IsTakenFromPool = false;
+                            socketInPool.IsInPool = true;
                             isReturned = true;
                         }
                     }

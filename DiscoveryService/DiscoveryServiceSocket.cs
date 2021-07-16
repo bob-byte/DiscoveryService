@@ -20,7 +20,7 @@ namespace LUC.DiscoveryService
     {
         private readonly Object m_lock = new Object();
 
-        private readonly TimeSpan howOftenCheckAcceptedClient = TimeSpan.FromSeconds(value: 2);
+        private readonly TimeSpan howOftenCheckAcceptedClient = TimeSpan.FromSeconds(value: 0.5);
 
         private AutoResetEvent acceptDone;
         private AutoResetEvent connectDone;
