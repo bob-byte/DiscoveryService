@@ -3,6 +3,7 @@ using LUC.DiscoveryService.Messages.KademliaRequests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     class PingResponse : Response 
     {
-        public static void SendSameRandomId(SocketInConnectionPool sender, TimeSpan timeoutToSend, PingRequest request)
+        public static void SendSameRandomId(Socket sender, TimeSpan timeoutToSend, PingRequest request)
         {
             if (request?.RandomID != default)
             {
@@ -20,7 +21,8 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                     RandomID = request.RandomID
                 };
 
-                sender.Send(response.ToByteArray(), timeoutToSend, out _);
+                sender.SendTimeout = timeoutToSend.Milliseconds;
+                sender.Send(response.ToByteArray());
             }
             else
             {

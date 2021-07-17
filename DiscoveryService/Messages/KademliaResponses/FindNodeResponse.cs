@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,7 +17,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
     {
         public List<Contact> Contacts { get; set; }
 
-        public static void SendOurCloseContactsAndPort(SocketInConnectionPool sender, IEnumerable<Contact> closeContactsToLocalContactId, UInt32 tcpPortOfLocalContact, TimeSpan timeoutToSend, FindNodeRequest message)
+        public static void SendOurCloseContactsAndPort(Socket sender, IEnumerable<Contact> closeContactsToLocalContactId, UInt32 tcpPortOfLocalContact, TimeSpan timeoutToSend, FindNodeRequest message)
         {
             if (message?.RandomID != default)
             {
@@ -26,7 +27,8 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                     Contacts = closeContactsToLocalContactId.ToList(),
                 };
 
-                sender.Send(response.ToByteArray(), timeoutToSend, out _);
+                sender.SendTimeout = timeoutToSend.Milliseconds;
+                sender.Send(response.ToByteArray());
                 //response.Send(new IPEndPoint(iPEndPoint.Address, (Int32)message.TcpPort), response.ToByteArray()).ConfigureAwait(false);
             }
             else

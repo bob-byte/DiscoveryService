@@ -127,58 +127,56 @@ namespace LUC.DiscoveryService
         {
             Service = new Service(MachineId, protocol, UseIpv4, UseIpv6, ProtocolVersion);
 
-            Service.QueryReceived += Service.TryKademliaOperation;
+            Service.QueryReceived += SendTcpMessage;
             Service.AnswerReceived += AddNewContact;
             //Service.AnswerReceived += Service.Bootstrap;
             Service.PingReceived += (s, e) =>
             {
-                SendKademliaResponse<PingRequest>(e, (client, request) =>
+                SendKademliaResponse<PingRequest>(e.AcceptedSocket, e, (receiver, request) =>
                 {
-                    PingResponse.SendSameRandomId(client, Constants.SendTimeout, request);
+                    PingResponse.SendSameRandomId(receiver, Constants.SendTimeout, request);
                 });
             };
 
-            Service.StoreReceived += (s, e) =>
-            {
-                SendKademliaResponse<StoreRequest>(e, (client, request) =>
-                {
-                    StoreResponse.SendSameRandomId(client, Constants.SendTimeout, request);
-                });
-            };
+            //Service.StoreReceived += (s, e) =>
+            //{
+            //    SendKademliaResponse<StoreRequest>(e, (client, request) =>
+            //    {
+            //        StoreResponse.SendSameRandomId(client, Constants.SendTimeout, request);
+            //    });
+            //};
 
-            Service.FindNodeReceived += (s, e) =>
-            {
-                SendKademliaResponse<FindNodeRequest>(e, (client, request) =>
-                {
-                     var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(e.LocalContactId), new ID(e.LocalContactId));
-                     FindNodeResponse.SendOurCloseContactsAndPort(client, closeContacts, RunningTcpPort, SendTimeout, request);
-                });
-            };
+            //Service.FindNodeReceived += (s, e) =>
+            //{
+            //    SendKademliaResponse<FindNodeRequest>(e, (client, request) =>
+            //    {
+            //         var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(e.LocalContactId), new ID(e.LocalContactId));
+            //         FindNodeResponse.SendOurCloseContactsAndPort(client, closeContacts, RunningTcpPort, SendTimeout, request);
+            //    });
+            //};
 
-            Service.FindValueReceived += (s, e) =>
-            {
-                SendKademliaResponse<FindValueRequest>(e, (client, request) =>
-                {
-                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(e.LocalContactId), new ID(e.LocalContactId));
-                    FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, MachineId);
-                });
-            };
+            //Service.FindValueReceived += (s, e) =>
+            //{
+            //    SendKademliaResponse<FindValueRequest>(s as DiscoveryServiceSocket, e, (client, request) =>
+            //    {
+            //        var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(e.LocalContactId), new ID(e.LocalContactId));
+            //        FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, MachineId);
+            //    });
+            //};
         }
 
-        private void SendKademliaResponse<T>(TcpMessageEventArgs eventArgs, Action<SocketInConnectionPool, T> funcSend)
+        private void SendKademliaResponse<T>(Socket acceptedSocket, TcpMessageEventArgs eventArgs, Action<Socket, T> funcSend)
             where T: Request, new()
         {
-            var request = eventArgs.Message<T>(whetherReadMessage: false);
-
-            var endPointWhereSend = new IPEndPoint(((IPEndPoint)eventArgs.RemoteContact).Address,
-                (Int32)request.TcpPort);
-            var client = connectionPool.SocketAsync(
-                endPointWhereSend,
-                Constants.ConnectTimeout, 
-                IOBehavior.Synchronous, 
-                CancellationToken.None).Result;
-
-            funcSend(client, request);
+            try
+            {
+                var request = eventArgs.Message<T>(whetherReadMessage: false);
+                funcSend(acceptedSocket, request);
+            }
+            catch(Exception ex)
+            {
+                log.LogInfo($"Failed to answer at {typeof(T)}: {ex.Message}");
+            }
         }
 
         public void AddNewContact(Object sender, TcpMessageEventArgs e)

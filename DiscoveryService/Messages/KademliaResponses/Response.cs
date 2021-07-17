@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
@@ -39,5 +40,11 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 throw new ArgumentNullException("WriterNullException");
             }
         }
+
+        //protected virtual void Send(Socket sender, TimeSpan timeoutToSend, Byte[] bytesOfResponse)
+        //{
+        //    sender.SendTimeout = timeoutToSend.Milliseconds;
+        //    sender.Send(bytesOfResponse);
+        //}
     }
 }

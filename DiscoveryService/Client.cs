@@ -214,6 +214,8 @@ namespace LUC.DiscoveryService
                         MulticastEndpointIp4 : MulticastEndpointIp6;
                     await sender.Value.SendAsync(message, message.Length, endpoint)
                         .ConfigureAwait(continueOnCapturedContext: false);
+
+                    break;
                 }
                 catch(SocketException e)
                 {

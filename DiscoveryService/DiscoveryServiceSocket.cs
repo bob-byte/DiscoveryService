@@ -151,6 +151,7 @@ namespace LUC.DiscoveryService
             {
                 receiveResult.Buffer = readBytes;
                 receiveResult.RemoteContact = ipEndPoint;
+                receiveResult.AcceptedSocket = clientToReadMessage;
                 receiveResult.LocalContactId = ContactId;
             }
             else
