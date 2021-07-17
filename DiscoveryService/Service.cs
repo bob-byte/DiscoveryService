@@ -144,9 +144,9 @@ namespace LUC.DiscoveryService
         internal Service(String machineId, IProtocol protocol, Boolean useIpv4, Boolean useIpv6, 
             UInt32 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
-            MachineId = machineId;
+            Protocol = protocol;
 
-            
+            MachineId = machineId;
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;
             ProtocolVersion = protocolVersion;
@@ -389,13 +389,9 @@ namespace LUC.DiscoveryService
                     return;
                 }
 
-                //if ((message.ProtocolVersion != ProtocolVersion) ||
-                //    (message.MachineId == MachineId))
-                //{
-                //    return;
-                //}
-
-                // Dispatch the message.
+            if ((message.ProtocolVersion == ProtocolVersion) ||
+                (message.MachineId != MachineId))
+            {
                 try
                 {
                     result.SetMessage(message);
@@ -406,6 +402,10 @@ namespace LUC.DiscoveryService
                     log.LogError($"Receive handler failed: {e.Message}");
                     // eat the exception
                 }
+            }
+
+            // Dispatch the message.
+            
             //}
         }
 
@@ -420,7 +420,7 @@ namespace LUC.DiscoveryService
         private void RaiseAnswerReceived(Object sender, TcpMessageEventArgs receiveResult)
         {
 
-            lock (sender)
+            lock (this)
             {
                 Message message = receiveResult.Message<Message>();
 
@@ -437,17 +437,16 @@ namespace LUC.DiscoveryService
                             //Protocol..PingReceived = () => requestManagement.SendSameRandomId(receiveResult.Message as PingRequest);
                             break;
                         }
-                        //case MessageOperation.Ping:
-                        //    {
-                        //        PingRequest request = new PingRequest();
-                        //        request.Read(receiveResult.Buffer);
-                        //        receiveResult.SetMessage(request);
-                        //        PingReceived?.Invoke(sender, receiveResult);
+                    case MessageOperation.Ping:
+                        {
+                            PingRequest request = new PingRequest();
+                            request.Read(receiveResult.Buffer);
+                            receiveResult.SetMessage(request);
+                            PingReceived?.Invoke(sender, receiveResult);
 
-
-                        //        //Protocol..PingReceived = () => requestManagement.SendSameRandomId(receiveResult.Message as PingRequest);
-                        //        break;
-                        //    }
+                            //Protocol..PingReceived = () => requestManagement.SendSameRandomId(receiveResult.Message as PingRequest);
+                            break;
+                        }
 
                         //case MessageOperation.PingResponse:
                         //    PingResponseReceived?.Invoke(sender, new TcpMessageEventArgs
@@ -508,19 +507,33 @@ namespace LUC.DiscoveryService
             }
         }
 
-        public void Bootstrap(Object sender, TcpMessageEventArgs receiveResult)
+        public void TryKademliaOperation(Object sender, UdpMessageEventArgs receiveResult)
         {
-            lock(sender)
+            lock (this)
             {
-                //var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>();
-                //if ((receiveResult.RemoteContact is IPEndPoint ipEndPoint))
-                //{
-                //    //Protocol.Ping(DistributedHashTable.Contact, DistributedHashTable.Contact.IPAddress, DistributedHashTable.Contact.TcpPort);
+                var udpMessage = receiveResult.Message<UdpMessage>(whetherReadMessage: false);
+                if ((udpMessage != null) && (receiveResult.RemoteEndPoint is IPEndPoint ipEndPoint))
+                {
+                    Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)udpMessage.TcpPort);
 
-                //    DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
-                //}
+                    //DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
+                }
             }
         }
+
+        //public void Bootstrap(Object sender, TcpMessageEventArgs receiveResult)
+        //{
+        //    lock(this)
+        //    {
+        //        var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
+        //        if ((tcpMessage != null) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
+        //        {
+        //            Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
+
+        //            //DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
+        //        }
+        //    }
+        //}
 
         /// <summary>
         ///   Start the service.

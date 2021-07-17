@@ -176,7 +176,7 @@ namespace LUC.DiscoveryService
 
                 availableDataToRead = socketToRead.Available;
             }
-
+            
             receiveDone?.Set();
 
             return allMessage.ToArray();

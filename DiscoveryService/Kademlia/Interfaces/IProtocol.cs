@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
     public interface IProtocol
     {
         /// <summary>
-        /// Someone is pinging us.  Register the contact and respond.
+        /// Pings contact with <paramref name="host"/> and <paramref name="tcpPort"/>
         /// </summary>
         /// <param name="sender">
         /// Current peer

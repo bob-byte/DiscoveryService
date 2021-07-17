@@ -10,10 +10,22 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
-    abstract class Request : Message
+    public abstract class Request : Message
     {
         public BigInteger RandomID { get; set; }
         public BigInteger Sender { get; set; }
+
+        /// <summary>
+        /// TCP port which is being run in machine with machineId.
+        /// TCP port for inter-service communications.
+        /// </summary>
+        public UInt32 TcpPort { get; set; }
+
+        public Request(UInt32 tcpPort)
+            : this()
+        {
+            TcpPort = tcpPort;
+        }
 
         public Request()
         {
@@ -25,8 +37,10 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (reader != null)
             {
-                RandomID = BigInteger.Parse(reader.ReadString());
+                MessageOperation = (MessageOperation)reader.ReadUInt32();
+                TcpPort = reader.ReadUInt32();
                 Sender = BigInteger.Parse(reader.ReadString());
+                RandomID = BigInteger.Parse(reader.ReadString());
 
                 return this;
             }
@@ -41,8 +55,10 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (writer != null)
             {
-                writer.Write(RandomID.ToString());
+                writer.Write((UInt32)MessageOperation);
+                writer.Write(TcpPort);
                 writer.Write(Sender.ToString());
+                writer.Write(RandomID.ToString());
             }
             else
             {

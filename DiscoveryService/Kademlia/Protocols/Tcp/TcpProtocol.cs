@@ -30,7 +30,6 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
         private ILoggingService loggingService;
 
-
         public TcpProtocol(ILoggingService loggingService)
         {
             this.loggingService = loggingService;
@@ -45,49 +44,75 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             var id = ID.RandomID;
 
             ErrorResponse peerError = new ErrorResponse();
-            PingRequest request = new PingRequest
+            PingRequest request = new PingRequest((UInt32)sender.EndPoint.Port)
             {
                 RandomID = id.Value,
-                Sender = sender.ID.Value
+                Sender = sender.ID.Value,
+                MessageOperation = MessageOperation.Ping
             };
             PingResponse response = null;
 
             var remoteEndPoint = new IPEndPoint(host, (Int32)tcpPort);
-            GetClient(sender.ID, remoteEndPoint, out var client, out var isInPool, out var isConnected);
             Boolean timeout;
-            if(isConnected)
+            try
             {
-                try
-                {
-                    ClientStart(isInPool, client, remoteEndPoint, request, out response);
-                }
-                catch (Exception ex)
-                {
-                    peerError.ErrorMessage = ex.Message;
-                }
-                //finally
-                //{
-                //    client.Shutdown(SocketShutdown.Both);
-                //    client.Close();
-                //}
-
-                timeout = response == null;
-            }
-            else
-            {
+                ClientStart(remoteEndPoint, request, out response);
                 timeout = false;
             }
-            
+            catch (TimeoutException ex)
+            {
+                timeout = true;
+                peerError.ErrorMessage = ex.Message;
+            }
+            catch (Exception ex)
+            {
+                timeout = false;
+                peerError.ErrorMessage = ex.Message;
+            }
+
             return GetRpcError(id, response, timeout, peerError);
+        }
+
+        private void ClientStart<TResponse>(IPEndPoint remoteEndPoint, Request request, out TResponse response)
+            where TResponse : Response, new()
+        {
+            response = null;
+            //take from DS.SendTcpMessage
+            var bytesOfRequest = request.ToByteArray();
+            var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, IOBehavior.Synchronous, CancellationToken.None).GetAwaiter().GetResult();
+
+            try
+            {
+                Boolean isReceived = false;
+
+                client.Send(bytesOfRequest, Constants.SendTimeout, out var isSent);
+                if (isSent)
+                {
+                    Thread.Sleep(Constants.TimeWaitResponse);
+                    var bytesOfResponse = client.Receive(Constants.ReceiveTimeout, out isReceived);
+                    if (isReceived)
+                    {
+                        response = new TResponse();
+                        response.Read(bytesOfResponse);
+                    }
+                }
+
+                if(!isSent || !isReceived)
+                {
+                    throw new TimeoutException();
+                }
+            }
+            finally
+            {
+                client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+            }
         }
 
         ///<inheritdoc/>
         public RpcError Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
         {
-
-            ErrorResponse peerError = new ErrorResponse();
             ID id = ID.RandomID;
-            var request = new StoreRequest
+            var request = new StoreRequest((UInt32)sender.EndPoint.Port)
             {
                 Sender = sender.ID.Value,
                 Key = key.Value,
@@ -99,73 +124,26 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             };
 
             var remoteContact = DiscoveryService.KnownContacts.SingleOrDefault(c => c.ID == key);
-            GetClient(sender.ID, remoteContact.EndPoint, out var client, out var isInPool, out var isConnected);
-            Boolean timeout;
+            ErrorResponse peerError = new ErrorResponse();
             StoreResponse response = null;
-            if (isConnected)
+            Boolean timeout;
+            try
             {
-                try
-                {
-                    ClientStart(isInPool, client, remoteContact.EndPoint, request, out response);
-                }
-                catch (Exception ex)
-                {
-                    peerError.ErrorMessage = ex.Message;
-                }
-                //finally
-                //{
-                //    client.Shutdown(SocketShutdown.Both);
-                //    client.Close();
-                //}
-
-                timeout = response == null;
+                ClientStart(remoteContact.EndPoint, request, out response);
+                timeout = false;
             }
-            else
+            catch (TimeoutException ex)
+            {
+                timeout = true;
+                peerError.ErrorMessage = ex.Message;
+            }
+            catch (Exception ex)
             {
                 timeout = false;
+                peerError.ErrorMessage = ex.Message;
             }
 
             return GetRpcError(id, response, timeout, peerError);
-        }
-
-        private void GetClient(ID idOfClient, IPEndPoint remoteEndPoint, out SocketInConnectionPool client, out Boolean isInPool, out Boolean isConnected)
-        {
-            client = null;
-            isInPool = false;
-            isConnected = false;
-            //connectionPool
-            //connectionPool.TakeClient(idOfClient.Value, endPointOfClient, ConnectTimeout, out client, out isConnected, out isInPool);
-            //if (client == null)
-            //{
-            //    client = new DiscoveryServiceSocket(endPointOfClient.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            //}
-        }
-
-        private void ClientStart<TResponse>(Boolean isInPool, SocketInConnectionPool client, IPEndPoint endPointOfClient, Request request, out TResponse response)
-            where TResponse: Response
-        {
-            response = null;
-            //Boolean isConnected = client.Connected;
-            //if(!isInPool)
-            //{
-            //    connectionPool.PutSocketInPool(client, idOfClient.Value, endPointOfClient, ConnectTimeout, out _, out _, out isConnected);
-            //}
-            //response = null;
-
-            //if (isConnected)
-            //{
-
-            //    client.Send(request.ToByteArray(), SendTimeout, out var isSent);
-
-            //    if (isSent)
-            //    {
-            //        var bytesOfResponse = client.Receive(ReceiveTimeout, out var isReceived);
-            //        if (isReceived)
-            //        {
-            //            response.Read(bytesOfResponse);
-            //        }
-            //    }
-            //}
         }
 
         /// <inheritdoc/>
@@ -175,7 +153,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             ID id = ID.RandomID;
             bool timeoutError = false;
 
-            var request = new FindNodeRequest
+            var request = new FindNodeRequest((UInt32)sender.EndPoint.Port)
             {
                 Sender = sender.ID.Value,
                 Key = keyToFindContacts.Value,
@@ -186,16 +164,14 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             FindNodeResponse response = null;
 
             var remoteContact = DiscoveryService.KnownContacts.Single(c => c.ID == keyToFindContacts);
-            GetClient(sender.ID, remoteContact.EndPoint, out var client, out var isInPool, out var isConnected);
-
+            //GetClient(sender.ID, remoteContact.EndPoint, out var client, out var isInPool, out var isConnected);
+            List<Contact> closeContactsToKey = null;
             try
             {
-                ClientStart(isInPool, client, remoteContact.EndPoint, request, out response);
+                ClientStart(remoteContact.EndPoint, request, out response);
 
                 //get close contacts near key
-                var closeContacts = response.Contacts;
-
-                return (closeContacts ?? EmptyContactList(), GetRpcError(id, response, timeoutError, peerError: null));
+                closeContactsToKey = response.Contacts;
             }
             catch (SocketException ex)
             {
@@ -204,24 +180,18 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                     ErrorMessage = ex.Message
                 };
                 timeoutError = true;
+            }
 
-                return (EmptyContactList(), GetRpcError(id, null, timeoutError, error));
-            }
-            finally
-            {
-                client.Shutdown(SocketShutdown.Both);
-                client.Close();
-            }
+            return (closeContactsToKey ?? EmptyContactList(), GetRpcError(id, response, timeoutError, peerError: null));
         }
 
         /// <inheritdoc/>
         public (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID keyToFindContact)
         {
-            ErrorResponse error;
             ID id = ID.RandomID;
             bool timeoutError = false;
 
-            var request = new FindValueRequest
+            var request = new FindValueRequest((UInt32)sender.EndPoint.Port)
             {
                 IdOfContact = keyToFindContact.Value,
                 MessageOperation = MessageOperation.FindValue,
@@ -231,35 +201,31 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             
             var remoteContact = DiscoveryService.KnownContacts.Single(c => c.ID == keyToFindContact);
             FindValueResponse response = null;
-            GetClient(sender.ID, remoteContact.EndPoint, out var client, out var isInPool, out var isConnected);
+            List<Contact> closeContactsToKey = null;
+            ErrorResponse peerError = new ErrorResponse();
 
             try
             {
-                ClientStart(isInPool, client, remoteContact.EndPoint, request, out response);
+                ClientStart(remoteContact.EndPoint, request, out response);
 
                 //get close contacts near key
-                var closeContacts = response?.CloseContactsToRepsonsingPeer/*.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList()*/;
+                closeContactsToKey = response?.CloseContactsToRepsonsingPeer/*.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList()*/;
 
                 // Return only contacts with supported protocols.
                 //return (contacts?.Where(c => c.Protocol != null).ToList(), ret.Value, GetRpcError(id, ret, timeoutError, error));
-
-                return (closeContacts ?? EmptyContactList(), response.ValueInResponsingPeer, GetRpcError(id, response, timeoutError, peerError: null));
             }
-            catch (SocketException ex)
+            catch(TimeoutException ex)
             {
-                error = new ErrorResponse
-                {
-                    ErrorMessage = ex.Message
-                };
+                peerError.ErrorMessage = ex.Message;
                 timeoutError = true;
-
-                return (EmptyContactList(), val: null, GetRpcError(id, null, timeoutError, error));
             }
-            finally
+            catch (Exception ex)
             {
-                client.Shutdown(SocketShutdown.Both);
-                client.Close();
+                peerError.ErrorMessage = ex.Message;
+                timeoutError = false;
             }
+
+            return (closeContactsToKey ?? EmptyContactList(), response?.ValueInResponsingPeer, GetRpcError(id, response, timeoutError, peerError));
         }
 
         protected RpcError GetRpcError(ID id, Response resp, bool timeoutError, ErrorResponse peerError)

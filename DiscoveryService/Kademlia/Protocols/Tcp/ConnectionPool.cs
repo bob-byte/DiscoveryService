@@ -35,7 +35,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             AppDomain.CurrentDomain.ProcessExit += CleanPool;
         }
 
-        private static void CleanPool(object sender, EventArgs e)
+        private static void CleanPool(Object sender, EventArgs e)
         {
             instance?.ClearPoolAsync(IOBehavior.Synchronous, respectMinPoolSize: false, CancellationToken.None).GetAwaiter().GetResult();
             //BackgroundConnectionResetHelper.Stop();
@@ -97,6 +97,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             }
 
             SocketInConnectionPool desiredSocket = null;
+            //if IOBehavior.Synchronous then use simple lock without await desiredSocket.ReturnedInPool.WaitAsync 
             await lockLeasedSockets.LockAsync(async () =>
             {
                 if (m_leasedSessions.ContainsKey(remoteEndPoint))

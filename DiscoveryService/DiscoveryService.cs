@@ -127,33 +127,58 @@ namespace LUC.DiscoveryService
         {
             Service = new Service(MachineId, protocol, UseIpv4, UseIpv6, ProtocolVersion);
 
-            Service.QueryReceived += SendTcpMessage;
+            Service.QueryReceived += Service.TryKademliaOperation;
             Service.AnswerReceived += AddNewContact;
             //Service.AnswerReceived += Service.Bootstrap;
-            //Service.PingReceived += (s, e) =>
-            //{
-            //    PingResponse.SendSameRandomId( , SendTimeout, e.Message);
-            //};
+            Service.PingReceived += (s, e) =>
+            {
+                SendKademliaResponse<PingRequest>(e, (client, request) =>
+                {
+                    PingResponse.SendSameRandomId(client, Constants.SendTimeout, request);
+                });
+            };
 
-            //Service.StoreReceived += (s, e) =>
-            //{
-            //    StoreResponse.SendSameRandomId( , SendTimeout, e.Message);
-            //};
+            Service.StoreReceived += (s, e) =>
+            {
+                SendKademliaResponse<StoreRequest>(e, (client, request) =>
+                {
+                    StoreResponse.SendSameRandomId(client, Constants.SendTimeout, request);
+                });
+            };
 
-            //Service.FindNodeReceived += (s, e) =>
-            //{
-            //    FindNodeResponse.SendOurCloseContactsAndPort( , , RunningTcpPort, SendTimeout, e.Message);
-            //};
+            Service.FindNodeReceived += (s, e) =>
+            {
+                SendKademliaResponse<FindNodeRequest>(e, (client, request) =>
+                {
+                     var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(e.LocalContactId), new ID(e.LocalContactId));
+                     FindNodeResponse.SendOurCloseContactsAndPort(client, closeContacts, RunningTcpPort, SendTimeout, request);
+                });
+            };
 
-            //Service.FindValueReceived += (sender, messageArgs) =>
-            //{
-            //    FindValueResponse.SendOurCloseContactsAndMachineValue(
-            //    messageArgs.Message as FindValueRequest,
-            //    ,
-            //    Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(messageArgs.LocalContactId), new ID(messageArgs.LocalContactId)),
-            //    MachineId,
-            //    RunningTcpPort);
-            //};
+            Service.FindValueReceived += (s, e) =>
+            {
+                SendKademliaResponse<FindValueRequest>(e, (client, request) =>
+                {
+                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(e.LocalContactId), new ID(e.LocalContactId));
+                    FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, MachineId);
+                });
+            };
+        }
+
+        private void SendKademliaResponse<T>(TcpMessageEventArgs eventArgs, Action<SocketInConnectionPool, T> funcSend)
+            where T: Request, new()
+        {
+            var request = eventArgs.Message<T>(whetherReadMessage: false);
+
+            var endPointWhereSend = new IPEndPoint(((IPEndPoint)eventArgs.RemoteContact).Address,
+                (Int32)request.TcpPort);
+            var client = connectionPool.SocketAsync(
+                endPointWhereSend,
+                Constants.ConnectTimeout, 
+                IOBehavior.Synchronous, 
+                CancellationToken.None).Result;
+
+            funcSend(client, request);
         }
 
         public void AddNewContact(Object sender, TcpMessageEventArgs e)
@@ -186,6 +211,7 @@ namespace LUC.DiscoveryService
 
             if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
             {
+
                 var sendingContact = Service.OurContacts.Single(c => c.ID.Value == e.LocalContactId);
 
                 Random random = new Random();

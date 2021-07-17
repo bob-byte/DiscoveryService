@@ -12,6 +12,18 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
     {
         public BigInteger Key { get; set; }
 
+        public FindNodeRequest()
+            : base()
+        {
+            ;//do nothing
+        }
+
+        public FindNodeRequest(UInt32 tcpPort)
+            : base(tcpPort)
+        {
+            ;//do nothing
+        }
+
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)
         {

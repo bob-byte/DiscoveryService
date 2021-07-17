@@ -13,5 +13,17 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public String Value { get; set; }
         public Boolean IsCached { get; set; }
         public Int32 ExpirationTimeSec { get; set; }
+
+        public StoreRequest()
+            : base()
+        {
+            ;//do nothing
+        }
+
+        public StoreRequest(UInt32 tcpPort)
+            : base(tcpPort)
+        {
+            ;//do nothing
+        }
     }
 }
