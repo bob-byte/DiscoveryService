@@ -92,6 +92,15 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 Boolean isReceived = false;
 
                 client.Send(bytesOfRequest, Constants.SendTimeout, out var isSent);
+                if (!isSent)
+                {
+                    client.Connect(remoteEndPoint, Constants.ConnectTimeout, out var isConnected);
+                    if (isConnected)
+                    {
+                        client.Send(bytesOfRequest, Constants.SendTimeout, out isSent);
+                    }
+                }
+
                 if (isSent)
                 {
                     Thread.Sleep(Constants.TimeWaitResponse);

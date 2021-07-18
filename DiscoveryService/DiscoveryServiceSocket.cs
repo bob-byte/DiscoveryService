@@ -275,18 +275,24 @@ namespace LUC.DiscoveryService
             }
 
             //Begin sending the data to the remote device
-            BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
-            isSent = sendDone.WaitOne(timeout);
-            if (isSent)
+            try
             {
-                State = SocketState.Connected;
+                BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
+                isSent = sendDone.WaitOne(timeout);
+                if (isSent)
+                {
+                    State = SocketState.Connected;
+                }
+            }
+            catch (Exception ex)
+            {
+                log.LogInfo($"Exception occurred during send operation: {ex.Message}");
+                isSent = false;
             }
         }
 
         private void SendCallback(IAsyncResult asyncResult)
         {
-            try
-            {
                 //Retrieve the socket from the state object
                 Socket client = (Socket)asyncResult.AsyncState;
 
@@ -295,11 +301,6 @@ namespace LUC.DiscoveryService
                 log.LogInfo($"Sent {bytesSent} bytes to {client.RemoteEndPoint}");
 
                 sendDone.Set();
-            }
-            catch (Exception ex)
-            {
-                log.LogInfo($"Exception occurred during send operation: {ex.Message}");
-            }
         }
 
         public void Disconnect(Boolean reuseSocket, TimeSpan timeout, out Boolean isDisconnected)

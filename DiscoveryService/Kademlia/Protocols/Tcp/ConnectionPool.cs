@@ -171,8 +171,15 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                     }
                     catch
                     {
-                        connectedSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
-                        await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(false);
+                        try
+                        {
+                            connectedSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
+                            await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(false);
+                        }
+                        catch(Exception ex)
+                        {
+                            log.LogError(ex.Message);
+                        }
                     }
                 }
             }

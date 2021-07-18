@@ -178,37 +178,49 @@ namespace LUC.DiscoveryService
         /// </param>
         public void SendTcpMessage(Object sender, UdpMessageEventArgs e)
         {
-            var udpMessage = e.Message<UdpMessage>(whetherReadMessage: false);
-
-            if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
+            lock(this)
             {
-                var sendingContact = Service.OurContacts.Single(c => c.ID.Value == e.LocalContactId);
+                var udpMessage = e.Message<UdpMessage>(whetherReadMessage: false);
 
-                Random random = new Random();
-                var tcpMessage = new AcknowledgeTcpMessage(
-                    messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                    MachineId,
-                    sendingContact.ID.Value,
-                    RunningTcpPort,
-                    ProtocolVersion,
-                    groupsIds: GroupsSupported?.Keys?.ToList());
-                var bytesToSend = tcpMessage.ToByteArray();
-
-                if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytesToSend)))
+                if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
                 {
-                    return;
+                    var sendingContact = Service.OurContacts.Single(c => c.ID.Value == e.LocalContactId);
+
+                    Random random = new Random();
+                    var tcpMessage = new AcknowledgeTcpMessage(
+                        messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                        MachineId,
+                        sendingContact.ID.Value,
+                        RunningTcpPort,
+                        ProtocolVersion,
+                        groupsIds: GroupsSupported?.Keys?.ToList());
+                    var bytesToSend = tcpMessage.ToByteArray();
+
+                    if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytesToSend)))
+                    {
+                        return;
+                    }
+
+                    var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
+                    SendMessage(remoteEndPoint, bytesToSend, out var isSent, out var client);
+                    if(!isSent)
+                    {
+                        SendMessage(remoteEndPoint, bytesToSend, out _, out client);
+                    }
                 }
-
-                var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
-                var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
-                client.Send(bytesToSend, Constants.SendTimeout, out _);
-
-                client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+                else
+                {
+                    throw new ArgumentException($"Bad format of {nameof(e)}");
+                }
             }
-            else
-            {
-                throw new ArgumentException($"Bad format of {nameof(e)}");
-            }
+        }
+
+        private void SendMessage(EndPoint remoteEndPoint, Byte[] bytesToSend, out Boolean isSent, out SocketInConnectionPool client)
+        {
+            client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
+            client.Send(bytesToSend, Constants.SendTimeout, out isSent);
+
+            client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
         }
 
         public void AddNewContact(Object sender, TcpMessageEventArgs e)
