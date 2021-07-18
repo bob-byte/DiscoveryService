@@ -203,16 +203,18 @@ namespace LUC.DiscoveryService
             try
             {
                 BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), this);
+                isConnected = connectDone.WaitOne(timeout);
+
+                if (isConnected)
+                {
+                    State = SocketState.Connected;
+                }
             }
             catch(Exception ex)
             {
                 log.LogError(ex.Message);
-            }
-            isConnected = connectDone.WaitOne(timeout);
-
-            if(isConnected)
-            {
-                State = SocketState.Connected;
+                isConnected = false;
+                State = SocketState.Disconnected;
             }
         }
 

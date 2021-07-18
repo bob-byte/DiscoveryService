@@ -45,7 +45,11 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             {
                 isInPool = value;
 
-                if(isInPool && ReturnedInPool.CurrentCount == 0)
+                if(!isInPool)
+                {
+                    ReturnedInPool.Wait(millisecondsTimeout: 0);
+                }
+                else if(isInPool && ReturnedInPool.CurrentCount == 0)
                 {
                     ReturnedInPool.Release();
                 }

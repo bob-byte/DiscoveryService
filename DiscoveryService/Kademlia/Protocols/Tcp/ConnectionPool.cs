@@ -157,14 +157,15 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         private async ValueTask<SocketInConnectionPool> ConnectedSocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, SocketInConnectionPool socket)
         {
             var connectedSocket = socket;
-            try
-            {
-                connectedSocket.VerifyConnected();
-            }
-            catch(NullReferenceException)
+            if (socket == null)
             {
                 connectedSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
                 await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+            }
+
+            try
+            {
+                connectedSocket.VerifyConnected();
             }
             catch
             {
@@ -182,7 +183,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             return connectedSocket;
         }
 
-        private async ValueTask<Boolean> ConnectInDifferentWayAsync(SocketInConnectionPool socket, EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
+        private async ValueTask ConnectInDifferentWayAsync(SocketInConnectionPool socket, EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
         {
             Boolean isConnected;
             if (ioBehavior == IOBehavior.Asynchronous)
@@ -198,7 +199,10 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 throw new ArgumentException($"{ioBehavior} has incorrect value");
             }
 
-            return isConnected;
+            if(!isConnected)
+            {
+                throw new SocketException((Int32)SocketError.ConnectionReset);
+            }
         }
 
         /// <summary>

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using LUC.DiscoveryService.Messages;
+using LUC.DiscoveryService.Messages.KademliaRequests;
 
 namespace LUC.DiscoveryService
 {
@@ -86,6 +87,15 @@ namespace LUC.DiscoveryService
             }
         }
 
+        private static void OnPingReceived(Object sender, TcpMessageEventArgs e)
+        {
+            lock (ttyLock)
+            {
+                Console.WriteLine("=== Kad PING received {0:O} ===", DateTime.Now);
+                Console.WriteLine(e.Message<PingRequest>(whetherReadMessage: false).ToString());
+            }
+        }
+
         static void Main(string[] args)
         {
             foreach (var a in Service.GetIPAddresses())
@@ -103,6 +113,14 @@ namespace LUC.DiscoveryService
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;
             serviceDiscovery.Service.QueryReceived += OnGoodUdpMessage;
             serviceDiscovery.Service.MalformedMessage += OnBadMessage;
+            serviceDiscovery.Service.PingReceived += OnPingReceived;
+            //serviceDiscovery.Service.PingResponseReceived += OnPongReceived;
+            //serviceDiscovery.Service.StoreReceived += OnStoreReceived;
+            //serviceDiscovery.Service.StoreResponseReceived += OnStoreResponseReceived;
+            //serviceDiscovery.Service.FindNodeReceived += OnFindNodeReceived;
+            //serviceDiscovery.Service.FindNodeResponseReceived += OnFindNodeResponseReceived;
+            //serviceDiscovery.Service.FindValueReceived += OnFindValueReceived;
+            //serviceDiscovery.Service.FindValueResponseReceived += OnFindValueResponseReceived;
 
             serviceDiscovery.Service.NetworkInterfaceDiscovered += (s, e) =>
             {
