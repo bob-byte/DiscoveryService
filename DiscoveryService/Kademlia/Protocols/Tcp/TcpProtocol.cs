@@ -43,7 +43,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         {
             var id = ID.RandomID;
 
-            ErrorResponse peerError = new ErrorResponse();
+            ErrorResponse peerError = null;
             PingRequest request = new PingRequest((UInt32)sender.EndPoint.Port)
             {
                 RandomID = id.Value,
@@ -62,15 +62,21 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             catch (TimeoutException ex)
             {
                 timeout = true;
-                peerError.ErrorMessage = ex.Message;
+                peerError = new ErrorResponse
+                {
+                    ErrorMessage = ex.Message
+                };
             }
             catch (Exception ex)
             {
                 timeout = false;
-                peerError.ErrorMessage = ex.Message;
+                peerError = new ErrorResponse
+                {
+                    ErrorMessage = ex.Message
+                };
             }
 
-            return GetRpcError(id, response, timeout, peerError);
+            return RpcError(id, response, timeout, peerError);
         }
 
         private void ClientStart<TResponse>(IPEndPoint remoteEndPoint, Request request, out TResponse response)
@@ -79,7 +85,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             response = null;
             var bytesOfRequest = request.ToByteArray();
 
-            var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, IOBehavior.Synchronous, CancellationToken.None).GetAwaiter().GetResult();
+            var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
 
             try
             {
@@ -125,7 +131,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
             var remoteContact = DiscoveryService.KnownContacts.SingleOrDefault(c => c.ID == key);
 
-            ErrorResponse peerError = new ErrorResponse();
+            ErrorResponse peerError = null;
             StoreResponse response = null;
             Boolean timeout;
 
@@ -137,15 +143,21 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             catch (TimeoutException ex)
             {
                 timeout = true;
-                peerError.ErrorMessage = ex.Message;
+                peerError = new ErrorResponse
+                {
+                    ErrorMessage = ex.Message
+                };
             }
             catch (Exception ex)
             {
                 timeout = false;
-                peerError.ErrorMessage = ex.Message;
+                peerError = new ErrorResponse
+                {
+                    ErrorMessage = ex.Message
+                };
             }
 
-            return GetRpcError(id, response, timeout, peerError);
+            return RpcError(id, response, timeout, peerError);
         }
 
         /// <inheritdoc/>
@@ -181,7 +193,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 timeoutError = true;
             }
 
-            return (closeContactsToKey ?? EmptyContactList(), GetRpcError(id, response, timeoutError, peerError));
+            return (closeContactsToKey ?? EmptyContactList(), RpcError(id, response, timeoutError, peerError));
         }
 
         protected List<Contact> EmptyContactList()
@@ -220,19 +232,25 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             }
             catch(TimeoutException ex)
             {
-                peerError.ErrorMessage = ex.Message;
+                peerError = new ErrorResponse
+                {
+                    ErrorMessage = ex.Message
+                };
                 timeoutError = true;
             }
             catch (Exception ex)
             {
-                peerError.ErrorMessage = ex.Message;
+                peerError = new ErrorResponse
+                {
+                    ErrorMessage = ex.Message
+                };
                 timeoutError = false;
             }
 
-            return (closeContactsToKey ?? EmptyContactList(), response?.ValueInResponsingPeer, GetRpcError(id, response, timeoutError, peerError));
+            return (closeContactsToKey ?? EmptyContactList(), response?.ValueInResponsingPeer, RpcError(id, response, timeoutError, peerError));
         }
 
-        protected RpcError GetRpcError(ID id, Response resp, bool timeoutError, ErrorResponse peerError)
+        protected RpcError RpcError(ID id, Response resp, bool timeoutError, ErrorResponse peerError)
         {
             RpcError rpcError = new RpcError
             {
@@ -241,7 +259,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 PeerErrorMessage = peerError?.ErrorMessage
             };
 
-            if((resp != null) && (id != null))
+            if((resp != null) && (id != new ID(bi: default)))
             {
                 rpcError.IDMismatchError = id != resp.RandomID;
             }

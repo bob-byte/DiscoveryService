@@ -72,9 +72,9 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             return instance;
         }
 
-        public async ValueTask<SocketInConnectionPool> SocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, CancellationToken cancellationToken)
+        public async ValueTask<SocketInConnectionPool> SocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            //cancellationToken.ThrowIfCancellationRequested();
 
             if (IsEmpty && (unchecked(((UInt32)Environment.TickCount) - m_lastRecoveryTime) >= PoolRecoveryFrequencyInMs))
             {
@@ -89,11 +89,11 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 #endif
             if (ioBehavior == IOBehavior.Asynchronous)
             {
-                await m_sessionSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                await m_sessionSemaphore.WaitAsync(timeWaitToReturnToPool).ConfigureAwait(false);
             }
             else
             {
-                m_sessionSemaphore.Wait(cancellationToken);
+                m_sessionSemaphore.Wait(timeWaitToReturnToPool);
             }
 
             SocketInConnectionPool desiredSocket = null;
@@ -104,17 +104,22 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 {
                     desiredSocket = m_leasedSessions[remoteEndPoint];
 
+                    Boolean isReturned = false;
                     //wait in different way
                     if (ioBehavior == IOBehavior.Asynchronous)
                     {
-                        await desiredSocket.ReturnedInPool.WaitAsync();
+                        isReturned = await desiredSocket.ReturnedInPool.WaitAsync(timeWaitToReturnToPool);
                     }
                     else if (ioBehavior == IOBehavior.Synchronous)
                     {
-                        desiredSocket.ReturnedInPool.Wait();
+                        isReturned = desiredSocket.ReturnedInPool.Wait(timeWaitToReturnToPool);
                     }
 
-                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket);
+                    if(!isReturned)
+                    {
+                        desiredSocket = null;
+                    }
+                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);
                 }
             });
 
@@ -132,7 +137,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                     m_sessions.Remove(remoteEndPoint);
                 }
 
-                desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(continueOnCapturedContext: false);
+                desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);
             }
             else
             {
@@ -159,18 +164,18 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             catch(NullReferenceException)
             {
                 connectedSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
-                    await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+                await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
             }
             catch
             {
                 try
                 {
-                    await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+                    await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(continueOnCapturedContext: false);
                 }
                 catch
                 {
                     connectedSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
-                    await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+                    await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(false);
                 }
             }
 

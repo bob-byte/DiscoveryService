@@ -512,11 +512,19 @@ namespace LUC.DiscoveryService
             lock (this)
             {
                 var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
-                if ((tcpMessage != null) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
+                try
                 {
-                    Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
+                    if ((tcpMessage != null) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
+                    {
+                        Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
 
-                    //DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
+                        //DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
+                    }
+                }
+                catch (Exception e)
+                {
+                    log.LogError($"Kadenlia operation failed: {e.Message}");
+                    // eat the exception
                 }
             }
         }

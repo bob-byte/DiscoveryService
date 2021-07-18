@@ -351,7 +351,7 @@ namespace LUC.DiscoveryService
                 {
                     throw new ObjectDisposedException(nameof(DiscoveryServiceSocket));
                 }
-                else if ((State == SocketState.Disconnected) | (State == SocketState.Failed))
+                else if (!Connected || ((State == SocketState.Disconnected) | (State == SocketState.Failed)))
                 {
                     throw new InvalidOperationException("ServerSession is not connected.");
                 }
