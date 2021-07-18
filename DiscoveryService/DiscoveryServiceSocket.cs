@@ -112,7 +112,6 @@ namespace LUC.DiscoveryService
             try
             {
                 clientToReadMessage = await AcceptedSocketAsync(maxAcceptedSockets, howOftenCheckAcceptedClient);
-
                 if (receiveDone == null)
                 {
                     receiveDone = new AutoResetEvent(initialState: false);

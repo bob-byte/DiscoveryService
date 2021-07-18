@@ -92,7 +92,7 @@ namespace LUC.DiscoveryService.Messages
         {
             if(reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadByte();
+                MessageOperation = (MessageOperation)reader.ReadUInt32();
                 MessageId = reader.ReadUInt32();
 
                 IdOfSendingContact = BigInteger.Parse(reader.ReadString());
@@ -130,7 +130,7 @@ namespace LUC.DiscoveryService.Messages
         {
             if (writer != null)
             {
-                writer.WriteByte((Byte)MessageOperation);
+                writer.Write((UInt32)MessageOperation);
                 writer.Write(MessageId);
                 writer.Write(IdOfSendingContact.ToString());
                 writer.Write(MachineId);

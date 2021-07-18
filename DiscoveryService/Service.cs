@@ -507,14 +507,14 @@ namespace LUC.DiscoveryService
             }
         }
 
-        public void TryKademliaOperation(Object sender, UdpMessageEventArgs receiveResult)
+        public void TryKademliaOperation(Object sender, TcpMessageEventArgs receiveResult)
         {
             lock (this)
             {
-                var udpMessage = receiveResult.Message<UdpMessage>(whetherReadMessage: false);
-                if ((udpMessage != null) && (receiveResult.RemoteEndPoint is IPEndPoint ipEndPoint))
+                var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
+                if ((tcpMessage != null) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
                 {
-                    Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)udpMessage.TcpPort);
+                    Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
 
                     //DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
                 }
@@ -523,7 +523,7 @@ namespace LUC.DiscoveryService
 
         //public void Bootstrap(Object sender, TcpMessageEventArgs receiveResult)
         //{
-        //    lock(this)
+        //    lock (this)
         //    {
         //        var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
         //        if ((tcpMessage != null) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))

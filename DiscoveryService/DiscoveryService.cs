@@ -129,7 +129,7 @@ namespace LUC.DiscoveryService
 
             Service.QueryReceived += SendTcpMessage;
             Service.AnswerReceived += AddNewContact;
-            //Service.AnswerReceived += Service.Bootstrap;
+            Service.AnswerReceived += Service.TryKademliaOperation;
             Service.PingReceived += (s, e) =>
             {
                 SendKademliaResponse<PingRequest>(e.AcceptedSocket, e, (receiver, request) =>
@@ -165,33 +165,6 @@ namespace LUC.DiscoveryService
             //};
         }
 
-        private void SendKademliaResponse<T>(Socket acceptedSocket, TcpMessageEventArgs eventArgs, Action<Socket, T> funcSend)
-            where T: Request, new()
-        {
-            try
-            {
-                var request = eventArgs.Message<T>(whetherReadMessage: false);
-                funcSend(acceptedSocket, request);
-            }
-            catch(Exception ex)
-            {
-                log.LogInfo($"Failed to answer at {typeof(T)}: {ex.Message}");
-            }
-        }
-
-        public void AddNewContact(Object sender, TcpMessageEventArgs e)
-        {
-            var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
-            if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint iPEndPoint))
-            {
-                KnownContacts.Add(new Contact(new TcpProtocol(log), new ID(tcpMessage.IdOfSendingContact), iPEndPoint.Address, tcpMessage.TcpPort));
-            }
-            else
-            {
-                throw new ArgumentException($"Bad format of {nameof(e)}");
-            }
-        }
-
         //TODO: check SSL certificate with SNI
         /// <summary>
         ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.RemoteContact"/> using <seealso cref="UdpMessage.TcpPort"/>
@@ -209,7 +182,6 @@ namespace LUC.DiscoveryService
 
             if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
             {
-
                 var sendingContact = Service.OurContacts.Single(c => c.ID.Value == e.LocalContactId);
 
                 Random random = new Random();
@@ -236,6 +208,33 @@ namespace LUC.DiscoveryService
             else
             {
                 throw new ArgumentException($"Bad format of {nameof(e)}");
+            }
+        }
+
+        public void AddNewContact(Object sender, TcpMessageEventArgs e)
+        {
+            var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
+            if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint iPEndPoint))
+            {
+                KnownContacts.Add(new Contact(new TcpProtocol(log), new ID(tcpMessage.IdOfSendingContact), iPEndPoint.Address, tcpMessage.TcpPort));
+            }
+            else
+            {
+                throw new ArgumentException($"Bad format of {nameof(e)}");
+            }
+        }
+
+        private void SendKademliaResponse<T>(Socket acceptedSocket, TcpMessageEventArgs eventArgs, Action<Socket, T> funcSend)
+            where T: Request, new()
+        {
+            try
+            {
+                var request = eventArgs.Message<T>(whetherReadMessage: false);
+                funcSend(acceptedSocket, request);
+            }
+            catch(Exception ex)
+            {
+                log.LogInfo($"Failed to answer at {typeof(T)}: {ex.Message}");
             }
         }
 
