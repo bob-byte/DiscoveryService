@@ -18,10 +18,11 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 var response = new StoreResponse
                 {
+                    MessageOperation = MessageOperation.StoreResponse,
                     RandomID = request.RandomID
                 };
 
-                sender.SendTimeout = timeoutToSend.Milliseconds;
+                sender.SendTimeout = (Int32)timeoutToSend.TotalMilliseconds;
                 sender.Send(response.ToByteArray());
             }
             else

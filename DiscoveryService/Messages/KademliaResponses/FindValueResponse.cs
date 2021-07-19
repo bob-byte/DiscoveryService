@@ -25,12 +25,13 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 var response = new FindValueResponse
                 {
+                    MessageOperation = MessageOperation.FindValueResponse,
                     RandomID = request.RandomID,
                     CloseContactsToRepsonsingPeer = closeContacts.ToList(),
                     ValueInResponsingPeer = machineValue
                 };
 
-                sender.SendTimeout = timeoutToSend.Milliseconds;
+                sender.SendTimeout = (Int32)timeoutToSend.TotalMilliseconds;
                 sender.Send(response.ToByteArray());
                 //response.Send(new IPEndPoint(remoteHost, (Int32)tcpPort)).ConfigureAwait(false);
             }
@@ -45,6 +46,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             if (reader != null)
             {
+                MessageOperation = (MessageOperation)reader.ReadUInt32();
                 RandomID = BigInteger.Parse(reader.ReadString());
                 CloseContactsToRepsonsingPeer = reader.ReadListOfContacts();
                 ValueInResponsingPeer = reader.ReadString();
@@ -62,6 +64,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             if (writer != null)
             {
+                writer.Write((UInt32)MessageOperation);
                 writer.Write(RandomID.ToString());
                 writer.WriteEnumerable(CloseContactsToRepsonsingPeer);
                 writer.Write(ValueInResponsingPeer);
