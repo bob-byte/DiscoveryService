@@ -112,7 +112,7 @@ namespace LUC.DiscoveryService.Test
             {
                 done.Set();
             };
-            var availableIps = NetworkEventHandler.GetIPAddresses().ToArray();
+            var availableIps = NetworkEventHandler.IPAddresses().ToArray();
 
             discoveryService.SendTcpMessage(this, new TcpMessageEventArgs
             {

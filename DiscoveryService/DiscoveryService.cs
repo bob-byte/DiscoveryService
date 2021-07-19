@@ -146,23 +146,23 @@ namespace LUC.DiscoveryService
                 });
             };
 
-            //Service.FindNodeReceived += (s, e) =>
-            //{
-            //    SendKademliaResponse<FindNodeRequest>(e, (client, request) =>
-            //    {
-            //         var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(e.LocalContactId), new ID(e.LocalContactId));
-            //         FindNodeResponse.SendOurCloseContactsAndPort(client, closeContacts, RunningTcpPort, SendTimeout, request);
-            //    });
-            //};
+            Service.FindNodeReceived += (invokerEvent, eventArgs) =>
+            {
+                SendKademliaResponse<FindNodeRequest>(eventArgs.AcceptedSocket, eventArgs, (client, request) =>
+                {
+                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), new ID(eventArgs.LocalContactId));
+                    FindNodeResponse.SendOurCloseContactsAndPort(client, closeContacts, SendTimeout, request);
+                });
+            };
 
-            //Service.FindValueReceived += (s, e) =>
-            //{
-            //    SendKademliaResponse<FindValueRequest>(s as DiscoveryServiceSocket, e, (client, request) =>
-            //    {
-            //        var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(e.LocalContactId), new ID(e.LocalContactId));
-            //        FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, MachineId);
-            //    });
-            //};
+            Service.FindValueReceived += (invokerEvent, eventArgs) =>
+            {
+                SendKademliaResponse<FindValueRequest>(eventArgs.AcceptedSocket, eventArgs, (client, request) =>
+                {
+                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), new ID(eventArgs.LocalContactId));
+                    FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, MachineId);
+                });
+            };
         }
 
         //TODO: check SSL certificate with SNI

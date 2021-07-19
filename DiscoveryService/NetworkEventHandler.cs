@@ -86,22 +86,10 @@ namespace LUC.DiscoveryService
         public event EventHandler<TcpMessageEventArgs> PingReceived;
 
         /// <summary>
-        ///   Raised when any link-local service sends PONG ( MessageOperation.PingResponse ).
-        ///   This is a Kadamilia pong answer to ping.
-        /// </summary>
-        public event EventHandler<TcpMessageEventArgs> PingResponseReceived;
-
-        /// <summary>
         ///   Raised when any link-local service sends STORE ( MessageOperation.Store ).
         ///   This is a Kadamilia STORE RPC call.
         /// </summary>
         public event EventHandler<TcpMessageEventArgs> StoreReceived;
-
-        /// <summary>
-        ///   Raised when any link-local service responds to STORE request ( MessageOperation.StoreResponse ).
-        ///   This is a response to Kadamilia's STORE RPC call.
-        /// </summary>
-        public event EventHandler<TcpMessageEventArgs> StoreResponseReceived;
 
         /// <summary>
         ///   Raised when any link-local service sends FindNode node request ( MessageOperation.FindNode ).
@@ -110,22 +98,10 @@ namespace LUC.DiscoveryService
         public event EventHandler<TcpMessageEventArgs> FindNodeReceived;
 
         /// <summary>
-        ///   Raised when any link-local service answers to FindNode RPC ( MessageOperation.FindNodeResponse ).
-        ///   This is a response to Kadamilia's FindNode RPC call.
-        /// </summary>
-        public event EventHandler<TcpMessageEventArgs> FindNodeResponseReceived;
-
-        /// <summary>
         ///   Raised when any link-local service asends FindValue RPC ( MessageOperation.FindValue ).
         ///   This is a Kadamilia's FindValue RPC call.
         /// </summary>
         public event EventHandler<TcpMessageEventArgs> FindValueReceived;
-
-        /// <summary>
-        ///   Raised when any link-local service answers to FindValue RPC ( MessageOperation.FindValueResponse ).
-        ///   This is a response to Kadamilia's FindValue RPC call.
-        /// </summary>
-        public event EventHandler<TcpMessageEventArgs> FindValueResponseReceived;
 
         /// <summary>
         ///   Raised when message is received that cannot be decoded.
@@ -207,7 +183,7 @@ namespace LUC.DiscoveryService
         ///   are included (127.0.0.1 and/or ::1).
         ///   </para>
         /// </remarks>
-        public static IEnumerable<NetworkInterface> GetNetworkInterfaces()
+        public static IEnumerable<NetworkInterface> NetworkInterfaces()
         {
             var nics = NetworkInterface.GetAllNetworkInterfaces()
                 .Where(nic => nic.OperationalStatus == OperationalStatus.Up)
@@ -231,15 +207,18 @@ namespace LUC.DiscoveryService
         ///   The loopback addresses (127.0.0.1 and ::1) are NOT included in the
         ///   returned sequences.
         /// </remarks>
-        public static IEnumerable<IPAddress> GetIPAddresses()
+        public static IEnumerable<IPAddress> IPAddresses()
         {
-            return GetNetworkInterfaces()
+            return NetworkInterfaces()
                 .SelectMany(nic => nic.GetIPProperties().UnicastAddresses)
                 .Select(u => u.Address);
         }
 
+        /// <summary>
+        /// IP-addresses which <seealso cref="DiscoveryService"/> uses to exchange messages
+        /// </summary>
         public List<IPAddress> RunningIpAddresses() =>
-            client?.RunningIpAddresses.Select(c => c.Value).ToList();
+            Client.IpAddressesOfInterfaces(networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics, UseIpv4, UseIpv6);
 
         /// <summary>
         ///   Get the link local IP addresses of the local machine.
@@ -251,14 +230,14 @@ namespace LUC.DiscoveryService
         ///   All IPv4 addresses are considered link local.
         /// </remarks>
         /// <seealso href="https://en.wikipedia.org/wiki/Link-local_address"/>
-        public static IEnumerable<IPAddress> GetLinkLocalAddresses()
+        public static IEnumerable<IPAddress> LinkLocalAddresses()
         {
-            return GetIPAddresses()
+            return IPAddresses()
                 .Where(a => a.AddressFamily == AddressFamily.InterNetwork ||
                     (a.AddressFamily == AddressFamily.InterNetworkV6 && a.IsIPv6LinkLocal));
         }
 
-        private void OnNetworkAddressChanged(object sender, EventArgs e) => FindNetworkInterfaces();
+        private void OnNetworkAddressChanged(Object sender, EventArgs e) => FindNetworkInterfaces();
 
         private void FindNetworkInterfaces()
         {
@@ -266,7 +245,7 @@ namespace LUC.DiscoveryService
 
             try
             {
-                var currentNics = GetNetworkInterfaces().ToList();
+                var currentNics = NetworkInterfaces().ToList();
 
                 var newNics = new List<NetworkInterface>();
                 var oldNics = new List<NetworkInterface>();
@@ -434,28 +413,28 @@ namespace LUC.DiscoveryService
 
                     case MessageOperation.Ping:
                         {
-                            HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, AnswerReceived);
+                            HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, PingReceived);
 
                             break;
                         }
 
                     case MessageOperation.Store:
                         {
-                            HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, AnswerReceived);
+                            HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, StoreReceived);
 
                             break;
                         }
 
                     case MessageOperation.FindNode:
                         {
-                            HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, AnswerReceived);
+                            HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, FindNodeReceived);
 
                             break;
                         }
 
                     case MessageOperation.FindValue:
                         {
-                            HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, AnswerReceived);
+                            HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, FindValueReceived);
 
                             break;
                         }
@@ -532,13 +511,9 @@ namespace LUC.DiscoveryService
             QueryReceived = null;
             AnswerReceived = null;
             PingReceived = null;
-            PingResponseReceived = null;
             StoreReceived = null;
-            StoreResponseReceived = null;
             FindNodeReceived = null;
-            FindNodeResponseReceived = null;
             FindValueReceived = null;
-            FindValueResponseReceived = null;
 
             NetworkInterfaceDiscovered = null;
 

@@ -190,7 +190,7 @@ namespace LUC.DiscoveryService
         public Dictionary<BigInteger, IPAddress> RunningIpAddresses { get; }
 
         internal static List<IPAddress> IpAddressesOfInterfaces(IEnumerable<NetworkInterface> nics, Boolean useIpv4, Boolean useIpv6) =>
-            nics.SelectMany(GetNetworkInterfaceLocalAddresses)
+            nics.SelectMany(NetworkInterfaceLocalAddresses)
                 .Where(a => (useIpv4 && a.AddressFamily == AddressFamily.InterNetwork)
                     || (useIpv6 && a.AddressFamily == AddressFamily.InterNetworkV6))
                 .ToList();
@@ -326,7 +326,7 @@ namespace LUC.DiscoveryService
         /// <returns>
         /// Collection of local <see cref="IPAddress"/> according to <paramref name="nic"/>
         /// </returns>
-        private static IEnumerable<IPAddress> GetNetworkInterfaceLocalAddresses(NetworkInterface nic)
+        private static IEnumerable<IPAddress> NetworkInterfaceLocalAddresses(NetworkInterface nic)
         {
             return nic
                 .GetIPProperties()
