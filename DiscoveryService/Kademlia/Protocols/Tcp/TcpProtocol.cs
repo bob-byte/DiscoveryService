@@ -107,13 +107,14 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             }
         }
 
-        public static void SendWithAvoidErrorsInNetwork(Byte[] bytesToSend, TimeSpan timeoutToSend, TimeSpan timeoutToConnect, ref SocketInConnectionPool client, out Boolean isSent)
+        public static void SendWithAvoidErrorsInNetwork(Byte[] bytesToSend, TimeSpan timeoutToSend, TimeSpan timeoutToConnect, 
+            ref SocketInConnectionPool client, out Boolean isSent)
         {
             client.Send(bytesToSend, timeoutToSend, out isSent);
 
             if (!isSent)
             {
-                //client = new SocketInConnectionPool(client.Id.AddressFamily, SocketType.Stream, ProtocolType.Tcp, client.Id, client.Pool, client.Log);
+                client = new SocketInConnectionPool(client.Id.AddressFamily, SocketType.Stream, ProtocolType.Tcp, client.Id, client.Pool, client.Log);
                 client.Connect(client.Id, timeoutToConnect, out var isConnected);
 
                 if(isConnected)

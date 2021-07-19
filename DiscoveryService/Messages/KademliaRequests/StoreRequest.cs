@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
-    class StoreRequest : Request
+    public class StoreRequest : Request
     {
         public BigInteger Key { get; set; }
         public String Value { get; set; }

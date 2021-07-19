@@ -239,7 +239,7 @@ namespace LUC.DiscoveryService
         }
 
         public List<IPAddress> RunningIpAddresses() =>
-            Client.IpAddressesOfInterfaces(networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics, UseIpv4, UseIpv6);
+            client?.RunningIpAddresses.Select(c => c.Value).ToList();
 
         /// <summary>
         ///   Get the link local IP addresses of the local machine.
@@ -427,40 +427,35 @@ namespace LUC.DiscoveryService
                 {
                     case MessageOperation.Acknowledge:
                         {
-                            HandleReceivedTcpMessage<AcknowledgeTcpMessage>(receiveResult);
-                            AnswerReceived?.Invoke(sender, receiveResult);
+                            HandleReceivedTcpMessage<AcknowledgeTcpMessage>(sender, receiveResult, AnswerReceived);
 
                             break;
                         }
 
                     case MessageOperation.Ping:
                         {
-                            HandleReceivedTcpMessage<PingRequest>(receiveResult);
-                            PingReceived?.Invoke(sender, receiveResult);
+                            HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, AnswerReceived);
 
                             break;
                         }
 
                     case MessageOperation.Store:
                         {
-                            HandleReceivedTcpMessage<StoreRequest>(receiveResult);
-                            StoreReceived?.Invoke(sender, receiveResult);
+                            HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, AnswerReceived);
 
                             break;
                         }
 
                     case MessageOperation.FindNode:
                         {
-                            HandleReceivedTcpMessage<FindNodeRequest>(receiveResult);
-                            FindNodeReceived?.Invoke(sender, receiveResult);
+                            HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, AnswerReceived);
 
                             break;
                         }
 
                     case MessageOperation.FindValue:
                         {
-                            HandleReceivedTcpMessage<FindValueRequest>(receiveResult);
-                            FindValueReceived?.Invoke(sender, receiveResult);
+                            HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, AnswerReceived);
 
                             break;
                         }
@@ -468,12 +463,14 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private void HandleReceivedTcpMessage<T>(TcpMessageEventArgs receiveResult)
+        private void HandleReceivedTcpMessage<T>(Object sender, TcpMessageEventArgs receiveResult, EventHandler<TcpMessageEventArgs> receiveEvent)
             where T: Message, new()
         {
             T request = new T();
             request.Read(receiveResult.Buffer);
             receiveResult.SetMessage(request);
+
+            receiveEvent?.Invoke(sender, receiveResult);
         }
 
         public void TryKademliaOperation(Object sender, TcpMessageEventArgs receiveResult)

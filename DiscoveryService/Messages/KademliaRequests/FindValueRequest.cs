@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
-    class FindValueRequest : Request
+    public class FindValueRequest : Request
     {
         public BigInteger IdOfContact { get; set; }
 
