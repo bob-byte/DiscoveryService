@@ -73,6 +73,15 @@ namespace LUC.DiscoveryService.CodingData
         }
 
         /// <summary>
+        ///   Read unsigned integer of 32 bits
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public Boolean ReadBoolean() =>
+            Convert.ToBoolean(ReadByte());
+
+        /// <summary>
         ///   Read the specified number of bytes.
         /// </summary>
         /// <param name="length">

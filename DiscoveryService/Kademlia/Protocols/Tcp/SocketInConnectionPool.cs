@@ -73,7 +73,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         {
 #if DEBUG
             {
-                log.LogInfo($"Socket with id \"{Id}\" returning to Pool");
+                Log.LogInfo($"Socket with id \"{Id}\" returning to Pool");
             }
 #endif
             LastReturnedTicks = unchecked((uint)Environment.TickCount);
@@ -88,7 +88,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             }
             else
             {
-                BackgroundConnectionResetHelper.AddSocket(this, log);
+                BackgroundConnectionResetHelper.AddSocket(this, Log);
                 return false;
             }
         }

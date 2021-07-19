@@ -25,7 +25,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             using (var writer = new StringWriter())
             {
-                writer.Write($"{GetType()}:\n" +
+                writer.Write($"{GetType().Name}:\n" +
                              $"Random ID = {RandomID}");
 
                 return writer.ToString();

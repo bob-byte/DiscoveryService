@@ -147,5 +147,8 @@ namespace LUC.DiscoveryService.Messages
                 throw new ArgumentNullException("WriterNullException");
             }
         }
+
+        protected String PropertyWithValue<T>(String nameProp, T value) =>
+            $"{nameProp} = {value}";
     }
 }

@@ -98,7 +98,7 @@ namespace LUC.DiscoveryService
 
         static void Main(string[] args)
         {
-            foreach (var a in Service.GetIPAddresses())
+            foreach (var a in NetworkEventHandler.GetIPAddresses())
             {
                 Console.WriteLine($"IP address {a}");
             }

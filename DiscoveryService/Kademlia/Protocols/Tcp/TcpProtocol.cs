@@ -15,28 +15,19 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 {
-    // ==========================
-
     class TcpProtocol : IProtocol
     {
-        //private readonly ConnectionPool<T> connectionPool;
+        private readonly ILoggingService loggingService;
+        private readonly UInt32 protocolVersion;
+        private ConnectionPool connectionPool;
 
-        //private static int REQUEST_TIMEOUT = 500;       // 500 ms for response.
-
-        //public TcpProtocol(IEqualityComparer<T> comparerEndPoint)
-        //{
-        //    //connectionPool = new ConnectionPool<T>(poolMaxSize: 100, comparerEndPoint);
-        //}
-
-        private ILoggingService loggingService;
-
-        public TcpProtocol(ILoggingService loggingService)
+        public TcpProtocol(ILoggingService loggingService, UInt32 protocolVersion)
         {
             this.loggingService = loggingService;
+            this.protocolVersion = protocolVersion;
+
             connectionPool = ConnectionPool.Instance(loggingService);
         }
-
-        private static ConnectionPool connectionPool;
 
         /// <inheritdoc/>
         public RpcError Ping(Contact sender, IPAddress host, Int32 tcpPort)
@@ -91,8 +82,8 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             {
                 Boolean isReceived = false;
 
-                SendWithAvoidErrorsInNetwork(loggingService, connectionPool, bytesOfRequest, 
-                    Constants.SendTimeout, Constants.ConnectTimeout, ref client, out var isSent);
+                SendWithAvoidErrorsInNetwork(bytesOfRequest, Constants.SendTimeout, Constants.ConnectTimeout, 
+                    ref client, out var isSent);
                 if (isSent)
                 {
                     Thread.Sleep(Constants.TimeWaitResponse);
@@ -116,13 +107,13 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             }
         }
 
-        public static void SendWithAvoidErrorsInNetwork(ILoggingService log, ConnectionPool pool, Byte[] bytesToSend, TimeSpan timeoutToSend, TimeSpan timeoutToConnect, ref SocketInConnectionPool client, out Boolean isSent)
+        public static void SendWithAvoidErrorsInNetwork(Byte[] bytesToSend, TimeSpan timeoutToSend, TimeSpan timeoutToConnect, ref SocketInConnectionPool client, out Boolean isSent)
         {
             client.Send(bytesToSend, timeoutToSend, out isSent);
 
             if (!isSent)
             {
-                client = new SocketInConnectionPool(client.Id.AddressFamily, SocketType.Stream, ProtocolType.Tcp, client.Id, pool, log);
+                //client = new SocketInConnectionPool(client.Id.AddressFamily, SocketType.Stream, ProtocolType.Tcp, client.Id, client.Pool, client.Log);
                 client.Connect(client.Id, timeoutToConnect, out var isConnected);
 
                 if(isConnected)
@@ -147,7 +138,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 MessageOperation = MessageOperation.Store
             };
 
-            var remoteContact = DiscoveryService.KnownContacts.SingleOrDefault(c => c.ID == key);
+            var remoteContact = DiscoveryService.KnownContacts(protocolVersion).SingleOrDefault(c => c.ID == key);
 
             ErrorResponse peerError = null;
             StoreResponse response = null;
@@ -186,12 +177,12 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             var request = new FindNodeRequest((UInt32)sender.EndPoint.Port)
             {
                 Sender = sender.ID.Value,
-                Key = keyToFindContacts.Value,
+                IdOfContact = keyToFindContacts.Value,
                 RandomID = id.Value,
                 MessageOperation = MessageOperation.FindNode
             };
             FindNodeResponse response = null;
-            var remoteContact = DiscoveryService.KnownContacts.Single(c => c.ID == keyToFindContacts);
+            var remoteContact = DiscoveryService.KnownContacts(protocolVersion).Single(c => c.ID == keyToFindContacts);
             ErrorResponse peerError = null;
             List<Contact> closeContactsToKey = null;
 
@@ -200,7 +191,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 ClientStart(remoteContact.EndPoint, request, out response);
 
                 //get close contacts near key
-                closeContactsToKey = response.Contacts;
+                closeContactsToKey = response.Contacts.ToList();
             }
             catch (SocketException ex)
             {
@@ -233,7 +224,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 RandomID = id.Value,
             };
             
-            var remoteContact = DiscoveryService.KnownContacts.Single(c => c.ID == keyToFindContact);
+            var remoteContact = DiscoveryService.KnownContacts(protocolVersion).Single(c => c.ID == keyToFindContact);
             FindValueResponse response = null;
             List<Contact> closeContactsToKey = null;
             ErrorResponse peerError = new ErrorResponse();
@@ -243,7 +234,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 ClientStart(remoteContact.EndPoint, request, out response);
 
                 //get close contacts near key
-                closeContactsToKey = response?.CloseContactsToRepsonsingPeer/*.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList()*/;
+                closeContactsToKey = response?.CloseContactsToRepsonsingPeer.ToList()/*.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList()*/;
 
                 // Return only contacts with supported protocols.
                 //return (contacts?.Where(c => c.Protocol != null).ToList(), ret.Value, GetRpcError(id, ret, timeoutError, error));

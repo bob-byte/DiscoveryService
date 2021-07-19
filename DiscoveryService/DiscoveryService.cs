@@ -33,6 +33,8 @@ namespace LUC.DiscoveryService
 
         private Boolean isDiscoveryServiceStarted = false;
 
+        private static readonly ConcurrentDictionary<UInt32, List<Contact>> knownContacts = new ConcurrentDictionary<UInt32, List<Contact>>();
+
         /// <summary>
         ///   Raised when a servive instance is shutting down.
         /// </summary>
@@ -65,7 +67,7 @@ namespace LUC.DiscoveryService
                 UseIpv6 = profile.UseIpv6;
                 ProtocolVersion = profile.ProtocolVersion;
                 MachineId = profile.MachineId;
-                protocol = new TcpProtocol(log);
+                protocol = new TcpProtocol(log, ProtocolVersion);
                 connectionPool = ConnectionPool.Instance(log);
 
                 InitService();
@@ -99,8 +101,6 @@ namespace LUC.DiscoveryService
         //    Stop();
         //}
 
-        public static List<Contact> KnownContacts { get; set; } = new List<Contact>();
-
         /// <summary>
         /// IP address of peers which were discovered.
         /// Key is a network in a format "IP-address:port".
@@ -121,30 +121,30 @@ namespace LUC.DiscoveryService
         ///   raised when a <see cref="DiscoveryServiceMessage"/> is received.
         ///   </para>
         /// </remarks>
-        public Service Service { get; private set; }
+        public NetworkEventHandler Service { get; private set; }
 
         private void InitService()
         {
-            Service = new Service(MachineId, protocol, UseIpv4, UseIpv6, ProtocolVersion);
+            Service = new NetworkEventHandler(MachineId, protocol, UseIpv4, UseIpv6, ProtocolVersion);
 
             Service.QueryReceived += SendTcpMessage;
             Service.AnswerReceived += AddNewContact;
             Service.AnswerReceived += Service.TryKademliaOperation;
-            Service.PingReceived += (s, e) =>
+            Service.PingReceived += (invokerEvent, eventArgs) =>
             {
-                SendKademliaResponse<PingRequest>(e.AcceptedSocket, e, (receiver, request) =>
+                SendKademliaResponse<PingRequest>(eventArgs.AcceptedSocket, eventArgs, funcSend: (acceptedSocket, request) =>
                 {
-                    PingResponse.SendSameRandomId(receiver, Constants.SendTimeout, request);
+                    PingResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
                 });
             };
 
-            //Service.StoreReceived += (s, e) =>
-            //{
-            //    SendKademliaResponse<StoreRequest>(e, (client, request) =>
-            //    {
-            //        StoreResponse.SendSameRandomId(client, Constants.SendTimeout, request);
-            //    });
-            //};
+            Service.StoreReceived += (invokerEvent, eventArgs) =>
+            {
+                SendKademliaResponse<StoreRequest>(eventArgs.AcceptedSocket, eventArgs, funcSend: (acceptedSocket, request) =>
+                {
+                    StoreResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
+                });
+            };
 
             //Service.FindNodeReceived += (s, e) =>
             //{
@@ -168,10 +168,10 @@ namespace LUC.DiscoveryService
         //TODO: check SSL certificate with SNI
         /// <summary>
         ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.RemoteContact"/> using <seealso cref="UdpMessage.TcpPort"/>
-        ///  It is added to <seealso cref="Service.QueryReceived"/>. 
+        ///  It is added to <seealso cref="NetworkEventHandler.QueryReceived"/>. 
         /// </summary>
         /// <param name="sender">
-        ///  Object which invoked event <seealso cref="Service.QueryReceived"/>
+        ///  Object which invoked event <seealso cref="NetworkEventHandler.QueryReceived"/>
         /// </param>
         /// <param name="e">
         ///  Information about UDP sender, that we have received.
@@ -209,8 +209,8 @@ namespace LUC.DiscoveryService
 
                     try
                     {
-                        TcpProtocol.SendWithAvoidErrorsInNetwork(log, connectionPool, bytesToSend,
-                        Constants.SendTimeout, Constants.ConnectTimeout, ref client, out _);
+                        TcpProtocol.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout, 
+                            Constants.ConnectTimeout, ref client, out _);
                     }
                     catch
                     {
@@ -228,20 +228,12 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private void SendMessage(EndPoint remoteEndPoint, Byte[] bytesToSend, out Boolean isSent, out SocketInConnectionPool client)
-        {
-            client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
-            client.Send(bytesToSend, Constants.SendTimeout, out isSent);
-
-            client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
-        }
-
         public void AddNewContact(Object sender, TcpMessageEventArgs e)
         {
             var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
             if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint iPEndPoint))
             {
-                KnownContacts.Add(new Contact(new TcpProtocol(log), new ID(tcpMessage.IdOfSendingContact), iPEndPoint.Address, tcpMessage.TcpPort));
+                KnownContacts(ProtocolVersion).Add(new Contact(protocol, new ID(tcpMessage.IdOfSendingContact), iPEndPoint.Address, tcpMessage.TcpPort));
             }
             else
             {
@@ -295,10 +287,11 @@ namespace LUC.DiscoveryService
             }
         }
 
-        //internal static List<Contact> KnownContacts(UInt32 protocolVersion)
-        //{
-
-        //}
+        internal static List<Contact> KnownContacts(UInt32 protocolVersion)
+        {
+            knownContacts.TryAdd(protocolVersion, new List<Contact>());
+            return knownContacts[protocolVersion];
+        }
 
         private static void StopDiscovery(Object sender, EventArgs e)
         {

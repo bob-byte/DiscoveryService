@@ -59,6 +59,13 @@ namespace LUC.DiscoveryService.CodingData
             Position += 4;
         }
 
+        public void Write(Boolean value)
+        {
+            stream.WriteByte(Convert.ToByte(value));
+
+            Position += 1;
+        }
+
         /// <summary>
         /// Write a sequence of bytes.
         /// </summary>

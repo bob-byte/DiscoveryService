@@ -15,7 +15,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     class FindValueResponse : Response
     {
-        public List<Contact> CloseContactsToRepsonsingPeer { get; set; }
+        public ICollection<Contact> CloseContactsToRepsonsingPeer { get; set; }
         public String ValueInResponsingPeer { get; set; }
 
         public static void SendOurCloseContactsAndMachineValue(FindValueRequest request, Socket sender, 

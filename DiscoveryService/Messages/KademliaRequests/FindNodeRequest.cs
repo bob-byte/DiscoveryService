@@ -10,7 +10,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     class FindNodeRequest : Request
     {
-        public BigInteger Key { get; set; }
+        public BigInteger IdOfContact { get; set; }
 
         public FindNodeRequest()
             : base()
@@ -47,11 +47,14 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             {
                 writer.Write(RandomID.ToString());
                 writer.Write(Sender.ToString());
+                writer.Write(IdOfContact.ToString());
             }
             else
             {
                 throw new ArgumentNullException("WriterNullException");
             }
         }
+
+
     }
 }

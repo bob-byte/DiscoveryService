@@ -29,13 +29,13 @@ namespace LUC.DiscoveryService
         private AutoResetEvent disconnectDone;
 
         [Import(typeof(ILoggingService))]
-        protected readonly ILoggingService log;
+        internal ILoggingService Log { get; }
 
         public DiscoveryServiceSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, ILoggingService loggingService)
             : base(addressFamily, socketType, protocolType)
         {
             State = SocketState.Created;
-            log = loggingService;
+            Log = loggingService;
         }
 
         /// <inheritdoc/>
@@ -44,7 +44,7 @@ namespace LUC.DiscoveryService
         {
             ContactId = contactId;
             State = SocketState.Created;
-            this.log = loggingService;
+            this.Log = loggingService;
         }
 
         public BigInteger ContactId { get; set; }
@@ -212,7 +212,7 @@ namespace LUC.DiscoveryService
             }
             catch(Exception ex)
             {
-                log.LogError(ex.Message);
+                Log.LogError(ex.Message);
                 isConnected = false;
                 State = SocketState.Disconnected;
             }
@@ -237,7 +237,7 @@ namespace LUC.DiscoveryService
             {
                 //Complete the connection
                 client.EndConnect(asyncResult);
-                log.LogInfo($"Socket connected to {client.RemoteEndPoint}");
+                Log.LogInfo($"Socket connected to {client.RemoteEndPoint}");
 
                 //Signal that the connection has been made
                 connectDone.Set();
@@ -286,7 +286,7 @@ namespace LUC.DiscoveryService
             }
             catch (Exception ex)
             {
-                log.LogInfo($"Exception occurred during send operation: {ex.Message}");
+                Log.LogInfo($"Exception occurred during send operation: {ex.Message}");
                 isSent = false;
             }
         }
@@ -298,7 +298,7 @@ namespace LUC.DiscoveryService
 
                 //Complete sending the data to the remote device
                 var bytesSent = client.EndSend(asyncResult);
-                log.LogInfo($"Sent {bytesSent} bytes to {client.RemoteEndPoint}");
+                Log.LogInfo($"Sent {bytesSent} bytes to {client.RemoteEndPoint}");
 
                 sendDone.Set();
         }
@@ -341,7 +341,7 @@ namespace LUC.DiscoveryService
         {
             if (State != state)
             {
-                log.LogError($"Session {RemoteEndPoint} should have SessionStateExpected {state} but was SessionState {State}");
+                Log.LogError($"Session {RemoteEndPoint} should have SessionStateExpected {state} but was SessionState {State}");
                 throw new InvalidOperationException($"Expected state to be {state} but was {State}."/*.FormatInvariant(state, State)*/);
             }
         }
