@@ -36,7 +36,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             connectionPool = ConnectionPool.Instance(loggingService);
         }
 
-        private ConnectionPool connectionPool;
+        private static ConnectionPool connectionPool;
 
         /// <inheritdoc/>
         public RpcError Ping(Contact sender, IPAddress host, Int32 tcpPort)
@@ -91,19 +91,12 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             {
                 Boolean isReceived = false;
 
-                client.Send(bytesOfRequest, Constants.SendTimeout, out var isSent);
-                if (!isSent)
-                {
-                    client.Connect(remoteEndPoint, Constants.ConnectTimeout, out var isConnected);
-                    if (isConnected)
-                    {
-                        client.Send(bytesOfRequest, Constants.SendTimeout, out isSent);
-                    }
-                }
-
+                SendWithAvoidErrorsInNetwork(loggingService, connectionPool, bytesOfRequest, 
+                    Constants.SendTimeout, Constants.ConnectTimeout, ref client, out var isSent);
                 if (isSent)
                 {
                     Thread.Sleep(Constants.TimeWaitResponse);
+
                     var bytesOfResponse = client.Receive(Constants.ReceiveTimeout, out isReceived);
                     if (isReceived)
                     {
@@ -120,6 +113,22 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             finally
             {
                 client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+            }
+        }
+
+        public static void SendWithAvoidErrorsInNetwork(ILoggingService log, ConnectionPool pool, Byte[] bytesToSend, TimeSpan timeoutToSend, TimeSpan timeoutToConnect, ref SocketInConnectionPool client, out Boolean isSent)
+        {
+            client.Send(bytesToSend, timeoutToSend, out isSent);
+
+            if (!isSent)
+            {
+                client = new SocketInConnectionPool(client.Id.AddressFamily, SocketType.Stream, ProtocolType.Tcp, client.Id, pool, log);
+                client.Connect(client.Id, timeoutToConnect, out var isConnected);
+
+                if(isConnected)
+                {
+                    client.Send(bytesToSend, timeoutToSend, out isSent);
+                }
             }
         }
 

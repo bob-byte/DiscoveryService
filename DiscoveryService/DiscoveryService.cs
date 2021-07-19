@@ -202,10 +202,23 @@ namespace LUC.DiscoveryService
                     }
 
                     var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
-                    SendMessage(remoteEndPoint, bytesToSend, out var isSent, out var client);
-                    if(!isSent)
+                    var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, 
+                        IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).
+                        GetAwaiter().
+                        GetResult();
+
+                    try
                     {
-                        SendMessage(remoteEndPoint, bytesToSend, out _, out client);
+                        TcpProtocol.SendWithAvoidErrorsInNetwork(log, connectionPool, bytesToSend,
+                        Constants.SendTimeout, Constants.ConnectTimeout, ref client, out _);
+                    }
+                    catch
+                    {
+                        throw;
+                    }
+                    finally
+                    {
+                        client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
                     }
                 }
                 else
