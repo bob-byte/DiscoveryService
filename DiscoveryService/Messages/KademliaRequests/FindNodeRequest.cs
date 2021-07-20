@@ -1,6 +1,7 @@
 ﻿using LUC.DiscoveryService.CodingData;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -58,6 +59,17 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
         }
 
+        public override String ToString()
+        {
+            using (var writer = new StringWriter())
+            {
+                writer.WriteLine($"{GetType().Name}:\n" +
+                             $"{PropertyWithValue(nameof(RandomID), RandomID)};\n" +
+                             $"{PropertyWithValue(nameof(Sender), Sender)};\n" +
+                             $"{PropertyWithValue(nameof(IdOfContact), IdOfContact)}");
 
+                return writer.ToString();
+            }
+        }
     }
 }

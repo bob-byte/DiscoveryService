@@ -464,12 +464,16 @@ namespace LUC.DiscoveryService
                         Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
                         Protocol.Store(DistributedHashTable.OurContact, 
                             DiscoveryService.KnownContacts(ProtocolVersion)[0].ID, MachineId);
-                        //DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
+                        Protocol.FindNode(DistributedHashTable.OurContact,
+                            DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
+                        Protocol.FindValue(DistributedHashTable.OurContact, DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
+
+                        DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
                     }
                 }
                 catch (Exception e)
                 {
-                    log.LogError($"Kadenlia operation failed: {e.Message}");
+                    log.LogError($"Kademlia operation failed: {e}");
                     // eat the exception
                 }
             }

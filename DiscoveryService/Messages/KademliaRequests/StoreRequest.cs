@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     public class StoreRequest : Request
     {
-        public BigInteger Key { get; set; }
+        public BigInteger KeyToStore { get; set; }
         public String Value { get; set; }
         public Boolean IsCached { get; set; }
         public Int32 ExpirationTimeSec { get; set; }
@@ -36,7 +36,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 MessageOperation = (MessageOperation)reader.ReadUInt32();
                 RandomID = BigInteger.Parse(reader.ReadString());
                 Sender = BigInteger.Parse(reader.ReadString());
-                Key = BigInteger.Parse(reader.ReadString());
+                KeyToStore = BigInteger.Parse(reader.ReadString());
                 Value = reader.ReadString();
                 IsCached = reader.ReadBoolean();
                 ExpirationTimeSec = (Int32)reader.ReadUInt32();
@@ -57,7 +57,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 writer.Write((UInt32)MessageOperation);
                 writer.Write(RandomID.ToString());
                 writer.Write(Sender.ToString());
-                writer.Write(Key.ToString());
+                writer.Write(KeyToStore.ToString());
                 writer.Write(Value);
                 writer.Write(IsCached);
                 writer.Write((UInt32)ExpirationTimeSec);
@@ -68,17 +68,17 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
         }
 
-        public override string ToString()
+        public override String ToString()
         {
             using (var writer = new StringWriter())
             {
-                writer.Write($"{GetType().Name}:\n" +
-                             $"{PropertyWithValue(nameof(RandomID), RandomID)};\n" +
-                             $"{PropertyWithValue(nameof(Sender), Sender)};\n" +
-                             $"{PropertyWithValue(nameof(Key), Key)};\n" +
-                             $"{PropertyWithValue(nameof(Value), Value)};\n" +
-                             $"{PropertyWithValue(nameof(IsCached), IsCached)};\n" +
-                             $"{PropertyWithValue(nameof(ExpirationTimeSec), ExpirationTimeSec)};\n");
+                writer.WriteLine($"{GetType().Name}:\n" +
+                                 $"{PropertyWithValue(nameof(RandomID), RandomID)};\n" +
+                                 $"{PropertyWithValue(nameof(Sender), Sender)};\n" +
+                                 $"{PropertyWithValue(nameof(KeyToStore), KeyToStore)};\n" +
+                                 $"{PropertyWithValue(nameof(Value), Value)};\n" +
+                                 $"{PropertyWithValue(nameof(IsCached), IsCached)};\n" +
+                                 $"{PropertyWithValue(nameof(ExpirationTimeSec), ExpirationTimeSec)}");
 
                 return writer.ToString();
             }

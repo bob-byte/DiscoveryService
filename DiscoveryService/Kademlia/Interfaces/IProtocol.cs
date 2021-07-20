@@ -45,7 +45,7 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
         /// (unless there are fewer than k nodes in all its k-buckets combined, in which case it returns every node it knows about).
         /// Also this operation returns <seealso cref="RpcError"/> to inform about the errors which maybe happened
         /// </returns>
-        (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID key, IPAddress host, Int32 tcpPort);
+        (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID key/*, IPAddress host, Int32 tcpPort*/);
 
         /// <summary>
         /// Attempt to find the value in the peer network. Also this operation has two purposes:

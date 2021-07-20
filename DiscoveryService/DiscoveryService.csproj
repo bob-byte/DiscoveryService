@@ -93,6 +93,7 @@
     <Compile Include="Kademlia\Protocols\Tcp\IOBehavior.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\SocketHealth.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\SocketInConnectionPool.cs" />
+    <Compile Include="Messages\KademliaResponses\ContactResponse.cs" />
     <Compile Include="SemaphoreLocker.cs" />
     <Compile Include="SocketState.cs" />
     <Compile Include="Messages\DiscoveryServiceMessage.cs" />

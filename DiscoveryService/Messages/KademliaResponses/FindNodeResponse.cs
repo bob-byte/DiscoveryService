@@ -4,6 +4,7 @@ using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -15,7 +16,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     class FindNodeResponse : Response
     {
-        public ICollection<Contact> Contacts { get; set; }
+        public ICollection<Contact> CloseSenderContacts { get; set; }
 
         public static void SendOurCloseContactsAndPort(Socket sender, IEnumerable<Contact> closeContactsToLocalContactId, 
             TimeSpan timeoutToSend, FindNodeRequest message)
@@ -26,7 +27,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 {
                     MessageOperation = MessageOperation.FindNodeResponse,
                     RandomID = message.RandomID,
-                    Contacts = closeContactsToLocalContactId.ToList(),
+                    CloseSenderContacts = closeContactsToLocalContactId.ToList(),
                 };
 
                 sender.SendTimeout = (Int32)timeoutToSend.TotalMilliseconds;
@@ -46,7 +47,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 MessageOperation = (MessageOperation)reader.ReadUInt32();
                 RandomID = BigInteger.Parse(reader.ReadString());
-                Contacts = reader.ReadListOfContacts();
+                CloseSenderContacts = reader.ReadListOfContacts();
 
                 return this;
             }
@@ -63,11 +64,28 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 writer.Write((UInt32)MessageOperation);
                 writer.Write(RandomID.ToString());
-                writer.WriteEnumerable(Contacts);
+                writer.WriteEnumerable(CloseSenderContacts);
             }
             else
             {
                 throw new ArgumentNullException("WriterNullException");
+            }
+        }
+
+        public override String ToString()
+        {
+            using (var writer = new StringWriter())
+            {
+                writer.WriteLine($"{GetType().Name}:\n" +
+                                 $"{PropertyWithValue(nameof(RandomID), RandomID)};\n" +
+                                 $"{nameof(CloseSenderContacts)}:");
+
+                foreach (var closeContact in CloseSenderContacts)
+                {
+                    writer.WriteLine($"{closeContact};\n");
+                }
+
+                return writer.ToString();
             }
         }
     }

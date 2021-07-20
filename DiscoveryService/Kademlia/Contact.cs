@@ -50,6 +50,14 @@ namespace LUC.DiscoveryService.Kademlia
             return ID.CompareTo(c.ID);
         }
 
+        public override String ToString()
+        {
+            return $"{nameof(ID)} = {ID};\n" +
+                   $"{nameof(EndPoint)} = {EndPoint};\n" +
+                   $"{nameof(LastSeen)} = {LastSeen};\n" +
+                   $"{nameof(Protocol)} = {Protocol}";
+        }
+
         public static bool operator ==(Contact a, Contact b)
         {
             if ((((object)a) == null) && (((object)b) != null)) return false;

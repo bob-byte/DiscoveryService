@@ -4,6 +4,7 @@ using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -72,6 +73,24 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             else
             {
                 throw new ArgumentNullException("WriterNullException");
+            }
+        }
+
+        public override String ToString()
+        {
+            using (var writer = new StringWriter())
+            {
+                writer.WriteLine($"{GetType().Name}:\n" +
+                                 $"{PropertyWithValue(nameof(RandomID), RandomID)};\n" +
+                                 $"{PropertyWithValue(nameof(ValueInResponsingPeer), ValueInResponsingPeer)};\n" +
+                                 $"{nameof(CloseContactsToRepsonsingPeer)}:");
+
+                foreach (var closeContact in CloseContactsToRepsonsingPeer)
+                {
+                    writer.WriteLine($"{closeContact};\n");
+                }
+
+                return writer.ToString();
             }
         }
     }

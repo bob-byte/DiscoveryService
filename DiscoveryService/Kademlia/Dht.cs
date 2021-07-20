@@ -144,7 +144,7 @@ namespace LUC.DiscoveryService.Kademlia
         public RpcError Bootstrap(Contact knownPeer)
         {
             node.BucketList.AddContact(knownPeer);
-            var (contacts, error) = knownPeer.Protocol.FindNode(ourContact, ourContact.ID, knownPeer.EndPoint.Address, knownPeer.EndPoint.Port);
+            var (contacts, error) = knownPeer.Protocol.FindNode(ourContact, ourContact.ID/*, knownPeer.EndPoint.Address, knownPeer.EndPoint.Port*/);
             HandleError(error, knownPeer);
 
             if (!error.HasError)
@@ -527,7 +527,7 @@ namespace LUC.DiscoveryService.Kademlia
 
             contacts.ForEach(c =>
             {
-                var (newContacts, timeoutError) = c.Protocol.FindNode(ourContact, rndId, c.EndPoint.Address, c.EndPoint.Port);
+                var (newContacts, timeoutError) = c.Protocol.FindNode(ourContact, rndId/*, c.EndPoint.Address, c.EndPoint.Port*/);
                 HandleError(timeoutError, c);
                 newContacts?.ForEach(otherContact => node.BucketList.AddContact(otherContact));
             });

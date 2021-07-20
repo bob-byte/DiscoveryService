@@ -103,15 +103,6 @@ namespace LUC.DiscoveryService
             }
         }
 
-        //private static void OnPongReceived(Object sender, TcpMessageEventArgs e)
-        //{
-        //    lock (ttyLock)
-        //    {
-        //        Console.WriteLine("=== Kad PONG received {0:O} ===", DateTime.Now);
-        //        Console.WriteLine(e.Message.ToString());
-        //    }
-        //}
-
         private static void OnStoreReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
@@ -122,15 +113,6 @@ namespace LUC.DiscoveryService
                 Console.WriteLine(message.ToString());
             }
         }
-
-        //private static void OnStoreResponseReceived(Object sender, TcpMessageEventArgs e)
-        //{
-        //    lock (ttyLock)
-        //    {
-        //        Console.WriteLine("=== Kad STORE response received {0:O} ===", DateTime.Now);
-        //        Console.WriteLine(e.Message.ToString());
-        //    }
-        //}
 
         private static void OnFindNodeReceived(Object sender, TcpMessageEventArgs e)
         {
@@ -143,15 +125,6 @@ namespace LUC.DiscoveryService
             }
         }
 
-        //private static void OnFindNodeResponseReceived(Object sender, TcpMessageEventArgs e)
-        //{
-        //    lock (ttyLock)
-        //    {
-        //        Console.WriteLine("=== Kad FindNode response received {0:O} ===", DateTime.Now);
-        //        Console.WriteLine(e.Message.ToString());
-        //    }
-        //}
-
         private static void OnFindValueReceived(Object sender, TcpMessageEventArgs e)
         {
             lock (ttyLock)
@@ -162,16 +135,6 @@ namespace LUC.DiscoveryService
                 Console.WriteLine(message.ToString());
             }
         }
-
-        //private static void OnFindValueResponseReceived(Object sender, TcpMessageEventArgs e)
-        //{
-        //    lock (ttyLock)
-        //    {
-        //        Console.WriteLine("=== Kad FindValue response received {0:O} ===", DateTime.Now);
-        //        Console.WriteLine(e.Message<FindValueResponse>.ToString());
-        //    }
-        //}
-
 
         static void Main(string[] args)
         {
