@@ -158,10 +158,21 @@ namespace LUC.DiscoveryService
         {
             var runningIpAddresses = RunningIpAddresses();
             Protocol = protocol;
+
+            var unAvailableAddresses = OurContacts.Except(runningIpAddresses.Select(c => 
+            new Contact { EndPoint = new IPEndPoint(c, (Int32)RunningTcpPort) }), new ContactComparer()).ToList();
+            OurContacts.RemoveRange(unAvailableAddresses);
+
             foreach (var ipAddress in runningIpAddresses)
             {
-                OurContacts.Add(new Contact(protocol, ID.RandomID, new IPEndPoint(ipAddress, (Int32)RunningTcpPort)));
+                if(!OurContacts.Any(c => ((IPEndPoint)c.EndPoint).Address.Equals(ipAddress)))
+                {
+                    OurContacts.Add(new Contact(protocol, ID.RandomID, new IPEndPoint(ipAddress, (Int32)RunningTcpPort)));
+                }
             }
+
+            DiscoveryService.KnownContacts(ProtocolVersion).Clear();
+            DiscoveryService.KnownContacts(ProtocolVersion).AddRange(OurContacts);
 
             DistributedHashTable = new Dht(OurContacts[0], protocol, () => new VirtualStorage(), new Router());
         }
@@ -277,7 +288,6 @@ namespace LUC.DiscoveryService
                 // Only create client if something has change.
                 if (newNics.Any() || oldNics.Any())
                 {
-                    OurContacts.Clear();
                     InitKademliaProtocol(Protocol);
 
                     client?.Dispose();

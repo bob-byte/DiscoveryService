@@ -87,6 +87,7 @@
     <Compile Include="DiscoveryServiceSocket.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\StringExtension.cs" />
+    <Compile Include="Kademlia\ContactComparer.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\BackgroundConnectionResetHelper.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\ConnectionPool.cs" />
     <Compile Include="Kademlia\Protocols\Tcp\ConnectionSettings.cs" />
