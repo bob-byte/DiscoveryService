@@ -126,6 +126,7 @@ namespace LUC.DiscoveryService
         private void InitService()
         {
             Service = new NetworkEventHandler(MachineId, protocol, UseIpv4, UseIpv6, ProtocolVersion);
+            KnownContacts(ProtocolVersion).AddRange(Service.OurContacts);
 
             Service.QueryReceived += SendTcpMessage;
             Service.AnswerReceived += AddEndpoint;

@@ -1,6 +1,7 @@
 ﻿using LUC.DiscoveryService.Kademlia.Interfaces;
 using System;
 using System.Net;
+using System.Runtime.CompilerServices;
 
 namespace LUC.DiscoveryService.Kademlia
 {
@@ -32,6 +33,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Update the fact that we've just seen this contact.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Touch()
         {
             LastSeen = DateTime.Now;
