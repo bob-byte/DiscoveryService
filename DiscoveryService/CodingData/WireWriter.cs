@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 
 namespace LUC.DiscoveryService.CodingData
@@ -169,10 +170,9 @@ namespace LUC.DiscoveryService.CodingData
         {
             if (enumerable != null)
             {
-                var array = enumerable.ToArray();
+                Write((UInt32)enumerable.Count());
 
-                Write((UInt32)array.Length);
-                foreach (var item in array)
+                foreach (var item in enumerable)
                 {
                     Write(item);
                 }
@@ -196,12 +196,11 @@ namespace LUC.DiscoveryService.CodingData
         {
             if (enumerable != null)
             {
-                var array = enumerable.ToArray();
+                Write((UInt32)enumerable.Count());
 
-                Write((UInt32)array.Length);
-                foreach (var item in array)
+                foreach (var contact in enumerable)
                 {
-                    Write(item);
+                    Write(contact);
                 }
             }
             else
@@ -213,8 +212,9 @@ namespace LUC.DiscoveryService.CodingData
         public void Write(Contact contact)
         {
             Write(contact.ID.Value.ToString());
-            Write(contact.EndPoint.Address.ToString());
-            Write((UInt32)contact.EndPoint.Port);
+            var endPoint = contact.EndPoint as IPEndPoint;
+            Write(endPoint.Address.ToString());
+            Write((UInt32)endPoint.Port);
         }
 
         public void Dispose() =>

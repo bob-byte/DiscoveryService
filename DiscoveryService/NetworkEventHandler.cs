@@ -160,7 +160,7 @@ namespace LUC.DiscoveryService
             Protocol = protocol;
             foreach (var ipAddress in runningIpAddresses)
             {
-                OurContacts.Add(new Contact(protocol, ID.RandomID, ipAddress, RunningTcpPort));
+                OurContacts.Add(new Contact(protocol, ID.RandomID, new IPEndPoint(ipAddress, (Int32)RunningTcpPort)));
             }
 
             DistributedHashTable = new Dht(OurContacts[0], protocol, () => new VirtualStorage(), new Router());
@@ -311,7 +311,7 @@ namespace LUC.DiscoveryService
             var runningIpAddresses = new Dictionary<BigInteger, IPAddress>();
             foreach (var contact in OurContacts)
             {
-                runningIpAddresses.Add(contact.ID.Value, contact.EndPoint.Address);
+                runningIpAddresses.Add(contact.ID.Value, ((IPEndPoint)contact.EndPoint).Address);
             }
 
             client = new Client(UseIpv4, UseIpv6, runningIpAddresses);
@@ -461,14 +461,14 @@ namespace LUC.DiscoveryService
                 {
                     if ((tcpMessage != null) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
                     {
-                        Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
-                        Protocol.Store(DistributedHashTable.OurContact, 
-                            DiscoveryService.KnownContacts(ProtocolVersion)[0].ID, MachineId);
-                        Protocol.FindNode(DistributedHashTable.OurContact,
-                            DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
-                        Protocol.FindValue(DistributedHashTable.OurContact, DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
+                        //Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
+                        //Protocol.Store(DistributedHashTable.OurContact, 
+                        //    DiscoveryService.KnownContacts(ProtocolVersion)[0].ID, MachineId);
+                        //Protocol.FindNode(DistributedHashTable.OurContact,
+                        //    DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
+                        //Protocol.FindValue(DistributedHashTable.OurContact, DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
 
-                        DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
+                        DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
                     }
                 }
                 catch (Exception e)

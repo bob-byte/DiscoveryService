@@ -52,7 +52,7 @@ namespace LUC.DiscoveryService.Kademlia
         public object ServerPing(CommonRequest request)
         {
             IProtocol protocol = Protocol.InstantiateProtocol(request.Protocol, request.ProtocolName);
-            Ping(new Contact(protocol, new ID(request.Sender), request.Host, request.TcpPort));
+            Ping(new Contact(protocol, new ID(request.Sender), request.EndPoint));
 
             return new { RandomID = request.RandomID };
         }
@@ -60,7 +60,7 @@ namespace LUC.DiscoveryService.Kademlia
         public object ServerStore(CommonRequest request)
         {
             IProtocol protocol = Protocol.InstantiateProtocol(request.Protocol, request.ProtocolName);
-            Store(new Contact(protocol, new ID(request.Sender), request.Host, request.TcpPort), new ID(request.Key), request.Value, request.IsCached, request.ExpirationTimeSec);
+            Store(new Contact(protocol, new ID(request.Sender), request.EndPoint), new ID(request.Key), request.Value, request.IsCached, request.ExpirationTimeSec);
 
             return new { RandomID = request.RandomID };
         }
@@ -68,7 +68,7 @@ namespace LUC.DiscoveryService.Kademlia
         public object ServerFindNode(CommonRequest request)
         {
             IProtocol protocol = Protocol.InstantiateProtocol(request.Protocol, request.ProtocolName);
-            var (contacts, val) = FindNode(new Contact(protocol, new ID(request.Sender), request.Host, request.TcpPort), new ID(request.Key));
+            var (contacts, val) = FindNode(new Contact(protocol, new ID(request.Sender), request.EndPoint), new ID(request.Key));
 
             return new
             {
@@ -86,7 +86,7 @@ namespace LUC.DiscoveryService.Kademlia
         public object ServerFindValue(CommonRequest request)
         {
             IProtocol protocol = Protocol.InstantiateProtocol(request.Protocol, request.ProtocolName);
-            var (contacts, val) = FindValue(new Contact(protocol, new ID(request.Sender), request.Host, request.TcpPort), new ID(request.Key));
+            var (contacts, val) = FindValue(new Contact(protocol, new ID(request.Sender), request.EndPoint), new ID(request.Key));
 
             return new
             {

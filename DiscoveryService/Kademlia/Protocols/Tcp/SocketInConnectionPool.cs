@@ -41,15 +41,16 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         public Boolean IsInPool 
         {
             get => isInPool;
+            //maybe body of set method should be placed in a lock
             set
             {
                 isInPool = value;
 
-                if(!isInPool)
+                if((!isInPool) && (ReturnedInPool.CurrentCount == 1))
                 {
                     ReturnedInPool.Wait(millisecondsTimeout: 0);
                 }
-                else if(isInPool && ReturnedInPool.CurrentCount == 0)
+                else if((isInPool) && (ReturnedInPool.CurrentCount == 0))
                 {
                     ReturnedInPool.Release();
                 }

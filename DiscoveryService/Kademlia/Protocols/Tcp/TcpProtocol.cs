@@ -17,25 +17,30 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 {
     class TcpProtocol : IProtocol
     {
-        private readonly ILoggingService loggingService;
+        private static ILoggingService log;
         private readonly UInt32 protocolVersion;
-        private ConnectionPool connectionPool;
+        private static ConnectionPool connectionPool;
+
+        public TcpProtocol()
+        {
+            ;//do nothing
+        }
 
         public TcpProtocol(ILoggingService loggingService, UInt32 protocolVersion)
         {
-            this.loggingService = loggingService;
             this.protocolVersion = protocolVersion;
 
+            log = loggingService;
             connectionPool = ConnectionPool.Instance(loggingService);
         }
 
         /// <inheritdoc/>
-        public RpcError Ping(Contact sender, IPAddress host, Int32 tcpPort)
+        public RpcError Ping(Contact sender, EndPoint endPointToPing)
         {
             var id = ID.RandomID;
 
             ErrorResponse peerError = null;
-            PingRequest request = new PingRequest((UInt32)sender.EndPoint.Port)
+            PingRequest request = new PingRequest
             {
                 RandomID = id.Value,
                 Sender = sender.ID.Value,
@@ -43,14 +48,13 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             };
             PingResponse response = null;
 
-            var remoteEndPoint = new IPEndPoint(host, (Int32)tcpPort);
             Boolean timeout;
             try
             {
-                ClientStart(remoteEndPoint, request, out response);
+                ClientStart(endPointToPing, request, out response);
                 timeout = false;
 
-                loggingService.LogInfo($"The response is received: {response}");
+                log.LogInfo($"The response is received:\n{response}");
             }
             catch (TimeoutException ex)
             {
@@ -72,7 +76,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             return RpcError(id, response, timeout, peerError);
         }
 
-        private void ClientStart<TResponse>(IPEndPoint remoteEndPoint, Request request, out TResponse response)
+        private void ClientStart<TResponse>(EndPoint remoteEndPoint, Request request, out TResponse response)
             where TResponse : Response, new()
         {
             response = null;
@@ -130,7 +134,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         public RpcError Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
         {
             ID id = ID.RandomID;
-            var request = new StoreRequest((UInt32)sender.EndPoint.Port)
+            var request = new StoreRequest
             {
                 Sender = sender.ID.Value,
                 KeyToStore = key.Value,
@@ -152,7 +156,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 ClientStart(remoteContact.EndPoint, request, out response);
                 timeout = false;
 
-                loggingService.LogInfo($"The response is received: {response}");
+                log.LogInfo($"The response is received:\n{response}");
             }
             catch (TimeoutException ex)
             {
@@ -179,7 +183,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         {
             ID id = ID.RandomID;
             Boolean timeoutError = false;
-            var request = new FindNodeRequest((UInt32)sender.EndPoint.Port)
+            var request = new FindNodeRequest
             {
                 Sender = sender.ID.Value,
                 IdOfContact = keyToFindContacts.Value,
@@ -198,7 +202,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 //get close contacts near key
                 closeContactsToKey = response.CloseSenderContacts.ToList();
 
-                loggingService.LogInfo($"The response is received: {response}");
+                log.LogInfo($"The response is received:\n{response}");
             }
             catch (SocketException ex)
             {
@@ -223,7 +227,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             ID id = ID.RandomID;
             bool timeoutError = false;
 
-            var request = new FindValueRequest((UInt32)sender.EndPoint.Port)
+            var request = new FindValueRequest
             {
                 IdOfContact = keyToFindContact.Value,
                 MessageOperation = MessageOperation.FindValue,
@@ -243,7 +247,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 //get close contacts near key
                 closeContactsToKey = response?.CloseContactsToRepsonsingPeer.ToList()/*.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList()*/;
 
-                loggingService.LogInfo($"The response is received: {response}");
+                log.LogInfo($"The response is received:\n{response}");
                 // Return only contacts with supported protocols.
                 //return (contacts?.Where(c => c.Protocol != null).ToList(), ret.Value, GetRpcError(id, ret, timeoutError, error));
             }

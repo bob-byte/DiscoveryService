@@ -106,8 +106,8 @@ namespace LUC.DiscoveryService
         /// Key is a network in a format "IP-address:port".
         /// Value is a list of group names, which peer supports
         /// </summary>
-        public ConcurrentDictionary<String, String> KnownIps { get; protected set; } = 
-            new ConcurrentDictionary<String, String>();
+        public ConcurrentDictionary<EndPoint, String> KnownIps { get; protected set; } = 
+            new ConcurrentDictionary<EndPoint, String>();
 
         /// <summary>
         ///   LightUpon.Cloud Service.
@@ -128,7 +128,7 @@ namespace LUC.DiscoveryService
             Service = new NetworkEventHandler(MachineId, protocol, UseIpv4, UseIpv6, ProtocolVersion);
 
             Service.QueryReceived += SendTcpMessage;
-            Service.AnswerReceived += AddNewContact;
+            Service.AnswerReceived += AddEndpoint;
             Service.AnswerReceived += Service.TryKademliaOperation;
             Service.PingReceived += (invokerEvent, eventArgs) =>
             {
@@ -228,12 +228,25 @@ namespace LUC.DiscoveryService
             }
         }
 
-        public void AddNewContact(Object sender, TcpMessageEventArgs e)
+        public void AddEndpoint(Object sender, TcpMessageEventArgs e)
         {
             var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
-            if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint iPEndPoint))
+            if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint ipEndPoint))
             {
-                KnownContacts(ProtocolVersion).Add(new Contact(protocol, new ID(tcpMessage.IdOfSendingContact), iPEndPoint.Address, tcpMessage.TcpPort));
+                var knownContacts = KnownContacts(ProtocolVersion);
+                if(!knownContacts.Any(c => c.ID == tcpMessage.IdOfSendingContact))
+                {
+                    knownContacts.Add(new Contact(protocol, new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
+                }
+
+                foreach (var groupId in tcpMessage.GroupIds)
+                {
+                    if (!KnownIps.TryAdd(ipEndPoint, groupId))
+                    {
+                        KnownIps.TryRemove(ipEndPoint, out _);
+                        KnownIps.TryAdd(ipEndPoint, groupId);
+                    }
+                }
             }
             else
             {

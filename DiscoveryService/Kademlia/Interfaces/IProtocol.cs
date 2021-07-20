@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
     public interface IProtocol
     {
         /// <summary>
-        /// Pings contact with <paramref name="host"/> and <paramref name="tcpPort"/>
+        /// Pings contact with <paramref name="endPointToPing"/>
         /// </summary>
         /// <param name="sender">
         /// Current peer
@@ -19,7 +19,7 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
         /// <returns>
         /// Information about the errors which maybe happened
         /// </returns>
-        RpcError Ping(Contact sender, IPAddress host, Int32 tcpPort);
+        RpcError Ping(Contact sender, EndPoint endPointToPing);
 
         /// <summary>
         /// This operation has two purposes:

@@ -10,7 +10,7 @@ namespace LUC.DiscoveryService.Kademlia
         public ID ID { get; set; }
 
         public IProtocol Protocol { get; set; }
-        public IPEndPoint EndPoint { get; set; }
+        public EndPoint EndPoint { get; set; }
 
         // For serialization.  Don't want to use JsonConstructor because we don't want to touch the LastSeen.
         public Contact()
@@ -20,11 +20,11 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its protocol and ID.
         /// </summary>
-        public Contact(IProtocol protocol, ID contactID, IPAddress address, UInt32 tcpPort)
+        public Contact(IProtocol protocol, ID contactID, EndPoint endPoint)
         {
             Protocol = protocol;
             ID = contactID;
-            EndPoint = new IPEndPoint(address, (Int32)tcpPort);
+            EndPoint = endPoint;
 
             Touch();
         }
