@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService
     /// <summary>
     ///   LightUpon.Cloud Service Discovery maintens the list of IP addresses in LAN. It realizes pattern Singleton
     /// </summary>
-    public class DiscoveryService : CollectedInfoInLan
+    public class DiscoveryService : AbstractService
     {
         private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
 
@@ -31,6 +31,7 @@ namespace LUC.DiscoveryService
 
         private Boolean isDiscoveryServiceStarted = false;
 
+        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
         private static readonly ConcurrentDictionary<UInt32, List<Contact>> knownContacts = new ConcurrentDictionary<UInt32, List<Contact>>();
 
         /// <summary>
