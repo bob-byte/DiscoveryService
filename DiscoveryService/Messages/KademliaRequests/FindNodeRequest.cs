@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     public class FindNodeRequest : Request
     {
-        public BigInteger IdOfContact { get; set; }
+        public BigInteger ContactId { get; set; }
 
         public FindNodeRequest()
             : base()
@@ -33,7 +33,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 MessageOperation = (MessageOperation)reader.ReadUInt32();
                 RandomID = BigInteger.Parse(reader.ReadString());
                 Sender = BigInteger.Parse(reader.ReadString());
-                IdOfContact = BigInteger.Parse(reader.ReadString());
+                ContactId = BigInteger.Parse(reader.ReadString());
 
                 return this;
             }
@@ -51,7 +51,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 writer.Write((UInt32)MessageOperation);
                 writer.Write(RandomID.ToString());
                 writer.Write(Sender.ToString());
-                writer.Write(IdOfContact.ToString());
+                writer.Write(ContactId.ToString());
             }
             else
             {
@@ -66,7 +66,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 writer.WriteLine($"{GetType().Name}:\n" +
                              $"{PropertyWithValue(nameof(RandomID), RandomID)};\n" +
                              $"{PropertyWithValue(nameof(Sender), Sender)};\n" +
-                             $"{PropertyWithValue(nameof(IdOfContact), IdOfContact)}");
+                             $"{PropertyWithValue(nameof(ContactId), ContactId)}");
 
                 return writer.ToString();
             }

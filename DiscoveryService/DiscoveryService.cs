@@ -8,7 +8,7 @@ using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.DiscoveryService.Messages.KademliaResponses;
 using LUC.DiscoveryService.Kademlia;
 using System.Collections.Generic;
-using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Kademlia.Interfaces;
 using System.Threading;
 
@@ -23,8 +23,6 @@ namespace LUC.DiscoveryService
 
         private static DiscoveryService instance;
         private readonly ConnectionPool connectionPool;
-
-        private IProtocol protocol;
 
         /// <summary>
         /// To avoid sending recent duplicate messages
@@ -67,7 +65,6 @@ namespace LUC.DiscoveryService
                 UseIpv6 = profile.UseIpv6;
                 ProtocolVersion = profile.ProtocolVersion;
                 MachineId = profile.MachineId;
-                protocol = new TcpProtocol(log, ProtocolVersion);
                 connectionPool = ConnectionPool.Instance(log);
 
                 InitService();
@@ -110,7 +107,7 @@ namespace LUC.DiscoveryService
             new ConcurrentDictionary<EndPoint, String>();
 
         /// <summary>
-        ///   LightUpon.Cloud Service.
+        ///   LightUpon.Cloud Discovery Service.
         /// </summary>
         /// <remarks>
         ///   Sends UDP queries via the multicast mechachism
@@ -125,7 +122,7 @@ namespace LUC.DiscoveryService
 
         private void InitService()
         {
-            Service = new NetworkEventHandler(MachineId, protocol, UseIpv4, UseIpv6, ProtocolVersion);
+            Service = new NetworkEventHandler(MachineId, UseIpv4, UseIpv6, ProtocolVersion);
 
             Service.QueryReceived += SendTcpMessage;
             Service.AnswerReceived += AddEndpoint;
@@ -236,7 +233,7 @@ namespace LUC.DiscoveryService
                 var knownContacts = KnownContacts(ProtocolVersion);
                 if(!knownContacts.Any(c => c.ID == tcpMessage.IdOfSendingContact))
                 {
-                    knownContacts.Add(new Contact(protocol, new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
+                    knownContacts.Add(new Contact(new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
                 }
 
                 foreach (var groupId in tcpMessage.GroupIds)

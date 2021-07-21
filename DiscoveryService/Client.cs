@@ -9,7 +9,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;
 
 namespace LUC.DiscoveryService

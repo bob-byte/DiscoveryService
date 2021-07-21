@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
+namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
     static class BackgroundConnectionResetHelper
     {
@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 		static readonly List<Task<Boolean>> s_resetTasks = new List<Task<Boolean>>();
 		static Task s_workerTask;
 
-		public static void AddSocket(SocketInConnectionPool socket, ILoggingService log)
+		public static void AddSocket(ConnectionPoolSocket socket, ILoggingService log)
         {
             SocketAsyncEventArgs disconnetArgs = new SocketAsyncEventArgs();
             var resetTask = socket.TryResetConnectionAsync(returnToPool: true, reuseSocket: true, IOBehavior.Asynchronous);

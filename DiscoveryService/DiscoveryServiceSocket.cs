@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 using System;

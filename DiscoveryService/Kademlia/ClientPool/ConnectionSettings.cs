@@ -4,7 +4,7 @@ using System.IO;
 using System.Net.Security;
 using System.Security.Authentication;
 
-namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
+namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
 	sealed class ConnectionSettings
 	{
