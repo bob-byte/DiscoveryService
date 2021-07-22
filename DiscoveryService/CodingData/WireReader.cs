@@ -1,5 +1,5 @@
 ﻿using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Kademlia.ClientPool;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -204,7 +204,7 @@ namespace LUC.DiscoveryService.CodingData
             var idAsBigInt = BigInteger.Parse(ReadString());
 
             var endPoint = new IPEndPoint(IPAddress.Parse(ReadString()), port: (Int32)ReadUInt32());
-            Contact contact = new Contact(new TcpProtocol(), new ID(idAsBigInt), endPoint);
+            Contact contact = new Contact(new ID(idAsBigInt), endPoint);
             return contact;
         }
 

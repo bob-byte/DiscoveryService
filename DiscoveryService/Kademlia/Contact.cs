@@ -11,7 +11,6 @@ namespace LUC.DiscoveryService.Kademlia
         public DateTime LastSeen { get; set; }
         public ID ID { get; set; }
 
-        public IProtocol Protocol { get; set; }
         public ICollection<EndPoint> LocalEndPoints { get; set; }
 
         // For serialization.  Don't want to use JsonConstructor because we don't want to touch the LastSeen.
@@ -20,11 +19,10 @@ namespace LUC.DiscoveryService.Kademlia
         }
 
         /// <summary>
-        /// Initialize a contact with its protocol and ID.
+        /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(IProtocol protocol, ID contactID, ICollection<EndPoint> endPoints)
+        public Contact(ID contactID, EndPoint endPoint)
         {
-            Protocol = protocol;
             ID = contactID;
             LocalEndPoints = endPoints;
 
@@ -57,8 +55,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             return $"{nameof(ID)} = {ID};\n" +
                    $"{nameof(LocalEndPoints)} = {LocalEndPoints};\n" +
-                   $"{nameof(LastSeen)} = {LastSeen};\n" +
-                   $"{nameof(Protocol)} = {Protocol}";
+                   $"{nameof(LastSeen)} = {LastSeen};\n";
         }
 
         public static bool operator ==(Contact a, Contact b)

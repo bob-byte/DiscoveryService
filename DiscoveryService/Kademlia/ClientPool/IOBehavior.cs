@@ -1,4 +1,4 @@
-namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
+namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
 	/// <summary>
 	/// Specifies whether to perform synchronous or asynchronous I/O.

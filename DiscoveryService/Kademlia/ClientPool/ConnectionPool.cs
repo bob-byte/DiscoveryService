@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
+namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
     sealed class ConnectionPool
     {
@@ -24,8 +24,8 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         private readonly SemaphoreSlim socketSemaphore;
         private readonly SemaphoreLocker lockLeasedSockets;
 
-        private readonly Dictionary<EndPoint, SocketInConnectionPool> sockets;
-        private readonly Dictionary<EndPoint, SocketInConnectionPool> leasedSockets;
+        private readonly Dictionary<EndPoint, ConnectionPoolSocket> sockets;
+        private readonly Dictionary<EndPoint, ConnectionPoolSocket> leasedSockets;
 
         private UInt32 lastRecoveryTime;
 
@@ -49,8 +49,8 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             cleanSemaphore = new SemaphoreSlim(initialCount: 1);
             socketSemaphore = new SemaphoreSlim(connectionSettings.MaximumPoolSize);
 
-            sockets = new Dictionary<EndPoint, SocketInConnectionPool>();
-            leasedSockets = new Dictionary<EndPoint, SocketInConnectionPool>();
+            sockets = new Dictionary<EndPoint, ConnectionPoolSocket>();
+            leasedSockets = new Dictionary<EndPoint, ConnectionPoolSocket>();
             lockLeasedSockets = new SemaphoreLocker();
         }
 
@@ -72,7 +72,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             return instance;
         }
 
-        public async ValueTask<SocketInConnectionPool> SocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool)
+        public async ValueTask<ConnectionPoolSocket> SocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool)
         {
             //cancellationToken.ThrowIfCancellationRequested();
 
@@ -96,7 +96,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 socketSemaphore.Wait(timeWaitToReturnToPool);
             }
 
-            SocketInConnectionPool desiredSocket = null;
+            ConnectionPoolSocket desiredSocket = null;
             //if IOBehavior.Synchronous then use simple lock without await desiredSocket.ReturnedInPool.WaitAsync 
             await lockLeasedSockets.LockAsync(async () =>
             {
@@ -141,7 +141,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             }
             else
             {
-                desiredSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
+                desiredSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
                 await ConnectInDifferentWayAsync(desiredSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
             }
 
@@ -154,7 +154,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             return desiredSocket;
         }
 
-        private async ValueTask<SocketInConnectionPool> ConnectedSocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, SocketInConnectionPool socket)
+        private async ValueTask<ConnectionPoolSocket> ConnectedSocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, ConnectionPoolSocket socket)
         {
             var connectedSocket = socket;
             if (socket != null)
@@ -173,7 +173,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                     {
                         try
                         {
-                            connectedSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
+                            connectedSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
                             await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(false);
                         }
                         catch(Exception ex)
@@ -185,14 +185,14 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             }
             else
             {
-                connectedSocket = new SocketInConnectionPool(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
+                connectedSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
                 await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
             }
 
             return connectedSocket;
         }
 
-        private async ValueTask ConnectInDifferentWayAsync(SocketInConnectionPool socket, EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
+        private async ValueTask ConnectInDifferentWayAsync(ConnectionPoolSocket socket, EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
         {
             Boolean isConnected;
             if (ioBehavior == IOBehavior.Asynchronous)
@@ -221,7 +221,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 		/// </summary>
 		private async ValueTask RecoverLeakedSocketsAsync(IOBehavior ioBehavior, TimeSpan timeoutToConnect)
         {
-            var recoveredSockets = new List<SocketInConnectionPool>();
+            var recoveredSockets = new List<ConnectionPoolSocket>();
             await lockLeasedSockets.LockAsync(async () =>
             {
                 lastRecoveryTime = unchecked((UInt32)Environment.TickCount);
@@ -267,7 +267,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             try
             {
                 Boolean wasInPool = false;
-                SocketInConnectionPool socketInPool = null;
+                ConnectionPoolSocket socketInPool = null;
                 await lockLeasedSockets.LockAsync(() =>
                 {
                     wasInPool = leasedSockets.ContainsKey(remoteEndPoint);
@@ -326,7 +326,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             return isReturned;
         }
 
-        private SocketHealth SocketHealth(SocketInConnectionPool socket)
+        private SocketHealth SocketHealth(ConnectionPoolSocket socket)
         {
             SocketHealth socketHealth;
 
@@ -406,7 +406,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                         lock (sockets)
                         {
                             var waitingSocket = sockets.FirstOrDefault();
-                            if(!waitingSocket.Equals(default(KeyValuePair<EndPoint, SocketInConnectionPool>)))
+                            if(!waitingSocket.Equals(default(KeyValuePair<EndPoint, ConnectionPoolSocket>)))
                             {
                                 waitingSocket.Value.Dispose();
                             }

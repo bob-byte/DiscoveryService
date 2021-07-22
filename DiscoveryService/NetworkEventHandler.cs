@@ -9,7 +9,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.Interfaces;
-using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Kademlia.Routers;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
@@ -426,6 +426,8 @@ namespace LUC.DiscoveryService
 
                     case MessageOperation.Ping:
                         {
+                            /// Someone is pinging us.  Register the contact and respond.
+
                             HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, PingReceived);
 
                             break;

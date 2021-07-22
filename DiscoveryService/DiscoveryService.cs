@@ -8,7 +8,7 @@ using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.DiscoveryService.Messages.KademliaResponses;
 using LUC.DiscoveryService.Kademlia;
 using System.Collections.Generic;
-using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Kademlia.Interfaces;
 using System.Threading;
 using System.Numerics;
@@ -18,14 +18,12 @@ namespace LUC.DiscoveryService
     /// <summary>
     ///   LightUpon.Cloud Service Discovery maintens the list of IP addresses in LAN. It realizes pattern Singleton
     /// </summary>
-    public class DiscoveryService : CollectedInfoInLan
+    public class DiscoveryService : AbstractService
     {
         private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
 
         private static DiscoveryService instance;
         private readonly ConnectionPool connectionPool;
-
-        private IProtocol protocol;
 
         /// <summary>
         /// To avoid sending recent duplicate messages
@@ -68,7 +66,6 @@ namespace LUC.DiscoveryService
                 UseIpv6 = profile.UseIpv6;
                 ProtocolVersion = profile.ProtocolVersion;
                 MachineId = profile.MachineId;
-                protocol = new TcpProtocol(log, ProtocolVersion);
                 connectionPool = ConnectionPool.Instance(log);
 
                 InitService();
@@ -111,7 +108,7 @@ namespace LUC.DiscoveryService
             new ConcurrentDictionary<EndPoint, String>();
 
         /// <summary>
-        ///   LightUpon.Cloud Service.
+        ///   LightUpon.Cloud Discovery Service.
         /// </summary>
         /// <remarks>
         ///   Sends UDP queries via the multicast mechachism
@@ -126,7 +123,7 @@ namespace LUC.DiscoveryService
 
         private void InitService()
         {
-            Service = new NetworkEventHandler(MachineId, protocol, UseIpv4, UseIpv6, ProtocolVersion);
+            Service = new NetworkEventHandler(MachineId, UseIpv4, UseIpv6, ProtocolVersion);
 
             Service.QueryReceived += SendTcpMessage;
             Service.AnswerReceived += AddEndpoint;
@@ -234,8 +231,8 @@ namespace LUC.DiscoveryService
             var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
             if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint ipEndPoint))
             {
-                //var knownContacts = KnownContacts(ProtocolVersion);
-                //knownContacts.TryAdd(tcpMessage.IdOfSendingContact, new Contact(protocol, new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
+                var knownContacts = KnownContacts(ProtocolVersion);
+                knownContacts.TryAdd(tcpMessage.IdOfSendingContact, new Contact(new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
 
                 foreach (var groupId in tcpMessage.GroupIds)
                 {

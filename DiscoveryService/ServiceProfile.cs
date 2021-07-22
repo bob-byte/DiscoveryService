@@ -12,8 +12,10 @@ namespace LUC.DiscoveryService
     /// <summary>
     ///   Contains info about current peer
     /// </summary>
-    public class ServiceProfile : CollectedInfoInLan
+    public class ServiceProfile : AbstractService
     {
+        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
+
         static ServiceProfile()
         {
             // Make sure Service is inited.

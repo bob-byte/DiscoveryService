@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
+using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using System;
 using System.Collections.Generic;
