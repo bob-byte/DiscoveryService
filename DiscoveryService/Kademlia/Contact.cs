@@ -1,5 +1,6 @@
 ﻿using LUC.DiscoveryService.Kademlia.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Runtime.CompilerServices;
 
@@ -11,7 +12,7 @@ namespace LUC.DiscoveryService.Kademlia
         public ID ID { get; set; }
 
         public IProtocol Protocol { get; set; }
-        public EndPoint EndPoint { get; set; }
+        public ICollection<EndPoint> LocalEndPoints { get; set; }
 
         // For serialization.  Don't want to use JsonConstructor because we don't want to touch the LastSeen.
         public Contact()
@@ -21,11 +22,11 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its protocol and ID.
         /// </summary>
-        public Contact(IProtocol protocol, ID contactID, EndPoint endPoint)
+        public Contact(IProtocol protocol, ID contactID, ICollection<EndPoint> endPoints)
         {
             Protocol = protocol;
             ID = contactID;
-            EndPoint = endPoint;
+            LocalEndPoints = endPoints;
 
             Touch();
         }
@@ -55,7 +56,7 @@ namespace LUC.DiscoveryService.Kademlia
         public override String ToString()
         {
             return $"{nameof(ID)} = {ID};\n" +
-                   $"{nameof(EndPoint)} = {EndPoint};\n" +
+                   $"{nameof(LocalEndPoints)} = {LocalEndPoints};\n" +
                    $"{nameof(LastSeen)} = {LastSeen};\n" +
                    $"{nameof(Protocol)} = {Protocol}";
         }

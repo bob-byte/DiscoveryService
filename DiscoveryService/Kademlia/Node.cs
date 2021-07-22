@@ -273,7 +273,7 @@ namespace LUC.DiscoveryService.Kademlia
                     // If our contact is closer, store the contact on its node.
                     if ((k ^ ourContact.ID) < distance)
                         {
-                            var error = sender.Protocol.Store(ourContact, new ID(k), storage.Get(k));
+                            var error = sender.Protocol.Store(ourContact, new ID(k), storage.Get(k), sender.LocalEndPoints);
                             dht?.HandleError(error, sender);
                         }
                     });

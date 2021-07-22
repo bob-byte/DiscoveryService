@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
     public interface IProtocol
     {
         /// <summary>
-        /// Pings contact with <paramref name="endPointToPing"/>
+        /// Pings contact with <paramref name="remoteNode"/>
         /// </summary>
         /// <param name="sender">
         /// Current peer
@@ -19,7 +19,7 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
         /// <returns>
         /// Information about the errors which maybe happened
         /// </returns>
-        RpcError Ping(Contact sender, EndPoint endPointToPing);
+        RpcError Ping(Contact sender, ICollection<EndPoint> remoteNode);
 
         /// <summary>
         /// This operation has two purposes:
@@ -45,7 +45,7 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
         /// (unless there are fewer than k nodes in all its k-buckets combined, in which case it returns every node it knows about).
         /// Also this operation returns <seealso cref="RpcError"/> to inform about the errors which maybe happened
         /// </returns>
-        (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID key/*, IPAddress host, Int32 tcpPort*/);
+        (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID key, ICollection<EndPoint> remoteNode);
 
         /// <summary>
         /// Attempt to find the value in the peer network. Also this operation has two purposes:
@@ -69,7 +69,7 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
         /// the result of a timeout error.
         /// Also this operation returns <seealso cref="RpcError"/> to inform about the errors which maybe happened
         /// </returns>
-        (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID key);
+        (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID key, ICollection<EndPoint> remoteNode);
 
         /// <summary>
         /// Insturcts a node to store a (<paramref name="key"/>, <paramref name="val"/>) pair for later retrieval. 
@@ -95,6 +95,6 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
         /// <returns>
         /// Information about the errors which maybe happened
         /// </returns>
-        RpcError Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0);
+        RpcError Store(Contact sender, ID key, string val, ICollection<EndPoint> remoteNode, bool isCached = false, int expirationTimeSec = 0);
     }
 }

@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -59,18 +60,22 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             catch (TimeoutException ex)
             {
                 timeout = true;
+
                 peerError = new ErrorResponse
                 {
                     ErrorMessage = ex.Message
                 };
+                log.LogError(ex.ToString());
             }
             catch (Exception ex)
             {
                 timeout = false;
+
                 peerError = new ErrorResponse
                 {
                     ErrorMessage = ex.Message
                 };
+                log.LogError(ex.ToString());
             }
 
             return RpcError(id, response, timeout, peerError);
@@ -92,6 +97,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                     ref client, out var isSent);
                 if (isSent)
                 {
+                    //TODO: optimize it. Check client.Available every 0.4 s
                     Thread.Sleep(Constants.TimeWaitResponse);
 
                     var bytesOfResponse = client.Receive(Constants.ReceiveTimeout, out isReceived);
@@ -131,7 +137,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         }
 
         ///<inheritdoc/>
-        public RpcError Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
+        public RpcError Store(Contact sender, ID key, string val, EndPoint remoteEndPoint, bool isCached = false, int expirationTimeSec = 0)
         {
             ID id = ID.RandomID;
             var request = new StoreRequest
@@ -145,7 +151,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 MessageOperation = MessageOperation.Store
             };
 
-            var remoteContact = DiscoveryService.KnownContacts(protocolVersion).Single(c => c.ID == key);
+            var remoteContact = RemoteContact(key);
             
             ErrorResponse peerError = null;
             StoreResponse response = null;
@@ -153,7 +159,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
 
             try
             {
-                ClientStart(remoteContact.EndPoint, request, out response);
+                ClientStart(remoteEndPoint, request, out response);
                 timeout = false;
 
                 log.LogInfo($"The response is received:\n{response}");
@@ -161,25 +167,36 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
             catch (TimeoutException ex)
             {
                 timeout = true;
+
                 peerError = new ErrorResponse
                 {
                     ErrorMessage = ex.Message
                 };
+                log.LogError(ex.ToString());
             }
             catch (Exception ex)
             {
                 timeout = false;
+
                 peerError = new ErrorResponse
                 {
                     ErrorMessage = ex.Message
                 };
+                log.LogError(ex.ToString());
             }
 
             return RpcError(id, response, timeout, peerError);
         }
 
+        private Contact RemoteContact(ID key)
+        {
+            Validate.IsTrue<ArgumentNullException>(key != new ID(default(BigInteger)), $"{nameof(key)} is null");
+
+            return DiscoveryService.KnownContacts(protocolVersion).SingleOrDefault(c => c.Key == key.Value).Value;
+        }
+
         /// <inheritdoc/>
-        public (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID keyToFindContacts/*, IPAddress host, Int32 tcpPort*/)
+        public (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID keyToFindContacts, EndPoint remoteEndPoint)
         {
             ID id = ID.RandomID;
             Boolean timeoutError = false;
@@ -191,13 +208,13 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 MessageOperation = MessageOperation.FindNode
             };
             FindNodeResponse response = null;
-            var remoteContact = DiscoveryService.KnownContacts(protocolVersion).Single(c => c.ID == keyToFindContacts);
+            var remoteContact = RemoteContact(keyToFindContacts);
             ErrorResponse peerError = null;
             List<Contact> closeContactsToKey = null;
 
             try
             {
-                ClientStart(remoteContact.EndPoint, request, out response);
+                ClientStart(remoteEndPoint, request, out response);
 
                 //get close contacts near key
                 closeContactsToKey = response.CloseSenderContacts.ToList();
@@ -210,6 +227,8 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 {
                     ErrorMessage = ex.Message
                 };
+                log.LogError(ex.ToString());
+
                 timeoutError = true;
             }
 
@@ -222,7 +241,7 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
         }
 
         /// <inheritdoc/>
-        public (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID keyToFindContact)
+        public (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID keyToFindContact, EndPoint remoteEndPoint)
         {
             ID id = ID.RandomID;
             bool timeoutError = false;
@@ -235,14 +254,14 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 RandomID = id.Value,
             };
             
-            var remoteContact = DiscoveryService.KnownContacts(protocolVersion).Single(c => c.ID == keyToFindContact);
+            var remoteContact = RemoteContact(keyToFindContact);
             FindValueResponse response = null;
             List<Contact> closeContactsToKey = null;
             ErrorResponse peerError = new ErrorResponse();
 
             try
             {
-                ClientStart(remoteContact.EndPoint, request, out response);
+                ClientStart(remoteEndPoint, request, out response);
 
                 //get close contacts near key
                 closeContactsToKey = response?.CloseContactsToRepsonsingPeer.ToList()/*.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList()*/;
@@ -257,6 +276,8 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 {
                     ErrorMessage = ex.Message
                 };
+                log.LogError(ex.ToString());
+
                 timeoutError = true;
             }
             catch (Exception ex)
@@ -265,6 +286,8 @@ namespace LUC.DiscoveryService.Kademlia.Protocols.Tcp
                 {
                     ErrorMessage = ex.Message
                 };
+                log.LogError(ex.ToString());
+
                 timeoutError = false;
             }
 

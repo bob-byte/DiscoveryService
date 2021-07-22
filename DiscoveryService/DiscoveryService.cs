@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using LUC.DiscoveryService.Kademlia.Protocols.Tcp;
 using LUC.DiscoveryService.Kademlia.Interfaces;
 using System.Threading;
+using System.Numerics;
 
 namespace LUC.DiscoveryService
 {
@@ -33,7 +34,7 @@ namespace LUC.DiscoveryService
 
         private Boolean isDiscoveryServiceStarted = false;
 
-        private static readonly ConcurrentDictionary<UInt32, List<Contact>> knownContacts = new ConcurrentDictionary<UInt32, List<Contact>>();
+        private static readonly ConcurrentDictionary<UInt32, ConcurrentDictionary<BigInteger, Contact>> knownContacts = new ConcurrentDictionary<UInt32, ConcurrentDictionary<BigInteger, Contact>>();
 
         /// <summary>
         ///   Raised when a servive instance is shutting down.
@@ -150,7 +151,7 @@ namespace LUC.DiscoveryService
             {
                 SendKademliaResponse<FindNodeRequest>(eventArgs.AcceptedSocket, eventArgs, (client, request) =>
                 {
-                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), new ID(eventArgs.LocalContactId));
+                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), exclude: new ID(default(BigInteger)));
                     FindNodeResponse.SendOurCloseContactsAndPort(client, closeContacts, SendTimeout, request);
                 });
             };
@@ -159,7 +160,7 @@ namespace LUC.DiscoveryService
             {
                 SendKademliaResponse<FindValueRequest>(eventArgs.AcceptedSocket, eventArgs, (client, request) =>
                 {
-                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), new ID(eventArgs.LocalContactId));
+                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), exclude: new ID(default(BigInteger)));
                     FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, MachineId);
                 });
             };
@@ -233,11 +234,8 @@ namespace LUC.DiscoveryService
             var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
             if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint ipEndPoint))
             {
-                var knownContacts = KnownContacts(ProtocolVersion);
-                if(!knownContacts.Any(c => c.ID == tcpMessage.IdOfSendingContact))
-                {
-                    knownContacts.Add(new Contact(protocol, new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
-                }
+                //var knownContacts = KnownContacts(ProtocolVersion);
+                //knownContacts.TryAdd(tcpMessage.IdOfSendingContact, new Contact(protocol, new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
 
                 foreach (var groupId in tcpMessage.GroupIds)
                 {
@@ -280,7 +278,6 @@ namespace LUC.DiscoveryService
                     InitService();
                 }
                 Service.Start();
-                KnownContacts(ProtocolVersion).AddRange(Service.OurContacts);
 
                 isDiscoveryServiceStarted = true;
             }
@@ -301,9 +298,9 @@ namespace LUC.DiscoveryService
             }
         }
 
-        internal static List<Contact> KnownContacts(UInt32 protocolVersion)
+        internal static ConcurrentDictionary<BigInteger, Contact> KnownContacts(UInt32 protocolVersion)
         {
-            knownContacts.TryAdd(protocolVersion, new List<Contact>());
+            knownContacts.TryAdd(protocolVersion, new ConcurrentDictionary<BigInteger, Contact>());
             return knownContacts[protocolVersion];
         }
 

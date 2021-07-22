@@ -160,21 +160,24 @@ namespace LUC.DiscoveryService
             Protocol = protocol;
 
             var unAvailableAddresses = OurContacts.Except(runningIpAddresses.Select(c => 
-            new Contact { EndPoint = new IPEndPoint(c, (Int32)RunningTcpPort) }), new ContactComparer()).ToList();
+            new Contact { LocalEndPoints = new IPEndPoint(c, (Int32)RunningTcpPort) }), new ContactComparer()).ToList();
             OurContacts.RemoveRange(unAvailableAddresses);
 
             foreach (var ipAddress in runningIpAddresses)
             {
-                if(!OurContacts.Any(c => ((IPEndPoint)c.EndPoint).Address.Equals(ipAddress)))
+                if(!OurContacts.Any(c => ((IPEndPoint)c.LocalEndPoints).Address.Equals(ipAddress)))
                 {
                     OurContacts.Add(new Contact(protocol, ID.RandomID, new IPEndPoint(ipAddress, (Int32)RunningTcpPort)));
                 }
             }
 
             DiscoveryService.KnownContacts(ProtocolVersion).Clear();
-            DiscoveryService.KnownContacts(ProtocolVersion).AddRange(OurContacts);
+            foreach (var ourContact in OurContacts)
+            {
+                DiscoveryService.KnownContacts(ProtocolVersion).TryAdd(ourContact.ID.Value, ourContact);
+            }
 
-            DistributedHashTable = new Dht(OurContacts[0], protocol, () => new VirtualStorage(), new Router());
+            DistributedHashTable = new Dht(OurContacts[0], protocol, () => new VirtualStorage(), new ParallelRouter());
         }
 
         /// <summary>
@@ -321,7 +324,7 @@ namespace LUC.DiscoveryService
             var runningIpAddresses = new Dictionary<BigInteger, IPAddress>();
             foreach (var contact in OurContacts)
             {
-                runningIpAddresses.Add(contact.ID.Value, ((IPEndPoint)contact.EndPoint).Address);
+                runningIpAddresses.Add(contact.ID.Value, ((IPEndPoint)contact.LocalEndPoints).Address);
             }
 
             client = new Client(UseIpv4, UseIpv6, runningIpAddresses);
