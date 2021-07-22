@@ -2,9 +2,9 @@
 using System.Linq;
 
 using Newtonsoft.Json;
-
-using LUC.DiscoveryService.Kademlia.Protocols;
-using LUC.DiscoveryService.Kademlia.Interfaces;
+using System;
+using LUC.Interfaces;
+using LUC.DiscoveryService.Kademlia.ClientPool;
 
 namespace LUC.DiscoveryService.Kademlia
 {
@@ -12,7 +12,7 @@ namespace LUC.DiscoveryService.Kademlia
     {
         private static ILoggingService log;
         private readonly UInt32 protocolVersion;
-        private static ConnectionPool connectionPool;
+        private readonly KademliaOperation kademliaOperation;
 
         public Contact OurContact { get { return ourContact; } set { ourContact = value; } }
         public IBucketList BucketList { get { return bucketList; } set { bucketList = value; } }
@@ -38,8 +38,8 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// If cache storage is not explicity provided, we use an in-memory virtual storage.
         /// </summary>
-        public Node(Contact contact, IStorage storage, IStorage cacheStorage = null,
-                    UInt32 protocolVersion, ILoggingService loggingService)
+        public Node(Contact contact, UInt16 protocolVersion, ILoggingService loggingService, 
+            IStorage storage, IStorage cacheStorage = null)
         {
             ourContact = contact;
             bucketList = new BucketList(contact);
@@ -54,7 +54,7 @@ namespace LUC.DiscoveryService.Kademlia
             this.protocolVersion = protocolVersion;
 
             log = loggingService;
-            connectionPool = ConnectionPool.Instance(loggingService);
+            kademliaOperation = new KademliaOperation(loggingService, protocolVersion);
         }
 
         /// <summary>
@@ -226,7 +226,7 @@ namespace LUC.DiscoveryService.Kademlia
                     // If our contact is closer, store the contact on its node.
                     if ((k ^ ourContact.ID) < distance)
                         {
-                            var error = sender.Protocol.Store(ourContact, new ID(k), storage.Get(k), sender.LocalEndPoints);
+                            var error = Store(ourContact, new ID(k), storage.Get(k), sender.local_IpAddresses);
                             dht?.HandleError(error, sender);
                         }
                     });
@@ -259,46 +259,8 @@ namespace LUC.DiscoveryService.Kademlia
         }
 
         /// <inheritdoc/>
-        public RpcError Ping(Contact sender, EndPoint endPointToPing)
-        {
-            var id = ID.RandomID;
+        public RpcError Ping(Contact sender, EndPoint endPointToPing) =>
 
-            ErrorResponse peerError = null;
-            PingRequest request = new PingRequest
-            {
-                RandomID = id.Value,
-                Sender = sender.ID.Value,
-                MessageOperation = MessageOperation.Ping
-            };
-            PingResponse response = null;
-
-            Boolean timeout;
-            try
-            {
-                ClientStart(endPointToPing, request, out response);
-                timeout = false;
-
-                log.LogInfo($"The response is received:\n{response}");
-            }
-            catch (TimeoutException ex)
-            {
-                timeout = true;
-                peerError = new ErrorResponse
-                {
-                    ErrorMessage = ex.Message
-                };
-            }
-            catch (Exception ex)
-            {
-                timeout = false;
-                peerError = new ErrorResponse
-                {
-                    ErrorMessage = ex.Message
-                };
-            }
-
-            return RpcError(id, response, timeout, peerError);
-        }
 
         private void ClientStart<TResponse>(EndPoint remoteEndPoint, Request request, out TResponse response)
             where TResponse : Response, new()

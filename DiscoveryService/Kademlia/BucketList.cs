@@ -71,7 +71,6 @@ namespace LUC.DiscoveryService.Kademlia
 
                 if (kbucket.Contains(contact.ID))
                 {
-                    //TODO: compare endpoints
                     // Replace the existing contact, updating the network info and LastSeen timestamp.
                     kbucket.ReplaceContact(contact);
                 }
@@ -91,7 +90,7 @@ namespace LUC.DiscoveryService.Kademlia
                     else
                     {
                         Contact lastSeenContact = kbucket.Contacts.OrderBy(c => c.LastSeen).First();
-                        RpcError error = lastSeenContact.Protocol.Ping(ourContact, lastSeenContact.LocalEndPoints);
+                        RpcError error = lastSeenContact.Protocol.Ping(ourContact, lastSeenContact.local_IpAddresses);
 
                         if (error.HasError)
                         {

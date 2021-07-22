@@ -212,7 +212,7 @@ namespace LUC.DiscoveryService.CodingData
         public void Write(Contact contact)
         {
             Write(contact.ID.Value.ToString());
-            var endPoint = contact.LocalEndPoints as IPEndPoint;
+            var endPoint = contact.local_IpAddresses as IPEndPoint;
             Write(endPoint.Address.ToString());
             Write((UInt32)endPoint.Port);
         }

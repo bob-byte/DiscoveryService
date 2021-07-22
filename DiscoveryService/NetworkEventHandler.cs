@@ -8,7 +8,6 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Threading.Tasks;
 using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Interfaces;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Kademlia.Routers;
 using LUC.DiscoveryService.Messages;
@@ -117,25 +116,23 @@ namespace LUC.DiscoveryService
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        internal NetworkEventHandler(String machineId, IProtocol protocol, Boolean useIpv4, Boolean useIpv6, 
-            UInt32 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
+        internal NetworkEventHandler(String machineId, Boolean useIpv4, Boolean useIpv6, 
+            UInt16 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
-            Protocol = protocol;
-
             MachineId = machineId;
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;
             ProtocolVersion = protocolVersion;
+            OurContact = new Contact();
+
             networkInterfacesFilter = filter;
 
             IgnoreDuplicateMessages = true;
         }
 
-        public List<Contact> OurContacts { get; } = new List<Contact>();
-
+        public Contact OurContact { get; }
+        
         public Dht DistributedHashTable { get; private set; }
-
-        public IProtocol Protocol { get; set; }
 
         /// <summary>
         /// Known network interfaces
@@ -154,30 +151,28 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public Boolean IgnoreDuplicateMessages { get; set; }
 
-        private void InitKademliaProtocol(IProtocol protocol)
+        private void InitKademliaProtocol()
         {
             var runningIpAddresses = RunningIpAddresses();
-            Protocol = protocol;
 
-            var unAvailableAddresses = OurContacts.Except(runningIpAddresses.Select(c => 
-            new Contact { LocalEndPoints = new IPEndPoint(c, (Int32)RunningTcpPort) }), new ContactComparer()).ToList();
-            OurContacts.RemoveRange(unAvailableAddresses);
+            var unAvailableAddresses = OurContact.Local_IpAddresses.Except(runningIpAddresses).ToList();
+            OurContact.Local_IpAddresses.RemoveRange(unAvailableAddresses);
 
             foreach (var ipAddress in runningIpAddresses)
             {
-                if(!OurContacts.Any(c => ((IPEndPoint)c.LocalEndPoints).Address.Equals(ipAddress)))
+                if(!OurContact.Local_IpAddresses.Any(c => c.Equals(ipAddress)))
                 {
-                    OurContacts.Add(new Contact(protocol, ID.RandomID, new IPEndPoint(ipAddress, (Int32)RunningTcpPort)));
+                    OurContact.Local_IpAddresses.Add(ipAddress);
                 }
             }
 
-            DiscoveryService.KnownContacts(ProtocolVersion).Clear();
-            foreach (var ourContact in OurContacts)
-            {
-                DiscoveryService.KnownContacts(ProtocolVersion).TryAdd(ourContact.ID.Value, ourContact);
-            }
+            //DiscoveryService.KnownContacts(ProtocolVersion).Clear();
+            //foreach (var ourContact in OurContact)
+            //{
+            //    DiscoveryService.KnownContacts(ProtocolVersion).TryAdd(ourContact.ID.Value, ourContact);
+            //}
 
-            DistributedHashTable = new Dht(OurContacts[0], protocol, () => new VirtualStorage(), new ParallelRouter());
+            DistributedHashTable = new Dht(OurContact, () => new VirtualStorage(), new ParallelRouter());
         }
 
         /// <summary>
@@ -291,7 +286,7 @@ namespace LUC.DiscoveryService
                 // Only create client if something has change.
                 if (newNics.Any() || oldNics.Any())
                 {
-                    InitKademliaProtocol(Protocol);
+                    InitKademliaProtocol();
 
                     client?.Dispose();
                     InitClient();
@@ -322,9 +317,9 @@ namespace LUC.DiscoveryService
         private void InitClient()
         {
             var runningIpAddresses = new Dictionary<BigInteger, IPAddress>();
-            foreach (var contact in OurContacts)
+            foreach (var contact in OurContact)
             {
-                runningIpAddresses.Add(contact.ID.Value, ((IPEndPoint)contact.LocalEndPoints).Address);
+                runningIpAddresses.Add(contact.ID.Value, ((IPEndPoint)contact.LocalIpAddresses).Address);
             }
 
             client = new Client(UseIpv4, UseIpv6, runningIpAddresses);
@@ -463,8 +458,11 @@ namespace LUC.DiscoveryService
             T request = new T();
             request.Read(receiveResult.Buffer);
             receiveResult.SetMessage(request);
-
-            receiveEvent?.Invoke(sender, receiveResult);
+            
+            receiveEvent?.BeginInvoke(sender, receiveResult, (asyncResult) =>
+            {
+                ((EventHandler<TcpMessageEventArgs>)asyncResult.AsyncState).EndInvoke(asyncResult);
+            }, receiveEvent);
         }
 
         public void TryKademliaOperation(Object sender, TcpMessageEventArgs receiveResult)
@@ -474,7 +472,7 @@ namespace LUC.DiscoveryService
                 var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
                 try
                 {
-                    if ((tcpMessage != null) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
+                    if ((tcpMessage != null) && (receiveResult.SendingEndPoint is IPEndPoint ipEndPoint))
                     {
                         //Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
                         //Protocol.Store(DistributedHashTable.OurContact, 
@@ -483,7 +481,7 @@ namespace LUC.DiscoveryService
                         //    DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
                         //Protocol.FindValue(DistributedHashTable.OurContact, DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
 
-                        DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
+                        DistributedHashTable.Bootstrap(knownPeer: new Contact(new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
                     }
                 }
                 catch (Exception e)

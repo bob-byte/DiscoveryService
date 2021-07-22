@@ -20,14 +20,14 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Default port which is used in LAN
         /// </summary>
-        public const UInt32 DefaultPort = 17500;
+        public const UInt16 DefaultPort = 17500;
 
         /// <summary>
         /// Count available ports which the LAN supports
         /// </summary>
-        public const UInt32 CountAvailablePorts = 10;
+        public const UInt16 CountAvailablePorts = 10;
 
-        protected UInt32 runningTcpPort;
+        protected UInt16 runningTcpPort;
 
         [Import(typeof(ILoggingService))]
         protected static readonly LoggingService log = new LoggingService();
@@ -63,17 +63,17 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Min available TCP port in the LAN
         /// </summary>
-        public UInt32 MinValueTcpPort { get; }
+        public UInt16 MinValueTcpPort { get; }
 
         /// <summary>
         /// Max available TCP port in the LAN
         /// </summary>
-        public UInt32 MaxValueTcpPort { get; }
+        public UInt16 MaxValueTcpPort { get; }
 
         /// <summary>
         /// TCP port which current peer is using in TCP connections
         /// </summary>
-        public UInt32 RunningTcpPort
+        public UInt16 RunningTcpPort
         {
             get => runningTcpPort;
             protected set
@@ -86,7 +86,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// UDP port which current peer is using in UDP connections
         /// </summary>
-        public UInt32 RunningUdpPort { get; }
+        public UInt16 RunningUdpPort { get; }
 
         /// <summary>
         ///   Protocol version.
@@ -94,6 +94,6 @@ namespace LUC.DiscoveryService
         /// <value>
         ///   Integer.
         /// </value>
-        public UInt32 ProtocolVersion { get; protected set; }
+        public UInt16 ProtocolVersion { get; protected set; }
     }
 }

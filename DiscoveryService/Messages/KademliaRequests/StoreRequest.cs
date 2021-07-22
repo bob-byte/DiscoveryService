@@ -33,13 +33,13 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadUInt32();
+                MessageOperation = (MessageOperation)reader.ReadUInt16();
                 RandomID = BigInteger.Parse(reader.ReadString());
                 Sender = BigInteger.Parse(reader.ReadString());
                 KeyToStore = BigInteger.Parse(reader.ReadString());
                 Value = reader.ReadString();
                 IsCached = reader.ReadBoolean();
-                ExpirationTimeSec = (Int32)reader.ReadUInt32();
+                ExpirationTimeSec = (Int32)reader.ReadUInt16();
 
                 return this;
             }

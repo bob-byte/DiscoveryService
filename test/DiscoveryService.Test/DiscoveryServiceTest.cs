@@ -117,7 +117,7 @@ namespace LUC.DiscoveryService.Test
             discoveryService.SendTcpMessage(this, new TcpMessageEventArgs
             {
                 Buffer = new UdpMessage(messageId: 123,tcpPort: discoveryService.RunningTcpPort,protocolVersion: 1,machineId:  null),
-                RemoteContact = new IPEndPoint(availableIps[1], (Int32)discoveryService.RunningTcpPort)
+                SendingEndPoint = new IPEndPoint(availableIps[1], (Int32)discoveryService.RunningTcpPort)
             });
 
             Assert.IsTrue(done.WaitOne());
@@ -155,7 +155,7 @@ namespace LUC.DiscoveryService.Test
             Assert.That(() => discoveryService.SendTcpMessage(this, new TcpMessageEventArgs
             {
                 Buffer = new UdpMessage(messageId: 123, tcpPort: discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null),
-                RemoteContact = null
+                SendingEndPoint = null
             }),
             Throws.TypeOf(typeof(ArgumentException)));
         }
@@ -168,7 +168,7 @@ namespace LUC.DiscoveryService.Test
             Assert.That(() => discoveryService.SendTcpMessage(this, new TcpMessageEventArgs
             {
                 Buffer = new UdpMessage(messageId: 123, tcpPort: discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null),
-                RemoteContact = new DnsEndPoint(Dns.GetHostName(), (Int32)AbstractService.DefaultPort, AddressFamily.InterNetwork)
+                SendingEndPoint = new DnsEndPoint(Dns.GetHostName(), (Int32)AbstractService.DefaultPort, AddressFamily.InterNetwork)
             }),
             Throws.TypeOf(typeof(ArgumentException)));
         }

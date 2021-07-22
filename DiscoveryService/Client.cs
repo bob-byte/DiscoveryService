@@ -258,7 +258,10 @@ namespace LUC.DiscoveryService
                             RemoteEndPoint = x.Result.RemoteEndPoint
                         };
 
-                        UdpMessageReceived.Invoke(this, eventArgs);
+                        UdpMessageReceived?.BeginInvoke(receiver, eventArgs, (asyncResult) =>
+                        {
+                            ((EventHandler<TcpMessageEventArgs>)asyncResult.AsyncState).EndInvoke(asyncResult);
+                        }, UdpMessageReceived);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);
@@ -303,7 +306,13 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x => ListenTcp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
-                    _ = task.ContinueWith(x => TcpMessageReceived?.Invoke(receiver, x.Result), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
+                    _ = task.ContinueWith(x =>
+                    {
+                        TcpMessageReceived?.BeginInvoke(receiver, x.Result, (asyncResult) =>
+                        {
+                            ((EventHandler<TcpMessageEventArgs>)asyncResult.AsyncState).EndInvoke(asyncResult);
+                        }, TcpMessageReceived);
+                    }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);
                 }

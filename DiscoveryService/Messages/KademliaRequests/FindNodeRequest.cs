@@ -30,7 +30,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadUInt32();
+                MessageOperation = (MessageOperation)reader.ReadUInt16();
                 RandomID = BigInteger.Parse(reader.ReadString());
                 Sender = BigInteger.Parse(reader.ReadString());
                 ContactId = BigInteger.Parse(reader.ReadString());

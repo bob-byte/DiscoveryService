@@ -64,7 +64,7 @@ namespace LUC.DiscoveryService
                 var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
                 Console.WriteLine(tcpMessage.ToString());
 
-                if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint endPoint))
+                if ((tcpMessage != null) && (e.SendingEndPoint is IPEndPoint endPoint))
                 {
                     var realEndPoint = $"{endPoint.Address}:{tcpMessage.TcpPort}";
 

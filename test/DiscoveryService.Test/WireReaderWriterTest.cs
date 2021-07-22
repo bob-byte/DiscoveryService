@@ -29,7 +29,7 @@ namespace LUC.DiscoveryService.Test
             var reader = new WireReader(memoryStream);
 
             Assert.AreEqual(expected: expectedStrValue, actual: reader.ReadString());
-            Assert.AreEqual(expected: expectedUintValue, actual: reader.ReadUInt32());
+            Assert.AreEqual(expected: expectedUintValue, actual: reader.ReadUInt16());
             CollectionAssert.AreEqual(expected: expectedBytes, actual: reader.ReadBytes(3));
             CollectionAssert.AreEqual(expected: expectedBytes, actual: reader.ReadByteLengthPrefixedBytes());
         }

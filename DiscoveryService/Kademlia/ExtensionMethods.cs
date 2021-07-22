@@ -162,7 +162,7 @@ namespace LUC.DiscoveryService.Kademlia
             return !source.Any(predicate);
         }
 
-        public static void RemoveRange<T>(this List<T> target, List<T> src)
+        public static void RemoveRange<T>(this ICollection<T> target, ICollection<T> src)
         {
             src.ForEach(s => target.Remove(s));
         }

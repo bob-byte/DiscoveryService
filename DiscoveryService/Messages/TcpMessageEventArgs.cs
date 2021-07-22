@@ -1,6 +1,7 @@
 ﻿using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
@@ -19,9 +20,11 @@ namespace LUC.DiscoveryService.Messages
         /// <value>
         ///   The endpoint from the message was received.
         /// </value>
-        public EndPoint RemoteContact { get; set; }
+        public EndPoint SendingEndPoint { get; set; }
 
         public Socket AcceptedSocket { get; set; }
+
+        public IEnumerable<EndPoint> RemoteEndPoints { get; set; }
 
         //public Contact LocalContact { get; set; }
     }

@@ -37,8 +37,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadUInt32();
-                TcpPort = reader.ReadUInt32();
+                MessageOperation = (MessageOperation)reader.ReadUInt16();
+                TcpPort = reader.ReadUInt16();
                 Sender = BigInteger.Parse(reader.ReadString());
                 RandomID = BigInteger.Parse(reader.ReadString());
 

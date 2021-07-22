@@ -149,7 +149,7 @@ namespace LUC.DiscoveryService
             if (ipEndPoint != null)
             {
                 receiveResult.Buffer = readBytes;
-                receiveResult.RemoteContact = ipEndPoint;
+                receiveResult.SendingEndPoint = ipEndPoint;
                 receiveResult.AcceptedSocket = clientToReadMessage;
                 receiveResult.LocalContactId = ContactId;
             }

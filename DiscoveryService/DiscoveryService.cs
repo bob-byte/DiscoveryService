@@ -165,7 +165,7 @@ namespace LUC.DiscoveryService
 
         //TODO: check SSL certificate with SNI
         /// <summary>
-        ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.RemoteContact"/> using <seealso cref="UdpMessage.TcpPort"/>
+        ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.SendingEndPoint"/> using <seealso cref="UdpMessage.TcpPort"/>
         ///  It is added to <seealso cref="NetworkEventHandler.QueryReceived"/>. 
         /// </summary>
         /// <param name="sender">
@@ -182,11 +182,11 @@ namespace LUC.DiscoveryService
 
                 if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
                 {
-                    var sendingContact = Service.OurContacts.Single(c => c.ID.Value == e.LocalContactId);
+                    var sendingContact = Service.OurContact.Single(c => c.ID.Value == e.LocalContactId);
 
                     Random random = new Random();
                     var tcpMessage = new AcknowledgeTcpMessage(
-                        messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                        messageId: random.Next(maxValue: Int32.MaxValue),
                         MachineId,
                         sendingContact.ID.Value,
                         RunningTcpPort,
@@ -229,7 +229,7 @@ namespace LUC.DiscoveryService
         public void AddEndpoint(Object sender, TcpMessageEventArgs e)
         {
             var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
-            if ((tcpMessage != null) && (e.RemoteContact is IPEndPoint ipEndPoint))
+            if ((tcpMessage != null) && (e.SendingEndPoint is IPEndPoint ipEndPoint))
             {
                 var knownContacts = KnownContacts(ProtocolVersion);
                 knownContacts.TryAdd(tcpMessage.IdOfSendingContact, new Contact(new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));

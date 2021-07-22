@@ -8,7 +8,6 @@ using System.Timers;
 using Newtonsoft.Json;
 
 using LUC.DiscoveryService.Kademlia.Routers;
-using LUC.DiscoveryService.Kademlia.Interfaces;
 
 namespace LUC.DiscoveryService.Kademlia
 {
@@ -38,9 +37,6 @@ namespace LUC.DiscoveryService.Kademlia
         public ID ID { get { return ourId; } set { ourId = value; } }
 
         [JsonIgnore]
-        public IProtocol Protocol { get { return protocol; } set { protocol = value; } }
-
-        [JsonIgnore]
         public int PendingPeersCount { get { lock (pendingContacts) { return pendingContacts.Count; } } }
 
         [JsonIgnore]
@@ -58,7 +54,6 @@ namespace LUC.DiscoveryService.Kademlia
         protected IStorage originatorStorage;
         protected IStorage republishStorage;
         protected IStorage cacheStorage;
-        protected IProtocol protocol;
         protected Node node;
         protected Contact ourContact;
         protected ID ourId;
@@ -78,12 +73,12 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Use this constructor to initialize the stores to the same instance.
         /// </summary>
-        public Dht(Contact contact, IProtocol protocol, Func<IStorage> storageFactory, BaseRouter router)
+        public Dht(Contact contact, Func<IStorage> storageFactory, BaseRouter router)
         {
             originatorStorage = storageFactory();
             republishStorage = storageFactory();
             cacheStorage = storageFactory();
-            FinishInitialization(contact, protocol, router);
+            FinishInitialization(contact, router);
             SetupTimers();
         }
 
@@ -144,7 +139,7 @@ namespace LUC.DiscoveryService.Kademlia
         public RpcError Bootstrap(Contact knownPeer)
         {
             node.BucketList.AddContact(knownPeer);
-            var (contacts, error) = knownPeer.Protocol.FindNode(ourContact, ourContact.ID, knownPeer.LocalEndPoints/*, knownPeer.EndPoint.Address, knownPeer.EndPoint.Port*/);
+            var (contacts, error) = knownPeer.Protocol.FindNode(ourContact, ourContact.ID, knownPeer.local_IpAddresses/*, knownPeer.EndPoint.Address, knownPeer.EndPoint.Port*/);
             HandleError(error, knownPeer);
 
             if (!error.HasError)
@@ -206,7 +201,7 @@ namespace LUC.DiscoveryService.Kademlia
                     {
                         int separatingNodes = GetSeparatingNodesCount(ourContact, storeTo);
                         int expTimeSec = (int)(Constants.EXPIRATION_TIME_SECONDS / Math.Pow(2, separatingNodes));
-                        RpcError error = storeTo.Protocol.Store(node.OurContact, key, lookup.val, storeTo.LocalEndPoints, true, expTimeSec);
+                        RpcError error = storeTo.Protocol.Store(node.OurContact, key, lookup.val, storeTo.local_IpAddresses, true, expTimeSec);
                         HandleError(error, storeTo);
                     }
                 }
@@ -363,7 +358,7 @@ namespace LUC.DiscoveryService.Kademlia
             SetupTimers();
         }
 
-        protected void FinishInitialization(Contact contact, IProtocol protocol, BaseRouter router)
+        protected void FinishInitialization(Contact contact, BaseRouter router)
         {
             evictionCount = new ConcurrentDictionary<BigInteger, int>();
             pendingContacts = new List<Contact>();
@@ -372,7 +367,6 @@ namespace LUC.DiscoveryService.Kademlia
             node = new Node(ourContact, republishStorage, cacheStorage);
             node.Dht = this;
             node.BucketList.Dht = this;
-            this.protocol = protocol;
             this.router = router;
             this.router.Node = node;
             this.router.Dht = this;
@@ -462,7 +456,7 @@ namespace LUC.DiscoveryService.Kademlia
 
                 contacts.ForEach(c =>
                 {
-                    RpcError error = c.Protocol.Store(ourContact, key, originatorStorage.Get(key), c.LocalEndPoints);
+                    RpcError error = c.Protocol.Store(ourContact, key, originatorStorage.Get(key), c.local_IpAddresses);
                     HandleError(error, c);
                 });
 
@@ -512,7 +506,7 @@ namespace LUC.DiscoveryService.Kademlia
 
             contacts.ForEach(c =>
             {
-                RpcError error = c.Protocol.Store(node.OurContact, key, val, c.LocalEndPoints);
+                RpcError error = c.Protocol.Store(node.OurContact, key, val, c.local_IpAddresses);
                 HandleError(error, c);
             });
         }
@@ -527,7 +521,7 @@ namespace LUC.DiscoveryService.Kademlia
 
             contacts.ForEach(c =>
             {
-                var (newContacts, timeoutError) = c.Protocol.FindNode(ourContact, rndId, c.LocalEndPoints);
+                var (newContacts, timeoutError) = c.Protocol.FindNode(ourContact, rndId, c.local_IpAddresses);
                 HandleError(timeoutError, c);
                 newContacts?.ForEach(otherContact => node.BucketList.AddContact(otherContact));
             });

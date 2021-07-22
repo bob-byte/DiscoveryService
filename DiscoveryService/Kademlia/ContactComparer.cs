@@ -13,7 +13,7 @@ namespace LUC.DiscoveryService.Kademlia
             Validate.IsTrue<ArgumentNullException>(contact1 != null, errorMessage: $"{nameof(contact1)} is equal to null");
             Validate.IsTrue<ArgumentNullException>(contact2 != null, errorMessage: $"{nameof(contact2)} is equal to null");
 
-            var isEqual = contact1.LocalEndPoints.Equals(contact2.LocalEndPoints);
+            var isEqual = contact1.Local_IpAddresses.Equals(contact2.local_IpAddresses);
             return isEqual;
         }
 
@@ -21,7 +21,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             Validate.IsTrue<ArgumentNullException>(contact != null, errorMessage: $"{nameof(contact)} is equal to null");
 
-            return contact.LocalEndPoints.GetHashCode();
+            return contact.Local_IpAddresses.GetHashCode();
         }
     }
 }

@@ -1,17 +1,18 @@
-﻿using LUC.DiscoveryService.Kademlia.Interfaces;
+﻿//using LUC.DiscoveryService.Kademlia.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Linq;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class Contact  : IComparable
+    public class Contact : IComparable
     {
-        public DateTime LastSeen { get; set; }
-        public ID ID { get; set; }
-
-        public ICollection<EndPoint> LocalEndPoints { get; set; }
+        private Int32 lastIndexOfAddress;
+        private readonly Dictionary<Int32, IPAddress> local_IpAddresses = new Dictionary<Int32, IPAddress>();
 
         // For serialization.  Don't want to use JsonConstructor because we don't want to touch the LastSeen.
         public Contact()
@@ -21,13 +22,22 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(ID contactID, EndPoint endPoint)
+        public Contact(ID contactID, UInt16 tcpPort, IPAddress locaIpAddresses)
         {
             ID = contactID;
-            LocalEndPoints = endPoints;
+            TcpPort = tcpPort;
+            LastActiveIpAddress = locaIpAddresses;
 
             Touch();
         }
+
+        public DateTime LastSeen { get; set; }
+
+        public ID ID { get; set; }
+
+        public UInt16 TcpPort { get; set; }
+
+        public IPAddress LastActiveIpAddress { get; set; }
 
         /// <summary>
         /// Update the fact that we've just seen this contact.
@@ -36,6 +46,43 @@ namespace LUC.DiscoveryService.Kademlia
         public void Touch()
         {
             LastSeen = DateTime.Now;
+        }
+
+        public void TryAddIpAddress(IPAddress address, out Boolean isAdded)
+        {
+            lock(local_IpAddresses)
+            {
+                isAdded = !local_IpAddresses.ContainsValue(address);
+
+                if(isAdded)
+                {
+                    local_IpAddresses.Add(++lastIndexOfAddress, address);
+                }
+            }
+        }
+
+        public IPAddress IpAddress(Int32 index)
+        {
+            lock(local_IpAddresses)
+            {
+                return local_IpAddresses[index];
+            }
+        }
+
+        public void TryRemoveIpAddress(IPAddress address, out Boolean isRemoved)
+        {
+            lock(local_IpAddresses)
+            {
+                if(local_IpAddresses.ContainsValue(address))
+                {
+                    var idOfAddress = local_IpAddresses.Single(c => c.Value.Equals(address)).Key;
+                    isRemoved = local_IpAddresses.Remove(idOfAddress);
+                }
+                else
+                {
+                    isRemoved = false;
+                }
+            }
         }
 
         // IComparable and operator overloading is implemented because on deserialization, Contact instances
@@ -54,7 +101,7 @@ namespace LUC.DiscoveryService.Kademlia
         public override String ToString()
         {
             return $"{nameof(ID)} = {ID};\n" +
-                   $"{nameof(LocalEndPoints)} = {LocalEndPoints};\n" +
+                   $"{nameof(local_IpAddresses)} = {local_IpAddresses};\n" +
                    $"{nameof(LastSeen)} = {LastSeen};\n";
         }
 

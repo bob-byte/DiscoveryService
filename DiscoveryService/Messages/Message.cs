@@ -84,7 +84,7 @@ namespace LUC.DiscoveryService.Messages
         {
             if(reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadUInt32();
+                MessageOperation = (MessageOperation)reader.ReadUInt16();
                 return this;
             }
             else

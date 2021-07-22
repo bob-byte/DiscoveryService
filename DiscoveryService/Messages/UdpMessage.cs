@@ -50,11 +50,11 @@ namespace LUC.DiscoveryService.Messages
         {
             if (reader != null)
             {
-                MessageId = reader.ReadUInt32();
+                MessageId = reader.ReadUInt16();
                 MachineId = reader.ReadString();
 
-                ProtocolVersion = reader.ReadUInt32();
-                TcpPort = reader.ReadUInt32();                
+                ProtocolVersion = reader.ReadUInt16();
+                TcpPort = reader.ReadUInt16();                
 
                 return this;
             }

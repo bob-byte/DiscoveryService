@@ -56,6 +56,22 @@ namespace LUC.DiscoveryService.CodingData
         }
 
         /// <summary>
+        ///   Read unsigned integer of 16 bits
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public UInt32 ReadUInt16()
+        {
+            Int32 value = ReadByte();
+
+            Int32 bitInByte = 8;
+            value = value << bitInByte | ReadByte();
+
+            return (UInt32)value;
+        }
+
+        /// <summary>
         ///   Read unsigned integer of 32 bits
         /// </summary>
         /// <exception cref="EndOfStreamException">
@@ -165,7 +181,7 @@ namespace LUC.DiscoveryService.CodingData
         public List<String> ReadListOfStrings()
         {
             List<String> list = new List<String>();
-            var length = ReadUInt32();
+            var length = ReadUInt16();
             if (length > 0)
             {
                 for (Int32 i = 0; i < length; i++)
@@ -187,7 +203,7 @@ namespace LUC.DiscoveryService.CodingData
         public List<Contact> ReadListOfContacts()
         {
             List<Contact> list = new List<Contact>();
-            var length = ReadUInt32();
+            var length = ReadUInt16();
             if (length > 0)
             {
                 for (Int32 i = 0; i < length; i++)
@@ -203,7 +219,7 @@ namespace LUC.DiscoveryService.CodingData
         {
             var idAsBigInt = BigInteger.Parse(ReadString());
 
-            var endPoint = new IPEndPoint(IPAddress.Parse(ReadString()), port: (Int32)ReadUInt32());
+            var endPoint = new IPEndPoint(IPAddress.Parse(ReadString()), port: (Int32)ReadUInt16());
             Contact contact = new Contact(new ID(idAsBigInt), endPoint);
             return contact;
         }

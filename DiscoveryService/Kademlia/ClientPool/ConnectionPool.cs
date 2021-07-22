@@ -284,7 +284,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 if(wasInPool)
                 {                 
                     var socketHealth = SocketHealth(socketInPool);
-                    if (socketHealth == Tcp.SocketHealth.Healthy)
+                    if (socketHealth == ClientPool.SocketHealth.Healthy)
                     {
                         lock(sockets)
                         {
@@ -295,11 +295,11 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     }
                     else
                     {
-                        if (socketHealth == Tcp.SocketHealth.IsNotConnected)
+                        if (socketHealth == ClientPool.SocketHealth.IsNotConnected)
                         {
                             log.LogInfo($"Pool received invalid Socket {socketInPool.Id}; destroying it");
                         }
-                        else if(socketHealth == Tcp.SocketHealth.Expired)
+                        else if(socketHealth == ClientPool.SocketHealth.Expired)
                         {
                             log.LogInfo($"Pool received expired Socket {socketInPool.Id}; destroying it");
                         }
@@ -336,18 +336,18 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
             catch
             {
-                socketHealth = Tcp.SocketHealth.IsNotConnected;
+                socketHealth = ClientPool.SocketHealth.IsNotConnected;
                 return socketHealth;
             }
 
             if((ConnectionSettings.ConnectionLifeTime > 0) && 
                (unchecked((UInt32)Environment.TickCount) - socket.CreatedTicks >= ConnectionSettings.ConnectionLifeTime))
             {
-                socketHealth = Tcp.SocketHealth.Expired;
+                socketHealth = ClientPool.SocketHealth.Expired;
             }
             else
             {
-                socketHealth = Tcp.SocketHealth.Healthy;
+                socketHealth = ClientPool.SocketHealth.Healthy;
             }
 
             return socketHealth;
