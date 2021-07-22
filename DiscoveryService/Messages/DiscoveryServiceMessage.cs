@@ -22,7 +22,7 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="protocolVersion">
         ///   Supported version of protocol
         /// </param>
-        public DiscoveryServiceMessage(UInt32 messageId, String machineId, UInt32 protocolVersion)
+        public DiscoveryServiceMessage(UInt32 messageId, String machineId, UInt16 protocolVersion)
         {
             MessageId = messageId;
             MachineId = machineId;
@@ -33,7 +33,7 @@ namespace LUC.DiscoveryService.Messages
         /// TCP port which is being run in machine with machineId.
         /// TCP port for inter-service communications.
         /// </summary>
-        public UInt32 TcpPort { get; set; }
+        public UInt16 TcpPort { get; set; }
 
         /// <summary>
         ///   Unique message identifier. It is used to detect duplicate messages.
@@ -48,7 +48,7 @@ namespace LUC.DiscoveryService.Messages
         /// <summary>
         ///   Supported version of protocol of the remote application.
         /// </summary>
-        public UInt32 ProtocolVersion { get; set; }
+        public UInt16 ProtocolVersion { get; set; }
 
         public override string ToString()
         {

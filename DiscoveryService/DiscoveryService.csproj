@@ -93,7 +93,6 @@
     <Compile Include="Kademlia\ClientPool\ConnectionSettings.cs" />
     <Compile Include="Kademlia\ClientPool\IOBehavior.cs" />
     <Compile Include="Kademlia\ClientPool\SocketHealth.cs" />
-    <Compile Include="Kademlia\ContactComparer.cs" />
     <Compile Include="Kademlia\KademliaOperation.cs" />
     <Compile Include="Messages\KademliaResponses\ContactResponse.cs" />
     <Compile Include="SemaphoreLocker.cs" />

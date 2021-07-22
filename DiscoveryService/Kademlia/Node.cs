@@ -5,12 +5,13 @@ using Newtonsoft.Json;
 using System;
 using LUC.Interfaces;
 using LUC.DiscoveryService.Kademlia.ClientPool;
+using LUC.Services.Implementation;
 
 namespace LUC.DiscoveryService.Kademlia
 {
     public class Node : INode
     {
-        private static ILoggingService log;
+        private static LoggingService log;
         private readonly UInt32 protocolVersion;
         private readonly KademliaOperation kademliaOperation;
 
@@ -38,7 +39,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// If cache storage is not explicity provided, we use an in-memory virtual storage.
         /// </summary>
-        public Node(Contact contact, UInt16 protocolVersion, ILoggingService loggingService, 
+        public Node(Contact contact, UInt16 protocolVersion,
             IStorage storage, IStorage cacheStorage = null)
         {
             ourContact = contact;
@@ -53,16 +54,17 @@ namespace LUC.DiscoveryService.Kademlia
 
             this.protocolVersion = protocolVersion;
 
-            log = loggingService;
-            kademliaOperation = new KademliaOperation(loggingService, protocolVersion);
+            log = new LoggingService
+            {
+                SettingsService = new SettingsService()
+            };
+
+            kademliaOperation = new KademliaOperation(protocolVersion);
         }
 
         /// <summary>
         /// Someone is pinging us.  Register the contact and respond.
         /// </summary>
-        /// <param name="sender">
-        /// Current peer
-        /// </param>
         /// <returns>
         /// Current peer
         /// </returns>
@@ -226,7 +228,7 @@ namespace LUC.DiscoveryService.Kademlia
                     // If our contact is closer, store the contact on its node.
                     if ((k ^ ourContact.ID) < distance)
                         {
-                            var error = Store(ourContact, new ID(k), storage.Get(k), sender.local_IpAddresses);
+                            var error = Store(ourContact, new ID(k), storage.Get(k), sender);
                             dht?.HandleError(error, sender);
                         }
                     });
@@ -258,227 +260,21 @@ namespace LUC.DiscoveryService.Kademlia
             return !ret;
         }
 
-        /// <inheritdoc/>
-        public RpcError Ping(Contact sender, EndPoint endPointToPing) =>
-
-
-        private void ClientStart<TResponse>(EndPoint remoteEndPoint, Request request, out TResponse response)
-            where TResponse : Response, new()
-        {
-            response = null;
-            var requestBytes = request.ToByteArray();
-
-            var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
-
-            try
-            {
-                Boolean isReceived = false;
-
-                SendWithAvoidErrorsInNetwork(requestBytes, Constants.SendTimeout, Constants.ConnectTimeout, 
-                    ref client, out var isSent);
-                if (isSent)
-                {
-                    Thread.Sleep(Constants.TimeWaitResponse);
-
-                    var bytesOfResponse = client.Receive(Constants.ReceiveTimeout, out isReceived);
-                    if (isReceived)
-                    {
-                        response = new TResponse();
-                        response.Read(bytesOfResponse);
-                    }
-                }
-
-                if(!isSent || !isReceived)
-                {
-                    throw new TimeoutException();
-                }
-            }
-            finally
-            {
-                client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
-            }
-        }
-
-        public static void SendWithAvoidErrorsInNetwork(Byte[] bytesToSend, TimeSpan timeoutToSend, TimeSpan timeoutToConnect, 
-            ref ConnectionPoolSocket client, out Boolean isSent)
-        {
-            client.Send(bytesToSend, timeoutToSend, out isSent);
-
-            if (!isSent)
-            {
-                client = new ConnectionPoolSocket(client.Id.AddressFamily, SocketType.Stream, ProtocolType.Tcp, client.Id, client.Pool, client.Log);
-                client.Connect(client.Id, timeoutToConnect, out var isConnected);
-
-                if(isConnected)
-                {
-                    client.Send(bytesToSend, timeoutToSend, out isSent);
-                }
-            }
-        }
+        /// <param name="ourContact">
+        /// Current peer
+        /// </param>
+        public RpcError PingRemoteContact(Contact ourContact, Contact remoteContact) =>
+            kademliaOperation.Ping(ourContact, remoteContact);
 
         ///<inheritdoc/>
-        public RpcError Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
-        {
-            ID id = ID.RandomID;
-            var request = new StoreRequest
-            {
-                Sender = sender.ID.Value,
-                KeyToStore = key.Value,
-                Value = val,
-                IsCached = isCached,
-                ExpirationTimeSec = expirationTimeSec,
-                RandomID = id.Value,
-                MessageOperation = MessageOperation.Store
-            };
-
-            var remoteContact = DiscoveryService.KnownContacts(protocolVersion).Single(c => c.ID == key);
-            
-            ErrorResponse peerError = null;
-            StoreResponse response = null;
-            Boolean timeout;
-
-            try
-            {
-                ClientStart(remoteContact.EndPoint, request, out response);
-                timeout = false;
-
-                log.LogInfo($"The response is received:\n{response}");
-            }
-            catch (TimeoutException ex)
-            {
-                timeout = true;
-                peerError = new ErrorResponse
-                {
-                    ErrorMessage = ex.Message
-                };
-            }
-            catch (Exception ex)
-            {
-                timeout = false;
-                peerError = new ErrorResponse
-                {
-                    ErrorMessage = ex.Message
-                };
-            }
-
-            return RpcError(id, response, timeout, peerError);
-        }
+        public RpcError Store(Contact sender, ID key, string val, Contact remoteContact, bool isCached = false, int expirationTimeSec = 0) =>
+            kademliaOperation.Store(sender, key, val, remoteContact, isCached, expirationTimeSec);
 
         /// <inheritdoc/>
-        public (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID keyToFindContacts/*, IPAddress host, Int32 tcpPort*/)
-        {
-            ID id = ID.RandomID;
-            Boolean timeoutError = false;
-            var request = new FindNodeRequest
-            {
-                Sender = sender.ID.Value,
-                ContactId = keyToFindContacts.Value,
-                RandomID = id.Value,
-                MessageOperation = MessageOperation.FindNode
-            };
-            FindNodeResponse response = null;
-            var remoteContact = DiscoveryService.KnownContacts(protocolVersion).Single(c => c.ID == keyToFindContacts);
-            ErrorResponse peerError = null;
-            List<Contact> closeContactsToKey = null;
-
-            try
-            {
-                ClientStart(remoteContact.EndPoint, request, out response);
-
-                //get close contacts near key
-                closeContactsToKey = response.CloseSenderContacts.ToList();
-
-                log.LogInfo($"The response is received:\n{response}");
-            }
-            catch (SocketException ex)
-            {
-                peerError = new ErrorResponse
-                {
-                    ErrorMessage = ex.Message
-                };
-                timeoutError = true;
-            }
-
-            return (closeContactsToKey ?? EmptyContactList(), RpcError(id, response, timeoutError, peerError));
-        }
-
-        protected List<Contact> EmptyContactList()
-        {
-            return new List<Contact>();
-        }
+        public (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID keyToFindContacts, Contact remoteContact) => kademliaOperation.FindNode(sender, keyToFindContacts, remoteContact);
 
         /// <inheritdoc/>
-        public (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID keyToFindContact)
-        {
-            ID id = ID.RandomID;
-            bool timeoutError = false;
-
-            var request = new FindValueRequest
-            {
-                ContactId = keyToFindContact.Value,
-                MessageOperation = MessageOperation.FindValue,
-                Sender = sender.ID.Value,
-                RandomID = id.Value,
-            };
-            
-            var remoteContact = DiscoveryService.KnownContacts(protocolVersion).Single(c => c.ID == keyToFindContact);
-            FindValueResponse response = null;
-            List<Contact> closeContactsToKey = null;
-            ErrorResponse peerError = new ErrorResponse();
-
-            try
-            {
-                ClientStart(remoteContact.EndPoint, request, out response);
-
-                //get close contacts near key
-                closeContactsToKey = response?.CloseContactsToRepsonsingPeer.ToList()/*.Select(val => new Contact(Protocol.InstantiateProtocol(val.Protocol, val.ProtocolName), new ID(val.Contact))).ToList()*/;
-
-                log.LogInfo($"The response is received:\n{response}");
-                // Return only contacts with supported protocols.
-                //return (contacts?.Where(c => c.Protocol != null).ToList(), ret.Value, GetRpcError(id, ret, timeoutError, error));
-            }
-            catch (TimeoutException ex)
-            {
-                peerError = new ErrorResponse
-                {
-                    ErrorMessage = ex.Message
-                };
-                timeoutError = true;
-            }
-            catch (Exception ex)
-            {
-                peerError = new ErrorResponse
-                {
-                    ErrorMessage = ex.Message
-                };
-                timeoutError = false;
-            }
-
-            return (closeContactsToKey ?? EmptyContactList(), response?.ValueInResponsingPeer, RpcError(id, response, timeoutError, peerError));
-        }
-
-        protected RpcError RpcError(ID id, Response resp, bool timeoutError, ErrorResponse peerError)
-        {
-            RpcError rpcError = new RpcError
-            {
-                TimeoutError = timeoutError,
-                PeerError = peerError != null,
-                PeerErrorMessage = peerError?.ErrorMessage
-            };
-
-            if((resp != null) && (id != new ID(bi: default)))
-            {
-                rpcError.IDMismatchError = id != resp.RandomID;
-            }
-            else
-            {
-                rpcError.IDMismatchError = false;
-            }
-
-            return rpcError;
-        }
-
-
-
+        public (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID keyToFindContact, Contact remoteContact) =>
+            kademliaOperation.FindValue(sender, keyToFindContact, remoteContact);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using LUC.Interfaces;
+using LUC.Services.Implementation;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -41,9 +42,12 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             //BackgroundConnectionResetHelper.Stop();
         }
 
-        private ConnectionPool(ConnectionSettings connectionSettings, ILoggingService loggingService)
+        private ConnectionPool(ConnectionSettings connectionSettings)
         {
-            log = loggingService;
+            log = new LoggingService
+            {
+                SettingsService = new SettingsService()
+            };
             ConnectionSettings = connectionSettings;
 
             cleanSemaphore = new SemaphoreSlim(initialCount: 1);
@@ -62,11 +66,11 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 		/// </summary>
 		internal Boolean IsEmpty => socketSemaphore.CurrentCount == 0;
 
-        public static ConnectionPool Instance(ILoggingService loggingService)
+        public static ConnectionPool Instance()
         {
             if(instance == null)
             {
-                instance = new ConnectionPool(new ConnectionSettings(), loggingService);
+                instance = new ConnectionPool(new ConnectionSettings());
             }
 
             return instance;
@@ -119,7 +123,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     {
                         desiredSocket = null;
                     }
-                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);
+                    
+                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);                    
                 }
             });
 
@@ -171,15 +176,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     }
                     catch
                     {
-                        try
-                        {
-                            connectedSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
-                            await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(false);
-                        }
-                        catch(Exception ex)
-                        {
-                            log.LogError(ex.Message);
-                        }
+                        connectedSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream,ProtocolType.Tcp, remoteEndPoint, instance, log);
+                        await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(false);
                     }
                 }
             }
@@ -194,23 +192,17 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         private async ValueTask ConnectInDifferentWayAsync(ConnectionPoolSocket socket, EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
         {
-            Boolean isConnected;
             if (ioBehavior == IOBehavior.Asynchronous)
             {
-                isConnected = await socket.ConnectAsync(remoteEndPoint, timeoutToConnect).ConfigureAwait(continueOnCapturedContext: false);
+                await socket.ConnectAsync(remoteEndPoint, timeoutToConnect).ConfigureAwait(continueOnCapturedContext: false);
             }
             else if (ioBehavior == IOBehavior.Synchronous)
             {
-                socket.Connect(remoteEndPoint, timeoutToConnect, out isConnected);
+                socket.Connect(remoteEndPoint, timeoutToConnect);
             }
             else
             {
                 throw new ArgumentException($"{ioBehavior} has incorrect value");
-            }
-
-            if(!isConnected)
-            {
-                throw new SocketException((Int32)SocketError.ConnectionReset);
             }
         }
 

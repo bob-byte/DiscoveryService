@@ -182,16 +182,15 @@ namespace LUC.DiscoveryService
             return allMessage.ToArray();
         }
 
-        public async Task<Boolean> ConnectAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect)
+        public async Task ConnectAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect)
         {
-            return await Task.Run(() =>
+            await Task.Run(() =>
             {
-                Connect(remoteEndPoint, timeoutToConnect, out var isConnected);
-                return isConnected;
+                Connect(remoteEndPoint, timeoutToConnect);
             });
         }
 
-        public void Connect(EndPoint remoteEndPoint, TimeSpan timeout, out Boolean isConnected)
+        public void Connect(EndPoint remoteEndPoint, TimeSpan timeout)
         {
             if(connectDone == null)
             {
@@ -200,21 +199,16 @@ namespace LUC.DiscoveryService
 
             VerifyWorkState();
 
-            try
-            {
-                BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), this);
-                isConnected = connectDone.WaitOne(timeout);
+            BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), this);
+            var isConnected = connectDone.WaitOne(timeout);
 
-                if (isConnected)
-                {
-                    State = SocketState.Connected;
-                }
-            }
-            catch(Exception ex)
+            if (isConnected)
             {
-                Log.LogError(ex.Message);
-                isConnected = false;
-                State = SocketState.Disconnected;
+                State = SocketState.Connected;
+            }
+            else
+            {
+                throw new TimeoutException();
             }
         }
 
@@ -248,7 +242,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        public Byte[] Receive(TimeSpan timeout, out Boolean isReceived)
+        public Byte[] Receive(TimeSpan timeout)
         {
             if (receiveDone == null)
             {
@@ -256,16 +250,21 @@ namespace LUC.DiscoveryService
             }
 
             var takReadBytes = ReadBytesAsync(this);
-            isReceived = receiveDone.WaitOne(timeout);
-            if(isReceived)
+            var isTimeout = receiveDone.WaitOne(timeout);
+
+            if(!isTimeout)
             {
                 State = SocketState.Connected;
-            }
 
-            return takReadBytes.Result;
+                return takReadBytes.Result;
+            }
+            else
+            {
+                throw new TimeoutException();
+            }
         }
 
-        public void Send(Byte[] bytesToSend, TimeSpan timeout, out Boolean isSent)
+        public void Send(Byte[] bytesToSend, TimeSpan timeout)
         {
             VerifyWorkState();
 
@@ -275,19 +274,16 @@ namespace LUC.DiscoveryService
             }
 
             //Begin sending the data to the remote device
-            try
+            BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
+            var isTimeout = !sendDone.WaitOne(timeout);
+
+            if (!isTimeout)
             {
-                BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
-                isSent = sendDone.WaitOne(timeout);
-                if (isSent)
-                {
-                    State = SocketState.Connected;
-                }
+                State = SocketState.Connected;
             }
-            catch (Exception ex)
+            else
             {
-                Log.LogInfo($"Exception occurred during send operation: {ex.Message}");
-                isSent = false;
+                throw new TimeoutException();
             }
         }
 

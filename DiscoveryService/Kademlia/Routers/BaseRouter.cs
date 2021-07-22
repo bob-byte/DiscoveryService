@@ -102,7 +102,7 @@ namespace LUC.DiscoveryService.Kademlia.Routers
 
         public (List<Contact> contacts, Contact foundBy, string val) RpcFindNodes(ID key, Contact contact)
         {
-            var (newContacts, timeoutError) = contact.Protocol.FindNode(node.OurContact, key, contact.local_IpAddresses);
+            var (newContacts, timeoutError) = Node.FindNode(node.OurContact, key, contact);
 
             // Null continuation here to support unit tests where a DHT hasn't been set up.
             dht?.HandleError(timeoutError, contact);
@@ -120,7 +120,7 @@ namespace LUC.DiscoveryService.Kademlia.Routers
             string retval = null;
             Contact foundBy = null;
 
-            var (otherContacts, val, error) = contact.Protocol.FindValue(node.OurContact, key, contact.local_IpAddresses);
+            var (otherContacts, val, error) = Node.FindValue(node.OurContact, key, contact);
             dht.HandleError(error, contact);
 
             if (!error.HasError)

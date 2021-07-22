@@ -39,7 +39,7 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="machineId">
         /// Id of machine which is sending this messege
         /// </param>
-        public UdpMessage(UInt32 messageId, UInt32 protocolVersion, UInt32 tcpPort, String machineId)
+        public UdpMessage(UInt32 messageId, UInt16 protocolVersion, UInt16 tcpPort, String machineId)
             : base(messageId, machineId, protocolVersion)
         {
             TcpPort = tcpPort;
@@ -50,7 +50,7 @@ namespace LUC.DiscoveryService.Messages
         {
             if (reader != null)
             {
-                MessageId = reader.ReadUInt16();
+                MessageId = reader.ReadUInt32();
                 MachineId = reader.ReadString();
 
                 ProtocolVersion = reader.ReadUInt16();

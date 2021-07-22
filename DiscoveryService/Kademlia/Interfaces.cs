@@ -13,6 +13,7 @@ namespace LUC.DiscoveryService.Kademlia
 
     public interface IDht
     {
+        Node Node { get; set; }
         void DelayEviction(Contact toEvict, Contact toReplace);
         void AddToPending(Contact pending);
     }

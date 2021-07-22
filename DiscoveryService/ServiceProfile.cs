@@ -14,8 +14,6 @@ namespace LUC.DiscoveryService
     /// </summary>
     public class ServiceProfile : AbstractService
     {
-        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
-
         static ServiceProfile()
         {
             // Make sure Service is inited.
@@ -28,7 +26,7 @@ namespace LUC.DiscoveryService
         /// <param name="addresses">
         /// <see cref="IPAddress"/> of network interfaces of current machine 
         /// </param>
-        public ServiceProfile(Boolean useIpv4, Boolean useIpv6, UInt32 protocolVersion, 
+        public ServiceProfile(Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion, 
             ConcurrentDictionary<String, String> groupsSupported = null, 
             IEnumerable<IPAddress> addresses = null)
         {
@@ -49,6 +47,8 @@ namespace LUC.DiscoveryService
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;
         }
+
+        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
 
         /// <summary>
         /// Known network interfaces

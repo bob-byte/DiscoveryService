@@ -8,6 +8,7 @@ using System.Timers;
 using Newtonsoft.Json;
 
 using LUC.DiscoveryService.Kademlia.Routers;
+using LUC.Interfaces;
 
 namespace LUC.DiscoveryService.Kademlia
 {
@@ -55,6 +56,7 @@ namespace LUC.DiscoveryService.Kademlia
         protected IStorage republishStorage;
         protected IStorage cacheStorage;
         protected Node node;
+        protected UInt16 protocolVersion;
         protected Contact ourContact;
         protected ID ourId;
         protected Timer bucketRefreshTimer;
@@ -73,13 +75,10 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Use this constructor to initialize the stores to the same instance.
         /// </summary>
-        public Dht(Contact contact, Func<IStorage> storageFactory, BaseRouter router)
+        public Dht(Contact contact, UInt16 protocolVersion, Func<IStorage> storageFactory, BaseRouter router)
+            : this(contact, router, protocolVersion, storageFactory(), storageFactory(), storageFactory())
         {
-            originatorStorage = storageFactory();
-            republishStorage = storageFactory();
-            cacheStorage = storageFactory();
-            FinishInitialization(contact, router);
-            SetupTimers();
+            ;//do nothing
         }
 
         /// <summary>
@@ -87,12 +86,14 @@ namespace LUC.DiscoveryService.Kademlia
         /// to be an in memory store, the originatorStorage to be a SQL database, and the republish store
         /// to be a key-value database.
         /// </summary>
-        public Dht(Contact contact, IProtocol protocol, BaseRouter router, IStorage originatorStorage, IStorage republishStorage, IStorage cacheStorage)
+        public Dht(Contact contact, BaseRouter router, UInt16 protocolVersion, IStorage originatorStorage, IStorage republishStorage, IStorage cacheStorage)
         {
             this.originatorStorage = originatorStorage;
             this.republishStorage = republishStorage;
             this.cacheStorage = cacheStorage;
-            FinishInitialization(contact, protocol, router);
+            this.protocolVersion = protocolVersion;
+
+            FinishInitialization(contact, router);
             SetupTimers();
         }
 
@@ -139,7 +140,7 @@ namespace LUC.DiscoveryService.Kademlia
         public RpcError Bootstrap(Contact knownPeer)
         {
             node.BucketList.AddContact(knownPeer);
-            var (contacts, error) = knownPeer.Protocol.FindNode(ourContact, ourContact.ID, knownPeer.local_IpAddresses/*, knownPeer.EndPoint.Address, knownPeer.EndPoint.Port*/);
+            var (contacts, error) = Node.FindNode(ourContact, ourContact.ID, knownPeer);
             HandleError(error, knownPeer);
 
             if (!error.HasError)
@@ -201,7 +202,7 @@ namespace LUC.DiscoveryService.Kademlia
                     {
                         int separatingNodes = GetSeparatingNodesCount(ourContact, storeTo);
                         int expTimeSec = (int)(Constants.EXPIRATION_TIME_SECONDS / Math.Pow(2, separatingNodes));
-                        RpcError error = storeTo.Protocol.Store(node.OurContact, key, lookup.val, storeTo.local_IpAddresses, true, expTimeSec);
+                        RpcError error = Node.Store(Node.OurContact, key, lookup.val, storeTo, true, expTimeSec);
                         HandleError(error, storeTo);
                     }
                 }
@@ -364,7 +365,7 @@ namespace LUC.DiscoveryService.Kademlia
             pendingContacts = new List<Contact>();
             ourId = contact.ID;
             ourContact = contact;
-            node = new Node(ourContact, republishStorage, cacheStorage);
+            node = new Node(ourContact, protocolVersion, republishStorage, cacheStorage);
             node.Dht = this;
             node.BucketList.Dht = this;
             this.router = router;
@@ -456,7 +457,7 @@ namespace LUC.DiscoveryService.Kademlia
 
                 contacts.ForEach(c =>
                 {
-                    RpcError error = c.Protocol.Store(ourContact, key, originatorStorage.Get(key), c.local_IpAddresses);
+                    RpcError error = Node.Store(ourContact, key, originatorStorage.Get(key), c);
                     HandleError(error, c);
                 });
 
@@ -492,22 +493,22 @@ namespace LUC.DiscoveryService.Kademlia
             DateTime now = DateTime.Now;
 
             KBucket kbucket = node.BucketList.GetKBucket(key);
-            List<Contact> contacts;
+            List<Contact> closerContacts;
 
             if ((now - kbucket.TimeStamp).TotalMilliseconds < Constants.BUCKET_REFRESH_INTERVAL)
             {
                 // Bucket has been refreshed recently, so don't do a lookup as we have the k closes contacts.
-                contacts = node.BucketList.GetCloseContacts(key, node.OurContact.ID);
+                closerContacts = node.BucketList.GetCloseContacts(key, node.OurContact.ID);
             }
             else
             {
-                contacts = router.Lookup(key, router.RpcFindNodes).contacts;
+                closerContacts = router.Lookup(key, router.RpcFindNodes).contacts;
             }
 
-            contacts.ForEach(c =>
+            closerContacts.ForEach(closerContact =>
             {
-                RpcError error = c.Protocol.Store(node.OurContact, key, val, c.local_IpAddresses);
-                HandleError(error, c);
+                RpcError error = Node.Store(node.OurContact, key, val, closerContact);
+                HandleError(error, closerContact);
             });
         }
 
@@ -519,10 +520,10 @@ namespace LUC.DiscoveryService.Kademlia
             // Isolate in a separate list as contacts collection for this bucket might change.
             List<Contact> contacts = bucket.Contacts.ToList();
 
-            contacts.ForEach(c =>
+            contacts.ForEach(contact =>
             {
-                var (newContacts, timeoutError) = c.Protocol.FindNode(ourContact, rndId, c.local_IpAddresses);
-                HandleError(timeoutError, c);
+                var (newContacts, timeoutError) = Node.FindNode(ourContact, rndId, contact);
+                HandleError(timeoutError, contact);
                 newContacts?.ForEach(otherContact => node.BucketList.AddContact(otherContact));
             });
         }

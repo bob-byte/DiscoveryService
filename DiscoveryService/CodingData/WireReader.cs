@@ -61,14 +61,14 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EndOfStreamException">
         ///   When no more data is available.
         /// </exception>
-        public UInt32 ReadUInt16()
+        public UInt16 ReadUInt16()
         {
-            Int32 value = ReadByte();
+            UInt16 value = ReadByte();
 
-            Int32 bitInByte = 8;
-            value = value << bitInByte | ReadByte();
+            UInt16 bitInByte = 8;
+            value = (UInt16)(value << bitInByte | ReadByte());
 
-            return (UInt32)value;
+            return value;
         }
 
         /// <summary>
@@ -219,8 +219,16 @@ namespace LUC.DiscoveryService.CodingData
         {
             var idAsBigInt = BigInteger.Parse(ReadString());
 
-            var endPoint = new IPEndPoint(IPAddress.Parse(ReadString()), port: (Int32)ReadUInt16());
-            Contact contact = new Contact(new ID(idAsBigInt), endPoint);
+            var tcpPort = ReadUInt16();
+            var addressesCount = ReadUInt16();
+
+            ICollection<IPAddress> addresses = new List<IPAddress>(addressesCount);
+            for (Int32 numAddress = 0; numAddress < addressesCount; numAddress++)
+            {
+                addresses.Add(IPAddress.Parse(ReadString()));
+            }
+
+            Contact contact = new Contact(new ID(idAsBigInt), tcpPort, addresses);
             return contact;
         }
 

@@ -50,6 +50,20 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="value">
         /// The four-byte unsigned integer to write.
         /// </param>
+        public void Write(UInt16 value)
+        {
+            stream.WriteByte((Byte)(value >> 8));
+            stream.WriteByte((Byte)value);
+
+            Position += 2;
+        }
+
+        /// <summary>
+        ///   Writes a four-byte unsigned integer to the current stream and advances the stream position by four bytes.
+        /// </summary>
+        /// <param name="value">
+        /// The four-byte unsigned integer to write.
+        /// </param>
         public void Write(UInt32 value)
         {
             stream.WriteByte((Byte)(value >> 24));
@@ -212,9 +226,14 @@ namespace LUC.DiscoveryService.CodingData
         public void Write(Contact contact)
         {
             Write(contact.ID.Value.ToString());
-            var endPoint = contact.local_IpAddresses as IPEndPoint;
-            Write(endPoint.Address.ToString());
-            Write((UInt32)endPoint.Port);
+            Write(contact.TcpPort);
+            Write((UInt16)contact.IpAddressesCount);
+
+            var addresses = contact.IpAddresses();
+            foreach (var address in addresses)
+            {
+                Write(address.ToString());
+            }
         }
 
         public void Dispose() =>

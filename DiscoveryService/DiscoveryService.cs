@@ -9,7 +9,6 @@ using LUC.DiscoveryService.Messages.KademliaResponses;
 using LUC.DiscoveryService.Kademlia;
 using System.Collections.Generic;
 using LUC.DiscoveryService.Kademlia.ClientPool;
-using LUC.DiscoveryService.Kademlia.Interfaces;
 using System.Threading;
 using System.Numerics;
 
@@ -66,7 +65,7 @@ namespace LUC.DiscoveryService
                 UseIpv6 = profile.UseIpv6;
                 ProtocolVersion = profile.ProtocolVersion;
                 MachineId = profile.MachineId;
-                connectionPool = ConnectionPool.Instance(log);
+                connectionPool = ConnectionPool.Instance();
 
                 InitService();
             }
@@ -98,6 +97,8 @@ namespace LUC.DiscoveryService
         //{
         //    Stop();
         //}
+
+        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
 
         /// <summary>
         /// IP address of peers which were discovered.
@@ -182,11 +183,11 @@ namespace LUC.DiscoveryService
 
                 if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
                 {
-                    var sendingContact = Service.OurContact.Single(c => c.ID.Value == e.LocalContactId);
+                    var sendingContact = Service.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
 
                     Random random = new Random();
                     var tcpMessage = new AcknowledgeTcpMessage(
-                        messageId: random.Next(maxValue: Int32.MaxValue),
+                        messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
                         MachineId,
                         sendingContact.ID.Value,
                         RunningTcpPort,
@@ -200,23 +201,20 @@ namespace LUC.DiscoveryService
                     }
 
                     var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
-                    var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, 
+
+                    ConnectionPoolSocket client = null;
+                    try
+                    {
+                        client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
                         IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).
                         GetAwaiter().
                         GetResult();
-
-                    try
-                    {
-                        TcpProtocol.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout, 
-                            Constants.ConnectTimeout, ref client, out _);
-                    }
-                    catch
-                    {
-                        throw;
+                        KademliaOperation.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout, 
+                            Constants.ConnectTimeout, ref client);
                     }
                     finally
                     {
-                        client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+                        client?.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
                     }
                 }
                 else
@@ -232,7 +230,7 @@ namespace LUC.DiscoveryService
             if ((tcpMessage != null) && (e.SendingEndPoint is IPEndPoint ipEndPoint))
             {
                 var knownContacts = KnownContacts(ProtocolVersion);
-                knownContacts.TryAdd(tcpMessage.IdOfSendingContact, new Contact(new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
+                knownContacts.TryAdd(tcpMessage.IdOfSendingContact, new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address));
 
                 foreach (var groupId in tcpMessage.GroupIds)
                 {

@@ -69,7 +69,7 @@ namespace LUC.DiscoveryService
         /// <param name="runningIpAddresses">
         /// NetworkInterfaces wherefrom we should send to
         /// </param>
-        public Client(Boolean useIpv4, Boolean useIpv6, Dictionary<BigInteger, IPAddress> runningIpAddresses)
+        public Client(Boolean useIpv4, Boolean useIpv6, ICollection<IPAddress> runningIpAddresses)
         {
             MulticastEndpointIp4 = new IPEndPoint(MulticastAddressIp4, (Int32)RunningUdpPort);
             MulticastEndpointIp6 = new IPEndPoint(MulticastAddressIp6, (Int32)RunningUdpPort);
@@ -99,26 +99,26 @@ namespace LUC.DiscoveryService
             }
 
             RunningIpAddresses = runningIpAddresses;
-            foreach (var idOfAddress in runningIpAddresses.Keys)
+            foreach (var address in runningIpAddresses)
             {
-                if (sendersUdp.Keys.Contains(runningIpAddresses[idOfAddress]))
+                if (sendersUdp.Keys.Contains(address))
                 {
                     continue;
                 }
 
-                var localEndpoint = new IPEndPoint(runningIpAddresses[idOfAddress], (Int32)RunningUdpPort);
-                var senderUdp = new UdpClient(runningIpAddresses[idOfAddress].AddressFamily);
-                var senderTcp = new TcpClient(runningIpAddresses[idOfAddress].AddressFamily);
+                var localEndpoint = new IPEndPoint(address, (Int32)RunningUdpPort);
+                var senderUdp = new UdpClient(address.AddressFamily);
+                var senderTcp = new TcpClient(address.AddressFamily);
 
-                DiscoveryServiceSocket receiverTcp = new DiscoveryServiceSocket(runningIpAddresses[idOfAddress].AddressFamily,
-                    SocketType.Stream, ProtocolType.Tcp, contactId: runningIpAddresses.Single(c => c.Value == runningIpAddresses[idOfAddress]).Key, log);
+                DiscoveryServiceSocket receiverTcp = new DiscoveryServiceSocket(address.AddressFamily,
+                    SocketType.Stream, ProtocolType.Tcp, log);
                 try
                 {
-                    switch (runningIpAddresses[idOfAddress].AddressFamily)
+                    switch (address.AddressFamily)
                     {
                         case AddressFamily.InterNetwork:
                             {
-                                udpReceiver4.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, optionValue: new MulticastOption(MulticastAddressIp4, runningIpAddresses[idOfAddress]));
+                                udpReceiver4.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, optionValue: new MulticastOption(MulticastAddressIp4, address));
                                 receiverTcp.Bind(localEndpoint);
                                 receiverTcp.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.ReuseAddress, optionValue: true);
 
@@ -134,7 +134,7 @@ namespace LUC.DiscoveryService
                             }
                         case AddressFamily.InterNetworkV6:
                             {
-                                udpReceiver6.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, optionValue: new IPv6MulticastOption(MulticastAddressIp6, runningIpAddresses[idOfAddress].ScopeId));
+                                udpReceiver6.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, optionValue: new IPv6MulticastOption(MulticastAddressIp6, address.ScopeId));
                                 receiverTcp.Bind(localEndpoint);
                                 receiverTcp.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.ReuseAddress, optionValue: true);
 
@@ -149,11 +149,11 @@ namespace LUC.DiscoveryService
                             }
                         default:
                             {
-                                throw new NotSupportedException($"Address family {runningIpAddresses[idOfAddress].AddressFamily}.");
+                                throw new NotSupportedException($"Address family {address.AddressFamily}.");
                             }
                     }
 
-                    if (!sendersUdp.TryAdd(runningIpAddresses[idOfAddress], senderUdp)) // Should not fail
+                    if (!sendersUdp.TryAdd(address, senderUdp)) // Should not fail
                     {
                         senderUdp.Dispose();
                     }
@@ -167,7 +167,7 @@ namespace LUC.DiscoveryService
                 }
                 catch (Exception e)
                 {
-                    log.LogError($"Cannot setup send socket for {runningIpAddresses[idOfAddress]}: {e.Message}");
+                    log.LogError($"Cannot setup send socket for {address}: {e.Message}");
                     senderUdp.Dispose();
                 }
             }
@@ -189,7 +189,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        public Dictionary<BigInteger, IPAddress> RunningIpAddresses { get; }
+        public ICollection<IPAddress> RunningIpAddresses { get; }
 
         internal static List<IPAddress> IpAddressesOfInterfaces(IEnumerable<NetworkInterface> nics, Boolean useIpv4, Boolean useIpv6) =>
             nics.SelectMany(NetworkInterfaceLocalAddresses)
@@ -250,11 +250,10 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x =>
                     {
-                        var acceptedContactId = RandomDefiniedAcceptedContactId(receiver);
+                        //var acceptedContactId = RandomDefiniedAcceptedContactId(receiver);
                         UdpMessageEventArgs eventArgs = new UdpMessageEventArgs
                         {
                             Buffer = x.Result.Buffer,
-                            LocalContactId = acceptedContactId,
                             RemoteEndPoint = x.Result.RemoteEndPoint
                         };
 
@@ -278,12 +277,12 @@ namespace LUC.DiscoveryService
             });
         }
 
-        private BigInteger RandomDefiniedAcceptedContactId(UdpClient receiver)
+        private IPAddress RandomDefiniedAcceptedContactId(UdpClient receiver)
         {
             Random random = new Random();
-            var runningAddressesWithSameFamily = RunningIpAddresses.Where(c => c.Value.AddressFamily == receiver.Client.AddressFamily).ToArray();
+            var runningAddressesWithSameFamily = RunningIpAddresses.Where(c => c.AddressFamily == receiver.Client.AddressFamily).ToArray();
             var numAcceptedAddress = random.Next(runningAddressesWithSameFamily.Length);
-            var acceptedContactId = runningAddressesWithSameFamily[numAcceptedAddress].Key;
+            var acceptedContactId = runningAddressesWithSameFamily[numAcceptedAddress];
 
             return acceptedContactId;
         }

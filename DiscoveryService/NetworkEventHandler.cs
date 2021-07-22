@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -155,16 +156,16 @@ namespace LUC.DiscoveryService
         {
             var runningIpAddresses = RunningIpAddresses();
 
-            var unAvailableAddresses = OurContact.Local_IpAddresses.Except(runningIpAddresses).ToList();
-            OurContact.Local_IpAddresses.RemoveRange(unAvailableAddresses);
+            //var unAvailableAddresses = OurContact.Local_IpAddresses.Except(runningIpAddresses).ToList();
+            //OurContact.Local_IpAddresses.RemoveRange(unAvailableAddresses);
 
-            foreach (var ipAddress in runningIpAddresses)
-            {
-                if(!OurContact.Local_IpAddresses.Any(c => c.Equals(ipAddress)))
-                {
-                    OurContact.Local_IpAddresses.Add(ipAddress);
-                }
-            }
+            //foreach (var ipAddress in runningIpAddresses)
+            //{
+            //    if(!OurContact.Local_IpAddresses.Any(c => c.Equals(ipAddress)))
+            //    {
+            //        OurContact.Local_IpAddresses.Add(ipAddress);
+            //    }
+            //}
 
             //DiscoveryService.KnownContacts(ProtocolVersion).Clear();
             //foreach (var ourContact in OurContact)
@@ -172,7 +173,7 @@ namespace LUC.DiscoveryService
             //    DiscoveryService.KnownContacts(ProtocolVersion).TryAdd(ourContact.ID.Value, ourContact);
             //}
 
-            DistributedHashTable = new Dht(OurContact, () => new VirtualStorage(), new ParallelRouter());
+            DistributedHashTable = new Dht(OurContact, ProtocolVersion, () => new VirtualStorage(), new ParallelRouter());
         }
 
         /// <summary>
@@ -316,13 +317,7 @@ namespace LUC.DiscoveryService
 
         private void InitClient()
         {
-            var runningIpAddresses = new Dictionary<BigInteger, IPAddress>();
-            foreach (var contact in OurContact)
-            {
-                runningIpAddresses.Add(contact.ID.Value, ((IPEndPoint)contact.LocalIpAddresses).Address);
-            }
-
-            client = new Client(UseIpv4, UseIpv6, runningIpAddresses);
+            client = new Client(UseIpv4, UseIpv6, RunningIpAddresses());
             client.UdpMessageReceived += OnUdpMessage;
             client.TcpMessageReceived += RaiseAnswerReceived;
         }
@@ -384,7 +379,17 @@ namespace LUC.DiscoveryService
                     result.SetMessage(message);
                     QueryReceived?.Invoke(sender, result);
                 }
-                catch (Exception e)
+                catch (TimeoutException e)
+                {
+                    log.LogError($"Receive handler failed: {e.Message}");
+                    // eat the exception
+                }
+                catch (SocketException e)
+                {
+                    log.LogError($"Receive handler failed: {e.Message}");
+                    // eat the exception
+                }
+                catch (EndOfStreamException e)
                 {
                     log.LogError($"Receive handler failed: {e.Message}");
                     // eat the exception
@@ -481,7 +486,7 @@ namespace LUC.DiscoveryService
                         //    DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
                         //Protocol.FindValue(DistributedHashTable.OurContact, DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
 
-                        DistributedHashTable.Bootstrap(knownPeer: new Contact(new ID(tcpMessage.IdOfSendingContact), new IPEndPoint(ipEndPoint.Address, (Int32)tcpMessage.TcpPort)));
+                        DistributedHashTable.Bootstrap(knownPeer: new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address));
                     }
                 }
                 catch (Exception e)

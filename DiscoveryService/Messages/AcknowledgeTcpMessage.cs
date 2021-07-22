@@ -37,7 +37,7 @@ namespace LUC.DiscoveryService.Messages
         /// TCP port for Kademilia requests.
         /// </param>
         public AcknowledgeTcpMessage(UInt32 messageId, String machineId, BigInteger idOfSendingContact, 
-            UInt32 tcpPort, UInt32 protocolVersion, List<String> groupsIds)
+            UInt16 tcpPort, UInt16 protocolVersion, List<String> groupsIds)
             : base(messageId, machineId, protocolVersion)
         {
             if(groupsIds != null)
@@ -96,7 +96,7 @@ namespace LUC.DiscoveryService.Messages
             if(reader != null)
             {
                 MessageOperation = (MessageOperation)reader.ReadUInt16();
-                MessageId = reader.ReadUInt16();
+                MessageId = reader.ReadUInt32();
 
                 IdOfSendingContact = BigInteger.Parse(reader.ReadString());
                 MachineId = reader.ReadString();

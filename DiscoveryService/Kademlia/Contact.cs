@@ -6,13 +6,15 @@ using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Linq;
+using System.Collections;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class Contact : IComparable
+    public class Contact : IComparable, IEnumerable<IPAddress>
     {
-        private Int32 lastIndexOfAddress;
-        private readonly Dictionary<Int32, IPAddress> local_IpAddresses = new Dictionary<Int32, IPAddress>();
+        private readonly Object lockIpAddresses;
+        private readonly List<IPAddress> ipAddresses = new List<IPAddress>();
+        //private ManualResetEvent isUsedByKadOp = new ManualResetEvent(initialState: );
 
         // For serialization.  Don't want to use JsonConstructor because we don't want to touch the LastSeen.
         public Contact()
@@ -22,13 +24,23 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(ID contactID, UInt16 tcpPort, IPAddress locaIpAddresses)
+        public Contact(ID contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress)
         {
             ID = contactID;
             TcpPort = tcpPort;
-            LastActiveIpAddress = locaIpAddresses;
+            LastActiveIpAddress = lastActiveIpAddress;
+            lockIpAddresses = new Object();
 
             Touch();
+        }
+
+        /// <summary>
+        /// Initialize a contact with its ID.
+        /// </summary>
+        public Contact(ID contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses)
+            : this(contactID, tcpPort, lastActiveIpAddress: ipAddresses.Last())
+        {
+            this.ipAddresses = ipAddresses.ToList();
         }
 
         public DateTime LastSeen { get; set; }
@@ -39,6 +51,10 @@ namespace LUC.DiscoveryService.Kademlia
 
         public IPAddress LastActiveIpAddress { get; set; }
 
+        public Int32 IpAddressesCount => ipAddresses.Count;
+
+        public IPAddress this[Int32 index] => ipAddresses[index];
+
         /// <summary>
         /// Update the fact that we've just seen this contact.
         /// </summary>
@@ -48,35 +64,43 @@ namespace LUC.DiscoveryService.Kademlia
             LastSeen = DateTime.Now;
         }
 
+        public List<IPAddress> IpAddresses() =>
+            ipAddresses.ToList();
+
         public void TryAddIpAddress(IPAddress address, out Boolean isAdded)
         {
-            lock(local_IpAddresses)
+            lock(lockIpAddresses)
             {
-                isAdded = !local_IpAddresses.ContainsValue(address);
+                isAdded = !ipAddresses.Contains(address);
 
                 if(isAdded)
                 {
-                    local_IpAddresses.Add(++lastIndexOfAddress, address);
+                    ipAddresses.Add(address);
                 }
             }
         }
 
-        public IPAddress IpAddress(Int32 index)
-        {
-            lock(local_IpAddresses)
-            {
-                return local_IpAddresses[index];
-            }
-        }
+        IEnumerator IEnumerable.GetEnumerator() =>
+            ipAddresses.GetEnumerator();
+
+        public IEnumerator<IPAddress> GetEnumerator() =>
+            ipAddresses.GetEnumerator();
+
+        //public IPAddress IpAddress(Int32 index)
+        //{
+        //    lock(local_IpAddresses)
+        //    {
+        //        return local_IpAddresses[index];
+        //    }
+        //}
 
         public void TryRemoveIpAddress(IPAddress address, out Boolean isRemoved)
         {
-            lock(local_IpAddresses)
+            lock(lockIpAddresses)
             {
-                if(local_IpAddresses.ContainsValue(address))
+                if(ipAddresses.Contains(address))
                 {
-                    var idOfAddress = local_IpAddresses.Single(c => c.Value.Equals(address)).Key;
-                    isRemoved = local_IpAddresses.Remove(idOfAddress);
+                    isRemoved = ipAddresses.Remove(address);
                 }
                 else
                 {
@@ -101,7 +125,7 @@ namespace LUC.DiscoveryService.Kademlia
         public override String ToString()
         {
             return $"{nameof(ID)} = {ID};\n" +
-                   $"{nameof(local_IpAddresses)} = {local_IpAddresses};\n" +
+                   $"{nameof(ipAddresses)} = {ipAddresses};\n" +
                    $"{nameof(LastSeen)} = {LastSeen};\n";
         }
 
