@@ -135,7 +135,7 @@ namespace LUC.DiscoveryService.Kademlia
                 writer.WriteLine($"{nameof(ipAddresses)}:");
                 for (Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++)
                 {
-                    writer.WriteLine($"{ipAddresses[numAddress]};");
+                    writer.WriteLine($"{ipAddresses[numAddress]}");
                 }
 
                 return writer.ToString();

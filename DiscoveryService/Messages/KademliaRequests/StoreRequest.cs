@@ -26,7 +26,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadUInt16();
+                MessageOperation = (MessageOperation)reader.ReadUInt32();
                 RandomID = BigInteger.Parse(reader.ReadString());
                 Sender = BigInteger.Parse(reader.ReadString());
                 KeyToStore = BigInteger.Parse(reader.ReadString());
@@ -47,7 +47,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (writer != null)
             {
-                writer.Write((UInt16)MessageOperation);
+                writer.Write((UInt32)MessageOperation);
                 writer.Write(RandomID.ToString());
                 writer.Write(Sender.ToString());
                 writer.Write(KeyToStore.ToString());

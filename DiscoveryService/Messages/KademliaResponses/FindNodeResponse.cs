@@ -47,7 +47,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             if (reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadUInt16();
+                MessageOperation = (MessageOperation)reader.ReadUInt32();
                 RandomID = BigInteger.Parse(reader.ReadString());
                 CloseSenderContacts = reader.ReadListOfContacts();
 
@@ -64,7 +64,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             if (writer != null)
             {
-                writer.Write((UInt16)MessageOperation);
+                writer.Write((UInt32)MessageOperation);
                 writer.Write(RandomID.ToString());
                 writer.WriteEnumerable(CloseSenderContacts);
             }
