@@ -125,7 +125,7 @@ namespace LUC.DiscoveryService
             UseIpv6 = useIpv6;
             ProtocolVersion = protocolVersion;
 
-            OurContact = new Contact(ID.RandomID, RunningTcpPort);
+            OurContact = new Contact(ID.RandomIDInKeySpace, RunningTcpPort);
             DistributedHashTable = new Dht(OurContact, ProtocolVersion, () => new VirtualStorage(), new ParallelRouter());
 
             networkInterfacesFilter = filter;

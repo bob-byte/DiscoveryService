@@ -151,7 +151,7 @@ namespace LUC.DiscoveryService.Messages
         {
             using(var writer = new StringWriter())
             {
-                writer.WriteLine($"TCP message:\n");
+                writer.WriteLine($"TCP message:");
                 writer.WriteLine($"{base.ToString()};");
                 writer.WriteLine($"Message operation: {MessageOperation};\n" +
                                    $"TCP port = {TcpPort};");

@@ -14,12 +14,6 @@ namespace LUC.DiscoveryService.Kademlia
         private readonly Object lockIpAddresses;
         private readonly List<IPAddress> ipAddresses;
         private IPAddress lastActiveIpAddress;
-        //private ManualResetEvent isUsedByKadOp = new ManualResetEvent(initialState: );
-
-        // For serialization.  Don't want to use JsonConstructor because we don't want to touch the LastSeen.
-        //public Contact()
-        //{
-        //}
 
         /// <summary>
         /// Initialize a contact with its ID.
@@ -136,19 +130,12 @@ namespace LUC.DiscoveryService.Kademlia
             using(StringWriter writer = new StringWriter())
             {
                 writer.WriteLine($"{PropertyWithValue(nameof(ID), ID)};\n" +
-                   $"{PropertyWithValue(nameof(LastSeen), LastSeen)};");
-                writer.WriteLine($"{nameof(ipAddresses)}:");
+                                 $"{PropertyWithValue(nameof(LastSeen), LastSeen)};");
 
+                writer.WriteLine($"{nameof(ipAddresses)}:");
                 for (Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++)
                 {
-                    if (numAddress == IpAddressesCount - 1)
-                    {
-                        writer.WriteLine($"{ipAddresses[numAddress]}");
-                    }
-                    else
-                    {
-                        writer.WriteLine($"{ipAddresses[numAddress]};");
-                    }
+                    writer.WriteLine($"{ipAddresses[numAddress]};");
                 }
 
                 return writer.ToString();
