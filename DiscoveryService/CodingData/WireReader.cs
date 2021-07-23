@@ -63,12 +63,12 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public UInt16 ReadUInt16()
         {
-            UInt16 value = ReadByte();
+            Int32 value = ReadByte();
 
-            UInt16 bitInByte = 8;
-            value = (UInt16)(value << bitInByte | ReadByte());
+            Int32 bitInByte = 8;
+            value = (value << bitInByte | ReadByte());
 
-            return value;
+            return (UInt16)value;
         }
 
         /// <summary>

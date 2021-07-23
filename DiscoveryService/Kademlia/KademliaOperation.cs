@@ -110,6 +110,15 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesOfRequest, 
                     Constants.SendTimeout, Constants.ConnectTimeout, ref client);
+                log.LogInfo($"Request {request.GetType().Name} is sent to {client.Id}:\n" +
+                            $"{request}");
+
+                Int32 countToCheck = 0;
+                while((client.Available == 0) && (countToCheck <= Constants.MaxCheckAvailableData))
+                {
+                    Thread.Sleep(Constants.TimeCheckDataToRead);
+                    countToCheck++;
+                }
 
                 var bytesOfResponse = client.Receive(Constants.ReceiveTimeout);
 

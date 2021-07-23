@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -148,6 +149,7 @@ namespace LUC.DiscoveryService.Messages
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected String PropertyWithValue<T>(String nameProp, T value) =>
             $"{nameProp} = {value}";
     }

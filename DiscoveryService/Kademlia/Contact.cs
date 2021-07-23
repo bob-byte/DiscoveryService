@@ -5,6 +5,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Collections;
+using System.IO;
 
 namespace LUC.DiscoveryService.Kademlia
 {
@@ -102,14 +103,6 @@ namespace LUC.DiscoveryService.Kademlia
         public IEnumerator<IPAddress> GetEnumerator() =>
             ipAddresses.GetEnumerator();
 
-        //public IPAddress IpAddress(Int32 index)
-        //{
-        //    lock(local_IpAddresses)
-        //    {
-        //        return local_IpAddresses[index];
-        //    }
-        //}
-
         public void TryRemoveIpAddress(IPAddress address, out Boolean isRemoved)
         {
             lock(lockIpAddresses)
@@ -140,10 +133,31 @@ namespace LUC.DiscoveryService.Kademlia
 
         public override String ToString()
         {
-            return $"{nameof(ID)} = {ID};\n" +
-                   $"{nameof(ipAddresses)} = {ipAddresses};\n" +
-                   $"{nameof(LastSeen)} = {LastSeen};\n";
+            using(StringWriter writer = new StringWriter())
+            {
+                writer.WriteLine($"{PropertyWithValue(nameof(ID), ID)};\n" +
+                   $"{PropertyWithValue(nameof(LastSeen), LastSeen)};");
+                writer.WriteLine($"{nameof(ipAddresses)}:");
+
+                for (Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++)
+                {
+                    if (numAddress == IpAddressesCount - 1)
+                    {
+                        writer.WriteLine($"{ipAddresses[numAddress]}");
+                    }
+                    else
+                    {
+                        writer.WriteLine($"{ipAddresses[numAddress]};");
+                    }
+                }
+
+                return writer.ToString();
+            }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected String PropertyWithValue<T>(String nameProp, T value) =>
+            $"{nameProp} = {value}";
 
         public static bool operator ==(Contact a, Contact b)
         {

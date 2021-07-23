@@ -96,8 +96,6 @@ namespace LUC.DiscoveryService.Kademlia
 			var contactInBucket = contacts.Single(c => c.ID == contact.ID);
 
 			contactInBucket.LastActiveIpAddress = contact.LastActiveIpAddress;
-			contactInBucket.TryAddIpAddress(contactInBucket.LastActiveIpAddress, out _);
-
 			if(whetherChangePar)
             {
 				contact = contactInBucket;
