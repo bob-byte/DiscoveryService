@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Messages
     ///   Defines the standard operations.
     /// </remarks>
     /// <seealso cref="DiscoveryServiceMessage.Opcode"/>
-    public enum MessageOperation : Byte
+    public enum MessageOperation : UInt16
     {
         /// <summary>
         ///   Acknowledge operation is type of TCP packet, sent on response to UDP message.

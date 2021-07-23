@@ -24,7 +24,7 @@ namespace LUC.DiscoveryService.Messages
 
         public Socket AcceptedSocket { get; set; }
 
-        public IEnumerable<EndPoint> RemoteEndPoints { get; set; }
+        //public IEnumerable<EndPoint> RemoteEndPoints { get; set; }
 
         //public Contact LocalContact { get; set; }
     }

@@ -55,7 +55,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (writer != null)
             {
-                writer.Write((UInt32)MessageOperation);
+                writer.Write((UInt16)MessageOperation);
                 writer.Write(TcpPort);
                 writer.Write(Sender.ToString());
                 writer.Write(RandomID.ToString());

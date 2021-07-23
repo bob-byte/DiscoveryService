@@ -133,7 +133,7 @@ namespace LUC.DiscoveryService.Messages
         {
             if (writer != null)
             {
-                writer.Write((UInt32)MessageOperation);
+                writer.Write((UInt16)MessageOperation);
                 writer.Write(MessageId);
                 writer.Write(IdOfSendingContact.ToString());
                 writer.Write(MachineId);

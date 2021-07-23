@@ -140,7 +140,7 @@ namespace LUC.DiscoveryService.Messages
         {
             if(writer != null)
             {
-                writer.WriteByte((Byte)MessageOperation);
+                writer.Write((UInt16)MessageOperation);
             }
             else
             {

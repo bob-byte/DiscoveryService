@@ -65,7 +65,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             if (writer != null)
             {
-                writer.Write((UInt32)MessageOperation);
+                writer.Write((UInt16)MessageOperation);
                 writer.Write(RandomID.ToString());
                 writer.WriteEnumerable(CloseContactsToRepsonsingPeer);
                 writer.Write(ValueInResponsingPeer);

@@ -154,13 +154,6 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public Boolean IgnoreDuplicateMessages { get; set; }
 
-        //private void InitKademliaProtocol()
-        //{
-        //    OurContact.TcpPort = RunningTcpPort;
-
-        //    DistributedHashTable = new Dht(OurContact, ProtocolVersion, () => new VirtualStorage(), new ParallelRouter());
-        //}
-
         /// <summary>
         ///   Get the network interfaces that are useable.
         /// </summary>
@@ -249,22 +242,18 @@ namespace LUC.DiscoveryService
                 {
                     oldNics.Add(nic);
 
+#if DEBUG
                     log.LogInfo($"Removed nic \'{nic.Name}\'.");
-                    //if (log.IsDebugEnabled)
-                    //{
-                    //    log.Debug($"Removed nic '{nic.Name}'.");
-                    //}
+#endif
                 }
 
                 foreach (var nic in currentNics.Where(nic => !KnownNics.Any(k => k.Id == nic.Id)))
                 {
                     newNics.Add(nic);
 
+#if DEBUG
                     log.LogInfo($"Found nic '{nic.Name}'.");
-                    //if (log.IsDebugEnabled)
-                    //{
-                    //    log.Debug($"Found nic '{nic.Name}'.");
-                    //}
+#endif
                 }
 
                 KnownNics = currentNics;
@@ -328,20 +317,20 @@ namespace LUC.DiscoveryService
         ///   event is raised.
         ///   </para>
         /// </remarks>
-        private void OnUdpMessage(object sender, UdpMessageEventArgs result)
+        private void OnUdpMessage(Object sender, UdpMessageEventArgs result)
         {
-            //lock(sender)
-            //{
+            lock (this)
+            {
                 if (result.Buffer.Length > MaxDatagramSize)
                 {
                     return;
                 }
 
                 //If recently received, then ignore.
-                //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-                //{
-                //    return;
-                //}
+                if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+                {
+                    return;
+                }
 
                 UdpMessage message = new UdpMessage();
                 try
@@ -356,34 +345,32 @@ namespace LUC.DiscoveryService
                     return;
                 }
 
-            if ((message.ProtocolVersion == ProtocolVersion) ||
-                (message.MachineId != MachineId))
-            {
-                try
+                if ((message.ProtocolVersion == ProtocolVersion) &&
+                    (message.MachineId != MachineId))
                 {
                     result.SetMessage(message);
-                    QueryReceived?.Invoke(sender, result);
-                }
-                catch (TimeoutException e)
-                {
-                    log.LogError($"Receive handler failed: {e.Message}");
-                    // eat the exception
-                }
-                catch (SocketException e)
-                {
-                    log.LogError($"Receive handler failed: {e.Message}");
-                    // eat the exception
-                }
-                catch (EndOfStreamException e)
-                {
-                    log.LogError($"Receive handler failed: {e.Message}");
-                    // eat the exception
+
+                    try
+                    {
+                        QueryReceived?.Invoke(sender, result);
+                    }
+                    catch (TimeoutException e)
+                    {
+                        log.LogError($"Receive handler failed: {e.Message}");
+                        // eat the exception
+                    }
+                    catch (SocketException e)
+                    {
+                        log.LogError($"Receive handler failed: {e.Message}");
+                        // eat the exception
+                    }
+                    catch (EndOfStreamException e)
+                    {
+                        log.LogError($"Receive handler failed: {e.Message}");
+                        // eat the exception
+                    }
                 }
             }
-
-            // Dispatch the message.
-            
-            //}
         }
 
         /// <summary>

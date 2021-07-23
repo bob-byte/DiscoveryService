@@ -50,11 +50,11 @@ namespace LUC.DiscoveryService.Kademlia
                 MessageOperation = MessageOperation.Ping
             };
 
-            ContactWithRemoteContact<PingResponse>(remoteContact, request, response: out _, out var rpcError);
+            GetRequestResult<PingResponse>(remoteContact, request, response: out _, out var rpcError);
             return rpcError;
         }
 
-        private void ContactWithRemoteContact<TResponse>(Contact contactToPing, Request request, out TResponse response, out RpcError rpcError) 
+        private void GetRequestResult<TResponse>(Contact contactToPing, Request request, out TResponse response, out RpcError rpcError) 
             where TResponse : Response, new()
         {
             var nodeError = new ErrorResponse();
@@ -149,7 +149,7 @@ namespace LUC.DiscoveryService.Kademlia
             };
 
             //var remoteContact = RemoteContact(key);
-            ContactWithRemoteContact<StoreResponse>(remoteContact, request, response: out _, out var rpcError);
+            GetRequestResult<StoreResponse>(remoteContact, request, response: out _, out var rpcError);
             return rpcError;
         }
 
@@ -171,7 +171,7 @@ namespace LUC.DiscoveryService.Kademlia
                 RandomID = id,
                 MessageOperation = MessageOperation.FindNode
             };
-            ContactWithRemoteContact<FindNodeResponse>(remoteContact, request, out var response, out var rpcError);
+            GetRequestResult<FindNodeResponse>(remoteContact, request, out var response, out var rpcError);
 
             return (response?.CloseSenderContacts?.ToList() ?? EmptyContactList(), rpcError);
         }
@@ -194,7 +194,7 @@ namespace LUC.DiscoveryService.Kademlia
                 RandomID = id,
             };
 
-            ContactWithRemoteContact<FindValueResponse>(remoteContact, request, out var response, out var rpcError);
+            GetRequestResult<FindValueResponse>(remoteContact, request, out var response, out var rpcError);
             var closeContacts = response?.CloseContactsToRepsonsingPeer?.ToList() ?? EmptyContactList();
 
             return (closeContacts, response.ValueInResponsingPeer, rpcError);

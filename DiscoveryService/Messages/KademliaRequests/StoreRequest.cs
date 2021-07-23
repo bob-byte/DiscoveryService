@@ -54,13 +54,13 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (writer != null)
             {
-                writer.Write((UInt32)MessageOperation);
+                writer.Write((UInt16)MessageOperation);
                 writer.Write(RandomID.ToString());
                 writer.Write(Sender.ToString());
                 writer.Write(KeyToStore.ToString());
                 writer.Write(Value);
                 writer.Write(IsCached);
-                writer.Write((UInt32)ExpirationTimeSec);
+                writer.Write((UInt16)ExpirationTimeSec);
             }
             else
             {
