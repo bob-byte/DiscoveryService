@@ -25,6 +25,8 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 
                 sender.SendTimeout = (Int32)timeoutToSend.TotalMilliseconds;
                 sender.Send(response.ToByteArray());
+
+                LogResponse(sender, response);
             }
             else
             {

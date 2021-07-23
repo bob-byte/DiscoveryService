@@ -260,7 +260,7 @@ namespace LUC.DiscoveryService
             try
             {
                 taskReadBytes = ReadBytesAsync(this);
-                isTimeout = receiveDone.WaitOne(timeout);
+                isTimeout = !receiveDone.WaitOne(timeout);
             }
             catch (SocketException)
             {

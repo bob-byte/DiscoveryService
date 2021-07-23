@@ -1,4 +1,6 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.Interfaces;
+using LUC.Services.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +13,23 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     public abstract class Response : Message
     {
+        protected static ILoggingService log;
+
+        static Response()
+        {
+            log = new LoggingService
+            {
+                SettingsService = new SettingsService()
+            };
+        }
+
         public BigInteger RandomID { get; set; }
+
+        protected static void LogResponse(Socket sender, Response response)
+        {
+            log.LogInfo($"Sent response to {sender.RemoteEndPoint}:\n" +
+                            $"{response}");
+        }
 
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)

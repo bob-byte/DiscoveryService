@@ -141,7 +141,6 @@ namespace LUC.DiscoveryService.Kademlia
         {
             node.BucketList.AddContact(knownPeer);
             var (contacts, error) = Node.FindNode(ourContact, ourContact.ID, knownPeer);
-            HandleError(error, knownPeer);
 
             if (!error.HasError)
             {
@@ -151,6 +150,10 @@ namespace LUC.DiscoveryService.Kademlia
                 // Resolve the list now, so we don't include additional contacts as we add to our bucket additional contacts.
                 var otherBuckets = node.BucketList.Buckets.Where(b => b != knownPeerBucket).ToList();
                 otherBuckets.ForEach(b => RefreshBucket(b));
+            }
+            else
+            {
+                HandleError(error, knownPeer);
             }
 
             return error;

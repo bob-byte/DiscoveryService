@@ -57,7 +57,7 @@ namespace LUC.DiscoveryService.Kademlia
         private void GetRequestResult<TResponse>(Contact contactToPing, Request request, out TResponse response, out RpcError rpcError) 
             where TResponse : Response, new()
         {
-            var nodeError = new ErrorResponse();
+            ErrorResponse nodeError = null;
             Boolean isTimeoutSocketOp;
             response = null;
 
@@ -111,8 +111,6 @@ namespace LUC.DiscoveryService.Kademlia
                 ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesOfRequest, 
                     Constants.SendTimeout, Constants.ConnectTimeout, ref client);
 
-                //TODO: optimize it. Check client.Available every 0.4 s
-                Thread.Sleep(Constants.TimeWaitResponse);
                 var bytesOfResponse = client.Receive(Constants.ReceiveTimeout);
 
                 response = new TResponse();
@@ -215,7 +213,7 @@ namespace LUC.DiscoveryService.Kademlia
             }
             else
             {
-                rpcError.IDMismatchError = false;
+                rpcError.IDMismatchError = true;
             }
 
             return rpcError;

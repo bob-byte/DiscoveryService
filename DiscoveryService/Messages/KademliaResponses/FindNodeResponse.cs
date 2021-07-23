@@ -32,7 +32,8 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 
                 sender.SendTimeout = (Int32)timeoutToSend.TotalMilliseconds;
                 sender.Send(response.ToByteArray());
-                //response.Send(new IPEndPoint(iPEndPoint.Address, (Int32)message.TcpPort), response.ToByteArray()).ConfigureAwait(false);
+
+                LogResponse(sender, response);
             }
             else
             {

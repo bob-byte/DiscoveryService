@@ -181,7 +181,7 @@ namespace LUC.DiscoveryService.CodingData
         public List<String> ReadListOfStrings()
         {
             List<String> list = new List<String>();
-            var length = ReadUInt16();
+            var length = ReadUInt32();
             if (length > 0)
             {
                 for (Int32 i = 0; i < length; i++)
@@ -203,7 +203,7 @@ namespace LUC.DiscoveryService.CodingData
         public List<Contact> ReadListOfContacts()
         {
             List<Contact> list = new List<Contact>();
-            var length = ReadUInt16();
+            var length = ReadUInt32();
             if (length > 0)
             {
                 for (Int32 i = 0; i < length; i++)
@@ -220,9 +220,9 @@ namespace LUC.DiscoveryService.CodingData
             var idAsBigInt = BigInteger.Parse(ReadString());
 
             var tcpPort = ReadUInt16();
-            var addressesCount = ReadUInt16();
+            var addressesCount = ReadUInt32();
 
-            ICollection<IPAddress> addresses = new List<IPAddress>(addressesCount);
+            ICollection<IPAddress> addresses = new List<IPAddress>((Int32)addressesCount);
             for (Int32 numAddress = 0; numAddress < addressesCount; numAddress++)
             {
                 addresses.Add(IPAddress.Parse(ReadString()));

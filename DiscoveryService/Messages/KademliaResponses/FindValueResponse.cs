@@ -34,7 +34,8 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 
                 sender.SendTimeout = (Int32)timeoutToSend.TotalMilliseconds;
                 sender.Send(response.ToByteArray());
-                //response.Send(new IPEndPoint(remoteHost, (Int32)tcpPort)).ConfigureAwait(false);
+
+                LogResponse(sender, response);
             }
             else
             {

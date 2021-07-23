@@ -13,8 +13,12 @@ namespace LUC.DiscoveryService.CodingData
     /// </summary>
     public class WireWriter : IDisposable
     {
-        private readonly Stream stream;
+        /// <summary>
+        /// 0x7F = 127
+        /// </summary>
         private const Byte MaxValueCharInAscii = 0x7F;
+
+        private readonly Stream stream;
 
         /// <summary>
         /// Creates a new instance of the <see cref="WireWriter"/> on the
@@ -228,7 +232,7 @@ namespace LUC.DiscoveryService.CodingData
         {
             Write(contact.ID.Value.ToString());
             Write(contact.TcpPort);
-            Write((UInt16)contact.IpAddressesCount);
+            Write((UInt32)contact.IpAddressesCount);
 
             var addresses = contact.IpAddresses();
             foreach (var address in addresses)
