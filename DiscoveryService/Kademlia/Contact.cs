@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Runtime.CompilerServices;
-using System.Collections.Concurrent;
-using System.Threading;
 using System.Linq;
 using System.Collections;
 
@@ -13,25 +11,35 @@ namespace LUC.DiscoveryService.Kademlia
     public class Contact : IComparable, IEnumerable<IPAddress>
     {
         private readonly Object lockIpAddresses;
-        private readonly List<IPAddress> ipAddresses = new List<IPAddress>();
+        private readonly List<IPAddress> ipAddresses;
+        private IPAddress lastActiveIpAddress;
         //private ManualResetEvent isUsedByKadOp = new ManualResetEvent(initialState: );
 
         // For serialization.  Don't want to use JsonConstructor because we don't want to touch the LastSeen.
-        public Contact()
+        //public Contact()
+        //{
+        //}
+
+        /// <summary>
+        /// Initialize a contact with its ID.
+        /// </summary>
+        public Contact(ID contactID, UInt16 tcpPort)
         {
+            ID = contactID;
+            TcpPort = tcpPort;
+            ipAddresses = new List<IPAddress>();
+            lockIpAddresses = new Object();
+
+            Touch();
         }
 
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
         public Contact(ID contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress)
+            : this(contactID, tcpPort)
         {
-            ID = contactID;
-            TcpPort = tcpPort;
             LastActiveIpAddress = lastActiveIpAddress;
-            lockIpAddresses = new Object();
-
-            Touch();
         }
 
         /// <summary>
@@ -49,7 +57,15 @@ namespace LUC.DiscoveryService.Kademlia
 
         public UInt16 TcpPort { get; set; }
 
-        public IPAddress LastActiveIpAddress { get; set; }
+        public IPAddress LastActiveIpAddress 
+        {
+            get => lastActiveIpAddress;
+            set
+            {
+                lastActiveIpAddress = value;
+                TryAddIpAddress(lastActiveIpAddress, out _);
+            }
+        }
 
         public Int32 IpAddressesCount => ipAddresses.Count;
 

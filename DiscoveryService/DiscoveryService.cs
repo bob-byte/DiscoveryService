@@ -19,8 +19,6 @@ namespace LUC.DiscoveryService
     /// </summary>
     public class DiscoveryService : AbstractService
     {
-        private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
-
         private static DiscoveryService instance;
         private readonly ConnectionPool connectionPool;
 
@@ -150,7 +148,7 @@ namespace LUC.DiscoveryService
                 SendKademliaResponse<FindNodeRequest>(eventArgs.AcceptedSocket, eventArgs, (client, request) =>
                 {
                     var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), exclude: new ID(default(BigInteger)));
-                    FindNodeResponse.SendOurCloseContactsAndPort(client, closeContacts, SendTimeout, request);
+                    FindNodeResponse.SendOurCloseContactsAndPort(client, closeContacts, Constants.SendTimeout, request);
                 });
             };
 
@@ -209,7 +207,8 @@ namespace LUC.DiscoveryService
                         IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).
                         GetAwaiter().
                         GetResult();
-                        KademliaOperation.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout, 
+
+                        ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout, 
                             Constants.ConnectTimeout, ref client);
                     }
                     finally

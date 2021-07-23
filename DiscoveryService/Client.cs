@@ -259,7 +259,7 @@ namespace LUC.DiscoveryService
 
                         UdpMessageReceived?.BeginInvoke(receiver, eventArgs, (asyncResult) =>
                         {
-                            ((EventHandler<TcpMessageEventArgs>)asyncResult.AsyncState).EndInvoke(asyncResult);
+                            ((EventHandler<UdpMessageEventArgs>)asyncResult.AsyncState).EndInvoke(asyncResult);
                         }, UdpMessageReceived);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 

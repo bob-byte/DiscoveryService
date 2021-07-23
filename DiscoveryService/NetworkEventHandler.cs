@@ -124,7 +124,9 @@ namespace LUC.DiscoveryService
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;
             ProtocolVersion = protocolVersion;
-            OurContact = new Contact();
+
+            OurContact = new Contact(ID.RandomID, RunningTcpPort);
+            DistributedHashTable = new Dht(OurContact, ProtocolVersion, () => new VirtualStorage(), new ParallelRouter());
 
             networkInterfacesFilter = filter;
 
@@ -152,29 +154,12 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public Boolean IgnoreDuplicateMessages { get; set; }
 
-        private void InitKademliaProtocol()
-        {
-            var runningIpAddresses = RunningIpAddresses();
+        //private void InitKademliaProtocol()
+        //{
+        //    OurContact.TcpPort = RunningTcpPort;
 
-            //var unAvailableAddresses = OurContact.Local_IpAddresses.Except(runningIpAddresses).ToList();
-            //OurContact.Local_IpAddresses.RemoveRange(unAvailableAddresses);
-
-            //foreach (var ipAddress in runningIpAddresses)
-            //{
-            //    if(!OurContact.Local_IpAddresses.Any(c => c.Equals(ipAddress)))
-            //    {
-            //        OurContact.Local_IpAddresses.Add(ipAddress);
-            //    }
-            //}
-
-            //DiscoveryService.KnownContacts(ProtocolVersion).Clear();
-            //foreach (var ourContact in OurContact)
-            //{
-            //    DiscoveryService.KnownContacts(ProtocolVersion).TryAdd(ourContact.ID.Value, ourContact);
-            //}
-
-            DistributedHashTable = new Dht(OurContact, ProtocolVersion, () => new VirtualStorage(), new ParallelRouter());
-        }
+        //    DistributedHashTable = new Dht(OurContact, ProtocolVersion, () => new VirtualStorage(), new ParallelRouter());
+        //}
 
         /// <summary>
         ///   Get the network interfaces that are useable.
@@ -287,7 +272,7 @@ namespace LUC.DiscoveryService
                 // Only create client if something has change.
                 if (newNics.Any() || oldNics.Any())
                 {
-                    InitKademliaProtocol();
+                    //InitKademliaProtocol();
 
                     client?.Dispose();
                     InitClient();
@@ -371,7 +356,7 @@ namespace LUC.DiscoveryService
                     return;
                 }
 
-            if ((message.ProtocolVersion == ProtocolVersion) &&
+            if ((message.ProtocolVersion == ProtocolVersion) ||
                 (message.MachineId != MachineId))
             {
                 try
@@ -413,6 +398,7 @@ namespace LUC.DiscoveryService
         {
             lock (this)
             {
+                OurContact.LastActiveIpAddress = (receiveResult.SendingEndPoint as IPEndPoint).Address;
                 Message message = receiveResult.Message<Message>();
 
                 switch (message.MessageOperation)

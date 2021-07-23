@@ -63,16 +63,16 @@ namespace LUC.DiscoveryService.Kademlia
 
             try
             {
-                //do this body in circle and lock(contactToPing.LockIpAddresses) while response == null
-                for (Int32 numAddress = contactToPing.IpAddressesCount - 1;
+                var cloneIpAddresses = contactToPing.IpAddresses();
+                for (Int32 numAddress = cloneIpAddresses.Count - 1;
                     (numAddress >= 0) && (response == null); numAddress--)
                 {
-                    var ipEndPoint = new IPEndPoint(contactToPing[numAddress], contactToPing.TcpPort);
+                    var ipEndPoint = new IPEndPoint(cloneIpAddresses[numAddress], contactToPing.TcpPort);
                     ClientStart(ipEndPoint, request, out response);
 
                     if (response == null)
                     {
-                        contactToPing.TryRemoveIpAddress(contactToPing[numAddress], out _);
+                        contactToPing.TryRemoveIpAddress(cloneIpAddresses[numAddress], out _);
                     }
                 }
 
@@ -108,8 +108,8 @@ namespace LUC.DiscoveryService.Kademlia
 
             try
             {
-                SendWithAvoidErrorsInNetwork(bytesOfRequest, Constants.SendTimeout, Constants.ConnectTimeout,
-                    ref client);
+                ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesOfRequest, 
+                    Constants.SendTimeout, Constants.ConnectTimeout, ref client);
 
                 //TODO: optimize it. Check client.Available every 0.4 s
                 Thread.Sleep(Constants.TimeWaitResponse);
@@ -121,24 +121,6 @@ namespace LUC.DiscoveryService.Kademlia
             finally
             {
                 client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
-            }
-        }
-
-        public static void SendWithAvoidErrorsInNetwork(Byte[] bytesToSend, TimeSpan timeoutToSend, TimeSpan timeoutToConnect,
-            ref ConnectionPoolSocket client)
-        {
-            try
-            {
-                client.Send(bytesToSend, timeoutToSend);
-            }
-            catch (SocketException e)
-            {
-                log.LogError($"Receive handler failed: {e.Message}");
-
-                client = new ConnectionPoolSocket(client.Id.AddressFamily, SocketType.Stream, ProtocolType.Tcp, client.Id, client.Pool, client.Log);
-                client.Connect(client.Id, timeoutToConnect);
-
-                client.Send(bytesToSend, timeoutToSend);
             }
         }
 

@@ -33,6 +33,24 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             Pool = belongPool;
         }
 
+        public static void SendWithAvoidErrorsInNetwork(Byte[] bytesToSend, TimeSpan timeoutToSend, TimeSpan timeoutToConnect,
+            ref ConnectionPoolSocket client)
+        {
+            try
+            {
+                client.Send(bytesToSend, timeoutToSend);
+            }
+            catch (SocketException e)
+            {
+                Log.LogError($"Receive handler failed: {e.Message}");
+
+                client = new ConnectionPoolSocket(client.Id.AddressFamily, SocketType.Stream, ProtocolType.Tcp, client.Id, client.Pool, Log);
+                client.Connect(client.Id, timeoutToConnect);
+
+                client.Send(bytesToSend, timeoutToSend);
+            }
+        }
+
         public UInt32 CreatedTicks { get; } = unchecked((UInt32)Environment.TickCount);
 
         public UInt32 LastReturnedTicks { get; private set; }

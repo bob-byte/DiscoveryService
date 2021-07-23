@@ -19,6 +19,7 @@ namespace LUC.DiscoveryService
     public class DiscoveryServiceSocket : Socket
     {
         private readonly Object m_lock = new Object();
+        //private Exception innerException;
 
         private readonly TimeSpan howOftenCheckAcceptedClient = TimeSpan.FromSeconds(value: 0.5);
 
@@ -29,7 +30,7 @@ namespace LUC.DiscoveryService
         private AutoResetEvent disconnectDone;
 
         [Import(typeof(ILoggingService))]
-        internal ILoggingService Log { get; }
+        internal static ILoggingService Log { get; private set; }
 
         public DiscoveryServiceSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, ILoggingService loggingService)
             : base(addressFamily, socketType, protocolType)
@@ -44,7 +45,7 @@ namespace LUC.DiscoveryService
         {
             ContactId = contactId;
             State = SocketState.Created;
-            this.Log = loggingService;
+            Log = loggingService;
         }
 
         public BigInteger ContactId { get; set; }
@@ -199,9 +200,9 @@ namespace LUC.DiscoveryService
 
             VerifyWorkState();
 
-            BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), this);
+            BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), state: this);
             var isConnected = connectDone.WaitOne(timeout);
-
+            
             if (isConnected)
             {
                 State = SocketState.Connected;
@@ -226,9 +227,10 @@ namespace LUC.DiscoveryService
         private void ConnectCallback(IAsyncResult asyncResult)
         {
             //Retrieve the socket from the state object
-            var client = (Socket)asyncResult.AsyncState;
-            if(client != null)
+            try
             {
+                var client = (Socket)asyncResult.AsyncState;
+
                 //Complete the connection
                 client.EndConnect(asyncResult);
                 Log.LogInfo($"Socket connected to {client.RemoteEndPoint}");
@@ -236,9 +238,13 @@ namespace LUC.DiscoveryService
                 //Signal that the connection has been made
                 connectDone.Set();
             }
-            else
+            catch(SocketException ex)
             {
-                throw new InvalidCastException($"Cannot convert from {asyncResult.AsyncState.GetType()} to {client.GetType()}");
+                Log.LogError(ex.ToString());
+            }
+            catch(InvalidCastException ex)
+            {
+                Log.LogError(ex.ToString());
             }
         }
 
@@ -372,8 +378,18 @@ namespace LUC.DiscoveryService
                     //eat it
                 }
             }
+            DisposeAllResetEvent();
 
             base.Dispose();
+        }
+
+        private void DisposeAllResetEvent()
+        {
+            acceptDone?.Dispose();
+            connectDone?.Dispose();
+            sendDone?.Dispose();
+            receiveDone?.Dispose();
+            disconnectDone?.Dispose();
         }
     }
 }
