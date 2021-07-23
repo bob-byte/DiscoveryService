@@ -184,8 +184,6 @@ namespace LUC.DiscoveryService
             {
                 tcpReceiver.Listen(BackLog);
                 ListenTcp(tcpReceiver);
-
-                break;
             }
         }
 
@@ -250,17 +248,14 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x =>
                     {
-                        //var acceptedContactId = RandomDefiniedAcceptedContactId(receiver);
                         UdpMessageEventArgs eventArgs = new UdpMessageEventArgs
                         {
                             Buffer = x.Result.Buffer,
                             RemoteEndPoint = x.Result.RemoteEndPoint
                         };
 
-                        UdpMessageReceived?.BeginInvoke(receiver, eventArgs, (asyncResult) =>
-                        {
-                            ((EventHandler<UdpMessageEventArgs>)asyncResult.AsyncState).EndInvoke(asyncResult);
-                        }, UdpMessageReceived);
+                        Task.Run(() => UdpMessageReceived.Invoke(receiver, eventArgs)).
+                                 ConfigureAwait(continueOnCapturedContext: false);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);
@@ -307,10 +302,8 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x =>
                     {
-                        TcpMessageReceived?.BeginInvoke(receiver, x.Result, (asyncResult) =>
-                        {
-                            ((EventHandler<TcpMessageEventArgs>)asyncResult.AsyncState).EndInvoke(asyncResult);
-                        }, TcpMessageReceived);
+                        Task.Run(() => TcpMessageReceived.Invoke(receiver, x.Result)).
+                                 ConfigureAwait(continueOnCapturedContext: false);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);

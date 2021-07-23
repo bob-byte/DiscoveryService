@@ -15,30 +15,12 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public BigInteger RandomID { get; set; }
         public BigInteger Sender { get; set; }
 
-        /// <summary>
-        /// TCP port which is being run in machine with machineId.
-        /// TCP port for inter-service communications.
-        /// </summary>
-        public UInt32 TcpPort { get; set; }
-
-        public Request(UInt32 tcpPort)
-            : this()
-        {
-            TcpPort = tcpPort;
-        }
-
-        public Request()
-        {
-            RandomID = ID.RandomID.Value;
-        }
-
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)
         {
             if (reader != null)
             {
                 MessageOperation = (MessageOperation)reader.ReadUInt16();
-                TcpPort = reader.ReadUInt16();
                 Sender = BigInteger.Parse(reader.ReadString());
                 RandomID = BigInteger.Parse(reader.ReadString());
 
@@ -56,7 +38,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             if (writer != null)
             {
                 writer.Write((UInt16)MessageOperation);
-                writer.Write(TcpPort);
                 writer.Write(Sender.ToString());
                 writer.Write(RandomID.ToString());
             }

@@ -14,13 +14,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public BigInteger ContactId { get; set; }
 
         public FindValueRequest()
-            : base()
-        {
-            ;//do nothing
-        }
-
-        public FindValueRequest(UInt32 tcpPort)
-            : base(tcpPort)
         {
             ;//do nothing
         }

@@ -14,13 +14,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public BigInteger ContactId { get; set; }
 
         public FindNodeRequest()
-            : base()
-        {
-            ;//do nothing
-        }
-
-        public FindNodeRequest(UInt32 tcpPort)
-            : base(tcpPort)
         {
             ;//do nothing
         }
@@ -48,7 +41,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (writer != null)
             {
-                writer.Write((UInt32)MessageOperation);
+                writer.Write((UInt16)MessageOperation);
                 writer.Write(RandomID.ToString());
                 writer.Write(Sender.ToString());
                 writer.Write(ContactId.ToString());

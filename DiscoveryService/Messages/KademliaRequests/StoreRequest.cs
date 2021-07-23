@@ -17,13 +17,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public Int32 ExpirationTimeSec { get; set; }
 
         public StoreRequest()
-            : base()
-        {
-            ;//do nothing
-        }
-
-        public StoreRequest(UInt32 tcpPort)
-            : base(tcpPort)
         {
             ;//do nothing
         }

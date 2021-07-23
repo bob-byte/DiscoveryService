@@ -337,11 +337,14 @@ namespace LUC.DiscoveryService
                 {
                     message.Read(result.Buffer);
                 }
-                catch (ArgumentNullException e)
+                catch (ArgumentNullException ex)
                 {
-                    log.LogError(e, "Received malformed message");
-                    MalformedMessage.Invoke(sender, result.Buffer);
-
+                    HandleMalformedMessage(ex, sender, result.Buffer);
+                    return;
+                }
+                catch(EndOfStreamException ex)
+                {
+                    HandleMalformedMessage(ex, sender, result.Buffer);
                     return;
                 }
 
@@ -385,47 +388,52 @@ namespace LUC.DiscoveryService
         {
             lock (this)
             {
-                OurContact.LastActiveIpAddress = (receiveResult.SendingEndPoint as IPEndPoint).Address;
-                Message message = receiveResult.Message<Message>();
-
-                switch (message.MessageOperation)
+                try
                 {
-                    case MessageOperation.Acknowledge:
-                        {
-                            HandleReceivedTcpMessage<AcknowledgeTcpMessage>(sender, receiveResult, AnswerReceived);
+                    OurContact.LastActiveIpAddress = (receiveResult.SendingEndPoint as IPEndPoint).Address;
+                    Message message = receiveResult.Message<Message>();
 
-                            break;
-                        }
+                    switch (message.MessageOperation)
+                    {
+                        case MessageOperation.Acknowledge:
+                            {
+                                HandleReceivedTcpMessage<AcknowledgeTcpMessage>(sender, receiveResult, AnswerReceived);
+                                break;
+                            }
 
-                    case MessageOperation.Ping:
-                        {
-                            /// Someone is pinging us.  Register the contact and respond.
+                        case MessageOperation.Ping:
+                            {
+                                /// Someone is pinging us.  Register the contact and respond.
+                                HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, PingReceived);
+                                break;
+                            }
 
-                            HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, PingReceived);
+                        case MessageOperation.Store:
+                            {
+                                HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, StoreReceived);
+                                break;
+                            }
 
-                            break;
-                        }
+                        case MessageOperation.FindNode:
+                            {
+                                HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, FindNodeReceived);
+                                break;
+                            }
 
-                    case MessageOperation.Store:
-                        {
-                            HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, StoreReceived);
-
-                            break;
-                        }
-
-                    case MessageOperation.FindNode:
-                        {
-                            HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, FindNodeReceived);
-
-                            break;
-                        }
-
-                    case MessageOperation.FindValue:
-                        {
-                            HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, FindValueReceived);
-
-                            break;
-                        }
+                        case MessageOperation.FindValue:
+                            {
+                                HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, FindValueReceived);
+                                break;
+                            }
+                    }
+                }
+                catch(EndOfStreamException ex)
+                {
+                    HandleMalformedMessage(ex, sender, receiveResult.Buffer);
+                }
+                catch (SocketException ex)
+                {
+                    log.LogError($"Cannot to handle TCP message: {ex}");
                 }
             }
         }
@@ -436,11 +444,14 @@ namespace LUC.DiscoveryService
             T request = new T();
             request.Read(receiveResult.Buffer);
             receiveResult.SetMessage(request);
-            
-            receiveEvent?.BeginInvoke(sender, receiveResult, (asyncResult) =>
-            {
-                ((EventHandler<TcpMessageEventArgs>)asyncResult.AsyncState).EndInvoke(asyncResult);
-            }, receiveEvent);
+
+            receiveEvent?.Invoke(sender, receiveResult);
+        }
+
+        private void HandleMalformedMessage(Exception exception, Object sender, Byte[] malformedMessage)
+        {
+            log.LogError($"Received malformed message: {exception}");
+            MalformedMessage.Invoke(sender, malformedMessage);
         }
 
         public void TryKademliaOperation(Object sender, TcpMessageEventArgs receiveResult)

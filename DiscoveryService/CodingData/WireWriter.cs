@@ -14,6 +14,7 @@ namespace LUC.DiscoveryService.CodingData
     public class WireWriter : IDisposable
     {
         private readonly Stream stream;
+        private const Byte MaxValueCharInAscii = 0x7F;
 
         /// <summary>
         /// Creates a new instance of the <see cref="WireWriter"/> on the
@@ -155,7 +156,7 @@ namespace LUC.DiscoveryService.CodingData
         {
             if(value != null)
             {
-                if (!value.Any(c => c > 0x7F))
+                if (!value.Any(c => c > MaxValueCharInAscii))
                 {
                     var bytes = Encoding.ASCII.GetBytes(value);
                     WriteByteLengthPrefixedBytes(bytes);

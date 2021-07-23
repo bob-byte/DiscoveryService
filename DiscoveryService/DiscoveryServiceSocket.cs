@@ -255,14 +255,24 @@ namespace LUC.DiscoveryService
                 receiveDone = new AutoResetEvent(initialState: false);
             }
 
-            var takReadBytes = ReadBytesAsync(this);
-            var isTimeout = receiveDone.WaitOne(timeout);
+            Boolean isTimeout;
+            Task<Byte[]> taskReadBytes;
+            try
+            {
+                taskReadBytes = ReadBytesAsync(this);
+                isTimeout = receiveDone.WaitOne(timeout);
+            }
+            catch (SocketException)
+            {
+                State = SocketState.Disconnected;
+                throw;
+            }
 
             if(!isTimeout)
             {
                 State = SocketState.Connected;
 
-                return takReadBytes.Result;
+                return taskReadBytes.Result;
             }
             else
             {
