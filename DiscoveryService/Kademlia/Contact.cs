@@ -54,7 +54,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         public DateTime LastSeen { get; set; }
 
-        public ID ID { get; set; }
+        public ID ID { get; }
 
         public UInt16 TcpPort { get; set; }
 

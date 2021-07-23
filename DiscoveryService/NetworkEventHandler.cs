@@ -390,7 +390,10 @@ namespace LUC.DiscoveryService
             {
                 try
                 {
-                    OurContact.LastActiveIpAddress = (receiveResult.SendingEndPoint as IPEndPoint).Address;
+                    var lastActiveAddress = (receiveResult.LocalEndPoint as IPEndPoint).Address;
+                    OurContact.LastActiveIpAddress = lastActiveAddress;
+                    DistributedHashTable.OurContact.LastActiveIpAddress = lastActiveAddress;
+
                     Message message = receiveResult.Message<Message>();
 
                     switch (message.MessageOperation)

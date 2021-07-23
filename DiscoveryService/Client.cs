@@ -253,9 +253,9 @@ namespace LUC.DiscoveryService
                             Buffer = x.Result.Buffer,
                             RemoteEndPoint = x.Result.RemoteEndPoint
                         };
+                        var separetedInvoke = Task.Run(() => UdpMessageReceived.Invoke(receiver, eventArgs));
 
-                        Task.Run(() => UdpMessageReceived.Invoke(receiver, eventArgs)).
-                                 ConfigureAwait(continueOnCapturedContext: false);
+                        separetedInvoke.ConfigureAwait(continueOnCapturedContext: false);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);
@@ -270,16 +270,6 @@ namespace LUC.DiscoveryService
                     return;
                 }
             });
-        }
-
-        private IPAddress RandomDefiniedAcceptedContactId(UdpClient receiver)
-        {
-            Random random = new Random();
-            var runningAddressesWithSameFamily = RunningIpAddresses.Where(c => c.AddressFamily == receiver.Client.AddressFamily).ToArray();
-            var numAcceptedAddress = random.Next(runningAddressesWithSameFamily.Length);
-            var acceptedContactId = runningAddressesWithSameFamily[numAcceptedAddress];
-
-            return acceptedContactId;
         }
 
         /// <summary>
@@ -302,8 +292,8 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x =>
                     {
-                        Task.Run(() => TcpMessageReceived.Invoke(receiver, x.Result)).
-                                 ConfigureAwait(continueOnCapturedContext: false);
+                        var separetedInvoke = Task.Run(() => TcpMessageReceived.Invoke(receiver, x.Result));
+                        separetedInvoke.ConfigureAwait(continueOnCapturedContext: false);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);

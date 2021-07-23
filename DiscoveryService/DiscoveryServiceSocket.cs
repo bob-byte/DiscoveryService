@@ -153,6 +153,7 @@ namespace LUC.DiscoveryService
                 receiveResult.SendingEndPoint = ipEndPoint;
                 receiveResult.AcceptedSocket = clientToReadMessage;
                 receiveResult.LocalContactId = ContactId;
+                receiveResult.LocalEndPoint = LocalEndPoint;
             }
             else
             {
