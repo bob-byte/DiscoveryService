@@ -305,12 +305,14 @@ namespace LUC.DiscoveryService
                 catch (SocketException e)
                 {
                     //TODO don't return. Change absolutely TCP port (in TcpListener), but take into account maxValueTcpPort
-                    log.LogError($"Failed to listen TCP message, {e.GetType()}: {e.Message}");
+                    log.LogError($"Failed to listen TCP message:\n" +
+                        $"{e}");
                     return;
                 }
                 catch(TimeoutException e)
                 {
-                    log.LogError($"Failed to listen TCP message, {e.GetType()}: {e.Message}");
+                    log.LogError($"Failed to listen TCP message:\n" +
+                        $"{e}");
                 }
             });
         }

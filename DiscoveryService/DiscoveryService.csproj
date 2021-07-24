@@ -84,6 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AbstractService.cs" />
+    <Compile Include="CodingData\Binary.cs" />
     <Compile Include="DiscoveryServiceSocket.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\StringExtension.cs" />

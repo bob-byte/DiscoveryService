@@ -36,7 +36,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             if (reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadUInt32();
+                base.Read(reader);
                 RandomID = BigInteger.Parse(reader.ReadString());
 
                 return this;
@@ -52,7 +52,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             if (writer != null)
             {
-                writer.Write((UInt32)MessageOperation);
+                base.Write(writer);
                 writer.Write(RandomID.ToString());
             }
             else

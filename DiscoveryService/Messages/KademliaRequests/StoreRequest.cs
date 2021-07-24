@@ -26,13 +26,12 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadUInt32();
-                RandomID = BigInteger.Parse(reader.ReadString());
-                Sender = BigInteger.Parse(reader.ReadString());
+                base.Read(reader);
+
                 KeyToStore = BigInteger.Parse(reader.ReadString());
                 Value = reader.ReadString();
                 IsCached = reader.ReadBoolean();
-                ExpirationTimeSec = (Int32)reader.ReadUInt16();
+                ExpirationTimeSec = (Int32)reader.ReadUInt32();
 
                 return this;
             }
@@ -47,13 +46,12 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             if (writer != null)
             {
-                writer.Write((UInt32)MessageOperation);
-                writer.Write(RandomID.ToString());
-                writer.Write(Sender.ToString());
+                base.Write(writer);
+
                 writer.Write(KeyToStore.ToString());
                 writer.Write(Value);
                 writer.Write(IsCached);
-                writer.Write((UInt16)ExpirationTimeSec);
+                writer.Write((UInt32)ExpirationTimeSec);
             }
             else
             {

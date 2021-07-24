@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Numerics;
 using System.Text;
 
 namespace LUC.DiscoveryService.CodingData
@@ -11,15 +12,8 @@ namespace LUC.DiscoveryService.CodingData
     /// <summary>
     /// Methods to write DNS wire formatted data items.
     /// </summary>
-    public class WireWriter : IDisposable
+    public class WireWriter : Binary, IDisposable
     {
-        /// <summary>
-        /// 0x7F = 127
-        /// </summary>
-        private const Byte MaxValueCharInAscii = 0x7F;
-
-        private readonly Stream stream;
-
         /// <summary>
         /// Creates a new instance of the <see cref="WireWriter"/> on the
         /// specified <see cref="Stream"/>.
@@ -57,10 +51,17 @@ namespace LUC.DiscoveryService.CodingData
         /// </param>
         public void Write(UInt16 value)
         {
-            stream.WriteByte((Byte)(value >> 8));
-            stream.WriteByte((Byte)value);
+            WriteNumeric(countOfBits: 16, (m_byte) => (Byte)(value >> m_byte));
 
             Position += 2;
+        }
+
+        private void WriteNumeric(Int32 countOfBits, Func<Int32, Byte> valueToWrite)
+        {
+            for (Int32 m_byte = countOfBits - BitsInOneByte; m_byte >= 0; m_byte -= BitsInOneByte)
+            {
+                stream.WriteByte(valueToWrite(m_byte));
+            }
         }
 
         /// <summary>
@@ -71,12 +72,26 @@ namespace LUC.DiscoveryService.CodingData
         /// </param>
         public void Write(UInt32 value)
         {
-            stream.WriteByte((Byte)(value >> 24));
-            stream.WriteByte((Byte)(value >> 16));
-            stream.WriteByte((Byte)(value >> 8));
-            stream.WriteByte((Byte)value);
+            WriteNumeric(countOfBits: 32, (m_byte) => (Byte)(value >> m_byte));
 
             Position += 4;
+        }
+
+        public void Write(BigInteger value)
+        {
+            var bytes = value.ToByteArray();
+            var numByte = 0;
+            Write((UInt32)bytes.Length);
+
+            WriteNumeric(countOfBits: bytes.Length * BitsInOneByte, (m_byte) =>
+            {
+                var shiftValue = bytes[numByte];
+                numByte++;
+
+                return shiftValue;
+            });
+
+            Position += bytes.Length;
         }
 
         public void Write(Boolean value)

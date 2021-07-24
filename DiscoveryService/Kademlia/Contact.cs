@@ -41,9 +41,10 @@ namespace LUC.DiscoveryService.Kademlia
         /// Initialize a contact with its ID.
         /// </summary>
         public Contact(ID contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses)
-            : this(contactID, tcpPort, lastActiveIpAddress: ipAddresses.Last())
+            : this(contactID, tcpPort)
         {
             this.ipAddresses = ipAddresses.ToList();
+            LastActiveIpAddress = ipAddresses.Last();
         }
 
         public DateTime LastSeen { get; set; }
@@ -135,7 +136,14 @@ namespace LUC.DiscoveryService.Kademlia
                 writer.WriteLine($"{nameof(ipAddresses)}:");
                 for (Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++)
                 {
-                    writer.WriteLine($"{ipAddresses[numAddress]}");
+                    if (numAddress == IpAddressesCount - 1)
+                    {
+                        writer.Write($"{ipAddresses[numAddress]}");
+                    }
+                    else
+                    {
+                        writer.WriteLine($"{ipAddresses[numAddress]};");
+                    }
                 }
 
                 return writer.ToString();

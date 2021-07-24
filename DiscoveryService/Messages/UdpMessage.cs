@@ -54,7 +54,7 @@ namespace LUC.DiscoveryService.Messages
                 MachineId = reader.ReadString();
 
                 ProtocolVersion = reader.ReadUInt16();
-                TcpPort = reader.ReadUInt16();                
+                TcpPort = (UInt16)reader.ReadUInt32();                
 
                 return this;
             }
@@ -72,7 +72,7 @@ namespace LUC.DiscoveryService.Messages
                 writer.Write(MessageId);
                 writer.Write(MachineId);
                 writer.Write(ProtocolVersion);
-                writer.Write(TcpPort);
+                writer.Write((UInt32)TcpPort);
             }
             else
             {

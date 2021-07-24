@@ -120,10 +120,17 @@ namespace LUC.DiscoveryService.Kademlia
                     countToCheck++;
                 }
 
-                var bytesOfResponse = client.Receive(Constants.ReceiveTimeout);
+                if(countToCheck <= Constants.MaxCheckAvailableData)
+                {
+                    var bytesOfResponse = client.Receive(Constants.ReceiveTimeout);
 
-                response = new TResponse();
-                response.Read(bytesOfResponse);
+                    response = new TResponse();
+                    response.Read(bytesOfResponse);
+                }
+                else
+                {
+                    throw new TimeoutException();
+                }
             }
             finally
             {

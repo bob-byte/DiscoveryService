@@ -95,10 +95,10 @@ namespace LUC.DiscoveryService.Messages
         {
             if(reader != null)
             {
-                MessageOperation = (MessageOperation)reader.ReadUInt32();
-                MessageId = reader.ReadUInt32();
+                base.Read(reader);
 
-                IdOfSendingContact = BigInteger.Parse(reader.ReadString());
+                MessageId = reader.ReadUInt32();
+                IdOfSendingContact = reader.ReadBigInteger();
                 MachineId = reader.ReadString();
 
                 ProtocolVersion = reader.ReadUInt16();
@@ -133,9 +133,10 @@ namespace LUC.DiscoveryService.Messages
         {
             if (writer != null)
             {
-                writer.Write((UInt32)MessageOperation);
+                base.Write(writer);
+
                 writer.Write(MessageId);
-                writer.Write(IdOfSendingContact.ToString());
+                writer.Write(IdOfSendingContact);
                 writer.Write(MachineId);
                 writer.Write(ProtocolVersion);
                 writer.Write(TcpPort);

@@ -13,10 +13,8 @@ namespace LUC.DiscoveryService.CodingData
     /// <summary>
     /// Methods to read DNS wire formatted data items.
     /// </summary>
-    public class WireReader : IDisposable
+    public class WireReader : Binary, IDisposable
     {
-        private readonly Stream stream;
-
         /// <summary>
         ///   Creates a new instance of the <see cref="WireReader"/> on the
         ///   specified <see cref="Stream"/>.
@@ -87,6 +85,25 @@ namespace LUC.DiscoveryService.CodingData
             value = value << bitInByte | ReadByte();
 
             return (UInt32)value;
+        }
+
+        /// <summary>
+        ///   Read <seealso cref="BigInteger"/>
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public BigInteger ReadBigInteger()
+        {
+            UInt32 countOfBytes = ReadUInt32();
+            BigInteger value = ReadByte();
+
+            for (Int32 numByte = 1; numByte < countOfBytes; numByte++)
+            {
+                value = value << BitsInOneByte | ReadByte();
+            }
+
+            return value;
         }
 
         /// <summary>
@@ -161,7 +178,7 @@ namespace LUC.DiscoveryService.CodingData
         public String ReadString()
         {
             var bytes = ReadByteLengthPrefixedBytes();
-            if(!bytes.Any(c => c > 0x7F))
+            if(!bytes.Any(c => c > MaxValueCharInAscii))
             {
                 return Encoding.ASCII.GetString(bytes);
             }
