@@ -51,12 +51,12 @@ namespace LUC.DiscoveryService.CodingData
         /// </param>
         public void Write(UInt16 value)
         {
-            WriteNumeric(countOfBits: 16, (m_byte) => (Byte)(value >> m_byte));
+            Write(countOfBits: 16, (m_byte) => (Byte)(value >> m_byte));
 
             Position += 2;
         }
 
-        private void WriteNumeric(Int32 countOfBits, Func<Int32, Byte> valueToWrite)
+        private void Write(Int32 countOfBits, Func<Int32, Byte> valueToWrite)
         {
             for (Int32 m_byte = countOfBits - BitsInOneByte; m_byte >= 0; m_byte -= BitsInOneByte)
             {
@@ -72,7 +72,7 @@ namespace LUC.DiscoveryService.CodingData
         /// </param>
         public void Write(UInt32 value)
         {
-            WriteNumeric(countOfBits: 32, (m_byte) => (Byte)(value >> m_byte));
+            Write(countOfBits: 32, (m_byte) => (Byte)(value >> m_byte));
 
             Position += 4;
         }
@@ -83,7 +83,7 @@ namespace LUC.DiscoveryService.CodingData
             var numByte = 0;
             Write((UInt32)bytes.Length);
 
-            WriteNumeric(countOfBits: bytes.Length * BitsInOneByte, (m_byte) =>
+            Write(countOfBits: bytes.Length * BitsInOneByte, (m_byte) =>
             {
                 var shiftValue = bytes[numByte];
                 numByte++;

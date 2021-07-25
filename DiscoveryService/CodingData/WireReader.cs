@@ -96,14 +96,15 @@ namespace LUC.DiscoveryService.CodingData
         public BigInteger ReadBigInteger()
         {
             UInt32 countOfBytes = ReadUInt32();
-            BigInteger value = ReadByte();
+            Byte[] bytes = new Byte[countOfBytes];
 
-            for (Int32 numByte = 1; numByte < countOfBytes; numByte++)
+            for (Int32 numByte = 0; numByte < countOfBytes; numByte++)
             {
-                value = value << BitsInOneByte | ReadByte();
+                bytes[numByte] = ReadByte();
             }
+            var bigInt = new BigInteger(bytes);
 
-            return value;
+            return bigInt;
         }
 
         /// <summary>
