@@ -28,7 +28,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             {
                 base.Read(reader);
 
-                KeyToStore = BigInteger.Parse(reader.ReadString());
+                KeyToStore = reader.ReadBigInteger();
                 Value = reader.ReadString();
                 IsCached = reader.ReadBoolean();
                 ExpirationTimeSec = (Int32)reader.ReadUInt32();
@@ -48,7 +48,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             {
                 base.Write(writer);
 
-                writer.Write(KeyToStore.ToString());
+                writer.Write(KeyToStore);
                 writer.Write(Value);
                 writer.Write(IsCached);
                 writer.Write((UInt32)ExpirationTimeSec);

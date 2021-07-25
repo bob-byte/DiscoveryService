@@ -22,8 +22,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             {
                 base.Read(reader);
 
-                Sender = BigInteger.Parse(reader.ReadString());
-                RandomID = BigInteger.Parse(reader.ReadString());
+                Sender = reader.ReadBigInteger();
+                RandomID = reader.ReadBigInteger();
 
                 return this;
             }
@@ -40,8 +40,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             {
                 base.Write(writer);
 
-                writer.Write(Sender.ToString());
-                writer.Write(RandomID.ToString());
+                writer.Write(Sender);
+                writer.Write(RandomID);
             }
             else
             {

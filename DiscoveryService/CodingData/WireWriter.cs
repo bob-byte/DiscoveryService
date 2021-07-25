@@ -245,7 +245,7 @@ namespace LUC.DiscoveryService.CodingData
 
         public void Write(Contact contact)
         {
-            Write(contact.ID.Value.ToString());
+            Write(contact.ID.Value);
             Write(contact.TcpPort);
             Write((UInt32)contact.IpAddressesCount);
 

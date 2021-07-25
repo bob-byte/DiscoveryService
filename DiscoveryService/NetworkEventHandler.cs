@@ -348,7 +348,7 @@ namespace LUC.DiscoveryService
                     return;
                 }
 
-                if ((message.ProtocolVersion == ProtocolVersion) ||
+                if ((message.ProtocolVersion == ProtocolVersion) &&
                     (message.MachineId != MachineId))
                 {
                     result.SetMessage(message);

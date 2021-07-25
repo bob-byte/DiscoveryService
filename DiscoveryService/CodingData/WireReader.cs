@@ -235,7 +235,7 @@ namespace LUC.DiscoveryService.CodingData
 
         public Contact ReadContact()
         {
-            var idAsBigInt = BigInteger.Parse(ReadString());
+            var idAsBigInt = ReadBigInteger();
 
             var tcpPort = ReadUInt16();
             var addressesCount = ReadUInt32();

@@ -24,7 +24,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             if (reader != null)
             {
                 base.Read(reader);
-                ContactId = BigInteger.Parse(reader.ReadString());
+                ContactId = reader.ReadBigInteger();
 
                 return this;
             }
@@ -40,7 +40,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             if (writer != null)
             {
                 base.Write(writer);
-                writer.Write(ContactId.ToString());
+                writer.Write(ContactId);
             }
             else
             {
