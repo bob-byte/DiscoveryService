@@ -54,7 +54,8 @@ namespace LUC.DiscoveryService.Kademlia
             return rpcError;
         }
 
-        private void GetRequestResult<TResponse>(Contact contactToPing, Request request, out TResponse response, out RpcError rpcError) 
+        private void GetRequestResult<TResponse>(Contact remoteContact, Request request, 
+            out TResponse response, out RpcError rpcError) 
             where TResponse : Response, new()
         {
             ErrorResponse nodeError = null;
@@ -63,16 +64,16 @@ namespace LUC.DiscoveryService.Kademlia
 
             try
             {
-                var cloneIpAddresses = contactToPing.IpAddresses();
+                var cloneIpAddresses = remoteContact.IpAddresses();
                 for (Int32 numAddress = cloneIpAddresses.Count - 1;
                     (numAddress >= 0) && (response == null); numAddress--)
                 {
-                    var ipEndPoint = new IPEndPoint(cloneIpAddresses[numAddress], contactToPing.TcpPort);
+                    var ipEndPoint = new IPEndPoint(cloneIpAddresses[numAddress], remoteContact.TcpPort);
                     ClientStart(ipEndPoint, request, out response);
 
                     if (response == null)
                     {
-                        contactToPing.TryRemoveIpAddress(cloneIpAddresses[numAddress], out _);
+                        remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], out _);
                     }
                 }
 
@@ -232,6 +233,7 @@ namespace LUC.DiscoveryService.Kademlia
                 rpcError.IDMismatchError = true;
             }
 
+            log.LogInfo(rpcError.ToString());
             return rpcError;
         }
     }

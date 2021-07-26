@@ -319,18 +319,18 @@ namespace LUC.DiscoveryService
         /// </remarks>
         private void OnUdpMessage(Object sender, UdpMessageEventArgs result)
         {
-            lock (this)
-            {
+            //lock (this)
+            //{
                 if (result.Buffer.Length > MaxDatagramSize)
                 {
                     return;
                 }
 
                 //If recently received, then ignore.
-                if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-                {
-                    return;
-                }
+                //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
+                //{
+                //    return;
+                //}
 
                 UdpMessage message = new UdpMessage();
                 try
@@ -348,7 +348,7 @@ namespace LUC.DiscoveryService
                     return;
                 }
 
-                if ((message.ProtocolVersion == ProtocolVersion) &&
+                if ((message.ProtocolVersion == ProtocolVersion) ||
                     (message.MachineId != MachineId))
                 {
                     result.SetMessage(message);
@@ -373,7 +373,7 @@ namespace LUC.DiscoveryService
                         // eat the exception
                     }
                 }
-            }
+            //}
         }
 
         /// <summary>
@@ -454,7 +454,7 @@ namespace LUC.DiscoveryService
         private void HandleMalformedMessage(Exception exception, Object sender, Byte[] malformedMessage)
         {
             log.LogError($"Received malformed message: {exception}");
-            MalformedMessage.Invoke(sender, malformedMessage);
+            MalformedMessage?.Invoke(sender, malformedMessage);
         }
 
         public void TryKademliaOperation(Object sender, TcpMessageEventArgs receiveResult)

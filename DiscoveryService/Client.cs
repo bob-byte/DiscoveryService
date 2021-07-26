@@ -184,6 +184,8 @@ namespace LUC.DiscoveryService
             {
                 tcpReceiver.Listen(BackLog);
                 ListenTcp(tcpReceiver);
+
+                //break;
             }
         }
 
@@ -246,16 +248,16 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x => ListenUdp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
-                    _ = task.ContinueWith(x =>
+                    _ = task.ContinueWith(async (taskReceiving) =>
                     {
                         UdpMessageEventArgs eventArgs = new UdpMessageEventArgs
                         {
-                            Buffer = x.Result.Buffer,
-                            RemoteEndPoint = x.Result.RemoteEndPoint
+                            Buffer = taskReceiving.Result.Buffer,
+                            RemoteEndPoint = taskReceiving.Result.RemoteEndPoint
                         };
-                        var separetedInvoke = Task.Run(() => UdpMessageReceived.Invoke(receiver, eventArgs));
 
-                        separetedInvoke.ConfigureAwait(continueOnCapturedContext: false);
+                        await Task.Run(() => UdpMessageReceived.Invoke(receiver, eventArgs)).
+                        ConfigureAwait(continueOnCapturedContext: false);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);
@@ -290,10 +292,11 @@ namespace LUC.DiscoveryService
 
                     _ = task.ContinueWith(x => ListenTcp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
-                    _ = task.ContinueWith(x =>
+                    _ = task.ContinueWith(async (taskReceiving) =>
                     {
-                        var separetedInvoke = Task.Run(() => TcpMessageReceived.Invoke(receiver, x.Result));
-                        separetedInvoke.ConfigureAwait(continueOnCapturedContext: false);
+                        TcpMessageReceived.Invoke(receiver, taskReceiving.Result);
+                        //await Task.Run(() => TcpMessageReceived.Invoke(receiver, taskReceiving.Result)).
+                        //ConfigureAwait(continueOnCapturedContext: false);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);
