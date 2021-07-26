@@ -10,7 +10,7 @@ using System.Text;
 namespace LUC.DiscoveryService.CodingData
 {
     /// <summary>
-    /// Methods to write DNS wire formatted data items.
+    /// Methods to write wire formatted data items.
     /// </summary>
     public class WireWriter : Binary, IDisposable
     {

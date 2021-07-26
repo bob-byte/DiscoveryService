@@ -18,8 +18,8 @@ namespace LUC.DiscoveryService
                 Assert.IsNotNull(sd);
             }
 
-            var mdns = new MulticastService();
-            using (var sd = new ServiceDiscovery(mdns))
+            var mss = new MulticastService();
+            using (var sd = new ServiceDiscovery(mss))
             {
                 Assert.IsNotNull(sd);
             }
@@ -31,10 +31,10 @@ namespace LUC.DiscoveryService
             var service = new ServiceProfile("x", "_sdtest-1._udp", 1024, new[] { IPAddress.Loopback });
             var done = new ManualResetEvent(false);
 
-            var mdns = new MulticastService();
-            mdns.NetworkInterfaceDiscovered += (s, e) =>
-                mdns.SendQuery(ServiceDiscovery.ServiceName, DnsClass.IN, DnsType.PTR);
-            mdns.AnswerReceived += (s, e) =>
+            var mss = new MulticastService();
+            mss.NetworkInterfaceDiscovered += (s, e) =>
+                mss.SendQuery(ServiceDiscovery.ServiceName, DnsClass.IN, DnsType.PTR);
+            mss.AnswerReceived += (s, e) =>
             {
                 var msg = e.Message;
                 if (msg.Answers.OfType<PTRRecord>().Any(p => p.DomainName == service.QualifiedServiceName))
@@ -44,16 +44,16 @@ namespace LUC.DiscoveryService
             };
             try
             {
-                using (var sd = new ServiceDiscovery(mdns))
+                using (var sd = new ServiceDiscovery(mss))
                 {
                     sd.Advertise(service);
-                    mdns.Start();
+                    mss.Start();
                     Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "query timeout");
                 }
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -63,10 +63,10 @@ namespace LUC.DiscoveryService
             var service = new ServiceProfile("x", "_sdtest-1._udp", 1024, new[] { IPAddress.Loopback });
             var done = new ManualResetEvent(false);
 
-            var mdns = new MulticastService();
-            mdns.NetworkInterfaceDiscovered += (s, e) =>
-                mdns.SendQuery(service.QualifiedServiceName, DnsClass.IN, DnsType.PTR);
-            mdns.AnswerReceived += (s, e) =>
+            var mss = new MulticastService();
+            mss.NetworkInterfaceDiscovered += (s, e) =>
+                mss.SendQuery(service.QualifiedServiceName, DnsClass.IN, DnsType.PTR);
+            mss.AnswerReceived += (s, e) =>
             {
                 var msg = e.Message;
                 if (msg.Answers.OfType<PTRRecord>().Any(p => p.DomainName == service.FullyQualifiedName))
@@ -76,16 +76,16 @@ namespace LUC.DiscoveryService
             };
             try
             {
-                using (var sd = new ServiceDiscovery(mdns))
+                using (var sd = new ServiceDiscovery(mss))
                 {
                     sd.Advertise(service);
-                    mdns.Start();
+                    mss.Start();
                     Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "query timeout");
                 }
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -95,10 +95,10 @@ namespace LUC.DiscoveryService
             var service = new ServiceProfile("x2", "_sdtest-1._udp", 1024, new[] { IPAddress.Loopback });
             var done = new ManualResetEvent(false);
 
-            var mdns = new MulticastService();
-            mdns.NetworkInterfaceDiscovered += (s, e) =>
-                mdns.SendQuery(service.HostName, DnsClass.IN, DnsType.A);
-            mdns.AnswerReceived += (s, e) =>
+            var mss = new MulticastService();
+            mss.NetworkInterfaceDiscovered += (s, e) =>
+                mss.SendQuery(service.HostName, DnsClass.IN, DnsType.A);
+            mss.AnswerReceived += (s, e) =>
             {
                 var msg = e.Message;
                 if (msg.Answers.OfType<ARecord>().Any(p => p.Name == service.HostName))
@@ -108,16 +108,16 @@ namespace LUC.DiscoveryService
             };
             try
             {
-                using (var sd = new ServiceDiscovery(mdns))
+                using (var sd = new ServiceDiscovery(mss))
                 {
                     sd.Advertise(service);
-                    mdns.Start();
+                    mss.Start();
                     Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "query timeout");
                 }
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -128,10 +128,10 @@ namespace LUC.DiscoveryService
             service.Subtypes.Add("_example");
             var done = new ManualResetEvent(false);
 
-            var mdns = new MulticastService();
-            mdns.NetworkInterfaceDiscovered += (s, e) =>
-                mdns.SendQuery("_example._sub._sdtest-1._udp.local", DnsClass.IN, DnsType.PTR);
-            mdns.AnswerReceived += (s, e) =>
+            var mss = new MulticastService();
+            mss.NetworkInterfaceDiscovered += (s, e) =>
+                mss.SendQuery("_example._sub._sdtest-1._udp.local", DnsClass.IN, DnsType.PTR);
+            mss.AnswerReceived += (s, e) =>
             {
                 var msg = e.Message;
                 if (msg.Answers.OfType<PTRRecord>().Any(p => p.DomainName == service.FullyQualifiedName))
@@ -141,16 +141,16 @@ namespace LUC.DiscoveryService
             };
             try
             {
-                using (var sd = new ServiceDiscovery(mdns))
+                using (var sd = new ServiceDiscovery(mss))
                 {
                     sd.Advertise(service);
-                    mdns.Start();
+                    mss.Start();
                     Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "query timeout");
                 }
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -159,10 +159,10 @@ namespace LUC.DiscoveryService
         {
             var service = new ServiceProfile("x", "_sdtest-2._udp", 1024);
             var done = new ManualResetEvent(false);
-            var mdns = new MulticastService();
-            var sd = new ServiceDiscovery(mdns);
+            var mss = new MulticastService();
+            var sd = new ServiceDiscovery(mss);
 
-            mdns.NetworkInterfaceDiscovered += (s, e) => sd.QueryAllServices();
+            mss.NetworkInterfaceDiscovered += (s, e) => sd.QueryAllServices();
             sd.ServiceDiscovered += (s, serviceName) =>
             {
                 if (serviceName == service.QualifiedServiceName)
@@ -173,13 +173,13 @@ namespace LUC.DiscoveryService
             try
             {
                 sd.Advertise(service);
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "DNS-SD query timeout");
             }
             finally
             {
                 sd.Dispose();
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -188,10 +188,10 @@ namespace LUC.DiscoveryService
         {
             var service = new ServiceProfile("x", "_sdtest-5._udp", 1024);
             var done = new ManualResetEvent(false);
-            var mdns = new MulticastService();
-            var sd = new ServiceDiscovery(mdns);
+            var mss = new MulticastService();
+            var sd = new ServiceDiscovery(mss);
 
-            mdns.NetworkInterfaceDiscovered += (s, e) => sd.QueryUnicastAllServices();
+            mss.NetworkInterfaceDiscovered += (s, e) => sd.QueryUnicastAllServices();
             sd.ServiceDiscovered += (s, serviceName) =>
             {
                 if (serviceName == service.QualifiedServiceName)
@@ -202,13 +202,13 @@ namespace LUC.DiscoveryService
             try
             {
                 sd.Advertise(service);
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "DNS-SD query timeout");
             }
             finally
             {
                 sd.Dispose();
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -217,10 +217,10 @@ namespace LUC.DiscoveryService
         {
             var service = new ServiceProfile("y", "_sdtest-2._udp", 1024);
             var done = new ManualResetEvent(false);
-            var mdns = new MulticastService();
-            var sd = new ServiceDiscovery(mdns);
+            var mss = new MulticastService();
+            var sd = new ServiceDiscovery(mss);
 
-            mdns.NetworkInterfaceDiscovered += (s, e) =>
+            mss.NetworkInterfaceDiscovered += (s, e) =>
             {
                 sd.QueryServiceInstances(service.ServiceName);
             };
@@ -236,13 +236,13 @@ namespace LUC.DiscoveryService
             try
             {
                 sd.Advertise(service);
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "instance not found");
             }
             finally
             {
                 sd.Dispose();
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -253,10 +253,10 @@ namespace LUC.DiscoveryService
             var service2 = new ServiceProfile("y", "_sdtest-2._udp", 1024);
             service2.Subtypes.Add("apiv2");
             var done = new ManualResetEvent(false);
-            var mdns = new MulticastService();
-            var sd = new ServiceDiscovery(mdns);
+            var mss = new MulticastService();
+            var sd = new ServiceDiscovery(mss);
 
-            mdns.NetworkInterfaceDiscovered += (s, e) =>
+            mss.NetworkInterfaceDiscovered += (s, e) =>
             {
                 sd.QueryServiceInstances("_sdtest-2._udp", "apiv2");
             };
@@ -273,13 +273,13 @@ namespace LUC.DiscoveryService
             {
                 sd.Advertise(service1);
                 sd.Advertise(service2);
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "instance not found");
             }
             finally
             {
                 sd.Dispose();
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -288,10 +288,10 @@ namespace LUC.DiscoveryService
         {
             var service = new ServiceProfile("y", "_sdtest-5._udp", 1024);
             var done = new ManualResetEvent(false);
-            var mdns = new MulticastService();
-            var sd = new ServiceDiscovery(mdns);
+            var mss = new MulticastService();
+            var sd = new ServiceDiscovery(mss);
 
-            mdns.NetworkInterfaceDiscovered += (s, e) =>
+            mss.NetworkInterfaceDiscovered += (s, e) =>
             {
                 sd.QueryUnicastServiceInstances(service.ServiceName);
             };
@@ -307,13 +307,13 @@ namespace LUC.DiscoveryService
             try
             {
                 sd.Advertise(service);
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "instance not found");
             }
             finally
             {
                 sd.Dispose();
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -323,12 +323,12 @@ namespace LUC.DiscoveryService
             var service = new ServiceProfile("y", "_sdtest-2._udp", 1024, new[] { IPAddress.Parse("127.1.1.1") });
             var done = new ManualResetEvent(false);
 
-            using (var mdns = new MulticastService())
-            using (var sd = new ServiceDiscovery(mdns) { AnswersContainsAdditionalRecords = true })
+            using (var mss = new MulticastService())
+            using (var sd = new ServiceDiscovery(mss) { AnswersContainsAdditionalRecords = true })
             {
                 Message discovered = null;
 
-                mdns.NetworkInterfaceDiscovered += (s, e) =>
+                mss.NetworkInterfaceDiscovered += (s, e) =>
                 {
                     sd.QueryServiceInstances(service.ServiceName);
                 };
@@ -345,7 +345,7 @@ namespace LUC.DiscoveryService
 
                 sd.Advertise(service);
 
-                mdns.Start();
+                mss.Start();
 
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(3)), "instance not found");
 
@@ -367,10 +367,10 @@ namespace LUC.DiscoveryService
         {
             var service = new ServiceProfile("z", "_sdtest-7._udp", 1024);
             var done = new ManualResetEvent(false);
-            var mdns = new MulticastService();
-            var sd = new ServiceDiscovery(mdns);
+            var mss = new MulticastService();
+            var sd = new ServiceDiscovery(mss);
 
-            mdns.NetworkInterfaceDiscovered += (s, e) => sd.QueryAllServices();
+            mss.NetworkInterfaceDiscovered += (s, e) => sd.QueryAllServices();
             sd.ServiceInstanceShutdown += (s, e) =>
             {
                 if (e.ServiceInstanceName == service.FullyQualifiedName)
@@ -381,14 +381,14 @@ namespace LUC.DiscoveryService
             try
             {
                 sd.Advertise(service);
-                mdns.Start();
+                mss.Start();
                 sd.Unadvertise(service);
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "goodbye timeout");
             }
             finally
             {
                 sd.Dispose();
-                mdns.Stop();
+                mss.Stop();
             }
         }
         [TestMethod]
@@ -398,11 +398,11 @@ namespace LUC.DiscoveryService
             var arpaAddress = IPAddress.Loopback.GetArpaName();
             var done = new ManualResetEvent(false);
 
-            var mdns = new MulticastService();
+            var mss = new MulticastService();
             Message response = null;
-            mdns.NetworkInterfaceDiscovered += (s, e) =>
-                mdns.SendQuery(arpaAddress, DnsClass.IN, DnsType.PTR);
-            mdns.AnswerReceived += (s, e) =>
+            mss.NetworkInterfaceDiscovered += (s, e) =>
+                mss.SendQuery(arpaAddress, DnsClass.IN, DnsType.PTR);
+            mss.AnswerReceived += (s, e) =>
             {
                 var msg = e.Message;
                 if (msg.Answers.OfType<PTRRecord>().Any(p => p.Name == arpaAddress))
@@ -413,10 +413,10 @@ namespace LUC.DiscoveryService
             };
             try
             {
-                using (var sd = new ServiceDiscovery(mdns))
+                using (var sd = new ServiceDiscovery(mss))
                 {
                     sd.Advertise(service);
-                    mdns.Start();
+                    mss.Start();
                     Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "query timeout");
                     var answers = response.Answers
                         .OfType<PTRRecord>()
@@ -429,7 +429,7 @@ namespace LUC.DiscoveryService
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -439,8 +439,8 @@ namespace LUC.DiscoveryService
             var service = new ServiceProfile("z", "_sdtest-4._udp", 1024, new[] { IPAddress.Loopback });
             var done = new ManualResetEvent(false);
 
-            var mdns = new MulticastService();
-            mdns.AnswerReceived += (s, e) =>
+            var mss = new MulticastService();
+            mss.AnswerReceived += (s, e) =>
             {
                 var msg = e.Message;
                 if (msg.Answers.OfType<PTRRecord>().Any(p => p.DomainName == service.FullyQualifiedName))
@@ -450,16 +450,16 @@ namespace LUC.DiscoveryService
             };
             try
             {
-                using (var sd = new ServiceDiscovery(mdns))
+                using (var sd = new ServiceDiscovery(mss))
                 {
-                    mdns.NetworkInterfaceDiscovered += (s, e) => sd.Announce(service);
-                    mdns.Start();
+                    mss.NetworkInterfaceDiscovered += (s, e) => sd.Announce(service);
+                    mss.Start();
                     Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(3)), "announce timeout");
                 }
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -469,11 +469,11 @@ namespace LUC.DiscoveryService
             var service = new ServiceProfile("z", "_sdtest-4._udp", 1024, new[] { IPAddress.Loopback });
             var done = new ManualResetEvent(false);
             var nanswers = 0;
-            var mdns = new MulticastService
+            var mss = new MulticastService
             {
                 IgnoreDuplicateMessages = false
             };
-            mdns.AnswerReceived += (s, e) =>
+            mss.AnswerReceived += (s, e) =>
             {
                 var msg = e.Message;
                 if (msg.Answers.OfType<PTRRecord>().Any(p => p.DomainName == service.FullyQualifiedName))
@@ -486,16 +486,16 @@ namespace LUC.DiscoveryService
             };
             try
             {
-                using (var sd = new ServiceDiscovery(mdns))
+                using (var sd = new ServiceDiscovery(mss))
                 {
-                    mdns.NetworkInterfaceDiscovered += (s, e) => sd.Announce(service);
-                    mdns.Start();
+                    mss.NetworkInterfaceDiscovered += (s, e) => sd.Announce(service);
+                    mss.Start();
                     Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(4)), "announce timeout");
                 }
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
     }

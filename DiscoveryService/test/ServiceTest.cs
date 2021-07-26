@@ -17,17 +17,17 @@ namespace LUC.DiscoveryService
         [TestMethod]
         public void Can_Create()
         {
-            var mdns = new MulticastService();
-            Assert.IsNotNull(mdns);
-            Assert.IsTrue(mdns.IgnoreDuplicateMessages);
+            var mss = new MulticastService();
+            Assert.IsNotNull(mss);
+            Assert.IsTrue(mss.IgnoreDuplicateMessages);
         }
 
         [TestMethod]
         public void StartStop()
         {
-            var mdns = new MulticastService();
-            mdns.Start();
-            mdns.Stop();
+            var mss = new MulticastService();
+            mss.Start();
+            mss.Stop();
         }
 
         [TestMethod]
@@ -37,9 +37,9 @@ namespace LUC.DiscoveryService
             var done = new ManualResetEvent(false);
             Message msg = null;
 
-            var mdns = new MulticastService();
-            mdns.NetworkInterfaceDiscovered += (s, e) => ready.Set();
-            mdns.QueryReceived += (s, e) =>
+            var mss = new MulticastService();
+            mss.NetworkInterfaceDiscovered += (s, e) => ready.Set();
+            mss.QueryReceived += (s, e) =>
             {
                 if ("some-service.local" == e.Message.Questions.First().Name)
                 {
@@ -50,16 +50,16 @@ namespace LUC.DiscoveryService
             };
             try
             {
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(ready.WaitOne(TimeSpan.FromSeconds(1)), "ready timeout");
-                mdns.SendQuery("some-service.local");
+                mss.SendQuery("some-service.local");
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "query timeout");
                 Assert.AreEqual("some-service.local", msg.Questions.First().Name);
                 Assert.AreEqual(DnsClass.IN, msg.Questions.First().Class);
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -70,25 +70,25 @@ namespace LUC.DiscoveryService
             var done = new ManualResetEvent(false);
             Message msg = null;
 
-            var mdns = new MulticastService();
-            mdns.NetworkInterfaceDiscovered += (s, e) => ready.Set();
-            mdns.QueryReceived += (s, e) =>
+            var mss = new MulticastService();
+            mss.NetworkInterfaceDiscovered += (s, e) => ready.Set();
+            mss.QueryReceived += (s, e) =>
             {
                 msg = e.Message;
                 done.Set();
             };
             try
             {
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(ready.WaitOne(TimeSpan.FromSeconds(1)), "ready timeout");
-                mdns.SendUnicastQuery("some-service.local");
+                mss.SendUnicastQuery("some-service.local");
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "query timeout");
                 Assert.AreEqual("some-service.local", msg.Questions.First().Name);
                 Assert.AreEqual(DnsClass.IN + 0x8000, msg.Questions.First().Class);
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -99,10 +99,10 @@ namespace LUC.DiscoveryService
             var done = new ManualResetEvent(false);
             Message response = null;
 
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
-                mdns.NetworkInterfaceDiscovered += (s, e) => mdns.SendQuery(service);
-                mdns.QueryReceived += (s, e) =>
+                mss.NetworkInterfaceDiscovered += (s, e) => mss.SendQuery(service);
+                mss.QueryReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Questions.Any(q => q.Name == service))
@@ -113,10 +113,10 @@ namespace LUC.DiscoveryService
                             Name = service,
                             Address = IPAddress.Parse("127.1.1.1")
                         });
-                        mdns.SendAnswer(res);
+                        mss.SendAnswer(res);
                     }
                 };
-                mdns.AnswerReceived += (s, e) =>
+                mss.AnswerReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Answers.Any(answer => answer.Name == service))
@@ -125,7 +125,7 @@ namespace LUC.DiscoveryService
                         done.Set();
                     }
                 };
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "answer timeout");
                 Assert.IsNotNull(response);
                 Assert.IsTrue(response.IsResponse);
@@ -150,10 +150,10 @@ namespace LUC.DiscoveryService
             });
             var packet = query.ToByteArray();
             var client = new UdpClient();
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
-                mdns.NetworkInterfaceDiscovered += (s, e) => ready.Set();
-                mdns.QueryReceived += (s, e) =>
+                mss.NetworkInterfaceDiscovered += (s, e) => ready.Set();
+                mss.QueryReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Questions.Any(q => q.Name == service))
@@ -164,10 +164,10 @@ namespace LUC.DiscoveryService
                             Name = service,
                             Address = IPAddress.Parse("127.1.1.1")
                         });
-                        mdns.SendAnswer(res, e);
+                        mss.SendAnswer(res, e);
                     }
                 };
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(ready.WaitOne(TimeSpan.FromSeconds(1)), "ready timeout");
                 await client.SendAsync(packet, packet.Length, "224.0.0.251", 5353);
 
@@ -191,12 +191,12 @@ namespace LUC.DiscoveryService
             var done = new ManualResetEvent(false);
             Message response = null;
 
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
-                mdns.UseIpv4 = true;
-                mdns.UseIpv6 = false;
-                mdns.NetworkInterfaceDiscovered += (s, e) => mdns.SendQuery(service);
-                mdns.QueryReceived += (s, e) =>
+                mss.UseIpv4 = true;
+                mss.UseIpv6 = false;
+                mss.NetworkInterfaceDiscovered += (s, e) => mss.SendQuery(service);
+                mss.QueryReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Questions.Any(q => q.Name == service))
@@ -207,10 +207,10 @@ namespace LUC.DiscoveryService
                             Name = service,
                             Address = IPAddress.Parse("127.1.1.1")
                         });
-                        mdns.SendAnswer(res);
+                        mss.SendAnswer(res);
                     }
                 };
-                mdns.AnswerReceived += (s, e) =>
+                mss.AnswerReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Answers.Any(answer => answer.Name == service))
@@ -219,7 +219,7 @@ namespace LUC.DiscoveryService
                         done.Set();
                     }
                 };
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "answer timeout");
                 Assert.IsNotNull(response);
                 Assert.IsTrue(response.IsResponse);
@@ -238,12 +238,12 @@ namespace LUC.DiscoveryService
             var done = new ManualResetEvent(false);
             Message response = null;
 
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
-                mdns.UseIpv4 = false;
-                mdns.UseIpv6 = true;
-                mdns.NetworkInterfaceDiscovered += (s, e) => mdns.SendQuery(service);
-                mdns.QueryReceived += (s, e) =>
+                mss.UseIpv4 = false;
+                mss.UseIpv6 = true;
+                mss.NetworkInterfaceDiscovered += (s, e) => mss.SendQuery(service);
+                mss.QueryReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Questions.Any(q => q.Name == service))
@@ -254,10 +254,10 @@ namespace LUC.DiscoveryService
                             Name = service,
                             Address = IPAddress.Parse("::2")
                         });
-                        mdns.SendAnswer(res);
+                        mss.SendAnswer(res);
                     }
                 };
-                mdns.AnswerReceived += (s, e) =>
+                mss.AnswerReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Answers.Any(answer => answer.Name == service))
@@ -266,7 +266,7 @@ namespace LUC.DiscoveryService
                         done.Set();
                     }
                 };
-                mdns.Start();
+                mss.Start();
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "answer timeout");
                 Assert.IsNotNull(response);
                 Assert.IsTrue(response.IsResponse);
@@ -283,9 +283,9 @@ namespace LUC.DiscoveryService
             var service = Guid.NewGuid().ToString() + ".local";
             var done = new ManualResetEvent(false);
 
-            var mdns = new MulticastService();
-            mdns.NetworkInterfaceDiscovered += (s, e) => mdns.SendQuery(service);
-            mdns.QueryReceived += (s, e) =>
+            var mss = new MulticastService();
+            mss.NetworkInterfaceDiscovered += (s, e) => mss.SendQuery(service);
+            mss.QueryReceived += (s, e) =>
             {
                 var msg = e.Message;
                 if (msg.Questions.Any(q => q.Name == service))
@@ -297,10 +297,10 @@ namespace LUC.DiscoveryService
                         Name = service,
                         Address = IPAddress.Parse("127.1.1.1")
                     });
-                    mdns.SendAnswer(res);
+                    mss.SendAnswer(res);
                 }
             };
-            mdns.AnswerReceived += (s, e) =>
+            mss.AnswerReceived += (s, e) =>
             {
                 var msg = e.Message;
                 if (msg.Answers.Any(a => a.Name == service))
@@ -310,12 +310,12 @@ namespace LUC.DiscoveryService
             };
             try
             {
-                mdns.Start();
+                mss.Start();
                 Assert.IsFalse(done.WaitOne(TimeSpan.FromSeconds(0.5)), "answer was not ignored");
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -323,14 +323,14 @@ namespace LUC.DiscoveryService
         public void Nics()
         {
             var done = new ManualResetEvent(false);
-            var mdns = new MulticastService();
+            var mss = new MulticastService();
             IEnumerable<NetworkInterface> nics = null;
-            mdns.NetworkInterfaceDiscovered += (s, e) =>
+            mss.NetworkInterfaceDiscovered += (s, e) =>
             {
                 nics = e.NetworkInterfaces;
                 done.Set();
             };
-            mdns.Start();
+            mss.Start();
             try
             {
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "timeout");
@@ -338,7 +338,7 @@ namespace LUC.DiscoveryService
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -346,9 +346,9 @@ namespace LUC.DiscoveryService
         public void SendQuery_TooBig()
         {
             var done = new ManualResetEvent(false);
-            var mdns = new MulticastService();
-            mdns.NetworkInterfaceDiscovered += (s, e) => done.Set();
-            mdns.Start();
+            var mss = new MulticastService();
+            mss.NetworkInterfaceDiscovered += (s, e) => done.Set();
+            mss.Start();
             try
             {
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "no nic");
@@ -357,12 +357,12 @@ namespace LUC.DiscoveryService
                 query.AdditionalRecords.Add(new NULLRecord { Name = "foo.bar.org", Data = new byte[9000] });
                 ExceptionAssert.Throws<ArgumentOutOfRangeException>(() =>
                 {
-                    mdns.SendQuery(query);
+                    mss.SendQuery(query);
                 });
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -370,9 +370,9 @@ namespace LUC.DiscoveryService
         public void SendAnswer_TooBig()
         {
             var done = new ManualResetEvent(false);
-            var mdns = new MulticastService();
-            mdns.NetworkInterfaceDiscovered += (s, e) => done.Set();
-            mdns.Start();
+            var mss = new MulticastService();
+            mss.NetworkInterfaceDiscovered += (s, e) => done.Set();
+            mss.Start();
             try
             {
                 Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(1)), "no nic");
@@ -381,12 +381,12 @@ namespace LUC.DiscoveryService
                 answer.Answers.Add(new NULLRecord { Name = "foo.bar.org", Data = new byte[9000] });
                 ExceptionAssert.Throws<ArgumentOutOfRangeException>(() =>
                 {
-                    mdns.SendAnswer(answer);
+                    mss.SendAnswer(answer);
                 });
             }
             finally
             {
-                mdns.Stop();
+                mss.Stop();
             }
         }
 
@@ -457,15 +457,15 @@ namespace LUC.DiscoveryService
         [TestMethod]
         public void Disposable()
         {
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
-                Assert.IsNotNull(mdns);
+                Assert.IsNotNull(mss);
             }
 
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
-                Assert.IsNotNull(mdns);
-                mdns.Start();
+                Assert.IsNotNull(mss);
+                mss.Start();
             }
         }
 
@@ -477,9 +477,9 @@ namespace LUC.DiscoveryService
             query.Questions.Add(new Question { Name = service, Type = DnsType.ANY });
             var cancellation = new CancellationTokenSource(2000);
 
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
-                mdns.QueryReceived += (s, e) =>
+                mss.QueryReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Questions.Any(q => q.Name == service))
@@ -490,11 +490,11 @@ namespace LUC.DiscoveryService
                             Name = service,
                             Address = IPAddress.Parse("127.1.1.1")
                         });
-                        mdns.SendAnswer(res);
+                        mss.SendAnswer(res);
                     }
                 };
-                mdns.Start();
-                var response = await mdns.ResolveAsync(query, cancellation.Token);
+                mss.Start();
+                var response = await mss.ResolveAsync(query, cancellation.Token);
                 Assert.IsNotNull(response, "no response");
                 Assert.IsTrue(response.IsResponse);
                 Assert.AreEqual(MessageStatus.NoError, response.Status);
@@ -512,12 +512,12 @@ namespace LUC.DiscoveryService
             query.Questions.Add(new Question { Name = service, Type = DnsType.ANY });
             var cancellation = new CancellationTokenSource(500);
 
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
-                mdns.Start();
+                mss.Start();
                 ExceptionAssert.Throws<TaskCanceledException>(() =>
                 {
-                    var _ = mdns.ResolveAsync(query, cancellation.Token).Result;
+                    var _ = mss.ResolveAsync(query, cancellation.Token).Result;
                 });
             }
         }
@@ -526,16 +526,16 @@ namespace LUC.DiscoveryService
         public async Task DuplicateResponse()
         {
             var service = Guid.NewGuid().ToString() + ".local";
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
                 var answerCount = 0;
-                mdns.NetworkInterfaceDiscovered += (s, e) =>
+                mss.NetworkInterfaceDiscovered += (s, e) =>
                 {
-                    mdns.SendQuery(service);
+                    mss.SendQuery(service);
                     Thread.Sleep(250);
-                    mdns.SendQuery(service);
+                    mss.SendQuery(service);
                 };
-                mdns.QueryReceived += (s, e) =>
+                mss.QueryReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Questions.Any(q => q.Name == service))
@@ -546,10 +546,10 @@ namespace LUC.DiscoveryService
                             Name = service,
                             Address = IPAddress.Parse("127.1.1.1")
                         });
-                        mdns.SendAnswer(res);
+                        mss.SendAnswer(res);
                     }
                 };
-                mdns.AnswerReceived += (s, e) =>
+                mss.AnswerReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Answers.Any(answer => answer.Name == service))
@@ -557,7 +557,7 @@ namespace LUC.DiscoveryService
                         ++answerCount;
                     };
                 };
-                mdns.Start();
+                mss.Start();
                 await Task.Delay(1000);
                 Assert.AreEqual(1, answerCount);
             }
@@ -569,16 +569,16 @@ namespace LUC.DiscoveryService
         {
             var service = Guid.NewGuid().ToString() + ".local";
 
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
                 var answerCount = 0;
-                mdns.NetworkInterfaceDiscovered += (s, e) =>
+                mss.NetworkInterfaceDiscovered += (s, e) =>
                 {
-                    mdns.SendQuery(service);
+                    mss.SendQuery(service);
                     Thread.Sleep(250);
-                    mdns.SendQuery(service);
+                    mss.SendQuery(service);
                 };
-                mdns.QueryReceived += (s, e) =>
+                mss.QueryReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Questions.Any(q => q.Name == service))
@@ -589,10 +589,10 @@ namespace LUC.DiscoveryService
                             Name = service,
                             Address = IPAddress.Parse("127.1.1.1")
                         });
-                        mdns.SendAnswer(res, checkDuplicate: false);
+                        mss.SendAnswer(res, checkDuplicate: false);
                     }
                 };
-                mdns.AnswerReceived += (s, e) =>
+                mss.AnswerReceived += (s, e) =>
                 {
                     var msg = e.Message;
                     if (msg.Answers.Any(answer => answer.Name == service))
@@ -600,11 +600,11 @@ namespace LUC.DiscoveryService
                         ++answerCount;
                     };
                 };
-                mdns.Start();
+                mss.Start();
                 await Task.Delay(2000);
                 Assert.AreEqual(1, answerCount);
 
-                mdns.SendQuery(service);
+                mss.SendQuery(service);
                 await Task.Delay(2000);
                 Assert.AreEqual(2, answerCount);
             }
@@ -615,14 +615,14 @@ namespace LUC.DiscoveryService
         {
             var ready1 = new ManualResetEvent(false);
             var ready2 = new ManualResetEvent(false);
-            using (var mdns1 = new MulticastService())
-            using (var mdns2 = new MulticastService())
+            using (var mss1 = new MulticastService())
+            using (var mss2 = new MulticastService())
             {
-                mdns1.NetworkInterfaceDiscovered += (s, e) => ready1.Set();
-                mdns1.Start();
+                mss1.NetworkInterfaceDiscovered += (s, e) => ready1.Set();
+                mss1.Start();
 
-                mdns2.NetworkInterfaceDiscovered += (s, e) => ready2.Set();
-                mdns2.Start();
+                mss2.NetworkInterfaceDiscovered += (s, e) => ready2.Set();
+                mss2.Start();
 
                 Assert.IsTrue(ready1.WaitOne(TimeSpan.FromSeconds(1)), "ready1 timeout");
                 Assert.IsTrue(ready2.WaitOne(TimeSpan.FromSeconds(1)), "ready2 timeout");
@@ -633,14 +633,14 @@ namespace LUC.DiscoveryService
         public void MalformedMessage()
         {
             byte[] malformedMessage = null;
-            using (var mdns = new MulticastService())
+            using (var mss = new MulticastService())
             {
-                mdns.MalformedMessage += (s, e) => malformedMessage = e;
+                mss.MalformedMessage += (s, e) => malformedMessage = e;
 
                 var msg = new byte[] { 0xff };
                 var endPoint = new IPEndPoint(IPAddress.Loopback, 5353);
                 var udp = new UdpReceiveResult(msg, endPoint);
-                mdns.OnDnsMessage(this, udp);
+                mss.OnDnsMessage(this, udp);
 
                 CollectionAssert.AreEqual(msg, malformedMessage);
             }
