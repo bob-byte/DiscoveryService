@@ -22,13 +22,11 @@ namespace LUC.DiscoveryService
         private static DiscoveryService instance;
         private readonly ConnectionPool connectionPool;
 
-        /// <summary>
-        /// To avoid sending recent duplicate messages
-        /// </summary>
-        private readonly RecentMessages sentMessages = new RecentMessages();
-
         private Boolean isDiscoveryServiceStarted = false;
 
+        //
+        // Kademilia contacts
+        //
         private static readonly ConcurrentDictionary<UInt32, ConcurrentDictionary<BigInteger, Contact>> knownContacts = new ConcurrentDictionary<UInt32, ConcurrentDictionary<BigInteger, Contact>>();
 
         /// <summary>
@@ -193,11 +191,6 @@ namespace LUC.DiscoveryService
                         groupsIds: GroupsSupported?.Keys?.ToList());
                     var bytesToSend = tcpMessage.ToByteArray();
 
-                    if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytesToSend)))
-                    {
-                        return;
-                    }
-
                     var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
 
                     ConnectionPoolSocket client = null;
@@ -278,7 +271,7 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// Sends query to all services in a local network
+        /// Sends multicast message
         /// </summary>
         public void QueryAllServices()
         {

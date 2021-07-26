@@ -22,7 +22,7 @@ namespace LUC.DiscoveryService
     class Client : AbstractService, IDisposable
     {
         private const Int32 BackLog = Int32.MaxValue;
-        private const Int32 CountStoragedAcceptedSockets = 16;
+        private const Int32 TcpMaxSockets = 16;
 
         private static readonly IPAddress MulticastAddressIp4 = IPAddress.Parse("224.0.0.251");
         private readonly IPEndPoint MulticastEndpointIp4;
@@ -172,8 +172,6 @@ namespace LUC.DiscoveryService
                 }
             }
 
-            //add call method DiscoveryRunAsync (realization in KUdpMulticastDiscovery). We don't need chain of methods to realize DiscoveryRunAsync, we only need SocketSendToAsync
-
             foreach (var r in udpReceivers)
             {
                 ListenUdp(r);
@@ -256,7 +254,7 @@ namespace LUC.DiscoveryService
                             RemoteEndPoint = taskReceiving.Result.RemoteEndPoint
                         };
 
-                        UdpMessageReceived.Invoke(receiver, eventArgs);
+                        UdpMessageReceived?.Invoke(receiver, eventArgs);
                         //await Task.Run(() => UdpMessageReceived.Invoke(receiver, eventArgs)).
                         //ConfigureAwait(continueOnCapturedContext: false);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
@@ -289,14 +287,14 @@ namespace LUC.DiscoveryService
             {
                 try
                 {
-                    var task = receiver.ReceiveAsync(Constants.ReceiveTimeout, CountStoragedAcceptedSockets);
+                    var task = receiver.ReceiveAsync(Constants.ReceiveTimeout, TcpMaxSockets);
 
                     _ = task.ContinueWith(x => ListenTcp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     //using tasks provides unblocking event calls
                     _ = task.ContinueWith(taskReceiving =>
                     {
-                        TcpMessageReceived.Invoke(receiver, taskReceiving.Result);
+                        TcpMessageReceived?.Invoke(receiver, taskReceiving.Result);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(false);
@@ -308,13 +306,13 @@ namespace LUC.DiscoveryService
                 catch (SocketException e)
                 {
                     //TODO don't return. Change absolutely TCP port (in TcpListener), but take into account maxValueTcpPort
-                    log.LogError($"Failed to listen TCP message:\n" +
+                    log.LogError($"Failed to listen on TCP port.\n" +
                         $"{e}");
                     return;
                 }
                 catch(TimeoutException e)
                 {
-                    log.LogError($"Failed to listen TCP message:\n" +
+                    log.LogError($"Failed to listen on TCP port.\n" +
                         $"{e}");
                 }
             });

@@ -319,61 +319,60 @@ namespace LUC.DiscoveryService
         /// </remarks>
         private void OnUdpMessage(Object sender, UdpMessageEventArgs result)
         {
-            //lock (this)
-            //{
-                if (result.Buffer.Length > MaxDatagramSize)
-                {
-                    return;
-                }
+            if (result.Buffer.Length > MaxDatagramSize)
+            {
+                return;
+            }
 
-                //If recently received, then ignore.
-                //if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(result.Buffer))
-                //{
-                //    return;
-                //}
+            UdpMessage message = new UdpMessage();
+            try
+            {
+                message.Read(result.Buffer);
+            }
+            catch (ArgumentNullException ex)
+            {
+                // ignore malformed message
+                // HandleMalformedMessage(ex, sender, result.Buffer);
+                return;
+            }
+            catch(EndOfStreamException ex)
+            {
+                // ignore malformed message
+                // HandleMalformedMessage(ex, sender, result.Buffer);
+                return;
+            }
 
-                UdpMessage message = new UdpMessage();
+            // If recently received, then ignore.
+            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(message.MessageId))
+            {
+                return;
+            }
+
+            if ((message.ProtocolVersion == ProtocolVersion) ||
+                (message.MachineId != MachineId))
+            {
+                result.SetMessage(message);
+
                 try
                 {
-                    message.Read(result.Buffer);
+                    QueryReceived?.Invoke(sender, result);
                 }
-                catch (ArgumentNullException ex)
+                catch (TimeoutException e)
                 {
-                    HandleMalformedMessage(ex, sender, result.Buffer);
-                    return;
+                    log.LogError($"Receive handler failed: {e.Message}");
+                    // eat the exception
                 }
-                catch(EndOfStreamException ex)
+                catch (SocketException e)
                 {
-                    HandleMalformedMessage(ex, sender, result.Buffer);
-                    return;
+                    log.LogError($"Receive handler failed: {e.Message}");
+                    // eat the exception
                 }
-
-                if ((message.ProtocolVersion == ProtocolVersion) ||
-                    (message.MachineId != MachineId))
+                catch (EndOfStreamException e)
                 {
-                    result.SetMessage(message);
-
-                    try
-                    {
-                        QueryReceived?.Invoke(sender, result);
-                    }
-                    catch (TimeoutException e)
-                    {
-                        log.LogError($"Receive handler failed: {e.Message}");
-                        // eat the exception
-                    }
-                    catch (SocketException e)
-                    {
-                        log.LogError($"Receive handler failed: {e.Message}");
-                        // eat the exception
-                    }
-                    catch (EndOfStreamException e)
-                    {
-                        log.LogError($"Receive handler failed: {e.Message}");
-                        // eat the exception
-                    }
+                    log.LogError($"Receive handler failed: {e.Message}");
+                    // eat the exception
                 }
-            //}
+            }
         }
 
         /// <summary>
