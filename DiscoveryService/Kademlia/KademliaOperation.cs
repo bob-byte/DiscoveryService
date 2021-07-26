@@ -105,7 +105,8 @@ namespace LUC.DiscoveryService.Kademlia
             response = null;
             var bytesOfRequest = request.ToByteArray();
 
-            var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
+            var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, 
+                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
 
             try
             {

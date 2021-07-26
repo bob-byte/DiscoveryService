@@ -126,7 +126,7 @@ namespace LUC.DiscoveryService
 
             Service.QueryReceived += SendTcpMessage;
             Service.AnswerReceived += AddEndpoint;
-            //Service.AnswerReceived += Service.TryKademliaOperation;
+            Service.AnswerReceived += Service.TryKademliaOperation;
             Service.PingReceived += (invokerEvent, eventArgs) =>
             {
                 SendKademliaResponse<PingRequest>(eventArgs.AcceptedSocket, eventArgs, funcSend: (acceptedSocket, request) =>
