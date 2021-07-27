@@ -448,12 +448,14 @@ namespace LUC.DiscoveryService
                 {
                     if ((tcpMessage != null) && (receiveResult.SendingEndPoint is IPEndPoint ipEndPoint))
                     {
-                        //Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
-                        //Protocol.Store(DistributedHashTable.OurContact, 
-                        //    DiscoveryService.KnownContacts(ProtocolVersion)[0].ID, MachineId);
-                        //Protocol.FindNode(DistributedHashTable.OurContact,
-                        //    DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
-                        //Protocol.FindValue(DistributedHashTable.OurContact, DiscoveryService.KnownContacts(ProtocolVersion)[0].ID);
+                        var knownContact = new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address);
+                        DistributedHashTable.Node.PingRemoteContact(DistributedHashTable.OurContact, knownContact);
+
+                        var key = DiscoveryService.KnownContacts(ProtocolVersion)[tcpMessage.IdOfSendingContact].ID;
+
+                        DistributedHashTable.Node.Store(DistributedHashTable.OurContact, key, MachineId, knownContact);
+                        DistributedHashTable.Node.FindNode(OurContact, key, knownContact);
+                        DistributedHashTable.Node.FindValue(OurContact, key, knownContact);
 
                         DistributedHashTable.Bootstrap(knownPeer: new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address));
                     }

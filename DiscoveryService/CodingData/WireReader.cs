@@ -236,17 +236,17 @@ namespace LUC.DiscoveryService.CodingData
         public Contact ReadContact()
         {
             var idAsBigInt = ReadBigInteger();
-
             var tcpPort = ReadUInt16();
-            var addressesCount = ReadUInt32();
+            var lastSeen = DateTime.Parse(ReadString());
 
+            var addressesCount = ReadUInt32();
             ICollection<IPAddress> addresses = new List<IPAddress>((Int32)addressesCount);
             for (Int32 numAddress = 0; numAddress < addressesCount; numAddress++)
             {
                 addresses.Add(IPAddress.Parse(ReadString()));
             }
 
-            Contact contact = new Contact(new ID(idAsBigInt), tcpPort, addresses);
+            Contact contact = new Contact(new ID(idAsBigInt), tcpPort, addresses, lastSeen);
             return contact;
         }
 

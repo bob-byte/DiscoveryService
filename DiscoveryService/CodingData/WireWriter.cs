@@ -247,8 +247,9 @@ namespace LUC.DiscoveryService.CodingData
         {
             Write(contact.ID.Value);
             Write(contact.TcpPort);
-            Write((UInt32)contact.IpAddressesCount);
+            Write(contact.LastSeen.ToString());
 
+            Write((UInt32)contact.IpAddressesCount);
             var addresses = contact.IpAddresses();
             foreach (var address in addresses)
             {

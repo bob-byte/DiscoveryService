@@ -40,11 +40,16 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(ID contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses)
-            : this(contactID, tcpPort)
+        public Contact(ID contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen)
         {
+            ID = contactID;
+            TcpPort = tcpPort;
+            ipAddresses = new List<IPAddress>();
+            lockIpAddresses = new Object();
+
             this.ipAddresses = ipAddresses.ToList();
             LastActiveIpAddress = ipAddresses.Last();
+            LastSeen = lastSeen;
         }
 
         public DateTime LastSeen { get; set; }

@@ -91,13 +91,14 @@ namespace LUC.DiscoveryService.Kademlia
             response = null;
             var bytesOfRequest = request.ToByteArray();
 
-            var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, 
-                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
-            
+            ConnectionPoolSocket client = null;
             try
             {
+                client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
+                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
+
                 //clean extra bytes
-                if(client.Available > 0)
+                if (client.Available > 0)
                 {
                     client.Receive(Constants.ReceiveTimeout);
                 }
@@ -144,7 +145,7 @@ namespace LUC.DiscoveryService.Kademlia
             }
             finally
             {
-                client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+                client?.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
             }
         }
 

@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             if (request?.RandomID != default)
             {
-                var response = new StoreResponse
+                var response = new PingResponse
                 {
                     MessageOperation = MessageOperation.PingResponse,
                     RandomID = request.RandomID
