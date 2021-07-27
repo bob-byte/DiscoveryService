@@ -15,6 +15,8 @@ namespace LUC.DiscoveryService.Kademlia
         private readonly List<IPAddress> ipAddresses;
         private IPAddress lastActiveIpAddress;
 
+        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
+
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
