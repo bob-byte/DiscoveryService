@@ -112,9 +112,8 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesOfRequest, 
                     Constants.SendTimeout, Constants.ConnectTimeout, ref client);
-                log.LogInfo($"Request {request.GetType().Name}:\n" +
-                            $"{request}\n" +
-                            $"is sent to {client.Id}");
+                log.LogInfo($"Request {request.GetType().Name} is sent to {client.Id}:\n" +
+                            $"{request}\n");
 
                 Int32 countToCheck = 0;
                 while((client.Available == 0) && (countToCheck <= Constants.MaxCheckAvailableData))
@@ -232,7 +231,7 @@ namespace LUC.DiscoveryService.Kademlia
             }
             else
             {
-                rpcError.IDMismatchError = true;
+                rpcError.IDMismatchError = false;
             }
 
             log.LogInfo(rpcError.ToString());

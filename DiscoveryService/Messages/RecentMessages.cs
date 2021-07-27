@@ -21,7 +21,7 @@ namespace LUC.DiscoveryService.Messages
         ///   The key is the Base64 encoding of the MD5 hash of 
         ///   a message and the value is when the message was seen.
         /// </value>
-        public ConcurrentDictionary<string, DateTime> Messages = new ConcurrentDictionary<UInt32, DateTime>();
+        public ConcurrentDictionary<UInt32, DateTime> Messages = new ConcurrentDictionary<UInt32, DateTime>();
 
         /// <summary>
         ///   The time interval used to determine if a message is recent.

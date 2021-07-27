@@ -104,14 +104,6 @@ namespace LUC.DiscoveryService
         public event EventHandler<TcpMessageEventArgs> FindValueReceived;
 
         /// <summary>
-        ///   Raised when message is received that cannot be decoded.
-        /// </summary>
-        /// <value>
-        ///   The message as a byte array.
-        /// </value>
-        public event EventHandler<Byte[]> MalformedMessage;
-
-        /// <summary>
         ///   Create a new instance of the <see cref="NetworkEventHandler"/> class.
         /// </summary>
         /// <param name="filter">
@@ -130,7 +122,7 @@ namespace LUC.DiscoveryService
 
             networkInterfacesFilter = filter;
 
-            IgnoreDuplicateMessages = true;
+            IgnoreDuplicateMessages = false;
         }
 
         public Contact OurContact { get; }
@@ -343,13 +335,11 @@ namespace LUC.DiscoveryService
             }
 
             // If recently received, then ignore.
-            if (IgnoreDuplicateMessages && !receivedMessages.TryAdd(message.MessageId))
-            {
-                return;
-            }
+            var isRecentlyReceived = !receivedMessages.TryAdd(message.MessageId);
 
-            if ((message.ProtocolVersion == ProtocolVersion) ||
-                (message.MachineId != MachineId))
+            if ((!IgnoreDuplicateMessages || !isRecentlyReceived) && 
+                ((message.ProtocolVersion == ProtocolVersion) ||
+                (message.MachineId != MachineId)))
             {
                 result.SetMessage(message);
 
@@ -431,7 +421,7 @@ namespace LUC.DiscoveryService
                 }
                 catch(EndOfStreamException ex)
                 {
-                    HandleMalformedMessage(ex, sender, receiveResult.Buffer);
+                    log.LogError($"Received malformed message: {ex}");
                 }
                 catch (SocketException ex)
                 {
@@ -448,12 +438,6 @@ namespace LUC.DiscoveryService
             receiveResult.SetMessage(request);
 
             receiveEvent?.Invoke(sender, receiveResult);
-        }
-
-        private void HandleMalformedMessage(Exception exception, Object sender, Byte[] malformedMessage)
-        {
-            log.LogError($"Received malformed message: {exception}");
-            MalformedMessage?.Invoke(sender, malformedMessage);
         }
 
         public void TryKademliaOperation(Object sender, TcpMessageEventArgs receiveResult)

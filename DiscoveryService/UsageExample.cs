@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 
@@ -42,19 +41,6 @@ namespace LUC.DiscoveryService
         /// This property is populated when OnGoodTcpMessage event arrives.
         /// </remarks>
         public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
-
-        private static void OnBadMessage(Object sender, Byte[] packet)
-        {
-            lock (ttyLock)
-            {
-                Console.WriteLine(">>> {0:O} <<<", DateTime.Now);
-                Console.WriteLine("Malformed message (base64)");
-                Console.WriteLine(Convert.ToBase64String(packet));
-                // log message
-            }
-
-            Environment.Exit(1);
-        }
 
         private static void OnGoodTcpMessage(Object sender, TcpMessageEventArgs e)
         {
@@ -152,7 +138,6 @@ namespace LUC.DiscoveryService
 
             serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;
             serviceDiscovery.Service.QueryReceived += OnGoodUdpMessage;
-            serviceDiscovery.Service.MalformedMessage += OnBadMessage;
 
             serviceDiscovery.Service.PingReceived += OnPingReceived;
             serviceDiscovery.Service.StoreReceived += OnStoreReceived;
@@ -171,10 +156,10 @@ namespace LUC.DiscoveryService
                 "in order to receive TCP answers, press any key each time.\n" +
                 "If you want to stop, press Esc");
 
-            ConsoleKey pressedKey = default;
             while (true)
             {
-                pressedKey = Console.ReadKey(intercept: true).Key;//does not display pressed key
+                var pressedKey = Console.ReadKey(intercept: true).Key;//does not display pressed key
+
                 if (pressedKey != ConsoleKey.Escape)
                 {
                     serviceDiscovery.QueryAllServices();

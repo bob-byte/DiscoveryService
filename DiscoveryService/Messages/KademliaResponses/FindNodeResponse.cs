@@ -18,7 +18,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
     {
         public ICollection<Contact> CloseSenderContacts { get; set; }
 
-        public static void SendOurCloseContactsAndPort(Socket sender, IEnumerable<Contact> closeContactsToLocalContactId, 
+        public static void SendOurCloseContacts(Socket sender, IEnumerable<Contact> closeContactsToLocalContactId, 
             TimeSpan timeoutToSend, FindNodeRequest message)
         {
             if (message?.RandomID != default)

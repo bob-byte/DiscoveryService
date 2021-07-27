@@ -145,7 +145,7 @@ namespace LUC.DiscoveryService
                 SendKademliaResponse<FindNodeRequest>(eventArgs.AcceptedSocket, eventArgs, (client, request) =>
                 {
                     var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), exclude: new ID(default(BigInteger)));
-                    FindNodeResponse.SendOurCloseContactsAndPort(client, closeContacts, Constants.SendTimeout, request);
+                    FindNodeResponse.SendOurCloseContacts(client, closeContacts, Constants.SendTimeout, request);
                 });
             };
 
@@ -190,29 +190,7 @@ namespace LUC.DiscoveryService
                     groupsIds: GroupsSupported?.Keys?.ToList());
                 var bytesToSend = tcpMessage.ToByteArray();
 
-                if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytesToSend)))
-                {
-<<<<<<< HEAD
-                    return;
-                }
-
                 var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
-=======
-                    var sendingContact = Service.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
-
-                    Random random = new Random();
-                    var tcpMessage = new AcknowledgeTcpMessage(
-                        messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                        MachineId,
-                        sendingContact.ID.Value,
-                        RunningTcpPort,
-                        ProtocolVersion,
-                        groupsIds: GroupsSupported?.Keys?.ToList());
-                    var bytesToSend = tcpMessage.ToByteArray();
-
-                    var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
->>>>>>> d5bfc6da7ce5527fb6a841de2b280f0f5b87db26
-
                 ConnectionPoolSocket client = null;
                 try
                 {

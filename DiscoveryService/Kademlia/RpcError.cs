@@ -8,10 +8,11 @@ namespace LUC.DiscoveryService.Kademlia
 {
     public class RpcError : Message
     {
-        public bool HasError { get { return TimeoutError || IDMismatchError || PeerError; } }
+        public Boolean HasError => 
+            TimeoutError || IDMismatchError || PeerError;
 
         public bool TimeoutError { get; set; }
-        public bool IDMismatchError { get; set; }
+        public Boolean IDMismatchError { get; set; }
         public bool PeerError { get; set; }
         public string PeerErrorMessage { get; set; }
 
