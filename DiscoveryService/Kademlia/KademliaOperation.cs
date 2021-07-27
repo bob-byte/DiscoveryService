@@ -106,14 +106,15 @@ namespace LUC.DiscoveryService.Kademlia
             var bytesOfRequest = request.ToByteArray();
 
             var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, 
-                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
+                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
 
             try
             {
                 ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesOfRequest, 
                     Constants.SendTimeout, Constants.ConnectTimeout, ref client);
-                log.LogInfo($"Request {request.GetType().Name} is sent to {client.Id}:\n" +
-                            $"{request}");
+                log.LogInfo($"Request {request.GetType().Name}:\n" +
+                            $"{request}\n" +
+                            $"is sent to {client.Id}");
 
                 Int32 countToCheck = 0;
                 while((client.Available == 0) && (countToCheck <= Constants.MaxCheckAvailableData))

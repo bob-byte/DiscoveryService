@@ -54,7 +54,7 @@ namespace LUC.DiscoveryService
 
         private readonly ConcurrentQueue<Socket> acceptedSockets = new ConcurrentQueue<Socket>();
 
-        private async Task<Socket> AcceptedSocketAsync(Int32 maxAcceptedSockets, TimeSpan howOftenCheckAcceptedClient)
+        private async Task<Socket> AcceptedSocketAsync(Int32 lengthStorageOfAcceptedSockets, TimeSpan howOftenCheckAcceptedClient)
         {
             if (acceptDone == null)
             {
@@ -63,7 +63,7 @@ namespace LUC.DiscoveryService
 
             Task.Run(async () =>
             {
-                if(acceptedSockets.Count >= maxAcceptedSockets)
+                if(acceptedSockets.Count >= lengthStorageOfAcceptedSockets)
                 {
                     acceptedSockets.TryDequeue(out _);
                 }
@@ -104,7 +104,7 @@ namespace LUC.DiscoveryService
             return acceptedSocket;
         }
 
-        public async Task<TcpMessageEventArgs> ReceiveAsync(TimeSpan timeoutToRead, Int32 maxAcceptedSockets)
+        public async Task<TcpMessageEventArgs> ReceiveAsync(TimeSpan timeoutToRead, Int32 lengthStorageOfAcceptedSockets)
         {
             IPEndPoint ipEndPoint;
             Socket clientToReadMessage;
@@ -112,7 +112,7 @@ namespace LUC.DiscoveryService
 
             try
             {
-                clientToReadMessage = await AcceptedSocketAsync(maxAcceptedSockets, howOftenCheckAcceptedClient);
+                clientToReadMessage = await AcceptedSocketAsync(lengthStorageOfAcceptedSockets, howOftenCheckAcceptedClient);
                 if (receiveDone == null)
                 {
                     receiveDone = new AutoResetEvent(initialState: false);

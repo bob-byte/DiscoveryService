@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using System.Threading;
 using System.Numerics;
+using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService
 {
@@ -20,15 +21,14 @@ namespace LUC.DiscoveryService
     public class DiscoveryService : AbstractService
     {
         private static DiscoveryService instance;
+        private readonly AppDomain dsDomain = AppDomain.CreateDomain("discoveryService");
         private readonly ConnectionPool connectionPool;
-
-        /// <summary>
-        /// To avoid sending recent duplicate messages
-        /// </summary>
-        private readonly RecentMessages sentMessages = new RecentMessages();
 
         private Boolean isDiscoveryServiceStarted = false;
 
+        //
+        // Kademilia contacts
+        //
         private static readonly ConcurrentDictionary<UInt32, ConcurrentDictionary<BigInteger, Contact>> knownContacts = new ConcurrentDictionary<UInt32, ConcurrentDictionary<BigInteger, Contact>>();
 
         /// <summary>
@@ -42,12 +42,6 @@ namespace LUC.DiscoveryService
         ///   When an answer containing type 1 received this event is raised.
         /// </remarks>
         public event EventHandler<TcpMessageEventArgs> ServiceInstanceShutdown;
-
-        static DiscoveryService()
-        {
-            AppDomain.CurrentDomain.DomainUnload += StopDiscovery;
-            AppDomain.CurrentDomain.ProcessExit += StopDiscovery;
-        }
 
         private DiscoveryService(ServiceProfile profile)
         {
@@ -65,6 +59,9 @@ namespace LUC.DiscoveryService
                 MachineId = profile.MachineId;
                 connectionPool = ConnectionPool.Instance();
 
+                dsDomain.DomainUnload += StopDiscovery;
+                dsDomain.ProcessExit += StopDiscovery;
+                
                 InitService();
             }
         }
@@ -173,14 +170,34 @@ namespace LUC.DiscoveryService
         /// <param name="e">
         ///  Information about UDP sender, that we have received.
         /// </param>
-        public void SendTcpMessage(Object sender, UdpMessageEventArgs e)
+        public async void SendTcpMessage(Object sender, UdpMessageEventArgs e)
         {
-            lock(this)
-            {
+            //lock(this)
+            //{
                 var udpMessage = e.Message<UdpMessage>(whetherReadMessage: false);
 
-                if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
+            if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
+            {
+                var sendingContact = Service.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
+
+                Random random = new Random();
+                var tcpMessage = new AcknowledgeTcpMessage(
+                    messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                    MachineId,
+                    sendingContact.ID.Value,
+                    RunningTcpPort,
+                    ProtocolVersion,
+                    groupsIds: GroupsSupported?.Keys?.ToList());
+                var bytesToSend = tcpMessage.ToByteArray();
+
+                if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytesToSend)))
                 {
+<<<<<<< HEAD
+                    return;
+                }
+
+                var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
+=======
                     var sendingContact = Service.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
 
                     Random random = new Random();
@@ -193,34 +210,31 @@ namespace LUC.DiscoveryService
                         groupsIds: GroupsSupported?.Keys?.ToList());
                     var bytesToSend = tcpMessage.ToByteArray();
 
-                    if ((Service.IgnoreDuplicateMessages) && (!sentMessages.TryAdd(bytesToSend)))
-                    {
-                        return;
-                    }
-
                     var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
+>>>>>>> d5bfc6da7ce5527fb6a841de2b280f0f5b87db26
 
-                    ConnectionPoolSocket client = null;
-                    try
-                    {
-                        client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                        IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).
-                        GetAwaiter().
-                        GetResult();
-
-                        ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout, 
-                            Constants.ConnectTimeout, ref client);
-                    }
-                    finally
-                    {
-                        client?.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
-                    }
-                }
-                else
+                ConnectionPoolSocket client = null;
+                try
                 {
-                    throw new ArgumentException($"Bad format of {nameof(e)}");
+                    client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
+                    IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
+
+                    ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
+                        Constants.ConnectTimeout, ref client);
+                }
+                finally
+                {
+                    if (client != null)
+                    {
+                        await client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+                    }
                 }
             }
+            else
+            {
+                throw new ArgumentException($"Bad format of {nameof(e)}");
+            }
+            //}
         }
 
         public void AddEndpoint(Object sender, TcpMessageEventArgs e)
@@ -278,7 +292,7 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// Sends query to all services in a local network
+        /// Sends multicast message
         /// </summary>
         public void QueryAllServices()
         {

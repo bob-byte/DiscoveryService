@@ -21,7 +21,7 @@ namespace LUC.DiscoveryService.Messages
         ///   The key is the Base64 encoding of the MD5 hash of 
         ///   a message and the value is when the message was seen.
         /// </value>
-        public ConcurrentDictionary<string, DateTime> Messages = new ConcurrentDictionary<string, DateTime>();
+        public ConcurrentDictionary<string, DateTime> Messages = new ConcurrentDictionary<UInt32, DateTime>();
 
         /// <summary>
         ///   The time interval used to determine if a message is recent.
@@ -38,10 +38,10 @@ namespace LUC.DiscoveryService.Messages
         ///   <b>true</b> if the message, did not already exist; otherwise,
         ///   <b>false</b> the message exists within the <see cref="Interval"/>.
         /// </returns>
-        public bool TryAdd(byte[] message)
+        public bool TryAdd(UInt32 messageId)
         {
             Prune();
-            return Messages.TryAdd(GetId(message), DateTime.Now);
+            return Messages.TryAdd(messageId, DateTime.Now);
         }
 
         /// <summary>
@@ -66,24 +66,6 @@ namespace LUC.DiscoveryService.Messages
                 }
             }
             return count;
-        }
-
-        /// <summary>
-        ///   Gets a unique ID for a message.
-        /// </summary>
-        /// <param name="message">
-        ///   The binary representation of a message.
-        /// </param>
-        /// <returns>
-        ///   The Base64 encoding of the MD5 hash of the <paramref name="message"/>.
-        /// </returns>
-        public string GetId(byte[] message)
-        {
-            // MD5 is okay because the hash is not used for security.
-            using (HashAlgorithm hasher = MD5.Create())
-            {
-                return Convert.ToBase64String(hasher.ComputeHash(message));
-            }
         }
     }
 }
