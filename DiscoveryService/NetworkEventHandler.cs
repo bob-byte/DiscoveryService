@@ -338,7 +338,7 @@ namespace LUC.DiscoveryService
             var isRecentlyReceived = !receivedMessages.TryAdd(message.MessageId);
 
             if ((!IgnoreDuplicateMessages || !isRecentlyReceived) && 
-                ((message.ProtocolVersion == ProtocolVersion) ||
+                ((message.ProtocolVersion == ProtocolVersion) &&
                 (message.MachineId != MachineId)))
             {
                 result.SetMessage(message);
@@ -384,7 +384,6 @@ namespace LUC.DiscoveryService
                     DistributedHashTable.OurContact.LastActiveIpAddress = lastActiveAddress;
 
                     Message message = receiveResult.Message<Message>();
-
                     switch (message.MessageOperation)
                     {
                         case MessageOperation.Acknowledge:

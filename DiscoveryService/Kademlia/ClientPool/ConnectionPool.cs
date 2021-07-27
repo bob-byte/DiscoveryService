@@ -295,7 +295,11 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                         {
                             log.LogInfo($"Pool received expired Socket {socketInPool.Id}; destroying it");
                         }
-                        socketInPool.Dispose();
+
+                        if(socketInPool.State != SocketState.Closed)
+                        {
+                            socketInPool.Dispose();
+                        }
 
                         isReturned = false;
                     }

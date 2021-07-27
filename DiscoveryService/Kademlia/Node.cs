@@ -72,7 +72,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
-            bucketList.AddContact(sender);
+            bucketList.AddContact(ref sender);
 
             return ourContact;
         }
@@ -104,7 +104,7 @@ namespace LUC.DiscoveryService.Kademlia
         public void Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
         {
             Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
-            bucketList.AddContact(sender);
+            bucketList.AddContact(ref sender);
 
             if (isCached)
             {
@@ -146,7 +146,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
-            bucketList.AddContact(sender);
+            bucketList.AddContact(ref sender);
 
             // Exclude sender.
             var contacts = bucketList.GetCloseContacts(key, sender.ID);
@@ -178,7 +178,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
-            bucketList.AddContact(sender);
+            bucketList.AddContact(ref sender);
 
             if (storage.Contains(key))
             {

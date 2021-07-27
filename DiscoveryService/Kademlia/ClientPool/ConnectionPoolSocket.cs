@@ -106,7 +106,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
             else if (!Pool.ConnectionSettings.ConnectionReset || Pool.ConnectionSettings.DeferConnectionReset)
             {
-                return await Pool.ReturnToPoolAsync(ioBehavior, RemoteEndPoint).ConfigureAwait(continueOnCapturedContext: false);
+                return await Pool.ReturnToPoolAsync(ioBehavior, Id).ConfigureAwait(continueOnCapturedContext: false);
             }
             else
             {
@@ -158,7 +158,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
             finally
             {
-                Dispose(disposing: true);
+                base.Dispose();
             }
         }
 

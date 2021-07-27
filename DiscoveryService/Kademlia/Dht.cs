@@ -139,12 +139,12 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         public RpcError Bootstrap(Contact knownPeer)
         {
-            node.BucketList.AddContact(knownPeer);
+            node.BucketList.AddContact(ref knownPeer);
             var (contacts, error) = Node.FindNode(ourContact, ourContact.ID, knownPeer);
 
             if (!error.HasError)
             {
-                contacts.ForEach(c => node.BucketList.AddContact(c));
+                contacts.ForEach(c => node.BucketList.AddContact(ref c));
 
                 KBucket knownPeerBucket = node.BucketList.GetKBucket(knownPeer.ID);
                 // Resolve the list now, so we don't include additional contacts as we add to our bucket additional contacts.
@@ -527,7 +527,7 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 var (newContacts, timeoutError) = Node.FindNode(ourContact, rndId, contact);
                 HandleError(timeoutError, contact);
-                newContacts?.ForEach(otherContact => node.BucketList.AddContact(otherContact));
+                newContacts?.ForEach(otherContact => node.BucketList.AddContact(ref otherContact));
             });
         }
     }

@@ -256,12 +256,12 @@ namespace LUC.DiscoveryService
                 receiveDone = new AutoResetEvent(initialState: false);
             }
 
-            Boolean isTimeout;
+            Boolean isReceived;
             Task<Byte[]> taskReadBytes;
             try
             {
                 taskReadBytes = ReadBytesAsync(this);
-                isTimeout = !receiveDone.WaitOne(timeout);
+                isReceived = receiveDone.WaitOne(timeout);
             }
             catch (SocketException)
             {
@@ -269,7 +269,7 @@ namespace LUC.DiscoveryService
                 throw;
             }
 
-            if(!isTimeout)
+            if(isReceived)
             {
                 State = SocketState.Connected;
 
@@ -292,9 +292,9 @@ namespace LUC.DiscoveryService
 
             //Begin sending the data to the remote device
             BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
-            var isTimeout = !sendDone.WaitOne(timeout);
+            var isSent = sendDone.WaitOne(timeout);
 
-            if (!isTimeout)
+            if (isSent)
             {
                 State = SocketState.Connected;
             }
@@ -316,7 +316,7 @@ namespace LUC.DiscoveryService
                 sendDone.Set();
         }
 
-        public void Disconnect(Boolean reuseSocket, TimeSpan timeout, out Boolean isDisconnected)
+        public void Disconnect(Boolean reuseSocket, TimeSpan timeout)
         {
             if (disconnectDone == null)
             {
@@ -326,10 +326,14 @@ namespace LUC.DiscoveryService
             VerifyConnected();
 
             BeginDisconnect(reuseSocket, new AsyncCallback(DisconnectCallback), this);
-            isDisconnected = disconnectDone.WaitOne(timeout);
+            var isDisconnected = disconnectDone.WaitOne(timeout);
             if(isDisconnected)
             {
                 State = SocketState.Disconnected;
+            }
+            else
+            {
+                throw new TimeoutException();
             }
         }
 
@@ -343,11 +347,23 @@ namespace LUC.DiscoveryService
 
         public async Task<Boolean> DisconnectAsync(Boolean reuseSocket, TimeSpan timeout)
         {
-            return await Task.Run(() =>
+            var disconnectTask = Task.Run(() =>
             {
-                 Disconnect(reuseSocket, timeout, out var isDisconnected);
-                 return isDisconnected;
+                 Disconnect(reuseSocket, timeout);
             });
+            await disconnectTask;
+
+            Boolean isDisconnected;
+            if(disconnectTask.Exception == null)
+            {
+                isDisconnected = true;
+            }
+            else
+            {
+                isDisconnected = false;
+            }
+
+            return isDisconnected;
         }
 
         private void VerifyState(SocketState state)

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
@@ -60,7 +61,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// Add a contact if possible, based on the algorithm described
         /// in sections 2.2, 2.4 and 4.2
         /// </summary>
-        public void AddContact(Contact contact)
+        public void AddContact(ref Contact contact)
         {
             //Validate.IsFalse<OurNodeCannotBeAContactException>(ourID == contact.ID, "Cannot add ourselves as a contact!");
             contact.Touch();            // Update the LastSeen to now.
@@ -72,7 +73,7 @@ namespace LUC.DiscoveryService.Kademlia
                 if (kbucket.Contains(contact.ID))
                 {
                     // Replace the existing contact, updating the network info and LastSeen timestamp.
-                    kbucket.ReplaceContact(contact);
+                    kbucket.ReplaceContact(ref contact);
                 }
                 else if (kbucket.IsBucketFull)
                 {
@@ -85,7 +86,7 @@ namespace LUC.DiscoveryService.Kademlia
                         buckets.Insert(idx + 1, k2);
                         buckets[idx].Touch();
                         buckets[idx + 1].Touch();
-                        AddContact(contact);
+                        AddContact(ref contact);
                     }
                     else
                     {

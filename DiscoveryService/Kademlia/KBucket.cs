@@ -91,15 +91,14 @@ namespace LUC.DiscoveryService.Kademlia
 		/// <summary>
 		/// Replaces the contact with the new contact, thus updating the LastSeen and network addressinfo. 
 		/// </summary>
-		public void ReplaceContact(Contact contact, Boolean whetherChangePar = true)
+		public void ReplaceContact(ref Contact contact)
 		{
-			var contactInBucket = contacts.Single(c => c.ID == contact.ID);
+			var contactId = contact.ID;
+			var contactInBucket = contacts.Single(c => c.ID == contactId);
 
 			contactInBucket.LastActiveIpAddress = contact.LastActiveIpAddress;
-			if(whetherChangePar)
-            {
-				contact = contactInBucket;
-			}
+			contact = contactInBucket;
+
 			//contacts.Add(contact);
 		}
 

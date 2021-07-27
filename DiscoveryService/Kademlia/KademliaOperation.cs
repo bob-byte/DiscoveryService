@@ -59,26 +59,73 @@ namespace LUC.DiscoveryService.Kademlia
             where TResponse : Response, new()
         {
             ErrorResponse nodeError = null;
-            Boolean isTimeoutSocketOp;
+            Boolean isTimeoutSocketOp = false;
             response = null;
 
+            var cloneIpAddresses = remoteContact.IpAddresses();
+            for (Int32 numAddress = cloneIpAddresses.Count - 1;
+                (numAddress >= 0) && (response == null); numAddress--)
+            {
+                var ipEndPoint = new IPEndPoint(cloneIpAddresses[numAddress], remoteContact.TcpPort);
+                ClientStart(ipEndPoint, request, out isTimeoutSocketOp, out nodeError, out response);
+
+                if (response != null)
+                {
+                    log.LogInfo($"The response is received:\n{response}");
+                }
+                else
+                {
+                    remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], isRemoved: out _);
+                }
+            }            
+
+            rpcError = RpcError(request.RandomID, response, isTimeoutSocketOp, nodeError);
+        }
+
+        private void ClientStart<TResponse>(EndPoint remoteEndPoint, Request request, 
+            out Boolean isTimeoutSocketOp, out ErrorResponse nodeError, out TResponse response)
+            where TResponse : Response, new()
+        {
+            nodeError = null;
+            isTimeoutSocketOp = false;
+            response = null;
+            var bytesOfRequest = request.ToByteArray();
+
+            var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, 
+                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
+            
             try
             {
-                var cloneIpAddresses = remoteContact.IpAddresses();
-                for (Int32 numAddress = cloneIpAddresses.Count - 1;
-                    (numAddress >= 0) && (response == null); numAddress--)
+                //clean extra bytes
+                if(client.Available > 0)
                 {
-                    var ipEndPoint = new IPEndPoint(cloneIpAddresses[numAddress], remoteContact.TcpPort);
-                    ClientStart(ipEndPoint, request, out response);
-
-                    if (response == null)
-                    {
-                        remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], out _);
-                    }
+                    client.Receive(Constants.ReceiveTimeout);
                 }
 
-                isTimeoutSocketOp = false;
-                log.LogInfo($"The response is received:\n{response}");
+                ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesOfRequest, 
+                    Constants.SendTimeout, Constants.ConnectTimeout, ref client);
+                log.LogInfo($"Request {request.GetType().Name} is sent to {client.Id}:\n" +
+                            $"{request}\n");
+
+                Int32 countCheck = 0;
+                while((client.Available == 0) && (countCheck <= Constants.MaxCheckAvailableData))
+                {
+                    Thread.Sleep(Constants.TimeCheckDataToRead);
+                    countCheck++;
+                }
+
+                if(countCheck <= Constants.MaxCheckAvailableData)
+                {
+                    var bytesOfResponse = client.Receive(Constants.ReceiveTimeout);
+
+                    response = new TResponse();
+                    response.Read(bytesOfResponse);
+                }
+                else
+                {
+                    client.Disconnect(reuseSocket: false, Constants.DisconnectTimeout);
+                    throw new TimeoutException();
+                }
             }
             catch (TimeoutException ex)
             {
@@ -94,45 +141,6 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 isTimeoutSocketOp = false;
                 HandleException(ex, ref nodeError);
-            }
-
-            rpcError = RpcError(request.RandomID, response, isTimeoutSocketOp, nodeError);
-        }
-
-        private void ClientStart<TResponse>(EndPoint remoteEndPoint, Request request, out TResponse response)
-            where TResponse : Response, new()
-        {
-            response = null;
-            var bytesOfRequest = request.ToByteArray();
-
-            var client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout, 
-                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
-
-            try
-            {
-                ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesOfRequest, 
-                    Constants.SendTimeout, Constants.ConnectTimeout, ref client);
-                log.LogInfo($"Request {request.GetType().Name} is sent to {client.Id}:\n" +
-                            $"{request}\n");
-
-                Int32 countToCheck = 0;
-                while((client.Available == 0) && (countToCheck <= Constants.MaxCheckAvailableData))
-                {
-                    Thread.Sleep(Constants.TimeCheckDataToRead);
-                    countToCheck++;
-                }
-
-                if(countToCheck <= Constants.MaxCheckAvailableData)
-                {
-                    var bytesOfResponse = client.Receive(Constants.ReceiveTimeout);
-
-                    response = new TResponse();
-                    response.Read(bytesOfResponse);
-                }
-                else
-                {
-                    throw new TimeoutException();
-                }
             }
             finally
             {

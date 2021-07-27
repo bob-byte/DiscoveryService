@@ -33,6 +33,7 @@ namespace LUC.DiscoveryService.Kademlia
 #endif
 
         public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(1);
+        public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(1);
         public static readonly TimeSpan TimeCheckDataToRead = TimeSpan.FromSeconds(0.4);
         public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(2);
         public static readonly TimeSpan TimeWaitResponse = TimeSpan.FromSeconds(2);
