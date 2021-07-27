@@ -22,7 +22,11 @@ namespace LUC.DiscoveryService
     class Client : AbstractService, IDisposable
     {
         private const Int32 BackLog = Int32.MaxValue;
-        private const Int32 LengthStorageOfAcceptedSockets = 16;
+
+        /// <summary>
+        /// Length storage of accepted TCP sockets
+        /// </summary>
+        private const Int32 LengthSocketStorage = 16;
 
         private static readonly IPAddress MulticastAddressIp4 = IPAddress.Parse("224.0.0.251");
         private readonly IPEndPoint MulticastEndpointIp4;
@@ -287,7 +291,7 @@ namespace LUC.DiscoveryService
             {
                 try
                 {
-                    var task = receiver.ReceiveAsync(Constants.ReceiveTimeout, LengthStorageOfAcceptedSockets);
+                    var task = receiver.ReceiveAsync(Constants.ReceiveTimeout, LengthSocketStorage);
 
                     _ = task.ContinueWith(x => ListenTcp(receiver), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
