@@ -218,7 +218,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EndOfStreamException">
         ///   When no more data is available.
         /// </exception>
-        public List<Contact> ReadListOfContacts()
+        public List<Contact> ReadListOfContacts(String lastSeenFormat)
         {
             List<Contact> list = new List<Contact>();
             var length = ReadUInt32();
@@ -226,19 +226,27 @@ namespace LUC.DiscoveryService.CodingData
             {
                 for (Int32 i = 0; i < length; i++)
                 {
-                    list.Add(ReadContact());
+                    list.Add(ReadContact(lastSeenFormat));
                 }
             }
 
             return list;
         }
 
-        public Contact ReadContact()
+        //class DateTimeFormat : IFormatProvider
+        //{
+        //    public Object GetFormat(Type type)
+        //    {
+
+        //    }
+        //}
+
+        public Contact ReadContact(String lastSeenFormat)
         {
             var idAsBigInt = ReadBigInteger();
             var tcpPort = ReadUInt16();
-            var lastSeen = DateTime.Parse(ReadString());
-
+            var lastSeen = DateTime.ParseExact(ReadString(), lastSeenFormat, provider: null);
+            
             var addressesCount = ReadUInt32();
             ICollection<IPAddress> addresses = new List<IPAddress>((Int32)addressesCount);
             for (Int32 numAddress = 0; numAddress < addressesCount; numAddress++)

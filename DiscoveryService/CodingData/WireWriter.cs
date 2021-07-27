@@ -226,7 +226,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="enumerable"/> is equal to null
         /// </exception>
-        public void WriteEnumerable(IEnumerable<Contact> enumerable)
+        public void WriteEnumerable(IEnumerable<Contact> enumerable, String lastSeenFormat)
         {
             if (enumerable != null)
             {
@@ -234,7 +234,7 @@ namespace LUC.DiscoveryService.CodingData
 
                 foreach (var contact in enumerable)
                 {
-                    Write(contact);
+                    Write(contact, lastSeenFormat);
                 }
             }
             else
@@ -243,11 +243,11 @@ namespace LUC.DiscoveryService.CodingData
             }
         }
 
-        public void Write(Contact contact)
+        public void Write(Contact contact, String lastSeenFormat)
         {
             Write(contact.ID.Value);
             Write(contact.TcpPort);
-            Write(contact.LastSeen.ToString());
+            Write(contact.LastSeen.ToString(lastSeenFormat));
 
             Write((UInt32)contact.IpAddressesCount);
             var addresses = contact.IpAddresses();

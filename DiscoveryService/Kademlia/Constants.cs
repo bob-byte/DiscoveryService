@@ -40,5 +40,7 @@ namespace LUC.DiscoveryService.Kademlia
         public static readonly TimeSpan TimeWaitReturnToPool = ConnectTimeout + SendTimeout + SendTimeout + ReceiveTimeout;//it's max of execution Kademlia operation 
         public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
 
+        public const String LastSeenFormat = "yyyy-MM-dd HH:mm:ss";
+
     }
 }

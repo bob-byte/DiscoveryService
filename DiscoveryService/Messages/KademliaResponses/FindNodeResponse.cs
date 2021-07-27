@@ -48,7 +48,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             if (reader != null)
             {
                 base.Read(reader);
-                CloseSenderContacts = reader.ReadListOfContacts();
+                CloseSenderContacts = reader.ReadListOfContacts(Constants.LastSeenFormat);
 
                 return this;
             }
@@ -64,7 +64,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             if (writer != null)
             {
                 base.Write(writer);
-                writer.WriteEnumerable(CloseSenderContacts);
+                writer.WriteEnumerable(CloseSenderContacts, Constants.LastSeenFormat);
             }
             else
             {

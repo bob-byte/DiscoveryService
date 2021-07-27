@@ -50,7 +50,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 base.Read(reader);
 
-                CloseContactsToRepsonsingPeer = reader.ReadListOfContacts();
+                CloseContactsToRepsonsingPeer = reader.ReadListOfContacts(Constants.LastSeenFormat);
                 ValueInResponsingPeer = reader.ReadString();
 
                 return this;
@@ -68,7 +68,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 base.Write(writer);
 
-                writer.WriteEnumerable(CloseContactsToRepsonsingPeer);
+                writer.WriteEnumerable(CloseContactsToRepsonsingPeer, Constants.LastSeenFormat);
                 writer.Write(ValueInResponsingPeer);
             }
             else
