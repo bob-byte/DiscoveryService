@@ -44,11 +44,18 @@ namespace LUC.DiscoveryService.Kademlia
         {
             ID = contactID;
             TcpPort = tcpPort;
-            ipAddresses = new List<IPAddress>();
             lockIpAddresses = new Object();
 
-            this.ipAddresses = ipAddresses.ToList();
-            LastActiveIpAddress = ipAddresses.Last();
+            if(ipAddresses != null)
+            {
+                this.ipAddresses = ipAddresses.ToList();
+                LastActiveIpAddress = ipAddresses.Last();
+            }
+            else
+            {
+                this.ipAddresses = new List<IPAddress>();
+            }
+            
             LastSeen = lastSeen;
         }
 
