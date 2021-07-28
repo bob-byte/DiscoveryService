@@ -24,9 +24,23 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             if ((request?.RandomID != default) && (sender != null))
             {
+                MessageOperation kadOperation;
+                if(machineValue != null)
+                {
+                    kadOperation = MessageOperation.FindValueResponseWithValue;
+                }
+                else if(closeContacts != null)
+                {
+                    kadOperation = MessageOperation.FindValueResponseWithCloseContacts;
+                }
+                else
+                {
+                    throw new ArgumentNullException($"Both {nameof(closeContacts)} and {nameof(machineValue)} are equal to {null}");
+                }
+
                 var response = new FindValueResponse
                 {
-                    MessageOperation = MessageOperation.FindValueResponse,
+                    MessageOperation = kadOperation,
                     RandomID = request.RandomID,
                     CloseContactsToRepsonsingPeer = closeContacts.ToList(),
                     ValueInResponsingPeer = machineValue
@@ -50,8 +64,14 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 base.Read(reader);
 
-                CloseContactsToRepsonsingPeer = reader.ReadListOfContacts(Constants.LastSeenFormat);
-                ValueInResponsingPeer = reader.ReadString();
+                if(MessageOperation == MessageOperation.FindValueResponseWithValue)
+                {
+                    ValueInResponsingPeer = reader.ReadString();
+                }
+                else if(MessageOperation == MessageOperation.FindValueResponseWithCloseContacts)
+                {
+                    CloseContactsToRepsonsingPeer = reader.ReadListOfContacts(Constants.LastSeenFormat);
+                }
 
                 return this;
             }
@@ -68,8 +88,14 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 base.Write(writer);
 
-                writer.WriteEnumerable(CloseContactsToRepsonsingPeer, Constants.LastSeenFormat);
-                writer.Write(ValueInResponsingPeer);
+                if(ValueInResponsingPeer != null)
+                {
+                    writer.Write(ValueInResponsingPeer);
+                }
+                else if(CloseContactsToRepsonsingPeer != null)
+                {
+                    writer.WriteEnumerable(CloseContactsToRepsonsingPeer, Constants.LastSeenFormat);
+                }
             }
             else
             {

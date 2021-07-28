@@ -192,7 +192,7 @@ namespace LUC.DiscoveryService.Kademlia
             var request = new FindNodeRequest
             {
                 Sender = sender.ID.Value,
-                ContactId = keyToFindContacts.Value,
+                KeyToFindCloseContacts = keyToFindContacts.Value,
                 RandomID = id,
                 MessageOperation = MessageOperation.FindNode
             };
@@ -213,7 +213,7 @@ namespace LUC.DiscoveryService.Kademlia
 
             var request = new FindValueRequest
             {
-                ContactId = keyToFindContact.Value,
+                KeyToFindCloseContacts = keyToFindContact.Value,
                 MessageOperation = MessageOperation.FindValue,
                 Sender = sender.ID.Value,
                 RandomID = id,

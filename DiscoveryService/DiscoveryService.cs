@@ -21,7 +21,7 @@ namespace LUC.DiscoveryService
     public class DiscoveryService : AbstractService
     {
         private static DiscoveryService instance;
-        private readonly AppDomain dsDomain = AppDomain.CreateDomain("discoveryService");
+
         private readonly ConnectionPool connectionPool;
 
         private Boolean isDiscoveryServiceStarted = false;
@@ -58,9 +58,6 @@ namespace LUC.DiscoveryService
                 ProtocolVersion = profile.ProtocolVersion;
                 MachineId = profile.MachineId;
                 connectionPool = ConnectionPool.Instance();
-
-                dsDomain.DomainUnload += StopDiscovery;
-                dsDomain.ProcessExit += StopDiscovery;
                 
                 InitService();
             }
@@ -121,40 +118,47 @@ namespace LUC.DiscoveryService
         {
             Service = new NetworkEventHandler(MachineId, UseIpv4, UseIpv6, ProtocolVersion);
 
-            Service.QueryReceived += SendTcpMessage;
+            Service.QueryReceived += async (invokerEvent, eventArgs) => await SendTcpMessageAsync(invokerEvent, eventArgs);
             Service.AnswerReceived += AddEndpoint;
             Service.AnswerReceived += Service.TryKademliaOperation;
             Service.PingReceived += (invokerEvent, eventArgs) =>
             {
-                SendKademliaResponse<PingRequest>(eventArgs.AcceptedSocket, eventArgs, funcSend: (acceptedSocket, request) =>
+                HandleKademliaRequest<PingRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
                 {
+                    Service.DistributedHashTable.Node.Ping(sender);
+
                     PingResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
                 });
             };
 
             Service.StoreReceived += (invokerEvent, eventArgs) =>
             {
-                SendKademliaResponse<StoreRequest>(eventArgs.AcceptedSocket, eventArgs, funcSend: (acceptedSocket, request) =>
+                HandleKademliaRequest<StoreRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
                 {
+                    Service.DistributedHashTable.Node.Store(sender, new ID(request.KeyToStore), 
+                        request.Value, request.IsCached, request.ExpirationTimeSec);
+
                     StoreResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
                 });
             };
 
             Service.FindNodeReceived += (invokerEvent, eventArgs) =>
             {
-                SendKademliaResponse<FindNodeRequest>(eventArgs.AcceptedSocket, eventArgs, (client, request) =>
+                HandleKademliaRequest<FindNodeRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
                 {
-                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), exclude: new ID(default(BigInteger)));
+                    Service.DistributedHashTable.Node.FindNode(sender, new ID(request.KeyToFindCloseContacts), out var closeContacts);
+                    
                     FindNodeResponse.SendOurCloseContacts(client, closeContacts, Constants.SendTimeout, request);
                 });
             };
 
             Service.FindValueReceived += (invokerEvent, eventArgs) =>
             {
-                SendKademliaResponse<FindValueRequest>(eventArgs.AcceptedSocket, eventArgs, (client, request) =>
+                HandleKademliaRequest<FindValueRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
                 {
-                    var closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(eventArgs.LocalContactId), exclude: new ID(default(BigInteger)));
-                    FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, MachineId);
+                    Service.DistributedHashTable.Node.FindValue(sender, new ID(request.KeyToFindCloseContacts), out var closeContacts, out var nodeValue);
+
+                    FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, nodeValue);
                 });
             };
         }
@@ -170,7 +174,7 @@ namespace LUC.DiscoveryService
         /// <param name="e">
         ///  Information about UDP sender, that we have received.
         /// </param>
-        public async void SendTcpMessage(Object sender, UdpMessageEventArgs e)
+        public async Task SendTcpMessageAsync(Object sender, UdpMessageEventArgs e)
         {
             //lock(this)
             //{
@@ -195,7 +199,7 @@ namespace LUC.DiscoveryService
                 try
                 {
                     client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                    IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
+                    IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
 
                     ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
                         Constants.ConnectTimeout, ref client);
@@ -238,13 +242,15 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private void SendKademliaResponse<T>(Socket acceptedSocket, TcpMessageEventArgs eventArgs, Action<Socket, T> funcSend)
+        private void HandleKademliaRequest<T>(Socket acceptedSocket, TcpMessageEventArgs eventArgs, Action<Socket, Contact, T> handleRequest)
             where T: Request, new()
         {
             try
             {
                 var request = eventArgs.Message<T>(whetherReadMessage: false);
-                funcSend(acceptedSocket, request);
+                var sender = KnownContacts(ProtocolVersion)[request.Sender];
+
+                handleRequest(acceptedSocket, sender, request);
             }
             catch(Exception ex)
             {

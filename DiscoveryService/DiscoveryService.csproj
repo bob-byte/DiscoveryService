@@ -85,6 +85,7 @@
   <ItemGroup>
     <Compile Include="AbstractService.cs" />
     <Compile Include="CodingData\Binary.cs" />
+    <Compile Include="CodingData\Buffer.cs" />
     <Compile Include="DiscoveryServiceSocket.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\StringExtension.cs" />
@@ -147,6 +148,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DiscoveryService.cs" />
     <Compile Include="ServiceProfile.cs" />
+    <Compile Include="TcpServer.cs" />
+    <Compile Include="TcpSession.cs" />
     <Compile Include="UsageExample.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -216,7 +216,7 @@ namespace LUC.DiscoveryService
 
         private void VerifyWorkState()
         {
-            if((State == SocketState.Closing) | (State == SocketState.Failed))
+            if((SocketState.Closing <= State) && (State <= SocketState.Failed))
             {
                 String messageError = "Wanted to use idle socket";
 
@@ -283,7 +283,7 @@ namespace LUC.DiscoveryService
 
         public void Send(Byte[] bytesToSend, TimeSpan timeout)
         {
-            VerifyWorkState();
+            VerifyConnected();
 
             if (sendDone == null)
             {
@@ -301,6 +301,21 @@ namespace LUC.DiscoveryService
             else
             {
                 throw new TimeoutException();
+            }
+        }
+
+        public void VerifyConnected()
+        {
+            lock (m_lock)
+            {
+                if (State == SocketState.Closed)
+                {
+                    throw new ObjectDisposedException(nameof(DiscoveryServiceSocket));
+                }
+                else if (!Connected || ((SocketState.Disconnected <= State) && (State <= SocketState.Failed)))
+                {
+                    throw new InvalidOperationException("ServerSession is not connected.");
+                }
             }
         }
 
@@ -372,21 +387,6 @@ namespace LUC.DiscoveryService
             {
                 Log.LogError($"Session {RemoteEndPoint} should have SessionStateExpected {state} but was SessionState {State}");
                 throw new InvalidOperationException($"Expected state to be {state} but was {State}."/*.FormatInvariant(state, State)*/);
-            }
-        }
-
-        public void VerifyConnected()
-        {
-            lock (m_lock)
-            {
-                if (State == SocketState.Closed)
-                {
-                    throw new ObjectDisposedException(nameof(DiscoveryServiceSocket));
-                }
-                else if (!Connected || ((State == SocketState.Disconnected) | (State == SocketState.Failed)))
-                {
-                    throw new InvalidOperationException("ServerSession is not connected.");
-                }
             }
         }
 

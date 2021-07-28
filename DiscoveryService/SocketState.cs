@@ -11,56 +11,41 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// The socket has been created; no connection has been made
         /// </summary>
-        Created,
+        Created = 1,
 
         /// <summary>
         /// The socket is attempting to connect to an another peer
         /// </summary>
-        Connecting,
+        Connecting = 2,
 
         /// <summary>
         /// The socket is connected to a server; there is no active query
         /// </summary>
-        Connected,
+        Connected = 4,
 
-        /// <summary>
-        /// The socked is connected to an another peer and a query is being made.
-        /// </summary>
-        Querying,
+        SendingBytes = 8,
 
-        SendingBytes,
+        SentBytes = 16,
 
-        SentBytes,
+        Reading = 32,
 
-        /// <summary>
-        /// The socked is connected to an another peer and the active query is being cancelled.
-        /// </summary>
-        CancelingQuery,
+        AlreadyRead = 64,
 
-        /// <summary>
-        /// A cancellation is pending on the connected peer and needs to be cleared
-        /// </summary>
-        ClearingPendingCancellation,
-
-        Reading,
-
-        AlreadyRead,
-
-        Disconnected,
+        Disconnected = 128,
 
         /// <summary>
         /// The socket is closing
         /// </summary>
-        Closing,
+        Closing = 256,
 
         /// <summary>
         /// The socked is closed
         /// </summary>
-        Closed,
+        Closed = 512,
 
         /// <summary>
         /// An unexpected error occurred; the socket is in an unusable state.
         /// </summary>
-        Failed
+        Failed = 1024
     }
 }

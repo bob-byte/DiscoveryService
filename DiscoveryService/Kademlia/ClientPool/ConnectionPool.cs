@@ -356,7 +356,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             // synchronize access to this method as only one clean routine should be run at a time
             if (ioBehavior == IOBehavior.Asynchronous)
             {
-                await cleanSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                await cleanSemaphore.WaitAsync(cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
             }
             else
             {
@@ -365,7 +365,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             try
             {
-                var waitTimeout = TimeSpan.FromMilliseconds(10);
+                var waitTimeout = TimeSpan.FromMilliseconds(value: 10);
                 while (true)
                 {
                     // if respectMinPoolSize is true, return if (leased sessions + waiting sessions <= minPoolSize)
@@ -405,6 +405,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                             if(!waitingSocket.Equals(default(KeyValuePair<EndPoint, ConnectionPoolSocket>)))
                             {
                                 waitingSocket.Value.Dispose();
+                            }
+                            else
+                            {
+                                return;
                             }
                         }
                     }

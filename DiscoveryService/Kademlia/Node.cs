@@ -142,16 +142,13 @@ namespace LUC.DiscoveryService.Kademlia
         /// Also this operation returns <seealso cref="RpcError"/> to inform about the errors which maybe happened
         /// </returns>
         //TODO it shouldn't return val
-        public (List<Contact> contacts, string val) FindNode(Contact sender, ID key)
+        public void FindNode(Contact sender, ID key, out List<Contact> contacts)
         {
             Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
             bucketList.AddContact(ref sender);
 
-            // Exclude sender.
-            var contacts = bucketList.GetCloseContacts(key, sender.ID);
-
-            return (contacts, null);
+            contacts = bucketList.GetCloseContacts(key, exclude: sender.ID);
         }
 
         /// <summary>
@@ -172,9 +169,9 @@ namespace LUC.DiscoveryService.Kademlia
         /// 160-bit ID near which you want to get list of contacts
         /// </param>
         /// <returns>
-        /// Returns either a list of close contacts or a the value, if the node's storage contains the value for the key.
+        /// Returns either the value if <paramref name="key"/> was storaged using <seealso cref="Store(Contact, ID, string, bool, int)"/> (first purpose) or a list of close contacts if it wasn't (second purpose)
         /// </returns>
-        public (List<Contact> contacts, string val) FindValue(Contact sender, ID key)
+        public void FindValue(Contact sender, ID key, out List<Contact> contacts, out String nodeValue)
         {
             Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
@@ -182,16 +179,18 @@ namespace LUC.DiscoveryService.Kademlia
 
             if (storage.Contains(key))
             {
-                return (null, storage.Get(key));
+                contacts = null;
+                nodeValue = storage.Get(key);
             }
             else if (CacheStorage.Contains(key))
             {
-                return (null, CacheStorage.Get(key));
+                contacts = null;
+                nodeValue = CacheStorage.Get(key);
             }
             else
             {
-                // Exclude sender.
-                return (bucketList.GetCloseContacts(key, sender.ID), null);
+                contacts = bucketList.GetCloseContacts(key, exclude: sender.ID);
+                nodeValue = null;
             }
         }
 

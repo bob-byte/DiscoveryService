@@ -1,4 +1,5 @@
-﻿using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Messages;
 using NUnit.Framework;
 using System;
 using System.Diagnostics;
@@ -37,10 +38,10 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void QueryAllServices_GetOwnUdpMessage_DontGet()
         {
-            var done = new ManualResetEvent(false);
+            var done = new ManualResetEvent(initialState: false);
             discoveryService.Service.QueryReceived += (sender, e) =>
             {
-                if (e.Buffer is UdpMessage)
+                if (e.Message<UdpMessage>() != null)
                 {
                     done.Set();
                 }
@@ -48,15 +49,8 @@ namespace LUC.DiscoveryService.Test
 
             discoveryService.Service.NetworkInterfaceDiscovered += (sender, e) => discoveryService.QueryAllServices();
 
-            try
-            {
-                discoveryService.Start();
-                Assert.IsFalse(done.WaitOne(TimeSpan.FromSeconds(value: 1)), message: "Got own UDP message");
-            }
-            finally
-            {
-                discoveryService.Stop();
-            }
+            discoveryService.Start();
+            Assert.IsFalse(done.WaitOne(TimeSpan.FromSeconds(value: 1)), message: "Got own UDP message");
         }
 
         [Test]
@@ -104,7 +98,7 @@ namespace LUC.DiscoveryService.Test
         }
 
         [Test]
-        public void QueryAllServices_GetTcpMessage_NotFailed()
+        public void SendTcpMessageAsync_GetTcpMessage_NotFailed()
         {
             var done = new ManualResetEvent(false);
             discoveryService.Start();
@@ -112,65 +106,66 @@ namespace LUC.DiscoveryService.Test
             {
                 done.Set();
             };
-            var availableIps = NetworkEventHandler.IPAddresses().ToArray();
 
-            discoveryService.SendTcpMessage(this, new TcpMessageEventArgs
+            var availableIps = discoveryService.Service.RunningIpAddresses().ToArray();
+            var eventArgs = new UdpMessageEventArgs
             {
-                Buffer = new UdpMessage(messageId: 123,tcpPort: discoveryService.RunningTcpPort,protocolVersion: 1,machineId:  null),
-                SendingEndPoint = new IPEndPoint(availableIps[1], (Int32)discoveryService.RunningTcpPort)
-            });
+                RemoteEndPoint = new IPEndPoint(availableIps[1], discoveryService.RunningTcpPort)
+            };
+            eventArgs.SetMessage(new UdpMessage(messageId: 123, tcpPort: discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null));
 
-            Assert.IsTrue(done.WaitOne());
+            discoveryService.SendTcpMessageAsync(this, eventArgs).Wait();
+
+            Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(value: 3)));
         }
 
         [Test]
         public void SendTcpMess_SetParInTypeTcpMess_GetException()
         {
             discoveryService.Start();
-
-            Assert.That(() => discoveryService.SendTcpMessage(this, new TcpMessageEventArgs
+            var eventArgs = new UdpMessageEventArgs
             {
-                Buffer = new TcpMessage(messageId: 123, discoveryService.MachineId, tcpPort: discoveryService.RunningTcpPort, protocolVersion: 1,groupsIds: null),
-            }),
-            Throws.TypeOf(typeof(ArgumentException)));
+                RemoteEndPoint = null
+            };
+            eventArgs.SetMessage(new AcknowledgeTcpMessage(messageId: 123, discoveryService.MachineId, ID.RandomID.Value, tcpPort: discoveryService.RunningTcpPort, protocolVersion: 1, groupsIds: null));
+
+            Assert.That(() => discoveryService.SendTcpMessageAsync(this, eventArgs), Throws.TypeOf(typeof(ArgumentException)));
         }
 
         [Test]
         public void SendTcpMess_SendNullMessage_GetException()
         {
             discoveryService.Start();
+            var eventArgs = new UdpMessageEventArgs();
+            eventArgs.SetMessage<UdpMessage>(message: null);
 
-            Assert.That(() => discoveryService.SendTcpMessage(this, new TcpMessageEventArgs
-            {
-                Buffer = null
-            }),
-            Throws.TypeOf(typeof(ArgumentException)));
+            Assert.That(() => discoveryService.SendTcpMessageAsync(this, eventArgs), Throws.TypeOf(typeof(ArgumentException)));
         }
 
         [Test]
         public void SendTcpMess_SendNullRemoteEndPoint_GetException()
         {
             discoveryService.Start();
-
-            Assert.That(() => discoveryService.SendTcpMessage(this, new TcpMessageEventArgs
+            var eventArgs = new UdpMessageEventArgs
             {
-                Buffer = new UdpMessage(messageId: 123, tcpPort: discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null),
-                SendingEndPoint = null
-            }),
-            Throws.TypeOf(typeof(ArgumentException)));
+                RemoteEndPoint = null
+            };
+            eventArgs.SetMessage(new UdpMessage(messageId: 123, tcpPort: discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null));
+
+            Assert.That(() => discoveryService.SendTcpMessageAsync(this, eventArgs), Throws.TypeOf(typeof(ArgumentException)));
         }
 
         [Test]
         public void SendTcpMess_EndPointIsDns_GetException()
         {
             discoveryService.Start();
-
-            Assert.That(() => discoveryService.SendTcpMessage(this, new TcpMessageEventArgs
+            var eventArgs = new UdpMessageEventArgs
             {
-                Buffer = new UdpMessage(messageId: 123, tcpPort: discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null),
-                SendingEndPoint = new DnsEndPoint(Dns.GetHostName(), (Int32)AbstractService.DefaultPort, AddressFamily.InterNetwork)
-            }),
-            Throws.TypeOf(typeof(ArgumentException)));
+                RemoteEndPoint = new DnsEndPoint(Dns.GetHostName(), AbstractService.DefaultPort, AddressFamily.InterNetwork)
+            };
+            eventArgs.SetMessage(new UdpMessage(messageId: 123, tcpPort: discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null));
+
+            Assert.That(() => discoveryService.SendTcpMessageAsync(this, eventArgs), Throws.TypeOf(typeof(ArgumentException)));
         }
 
         /// <summary>
@@ -179,15 +174,14 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Instance_CreateOneMoreInstanceOfDsAndCompareMachineId_TheSameMachineId()
         {
-            //create another task, call DS.Instance
             DiscoveryService discoveryService2 = null;
             Task.Run(() =>
             {
-                discoveryService2 = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 2));
+                discoveryService2 = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, 
+                    protocolVersion: 2));
             }).Wait();
 
             Assert.IsTrue(discoveryService.MachineId == discoveryService2.MachineId);
-            //compare MachineIds. They should be different 
         }
     }
 }

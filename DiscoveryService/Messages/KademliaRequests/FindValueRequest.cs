@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     public class FindValueRequest : Request
     {
-        public BigInteger ContactId { get; set; }
+        public BigInteger KeyToFindCloseContacts { get; set; }
 
         public FindValueRequest()
         {
@@ -24,7 +24,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             if (reader != null)
             {
                 base.Read(reader);
-                ContactId = reader.ReadBigInteger();
+                KeyToFindCloseContacts = reader.ReadBigInteger();
 
                 return this;
             }
@@ -40,7 +40,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             if (writer != null)
             {
                 base.Write(writer);
-                writer.Write(ContactId);
+                writer.Write(KeyToFindCloseContacts);
             }
             else
             {
@@ -55,7 +55,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 writer.WriteLine($"{GetType().Name}:\n" +
                                  $"{PropertyWithValue(nameof(RandomID), RandomID)};\n" +
                                  $"{PropertyWithValue(nameof(Sender), Sender)};\n" +
-                                 $"{PropertyWithValue(nameof(ContactId), ContactId)}");
+                                 $"{PropertyWithValue(nameof(KeyToFindCloseContacts), KeyToFindCloseContacts)}");
 
                 return writer.ToString();
             }
