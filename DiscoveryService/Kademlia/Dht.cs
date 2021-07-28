@@ -168,36 +168,28 @@ namespace LUC.DiscoveryService.Kademlia
             StoreOnCloserContacts(key, val);
         }
 
-        public (bool found, List<Contact> contacts, string val) FindValue(ID key)
+        public void FindValue(ID key, out Boolean found, out List<Contact> closeContacts, out String nodeValue)
         {
             TouchBucketWithKey(key);
 
-            string ourVal;
             List<Contact> contactsQueried = new List<Contact>();
-            (bool found, List<Contact> contacts, string val) ret = (false, null, null);
 
-            if (originatorStorage.TryGetValue(key, out ourVal))
+            closeContacts = null;
+            nodeValue = null;
+
+            if ((originatorStorage.TryGetValue(key, out nodeValue)) || (republishStorage.TryGetValue(key, out nodeValue)) || (cacheStorage.TryGetValue(key, out nodeValue)))
             {
-                // Sort of odd that we are using the key-value store to find something the key-value that we originate.
-                ret = (true, null, ourVal);
-            }
-            else if (republishStorage.TryGetValue(key, out ourVal))
-            {
-                // If we have it from another peer.
-                ret = (true, null, ourVal);
-            }
-            else if (cacheStorage.TryGetValue(key, out ourVal))
-            {
-                // If we have it because it was cached.
-                ret = (true, null, ourVal);
+                found = true;
             }
             else
             {
                 var lookup = router.Lookup(key, router.RpcFindValue);
+                found = lookup.found;
 
                 if (lookup.found)
                 {
-                    ret = (true, null, lookup.val);
+                    nodeValue = lookup.val;
+                    closeContacts = lookup.contacts;
                     // Find the first close contact (other than the one the value was found by) in which to *cache* the key-value.
                     var storeTo = lookup.contacts.Where(c => c != lookup.foundBy).OrderBy(c => c.ID ^ key).FirstOrDefault();
 
@@ -210,8 +202,6 @@ namespace LUC.DiscoveryService.Kademlia
                     }
                 }
             }
-
-            return ret;
         }
 
 #if DEBUG       // For demo and unit testing.

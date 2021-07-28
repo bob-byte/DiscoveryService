@@ -135,8 +135,7 @@ namespace LUC.DiscoveryService
             {
                 HandleKademliaRequest<StoreRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
                 {
-                    Service.DistributedHashTable.Node.Store(sender, new ID(request.KeyToStore), 
-                        request.Value, request.IsCached, request.ExpirationTimeSec);
+                    Service.DistributedHashTable.Store(new ID(request.KeyToStore), request.Value);
 
                     StoreResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
                 });
@@ -156,9 +155,18 @@ namespace LUC.DiscoveryService
             {
                 HandleKademliaRequest<FindValueRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
                 {
-                    Service.DistributedHashTable.Node.FindValue(sender, new ID(request.KeyToFindCloseContacts), out var closeContacts, out var nodeValue);
+                    //Service.DistributedHashTable.Node.FindValue(sender, new ID(request.KeyToFindCloseContacts), out var closeContacts, out var nodeValue);
+                    Service.DistributedHashTable.FindValue(new ID(request.KeyToFindCloseContacts), 
+                        out var isFound, out var closeContacts, out var nodeValue);
 
-                    FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, nodeValue);
+                    if(isFound)
+                    {
+                        FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, nodeValue);
+                    }
+                    else
+                    {
+                        //TODO send response with another MessageOperation or just do nothing
+                    }
                 });
             };
         }
