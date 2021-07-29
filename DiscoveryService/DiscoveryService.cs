@@ -158,7 +158,7 @@ namespace LUC.DiscoveryService
                     }
                     else
                     {
-                        Service.DistributedHashTable.AddToPending(sender);
+                        //Service.DistributedHashTable.AddToPending(sender);
                         closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(request.KeyToFindCloseContacts), new ID(request.Sender));
                     }
                     

@@ -42,7 +42,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 {
                     MessageOperation = kadOperation,
                     RandomID = request.RandomID,
-                    CloseContactsToRepsonsingPeer = closeContacts.ToList(),
+                    CloseContactsToRepsonsingPeer = closeContacts?.ToList(),
                     ValueInResponsingPeer = machineValue
                 };
 
@@ -112,9 +112,12 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                                  $"{PropertyWithValue(nameof(ValueInResponsingPeer), ValueInResponsingPeer)};\n" +
                                  $"{nameof(CloseContactsToRepsonsingPeer)}:");
 
-                foreach (var closeContact in CloseContactsToRepsonsingPeer)
+                if(CloseContactsToRepsonsingPeer != null)
                 {
-                    writer.WriteLine($"{closeContact};\n");
+                    foreach (var closeContact in CloseContactsToRepsonsingPeer)
+                    {
+                        writer.WriteLine($"{closeContact};\n");
+                    }
                 }
 
                 return writer.ToString();

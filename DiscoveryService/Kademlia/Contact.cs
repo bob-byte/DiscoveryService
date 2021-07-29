@@ -48,8 +48,8 @@ namespace LUC.DiscoveryService.Kademlia
 
             if(ipAddresses != null)
             {
-                this.ipAddresses = ipAddresses.ToList();
-                LastActiveIpAddress = ipAddresses.Last();
+                this.ipAddresses = ipAddresses?.ToList();
+                LastActiveIpAddress = ipAddresses?.Last();
             }
             else
             {
