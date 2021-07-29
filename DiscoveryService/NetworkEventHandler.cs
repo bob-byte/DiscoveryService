@@ -447,7 +447,7 @@ namespace LUC.DiscoveryService
                         var knownContact = new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address);
                         DistributedHashTable.Node.PingRemoteContact(DistributedHashTable.OurContact, knownContact);
 
-                        var key = DiscoveryService.KnownContacts(ProtocolVersion)[tcpMessage.IdOfSendingContact].ID;
+                        var key = knownContact.ID;
 
                         DistributedHashTable.Node.Store(DistributedHashTable.OurContact, key, MachineId, knownContact);
                         DistributedHashTable.Node.FindNode(OurContact, key, knownContact);
