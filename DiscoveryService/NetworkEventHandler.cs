@@ -318,16 +318,14 @@ namespace LUC.DiscoveryService
                 {
                     message.Read(result.Buffer);
                 }
-                catch (ArgumentNullException ex)
+                catch (ArgumentNullException)
                 {
                     // ignore malformed message
-                    // HandleMalformedMessage(ex, sender, result.Buffer);
                     return;
                 }
-                catch (EndOfStreamException ex)
+                catch (EndOfStreamException)
                 {
                     // ignore malformed message
-                    // HandleMalformedMessage(ex, sender, result.Buffer);
                     return;
                 }
 
@@ -335,7 +333,7 @@ namespace LUC.DiscoveryService
                 var isRecentlyReceived = !receivedMessages.TryAdd(message.MessageId);
 
                 if ((!IgnoreDuplicateMessages || !isRecentlyReceived) &&
-                    ((message.ProtocolVersion == ProtocolVersion) ||
+                    ((message.ProtocolVersion == ProtocolVersion) &&
                     (message.MachineId != MachineId)))
                 {
                     result.SetMessage(message);

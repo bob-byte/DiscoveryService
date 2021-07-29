@@ -320,7 +320,7 @@ namespace LUC.DiscoveryService
             {
                 foreach (var tcpSession in Sessions.Values)
                 {
-                    if (tcpSession.Socket.Available > 0)
+                    if (tcpSession.Socket?.Available > 0)
                     {
                         sessionWithData = tcpSession;
                         break;

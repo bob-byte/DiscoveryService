@@ -131,7 +131,7 @@ namespace LUC.DiscoveryService
             IsConnected = true;
 
             // Try to receive something from the client
-            TryReceive();
+            //TryReceive();
 
             // Check the socket disposed state: in some rare cases it might be disconnected while receiving!
             if (IsSocketDisposed)

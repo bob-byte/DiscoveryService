@@ -178,8 +178,6 @@ namespace LUC.DiscoveryService
             {
                 tcpReceiver.Start();
                 ListenTcp(tcpReceiver);
-
-                break;
             }
         }
 
@@ -210,8 +208,6 @@ namespace LUC.DiscoveryService
                         MulticastEndpointIp4 : MulticastEndpointIp6;
                     await sender.Value.SendAsync(message, message.Length, endpoint)
                         .ConfigureAwait(continueOnCapturedContext: false);
-
-                    break;
                 }
                 catch(SocketException e)
                 {
@@ -288,7 +284,7 @@ namespace LUC.DiscoveryService
                     //get TcpMessageEventArgs
                     var taskGetEventArgs = taskSession.ContinueWith(continuationFunction: previousTask =>
                     {
-                        var session = previousTask.GetAwaiter().GetResult();
+                        var session = previousTask.Result;
                         var buffer = session.ReadAllAvailableBytes();
 
                         TcpMessageEventArgs eventArgs = new TcpMessageEventArgs
@@ -302,8 +298,6 @@ namespace LUC.DiscoveryService
                         return eventArgs;
                     });
 
-                    await taskSession.ConfigureAwait(continueOnCapturedContext: false);
-
                     //ListenTcp call is here not to stop listening when we received TCP message
                     _ = taskGetEventArgs.ContinueWith(x => ListenTcp(tcpServer), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
@@ -313,7 +307,7 @@ namespace LUC.DiscoveryService
                         TcpMessageReceived?.Invoke(tcpServer, taskReceiving.Result);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
-                    await taskGetEventArgs.ConfigureAwait(false);
+                    await taskGetEventArgs.ConfigureAwait(continueOnCapturedContext: false);
                 }
                 catch (ObjectDisposedException)
                 {
