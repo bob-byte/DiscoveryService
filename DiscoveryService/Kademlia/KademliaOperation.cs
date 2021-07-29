@@ -222,7 +222,7 @@ namespace LUC.DiscoveryService.Kademlia
             GetRequestResult<FindValueResponse>(remoteContact, request, out var response, out var rpcError);
             var closeContacts = response?.CloseContactsToRepsonsingPeer?.ToList() ?? EmptyContactList();
 
-            return (closeContacts, response.ValueInResponsingPeer, rpcError);
+            return (closeContacts, response?.ValueInResponsingPeer, rpcError);
         }
 
         protected RpcError RpcError(BigInteger id, Response resp, bool timeoutError, ErrorResponse peerError)

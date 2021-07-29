@@ -1,24 +1,24 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LUC.DiscoveryService.CodingData;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Ssl
 {
     /// <summary>
-    /// TCP session is used to read and write data from the connected TCP client
+    /// SSL session is used to read and write data from the connected SSL client
     /// </summary>
     /// <remarks>Thread-safe</remarks>
-    public class TcpSession : IDisposable
+    public class SslSession : IDisposable
     {
         /// <summary>
         /// Initialize the session with a given server
         /// </summary>
-        /// <param name="server">TCP server</param>
-        public TcpSession(TcpServer server)
+        /// <param name="server">SSL server</param>
+        public SslSession(SslServer server)
         {
             Id = Guid.NewGuid();
             Server = server;
@@ -34,7 +34,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Server
         /// </summary>
-        public TcpServer Server { get; }
+        public SslServer Server { get; }
         /// <summary>
         /// Socket
         /// </summary>
@@ -76,10 +76,18 @@ namespace LUC.DiscoveryService
 
         #region Connect/Disconnect session
 
+        private bool _disconnecting;
+        private SslStream _sslStream;
+        private Guid? _sslStreamId;
+
         /// <summary>
         /// Is the session connected?
         /// </summary>
         public bool IsConnected { get; private set; }
+        /// <summary>
+        /// Is the session handshaked?
+        /// </summary>
+        public bool IsHandshaked { get; private set; }
 
         /// <summary>
         /// Connect the session
@@ -96,12 +104,6 @@ namespace LUC.DiscoveryService
             _receiveBuffer = new CodingData.Buffer();
             _sendBufferMain = new CodingData.Buffer();
             _sendBufferFlush = new CodingData.Buffer();
-
-            // Setup event args
-            _receiveEventArg = new SocketAsyncEventArgs();
-            _receiveEventArg.Completed += OnAsyncCompleted;
-            _sendEventArg = new SocketAsyncEventArgs();
-            _sendEventArg.Completed += OnAsyncCompleted;
 
             // Apply the option: keep alive
             if (Server.OptionKeepAlive)
@@ -130,22 +132,32 @@ namespace LUC.DiscoveryService
             // Update the connected flag
             IsConnected = true;
 
-            // Try to receive something from the client
-            //TryReceive();
-
-            // Check the socket disposed state: in some rare cases it might be disconnected while receiving!
-            if (IsSocketDisposed)
-                return;
-
             // Call the session connected handler
             OnConnected();
 
             // Call the session connected handler in the server
             Server.OnConnectedInternal(this);
 
-            // Call the empty send buffer handler
-            if (_sendBufferMain.IsEmpty)
-                OnEmpty();
+            try
+            {
+                // Create SSL stream
+                _sslStreamId = Guid.NewGuid();
+                _sslStream = (Server.Context.CertificateValidationCallback != null) ? new SslStream(new NetworkStream(Socket, false), false, Server.Context.CertificateValidationCallback) : new SslStream(new NetworkStream(Socket, false), false);
+
+                // Call the session handshaking handler
+                OnHandshaking();
+
+                // Call the session handshaking handler in the server
+                Server.OnHandshakingInternal(this);
+
+                // Begin the SSL handshake
+                _sslStream.BeginAuthenticateAsServer(Server.Context.Certificate, Server.Context.ClientCertificateRequired, Server.Context.Protocols, checkCertificateRevocation: false, ProcessHandshake, _sslStreamId);
+            }
+            catch (Exception)
+            {
+                SendError(SocketError.NotConnected);
+                Disconnect();
+            }
         }
 
         /// <summary>
@@ -157,9 +169,11 @@ namespace LUC.DiscoveryService
             if (!IsConnected)
                 return false;
 
-            // Reset event args
-            _receiveEventArg.Completed -= OnAsyncCompleted;
-            _sendEventArg.Completed -= OnAsyncCompleted;
+            if (_disconnecting)
+                return false;
+
+            // Update the disconnecting flag
+            _disconnecting = true;
 
             // Call the session disconnecting handler
             OnDisconnecting();
@@ -169,6 +183,17 @@ namespace LUC.DiscoveryService
 
             try
             {
+                try
+                {
+                    // Shutdown the SSL stream
+                    _sslStream.ShutdownAsync().Wait();
+                }
+                catch (Exception) {}
+
+                // Dispose the SSL stream & buffer
+                _sslStream.Dispose();
+                _sslStreamId = null;
+
                 try
                 {
                     // Shutdown the socket associated with the client
@@ -182,14 +207,13 @@ namespace LUC.DiscoveryService
                 // Dispose the session socket
                 Socket.Dispose();
 
-                // Dispose event arguments
-                _receiveEventArg.Dispose();
-                _sendEventArg.Dispose();
-
                 // Update the session socket disposed flag
                 IsSocketDisposed = true;
             }
             catch (ObjectDisposedException) {}
+
+            // Update the handshaked flag
+            IsHandshaked = false;
 
             // Update the connected flag
             IsConnected = false;
@@ -210,6 +234,9 @@ namespace LUC.DiscoveryService
             // Unregister session
             Server.UnregisterSession(Id);
 
+            // Reset the disconnecting flag
+            _disconnecting = false;
+
             return true;
         }
 
@@ -220,13 +247,11 @@ namespace LUC.DiscoveryService
         // Receive buffer
         private bool _receiving;
         private CodingData.Buffer _receiveBuffer;
-        private SocketAsyncEventArgs _receiveEventArg;
         // Send buffer
         private readonly object _sendLock = new object();
         private bool _sending;
         private CodingData.Buffer _sendBufferMain;
         private CodingData.Buffer _sendBufferFlush;
-        private SocketAsyncEventArgs _sendEventArg;
         private long _sendBufferFlushOffset;
 
         /// <summary>
@@ -245,39 +270,39 @@ namespace LUC.DiscoveryService
         /// <returns>Size of sent data</returns>
         public virtual long Send(byte[] buffer, long offset, long size)
         {
-            if (!IsConnected)
+            if (!IsHandshaked)
                 return 0;
 
             if (size == 0)
                 return 0;
 
-            // Sent data to the client
-            long sent = Socket.Send(buffer, (int)offset, (int)size, SocketFlags.None, out SocketError ec);
-            if (sent > 0)
+            try
             {
+                // Sent data to the server
+                _sslStream.Write(buffer, (int)offset, (int)size);
+
                 // Update statistic
-                BytesSent += sent;
+                BytesSent += size;
                 Interlocked.Add(ref Server._bytesSent, size);
 
                 // Call the buffer sent handler
-                OnSent(sent, BytesPending + BytesSending);
-            }
+                OnSent(size, BytesPending + BytesSending);
 
-            // Check for socket error
-            if (ec != SocketError.Success)
+                return size;
+            }
+            catch (Exception)
             {
-                SendError(ec);
+                SendError(SocketError.OperationAborted);
                 Disconnect();
+                return 0;
             }
-
-            return sent;
         }
 
         /// <summary>
         /// Send text to the client (synchronous)
         /// </summary>
         /// <param name="text">Text string to send</param>
-        /// <returns>Size of sent data</returns>
+        /// <returns>Size of sent text</returns>
         public virtual long Send(string text) { return Send(Encoding.UTF8.GetBytes(text)); }
 
         /// <summary>
@@ -296,7 +321,7 @@ namespace LUC.DiscoveryService
         /// <returns>'true' if the data was successfully sent, 'false' if the session is not connected</returns>
         public virtual bool SendAsync(byte[] buffer, long offset, long size)
         {
-            if (!IsConnected)
+            if (!IsHandshaked)
                 return false;
 
             if (size == 0)
@@ -345,55 +370,6 @@ namespace LUC.DiscoveryService
         public virtual long Receive(byte[] buffer) { return Receive(buffer, 0, buffer.Length); }
 
         /// <summary>
-        /// Receive data from the client (synchronous)
-        /// </summary>
-        /// <param name="buffer">Buffer to receive</param>
-        /// <param name="offset">Buffer offset</param>
-        /// <param name="size">Buffer size</param>
-        /// <returns>Size of received data</returns>
-        public virtual long Receive(byte[] buffer, long offset, long size)
-        {
-            if (!IsConnected)
-                return 0;
-
-            if (size == 0)
-                return 0;
-
-            // Receive data from the client
-            long received = Socket.Receive(buffer, (int)offset, (int)size, SocketFlags.None, out SocketError ec);
-            if (received > 0)
-            {
-                // Update statistic
-                BytesReceived += received;
-                Interlocked.Add(ref Server._bytesReceived, received);
-
-                // Call the buffer received handler
-                OnReceived(buffer, 0, received);
-            }
-
-            // Check for socket error
-            if (ec != SocketError.Success)
-            {
-                SendError(ec);
-                Disconnect();
-            }
-
-            return received;
-        }
-
-        /// <summary>
-        /// Receive text from the client (synchronous)
-        /// </summary>
-        /// <param name="size">Text size to receive</param>
-        /// <returns>Received text</returns>
-        public virtual string Receive(long size)
-        {
-            var buffer = new byte[size];
-            var length = Receive(buffer);
-            return Encoding.UTF8.GetString(buffer, 0, (int)length);
-        }
-
-        /// <summary>
         ///   Reads all available data
         /// </summary>
         public async Task<Byte[]> ReadBytesAsync()
@@ -414,6 +390,45 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
+        /// Receive data from the client (synchronous)
+        /// </summary>
+        /// <param name="buffer">Buffer to receive</param>
+        /// <param name="offset">Buffer offset</param>
+        /// <param name="size">Buffer size</param>
+        /// <returns>Size of received data</returns>
+        public virtual long Receive(byte[] buffer, long offset, long size)
+        {
+            if (!IsHandshaked)
+                return 0;
+
+            if (size == 0)
+                return 0;
+
+            try
+            {
+                // Receive data from the client
+                long received = _sslStream.Read(buffer, (int)offset, (int)size);
+                if (received > 0)
+                {
+                    // Update statistic
+                    BytesReceived += received;
+                    Interlocked.Add(ref Server._bytesReceived, received);
+
+                    // Call the buffer received handler
+                    OnReceived(buffer, 0, received);
+                }
+
+                return received;
+            }
+            catch (Exception)
+            {
+                SendError(SocketError.OperationAborted);
+                Disconnect();
+                return 0;
+            }
+        }
+
+        /// <summary>
         ///   Reads all available data
         /// </summary>
         public Byte[] ReadAllAvailableBytes()
@@ -421,7 +436,7 @@ namespace LUC.DiscoveryService
             List<Byte> allMessage = new List<Byte>();
             var availableDataToRead = Socket.Available;
 
-            for (Int64 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0; )
+            for (Int64 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0;)
             {
                 var buffer = new Byte[availableDataToRead];
                 countReadBytes = Receive(buffer, offset: 0, availableDataToRead);
@@ -431,6 +446,18 @@ namespace LUC.DiscoveryService
             }
 
             return allMessage.ToArray();
+        }
+
+        /// <summary>
+        /// Receive text from the client (synchronous)
+        /// </summary>
+        /// <param name="size">Text size to receive</param>
+        /// <returns>Received text</returns>
+        public virtual string Receive(long size)
+        {
+            var buffer = new byte[size];
+            var length = Receive(buffer);
+            return Encoding.UTF8.GetString(buffer, 0, (int)length);
         }
 
         /// <summary>
@@ -450,25 +477,23 @@ namespace LUC.DiscoveryService
             if (_receiving)
                 return;
 
-            if (!IsConnected)
+            if (!IsHandshaked)
                 return;
 
-            bool process = true;
-
-            while (process)
+            try
             {
-                process = false;
-
-                try
+                // Async receive with the receive handler
+                IAsyncResult result;
+                do
                 {
-                    // Async receive with the receive handler
+                    if (!IsHandshaked)
+                        return;
+
                     _receiving = true;
-                    _receiveEventArg.SetBuffer(_receiveBuffer.Data, 0, (int)_receiveBuffer.Capacity);
-                    if (!Socket.ReceiveAsync(_receiveEventArg))
-                        process = ProcessReceive(_receiveEventArg);
-                }
-                catch (ObjectDisposedException) {}
+                    result = _sslStream.BeginRead(_receiveBuffer.Data, 0, (int)_receiveBuffer.Capacity, ProcessReceive, _sslStreamId);
+                } while (result.CompletedSynchronously);
             }
+            catch (ObjectDisposedException) {}
         }
 
         /// <summary>
@@ -476,59 +501,51 @@ namespace LUC.DiscoveryService
         /// </summary>
         private void TrySend()
         {
-            if (!IsConnected)
+            if (!IsHandshaked)
                 return;
 
             bool empty = false;
-            bool process = true;
 
-            while (process)
+            lock (_sendLock)
             {
-                process = false;
-
-                lock (_sendLock)
+                // Is previous socket send in progress?
+                if (_sendBufferFlush.IsEmpty)
                 {
-                    // Is previous socket send in progress?
+                    // Swap flush and main buffers
+                    _sendBufferFlush = Interlocked.Exchange(ref _sendBufferMain, _sendBufferFlush);
+                    _sendBufferFlushOffset = 0;
+
+                    // Update statistic
+                    BytesPending = 0;
+                    BytesSending += _sendBufferFlush.Size;
+
+                    // Check if the flush buffer is empty
                     if (_sendBufferFlush.IsEmpty)
                     {
-                        // Swap flush and main buffers
-                        _sendBufferFlush = Interlocked.Exchange(ref _sendBufferMain, _sendBufferFlush);
-                        _sendBufferFlushOffset = 0;
+                        // Need to call empty send buffer handler
+                        empty = true;
 
-                        // Update statistic
-                        BytesPending = 0;
-                        BytesSending += _sendBufferFlush.Size;
-
-                        // Check if the flush buffer is empty
-                        if (_sendBufferFlush.IsEmpty)
-                        {
-                            // Need to call empty send buffer handler
-                            empty = true;
-
-                            // End sending process
-                            _sending = false;
-                        }
+                        // End sending process
+                        _sending = false;
                     }
-                    else
-                        return;
                 }
-
-                // Call the empty send buffer handler
-                if (empty)
-                {
-                    OnEmpty();
+                else
                     return;
-                }
-
-                try
-                {
-                    // Async write with the write handler
-                    _sendEventArg.SetBuffer(_sendBufferFlush.Data, (int)_sendBufferFlushOffset, (int)(_sendBufferFlush.Size - _sendBufferFlushOffset));
-                    if (!Socket.SendAsync(_sendEventArg))
-                        process = ProcessSend(_sendEventArg);
-                }
-                catch (ObjectDisposedException) {}
             }
+
+            // Call the empty send buffer handler
+            if (empty)
+            {
+                OnEmpty();
+                return;
+            }
+
+            try
+            {
+                // Async write with the write handler
+                _sslStream.BeginWrite(_sendBufferFlush.Data, (int)_sendBufferFlushOffset, (int)(_sendBufferFlush.Size - _sendBufferFlushOffset), ProcessSend, _sslStreamId);
+            }
+            catch (ObjectDisposedException) {}
         }
 
         /// <summary>
@@ -554,126 +571,161 @@ namespace LUC.DiscoveryService
         #region IO processing
 
         /// <summary>
-        /// This method is called whenever a receive or send operation is completed on a socket
+        /// This method is invoked when an asynchronous handshake operation completes
         /// </summary>
-        private void OnAsyncCompleted(object sender, SocketAsyncEventArgs e)
+        private void ProcessHandshake(IAsyncResult result)
         {
-            if (IsSocketDisposed)
-                return;
-
-            // Determine which type of operation just completed and call the associated handler
-            switch (e.LastOperation)
+            try
             {
-                case SocketAsyncOperation.Receive:
-                    if (ProcessReceive(e))
-                        TryReceive();
-                    break;
-                case SocketAsyncOperation.Send:
-                    if (ProcessSend(e))
-                        TrySend();
-                    break;
-                default:
-                    throw new ArgumentException("The last operation completed on the socket was not a receive or send");
-            }
+                if (IsHandshaked)
+                    return;
 
+                // Validate SSL stream Id
+                var sslStreamId = result.AsyncState as Guid?;
+                if (_sslStreamId != sslStreamId)
+                    return;
+
+                // End the SSL handshake
+                _sslStream.EndAuthenticateAsServer(result);
+
+                // Update the handshaked flag
+                IsHandshaked = true;
+
+                // Try to receive something from the client
+                TryReceive();
+
+                // Check the socket disposed state: in some rare cases it might be disconnected while receiving!
+                if (IsSocketDisposed)
+                    return;
+
+                // Call the session handshaked handler
+                OnHandshaked();
+
+                // Call the session handshaked handler in the server
+                Server.OnHandshakedInternal(this);
+
+                // Call the empty send buffer handler
+                if (_sendBufferMain.IsEmpty)
+                    OnEmpty();
+            }
+            catch (Exception)
+            {
+                SendError(SocketError.NotConnected);
+                Disconnect();
+            }
         }
 
         /// <summary>
         /// This method is invoked when an asynchronous receive operation completes
         /// </summary>
-        private bool ProcessReceive(SocketAsyncEventArgs e)
+        private void ProcessReceive(IAsyncResult result)
         {
-            if (!IsConnected)
-                return false;
-
-            long size = e.BytesTransferred;
-
-            // Received some data from the client
-            if (size > 0)
+            try
             {
-                // Update statistic
-                BytesReceived += size;
-                Interlocked.Add(ref Server._bytesReceived, size);
+                if (!IsHandshaked)
+                    return;
 
-                // Call the buffer received handler
-                OnReceived(_receiveBuffer.Data, 0, size);
+                // Validate SSL stream Id
+                var sslStreamId = result.AsyncState as Guid?;
+                if (_sslStreamId != sslStreamId)
+                    return;
 
-                // If the receive buffer is full increase its size
-                if (_receiveBuffer.Capacity == size)
+                // End the SSL read
+                long size = _sslStream.EndRead(result);
+
+                // Received some data from the client
+                if (size > 0)
                 {
-                    // Check the receive buffer limit
-                    if (((2 * size) > OptionReceiveBufferLimit) && (OptionReceiveBufferLimit > 0))
+                    // Update statistic
+                    BytesReceived += size;
+                    Interlocked.Add(ref Server._bytesReceived, size);
+
+                    // Call the buffer received handler
+                    OnReceived(_receiveBuffer.Data, 0, size);
+
+                    // If the receive buffer is full increase its size
+                    if (_receiveBuffer.Capacity == size)
                     {
-                        SendError(SocketError.NoBufferSpaceAvailable);
-                        Disconnect();
-                        return false;
+                        // Check the receive buffer limit
+                        if (((2 * size) > OptionReceiveBufferLimit) && (OptionReceiveBufferLimit > 0))
+                        {
+                            SendError(SocketError.NoBufferSpaceAvailable);
+                            Disconnect();
+                            return;
+                        }
+
+                        _receiveBuffer.Reserve(2 * size);
                     }
-
-                    _receiveBuffer.Reserve(2 * size);
                 }
-            }
 
-            _receiving = false;
+                _receiving = false;
 
-            // Try to receive again if the session is valid
-            if (e.SocketError == SocketError.Success)
-            {
                 // If zero is returned from a read operation, the remote end has closed the connection
                 if (size > 0)
-                    return true;
+                {
+                    if (!result.CompletedSynchronously)
+                        TryReceive();
+                }
                 else
                     Disconnect();
             }
-            else
+            catch (Exception)
             {
-                SendError(e.SocketError);
+                SendError(SocketError.OperationAborted);
                 Disconnect();
             }
-
-            return false;
         }
 
         /// <summary>
         /// This method is invoked when an asynchronous send operation completes
         /// </summary>
-        private bool ProcessSend(SocketAsyncEventArgs e)
+        private void ProcessSend(IAsyncResult result)
         {
-            if (!IsConnected)
-                return false;
-
-            long size = e.BytesTransferred;
-
-            // Send some data to the client
-            if (size > 0)
+            try
             {
-                // Update statistic
-                BytesSending -= size;
-                BytesSent += size;
-                Interlocked.Add(ref Server._bytesSent, size);
+                // Validate SSL stream Id
+                var sslStreamId = result.AsyncState as Guid?;
+                if (_sslStreamId != sslStreamId)
+                    return;
 
-                // Increase the flush buffer offset
-                _sendBufferFlushOffset += size;
+                if (!IsHandshaked)
+                    return;
 
-                // Successfully send the whole flush buffer
-                if (_sendBufferFlushOffset == _sendBufferFlush.Size)
+                // End the SSL write
+                _sslStream.EndWrite(result);
+
+                long size = _sendBufferFlush.Size;
+
+                // Send some data to the client
+                if (size > 0)
                 {
-                    // Clear the flush buffer
-                    _sendBufferFlush.Clear();
-                    _sendBufferFlushOffset = 0;
+                    // Update statistic
+                    BytesSending -= size;
+                    BytesSent += size;
+                    Interlocked.Add(ref Server._bytesSent, size);
+
+                    // Increase the flush buffer offset
+                    _sendBufferFlushOffset += size;
+
+                    // Successfully send the whole flush buffer
+                    if (_sendBufferFlushOffset == _sendBufferFlush.Size)
+                    {
+                        // Clear the flush buffer
+                        _sendBufferFlush.Clear();
+                        _sendBufferFlushOffset = 0;
+                    }
+
+                    // Call the buffer sent handler
+                    OnSent(size, BytesPending + BytesSending);
                 }
 
-                // Call the buffer sent handler
-                OnSent(size, BytesPending + BytesSending);
+                // Try to send again if the session is valid
+                TrySend();
             }
-
-            // Try to send again if the session is valid
-            if (e.SocketError == SocketError.Success)
-                return true;
-            else
+            catch (Exception)
             {
-                SendError(e.SocketError);
+                SendError(SocketError.OperationAborted);
                 Disconnect();
-                return false;
             }
         }
 
@@ -689,6 +741,14 @@ namespace LUC.DiscoveryService
         /// Handle client connected notification
         /// </summary>
         protected virtual void OnConnected() {}
+        /// <summary>
+        /// Handle client handshaking notification
+        /// </summary>
+        protected virtual void OnHandshaking() {}
+        /// <summary>
+        /// Handle client handshaked notification
+        /// </summary>
+        protected virtual void OnHandshaked() {}
         /// <summary>
         /// Handle client disconnecting notification
         /// </summary>
@@ -808,7 +868,7 @@ namespace LUC.DiscoveryService
         }
 
         // Use C# destructor syntax for finalization code.
-        ~TcpSession()
+        ~SslSession()
         {
             // Simply call Dispose(false).
             Dispose(false);

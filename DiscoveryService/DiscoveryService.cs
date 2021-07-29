@@ -12,6 +12,7 @@ using LUC.DiscoveryService.Kademlia.ClientPool;
 using System.Threading;
 using System.Numerics;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace LUC.DiscoveryService
 {
@@ -119,56 +120,73 @@ namespace LUC.DiscoveryService
             Service = new NetworkEventHandler(MachineId, UseIpv4, UseIpv6, ProtocolVersion);
 
             Service.QueryReceived += async (invokerEvent, eventArgs) => await SendTcpMessageAsync(invokerEvent, eventArgs);
+
             Service.AnswerReceived += AddEndpoint;
             Service.AnswerReceived += Service.TryKademliaOperation;
+
             Service.PingReceived += (invokerEvent, eventArgs) =>
             {
-                HandleKademliaRequest<PingRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
-                {
-                    Service.DistributedHashTable.Node.Ping(sender);
-
-                    PingResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
-                });
+                HandleKademliaRequest<PingRequest>(eventArgs.AcceptedSocket, eventArgs, 
+                    localKadOp: (sender, request) =>
+                    {
+                        if (sender != null)
+                        {
+                            Service.DistributedHashTable.Node.Ping(sender);
+                        }
+                    },
+                    funcSendResponse: (acceptedSocket, request) =>
+                    {
+                        PingResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
+                    });
             };
 
-            Service.StoreReceived += (invokerEvent, eventArgs) =>
-            {
-                HandleKademliaRequest<StoreRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
-                {
-                    Service.DistributedHashTable.Store(new ID(request.KeyToStore), request.Value);
+            //Service.StoreReceived += (invokerEvent, eventArgs) =>
+            //{
+            //    HandleKademliaRequest<StoreRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
+            //    {
+            //        Service.DistributedHashTable.Store(new ID(request.KeyToStore), request.Value);
 
-                    StoreResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
-                });
-            };
+            //        StoreResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
+            //    });
+            //};
 
-            Service.FindNodeReceived += (invokerEvent, eventArgs) =>
-            {
-                HandleKademliaRequest<FindNodeRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
-                {
-                    Service.DistributedHashTable.Node.FindNode(sender, new ID(request.KeyToFindCloseContacts), out var closeContacts);
+            //Service.FindNodeReceived += (invokerEvent, eventArgs) =>
+            //{
+            //    HandleKademliaRequest<FindNodeRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
+            //    {
+            //        List<Contact> closeContacts;
+            //        if (sender != null)
+            //        {
+            //            Service.DistributedHashTable.Node.FindNode(sender, new ID(request.KeyToFindCloseContacts), out closeContacts);
+            //        }
+            //        else
+            //        {
+            //            Service.DistributedHashTable.AddToPending(sender);
+            //            closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(request.KeyToFindCloseContacts), new ID(request.Sender));
+            //        }
                     
-                    FindNodeResponse.SendOurCloseContacts(client, closeContacts, Constants.SendTimeout, request);
-                });
-            };
+            //        FindNodeResponse.SendOurCloseContacts(client, closeContacts, Constants.SendTimeout, request);
+            //    });
+            //};
 
-            Service.FindValueReceived += (invokerEvent, eventArgs) =>
-            {
-                HandleKademliaRequest<FindValueRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
-                {
-                    //Service.DistributedHashTable.Node.FindValue(sender, new ID(request.KeyToFindCloseContacts), out var closeContacts, out var nodeValue);
-                    Service.DistributedHashTable.FindValue(new ID(request.KeyToFindCloseContacts), 
-                        out var isFound, out var closeContacts, out var nodeValue);
+            //Service.FindValueReceived += (invokerEvent, eventArgs) =>
+            //{
+            //    HandleKademliaRequest<FindValueRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
+            //    {
+            //        //Service.DistributedHashTable.Node.FindValue(sender, new ID(request.KeyToFindCloseContacts), out var closeContacts, out var nodeValue);
+            //        Service.DistributedHashTable.FindValue(new ID(request.KeyToFindCloseContacts), 
+            //            out var isFound, out var closeContacts, out var nodeValue);
 
-                    if(isFound)
-                    {
-                        FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, nodeValue);
-                    }
-                    else
-                    {
-                        //TODO send response with another MessageOperation or just do nothing
-                    }
-                });
-            };
+            //        if(isFound)
+            //        {
+            //            FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, nodeValue);
+            //        }
+            //        else
+            //        {
+            //            //TODO send response with another MessageOperation or just do nothing
+            //        }
+            //    });
+            //};
         }
 
         //TODO: check SSL certificate with SNI
@@ -250,19 +268,38 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private void HandleKademliaRequest<T>(Socket acceptedSocket, TcpMessageEventArgs eventArgs, Action<Socket, Contact, T> handleRequest)
+        private void HandleKademliaRequest<T>(Socket acceptedSocket, TcpMessageEventArgs eventArgs, Action<Contact, T> localKadOp, Action<Socket, T> funcSendResponse)
             where T: Request, new()
         {
+            Contact sender = null;
+            T request = null;
             try
             {
-                var request = eventArgs.Message<T>(whetherReadMessage: false);
-                var sender = KnownContacts(ProtocolVersion)[request.Sender];
-
-                handleRequest(acceptedSocket, sender, request);
+                request = eventArgs.Message<T>(whetherReadMessage: false);
+                sender = Service.DistributedHashTable.KnownContact(new ID(request.Sender));
             }
-            catch(Exception ex)
+            catch(InvalidOperationException ex)
             {
-                log.LogInfo($"Failed to answer at {typeof(T)}: {ex.Message}");
+                log.LogInfo($"Cannot find sender {typeof(T).Name}: {ex}");
+            }
+            catch(EndOfStreamException ex)
+            {
+                log.LogInfo($"Failed to answer at {typeof(T).Name}: {ex}");
+                return;
+            }
+
+            try
+            {
+                localKadOp(sender, request);
+                funcSendResponse(acceptedSocket, request);
+            }
+            catch (SocketException ex)
+            {
+                log.LogInfo($"Failed to answer at {typeof(T).Name}: {ex}");
+            }
+            catch (TimeoutException ex)
+            {
+                log.LogInfo($"Failed to answer at {typeof(T).Name}: {ex}");
             }
         }
 

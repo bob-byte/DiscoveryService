@@ -97,6 +97,13 @@ namespace LUC.DiscoveryService.Kademlia
             SetupTimers();
         }
 
+        public Contact KnownContact(ID contactId)
+        {
+            Contact foundContact = node.BucketList.GetKBucket(contactId).Contacts.Single(c => c.ID == contactId);
+
+            return foundContact;
+        }
+
         /// <summary>
         /// Returns a JSON string of the serialized DHT.
         /// </summary>
