@@ -1,10 +1,13 @@
-﻿using System;
+﻿using LUC.DiscoveryService.Kademlia;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService
 {
@@ -14,6 +17,8 @@ namespace LUC.DiscoveryService
     /// <remarks>Thread-safe</remarks>
     public class TcpServer : IDisposable
     {
+        private readonly TimeSpan WaitForCheckingWaitingSocket = TimeSpan.FromSeconds(0.5);
+
         /// <summary>
         /// Initialize TCP server with a given IP address and port number
         /// </summary>
@@ -305,6 +310,30 @@ namespace LUC.DiscoveryService
             // Accept the next client connection
             if (IsAccepting)
                 StartAccept(e);
+        }
+
+        public async Task<TcpSession> SessionWithNewDataAsync()
+        {
+            TcpSession sessionWithData = null;
+
+            while (sessionWithData == null)
+            {
+                foreach (var tcpSession in Sessions.Values)
+                {
+                    if (tcpSession.Socket.Available > 0)
+                    {
+                        sessionWithData = tcpSession;
+                        break;
+                    }
+                }
+
+                if (sessionWithData == null)
+                {
+                    await Task.Delay(Constants.TimeCheckDataToRead);
+                }
+            }
+
+            return sessionWithData;
         }
 
         /// <summary>

@@ -24,7 +24,8 @@ namespace LUC.DiscoveryService.Messages
         StoreResponse = 4,
         FindNode = 5,
         FindNodeResponse = 6,
-        FindValueResponseWithValue = 7,
-        FindValueResponseWithCloseContacts = 8
+        FindValue = 7,
+        FindValueResponseWithValue = 8,
+        FindValueResponseWithCloseContacts = 9
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -390,6 +391,45 @@ namespace LUC.DiscoveryService
             var buffer = new byte[size];
             var length = Receive(buffer);
             return Encoding.UTF8.GetString(buffer, 0, (int)length);
+        }
+
+        /// <summary>
+        ///   Reads all available data
+        /// </summary>
+        public async Task<Byte[]> ReadBytesAsync()
+        {
+            List<Byte> allMessage = new List<Byte>();
+            var availableDataToRead = Socket.Available;
+            for (Int32 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0;)
+            {
+                var buffer = new ArraySegment<Byte>(new Byte[availableDataToRead]);
+                countReadBytes = await Socket.ReceiveAsync(buffer, SocketFlags.None);
+                allMessage.AddRange(buffer);
+
+                availableDataToRead = Socket.Available;
+            }
+
+            return allMessage.ToArray();
+        }
+
+        /// <summary>
+        ///   Reads all available data
+        /// </summary>
+        public Byte[] ReadAllAvailableBytes()
+        {
+            List<Byte> allMessage = new List<Byte>();
+            var availableDataToRead = Socket.Available;
+
+            for (Int64 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0; )
+            {
+                var buffer = new Byte[availableDataToRead];
+                countReadBytes = Receive(buffer, offset: 0, availableDataToRead);
+                allMessage.AddRange(buffer);
+
+                availableDataToRead = Socket.Available;
+            }
+
+            return allMessage.ToArray();
         }
 
         /// <summary>
