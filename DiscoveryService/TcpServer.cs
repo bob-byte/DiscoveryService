@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Messages;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -18,6 +19,8 @@ namespace LUC.DiscoveryService
     public class TcpServer : IDisposable
     {
         private readonly TimeSpan WaitForCheckingWaitingSocket = TimeSpan.FromSeconds(0.5);
+
+        private AutoResetEvent receiveDone;
 
         /// <summary>
         /// Initialize TCP server with a given IP address and port number
@@ -310,6 +313,64 @@ namespace LUC.DiscoveryService
             // Accept the next client connection
             if (IsAccepting)
                 StartAccept(e);
+        }
+
+        public async Task<TcpMessageEventArgs> ReceiveAsync(TimeSpan timeoutToRead)
+        {
+            IPEndPoint ipEndPoint;
+            TcpSession clientToReadMessage;
+            Byte[] readBytes;
+
+            try
+            {
+                clientToReadMessage = await SessionWithNewDataAsync();
+                if (receiveDone == null)
+                {
+                    receiveDone = new AutoResetEvent(initialState: false);
+                }
+                var taskReadBytes = clientToReadMessage.ReadBytesAsync(receiveDone);
+
+                var isReceivedInTime = receiveDone.WaitOne(timeoutToRead);
+                if (isReceivedInTime)
+                {
+                    readBytes = taskReadBytes.Result;
+                    ipEndPoint = clientToReadMessage.Socket.RemoteEndPoint as IPEndPoint;
+                }
+                else
+                {
+                    throw new TimeoutException($"Timeout to read data from {clientToReadMessage.Socket.RemoteEndPoint}");
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                throw;
+            }
+            catch (SocketException)
+            {
+                if (IsSocketDisposed)
+                {
+                    throw new ObjectDisposedException($"Socket {_acceptorSocket.LocalEndPoint} is disposed");
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            TcpMessageEventArgs receiveResult = new TcpMessageEventArgs();
+            if (ipEndPoint != null)
+            {
+                receiveResult.Buffer = readBytes;
+                receiveResult.SendingEndPoint = ipEndPoint;
+                receiveResult.AcceptedSocket = clientToReadMessage.Socket;
+                receiveResult.LocalEndPoint = _acceptorSocket.LocalEndPoint;
+            }
+            else
+            {
+                throw new InvalidOperationException("Cannot convert remote end point to IPEndPoint");
+            }
+
+            return receiveResult;
         }
 
         public async Task<TcpSession> SessionWithNewDataAsync()

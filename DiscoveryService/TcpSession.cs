@@ -396,7 +396,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Reads all available data
         /// </summary>
-        public async Task<Byte[]> ReadBytesAsync()
+        public async Task<Byte[]> ReadBytesAsync(AutoResetEvent receiveDone)
         {
             List<Byte> allMessage = new List<Byte>();
             var availableDataToRead = Socket.Available;
@@ -410,7 +410,7 @@ namespace LUC.DiscoveryService
                 availableDataToRead = Socket.Available;
             }
 
-
+            receiveDone.Set();
 
             return allMessage.ToArray();
         }

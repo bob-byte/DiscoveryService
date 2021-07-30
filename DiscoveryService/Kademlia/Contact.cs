@@ -9,7 +9,7 @@ using System.IO;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class Contact : IComparable, IEnumerable<IPAddress>
+    public class Contact : IComparable
     {
         private readonly Object lockIpAddresses;
         private readonly List<IPAddress> ipAddresses;
@@ -77,8 +77,6 @@ namespace LUC.DiscoveryService.Kademlia
 
         public Int32 IpAddressesCount => ipAddresses.Count;
 
-        public IPAddress this[Int32 index] => ipAddresses[index];
-
         /// <summary>
         /// Update the fact that we've just seen this contact.
         /// </summary>
@@ -93,22 +91,26 @@ namespace LUC.DiscoveryService.Kademlia
 
         public void TryAddIpAddress(IPAddress address, out Boolean isAdded)
         {
-            lock(lockIpAddresses)
+            if (address != null)
             {
-                isAdded = !ipAddresses.Contains(address);
-
-                if(isAdded)
+                lock (lockIpAddresses)
                 {
-                    ipAddresses.Add(address);
+                    if (!ipAddresses.Contains(address))
+                    {
+                        ipAddresses.Add(address);
+                        isAdded = true;
+                    }
+                    else
+                    {
+                        isAdded = false;
+                    }
                 }
             }
+            else
+            {
+                isAdded = false;
+            }
         }
-
-        IEnumerator IEnumerable.GetEnumerator() =>
-            ipAddresses.GetEnumerator();
-
-        public IEnumerator<IPAddress> GetEnumerator() =>
-            ipAddresses.GetEnumerator();
 
         public void TryRemoveIpAddress(IPAddress address, out Boolean isRemoved)
         {
@@ -118,7 +120,7 @@ namespace LUC.DiscoveryService.Kademlia
                 {
                     isRemoved = ipAddresses.Remove(address);
 
-                    if(ipAddresses.Count >= 0)
+                    if(ipAddresses.Count > 0)
                     {
                         lastActiveIpAddress = ipAddresses[IpAddressesCount - 1];
                     }

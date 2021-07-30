@@ -281,37 +281,18 @@ namespace LUC.DiscoveryService
             {
                 try
                 {
-                    var taskSession = tcpServer.SessionWithNewDataAsync();
-                    await taskSession.ConfigureAwait(continueOnCapturedContext: false);
-
-                    //get TcpMessageEventArgs
-                    var taskGetEventArgs = taskSession.ContinueWith(continuationFunction: previousTask =>
-                    {
-                        var session = previousTask.Result;
-                        var buffer = session.ReadAllAvailableBytes();
-                        log.LogInfo($"Read {buffer.Length} bytes");
-
-                        TcpMessageEventArgs eventArgs = new TcpMessageEventArgs
-                        {
-                            AcceptedSocket = session.Socket,
-                            Buffer = buffer,
-                            LocalEndPoint = tcpServer.Endpoint,
-                            SendingEndPoint = session.Socket.RemoteEndPoint
-                        };
-
-                        return eventArgs;
-                    });
+                    var task = tcpServer.ReceiveAsync(Constants.ReceiveTimeout);
 
                     //ListenTcp call is here not to stop listening when we received TCP message
-                    _ = taskGetEventArgs.ContinueWith(x => ListenTcp(tcpServer), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
+                    _ = task.ContinueWith(x => ListenTcp(tcpServer), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     //using tasks provides unblocking event calls
-                    _ = taskGetEventArgs.ContinueWith(taskReceiving =>
+                    _ = task.ContinueWith(taskReceiving =>
                     {
                         TcpMessageReceived?.Invoke(tcpServer, taskReceiving.Result);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
-                    await taskGetEventArgs.ConfigureAwait(continueOnCapturedContext: false);
+                    await task.ConfigureAwait(continueOnCapturedContext: false);
                 }
                 catch (ObjectDisposedException)
                 {
