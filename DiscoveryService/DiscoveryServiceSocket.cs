@@ -186,10 +186,27 @@ namespace LUC.DiscoveryService
 
         public async Task ConnectAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect)
         {
-            await Task.Run(() =>
+            var taskConnection = Task.Run(() =>
             {
-                Connect(remoteEndPoint, timeoutToConnect);
+                try
+                {
+                    Connect(remoteEndPoint, timeoutToConnect);
+                }
+                catch (SocketException ex)
+                {
+                    Log.LogError(ex.ToString());
+                }
+                catch (TimeoutException ex)
+                {
+                    Log.LogError(ex.ToString());
+                }
             });
+            await taskConnection.ConfigureAwait(continueOnCapturedContext: false);
+
+            if (taskConnection.Exception != null)
+            {
+                throw taskConnection.Exception;
+            }
         }
 
         public void Connect(EndPoint remoteEndPoint, TimeSpan timeout)
@@ -281,27 +298,31 @@ namespace LUC.DiscoveryService
             }
         }
 
+        //Maybe we should use lock to avoid sending several packages
         public void Send(Byte[] bytesToSend, TimeSpan timeout)
         {
-            VerifyConnected();
+            //lock(sendDone)
+            //{
+                VerifyConnected();
 
-            if (sendDone == null)
-            {
-                sendDone = new AutoResetEvent(initialState: false);
-            }
+                if (sendDone == null)
+                {
+                    sendDone = new AutoResetEvent(initialState: false);
+                }
 
-            //Begin sending the data to the remote device
-            BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
-            var isSent = sendDone.WaitOne(timeout);
+                //Begin sending the data to the remote device
+                BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
+                var isSent = sendDone.WaitOne(timeout);
 
-            if (isSent)
-            {
-                State = SocketState.Connected;
-            }
-            else
-            {
-                throw new TimeoutException();
-            }
+                if (isSent)
+                {
+                    State = SocketState.Connected;
+                }
+                else
+                {
+                    throw new TimeoutException();
+                }
+            //}
         }
 
         public void VerifyConnected()

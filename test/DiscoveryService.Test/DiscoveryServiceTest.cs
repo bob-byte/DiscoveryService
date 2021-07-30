@@ -116,7 +116,7 @@ namespace LUC.DiscoveryService.Test
 
             discoveryService.SendTcpMessageAsync(this, eventArgs).Wait();
 
-            Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(value: 3)));
+            Assert.IsTrue(done.WaitOne(TimeSpan.FromSeconds(value: 10)));
         }
 
         [Test]

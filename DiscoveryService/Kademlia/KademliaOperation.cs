@@ -95,7 +95,7 @@ namespace LUC.DiscoveryService.Kademlia
             try
             {
                 client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
+                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
 
                 //clean extra bytes
                 if (client.Available > 0)

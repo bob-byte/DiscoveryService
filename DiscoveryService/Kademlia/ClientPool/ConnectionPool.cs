@@ -128,32 +128,30 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 }
             });
 
-            if(desiredSocket != null)
+            if(desiredSocket == null)
             {
-                return desiredSocket;
-            }
-
-            Boolean isInPool = sockets.ContainsKey(remoteEndPoint);
-            if (isInPool)
-            {
-                lock (sockets)
+                Boolean isInPool = sockets.ContainsKey(remoteEndPoint);
+                if (isInPool)
                 {
-                    desiredSocket = sockets[remoteEndPoint];
-                    sockets.Remove(remoteEndPoint);
+                    lock (sockets)
+                    {
+                        desiredSocket = sockets[remoteEndPoint];
+                        sockets.Remove(remoteEndPoint);
+                    }
+
+                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);
+                }
+                else
+                {
+                    desiredSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
+                    await ConnectInDifferentWayAsync(desiredSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
                 }
 
-                desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);
-            }
-            else
-            {
-                desiredSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
-                await ConnectInDifferentWayAsync(desiredSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
-            }
-
-            lock (leasedSockets)
-            {
-                leasedSockets.Add(remoteEndPoint, desiredSocket);
-                desiredSocket.IsInPool = false;
+                lock (leasedSockets)
+                {
+                    leasedSockets.Add(remoteEndPoint, desiredSocket);
+                    desiredSocket.IsInPool = false;
+                }
             }
 
             return desiredSocket;

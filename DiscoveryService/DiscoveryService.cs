@@ -22,6 +22,7 @@ namespace LUC.DiscoveryService
     public class DiscoveryService : AbstractService
     {
         private static DiscoveryService instance;
+        private static SemaphoreLocker asyncLocker; //it is static to every DS has only 1 sending TCP message at once
 
         private readonly ConnectionPool connectionPool;
 
@@ -59,7 +60,9 @@ namespace LUC.DiscoveryService
                 ProtocolVersion = profile.ProtocolVersion;
                 MachineId = profile.MachineId;
                 connectionPool = ConnectionPool.Instance();
-                
+
+                asyncLocker = new SemaphoreLocker();
+
                 InitService();
             }
         }
@@ -199,46 +202,46 @@ namespace LUC.DiscoveryService
         /// </param>
         public async Task SendTcpMessageAsync(Object sender, UdpMessageEventArgs e)
         {
-            //lock(this)
+            //lock (this)
             //{
                 var udpMessage = e.Message<UdpMessage>(whetherReadMessage: false);
 
-            if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
-            {
-                var sendingContact = Service.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
-
-                Random random = new Random();
-                var tcpMessage = new AcknowledgeTcpMessage(
-                    messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                    MachineId,
-                    sendingContact.ID.Value,
-                    RunningTcpPort,
-                    ProtocolVersion,
-                    groupsIds: GroupsSupported?.Keys?.ToList());
-                var bytesToSend = tcpMessage.ToByteArray();
-
-                var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
-                ConnectionPoolSocket client = null;
-                try
+                if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
                 {
-                    client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                    IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
+                    var sendingContact = Service.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
 
-                    ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
-                        Constants.ConnectTimeout, ref client);
-                }
-                finally
-                {
-                    if (client != null)
+                    Random random = new Random();
+                    var tcpMessage = new AcknowledgeTcpMessage(
+                        messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                        MachineId,
+                        sendingContact.ID.Value,
+                        RunningTcpPort,
+                        ProtocolVersion,
+                        groupsIds: GroupsSupported?.Keys?.ToList());
+                    var bytesToSend = tcpMessage.ToByteArray();
+
+                    var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
+                    ConnectionPoolSocket client = null;
+                    try
                     {
-                        await client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+                        client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
+                        IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
+
+                        ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
+                            Constants.ConnectTimeout, ref client);
+                    }
+                    finally
+                    {
+                        if (client != null)
+                        {
+                            await client.ReturnToPoolAsync(IOBehavior.Asynchronous).ConfigureAwait(continueOnCapturedContext: false);
+                        }
                     }
                 }
-            }
-            else
-            {
-                throw new ArgumentException($"Bad format of {nameof(e)}");
-            }
+                else
+                {
+                    throw new ArgumentException($"Bad format of {nameof(e)}");
+                }
             //}
         }
 
@@ -277,11 +280,11 @@ namespace LUC.DiscoveryService
             }
             catch(InvalidOperationException ex)
             {
-                log.LogInfo($"Cannot find sender {typeof(T).Name}: {ex}");
+                log.LogInfo($"Cannot find sender of {typeof(T).Name}: {ex.Message}");
             }
             catch(EndOfStreamException ex)
             {
-                log.LogInfo($"Failed to answer at {typeof(T).Name}: {ex}");
+                log.LogInfo($"Failed to answer at a {typeof(T).Name}: {ex}");
                 return;
             }
 
@@ -291,11 +294,11 @@ namespace LUC.DiscoveryService
             }
             catch (SocketException ex)
             {
-                log.LogInfo($"Failed to answer at {typeof(T).Name}: {ex}");
+                log.LogInfo($"Failed to answer at a {typeof(T).Name}: {ex}");
             }
             catch (TimeoutException ex)
             {
-                log.LogInfo($"Failed to answer at {typeof(T).Name}: {ex}");
+                log.LogInfo($"Failed to answer at a {typeof(T).Name}: {ex}");
             }
         }
 

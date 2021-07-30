@@ -410,6 +410,8 @@ namespace LUC.DiscoveryService
                 availableDataToRead = Socket.Available;
             }
 
+
+
             return allMessage.ToArray();
         }
 

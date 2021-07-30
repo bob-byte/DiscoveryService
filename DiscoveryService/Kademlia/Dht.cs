@@ -515,17 +515,23 @@ namespace LUC.DiscoveryService.Kademlia
         protected void RefreshBucket(KBucket bucket)
         {
             bucket.Touch();
-            ID rndId = ID.RandomIDWithinBucket(bucket);
-            bucket.Contacts.Single(c => c.ID == rndId);
-            // Isolate in a separate list as contacts collection for this bucket might change.
-            List<Contact> contacts = bucket.Contacts.ToList();
 
-            contacts.ForEach(contact =>
+            ID rndId = ID.RandomIDWithinBucket(bucket);
+            var whetherContains = bucket.Contacts.Any(c => c.ID == rndId);
+
+            if(whetherContains)
             {
-                var (newContacts, timeoutError) = Node.FindNode(ourContact, rndId, contact);
-                HandleError(timeoutError, contact);
-                newContacts?.ForEach(otherContact => node.BucketList.AddContact(ref otherContact));
-            });
+                // Isolate in a separate list as contacts collection for this bucket might change.
+                List<Contact> contacts = bucket.Contacts.ToList();
+
+                contacts.ForEach(contact =>
+                {
+                    var (newContacts, timeoutError) = Node.FindNode(ourContact, rndId, contact);
+                    HandleError(timeoutError, contact);
+
+                    newContacts?.ForEach(otherContact => node.BucketList.AddContact(ref otherContact));
+                });
+            }
         }
     }
 }

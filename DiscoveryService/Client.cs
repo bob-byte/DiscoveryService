@@ -208,6 +208,8 @@ namespace LUC.DiscoveryService
                         MulticastEndpointIp4 : MulticastEndpointIp6;
                     await sender.Value.SendAsync(message, message.Length, endpoint)
                         .ConfigureAwait(continueOnCapturedContext: false);
+
+                    break;
                 }
                 catch(SocketException e)
                 {
@@ -280,12 +282,14 @@ namespace LUC.DiscoveryService
                 try
                 {
                     var taskSession = tcpServer.SessionWithNewDataAsync();
+                    await taskSession.ConfigureAwait(continueOnCapturedContext: false);
 
                     //get TcpMessageEventArgs
                     var taskGetEventArgs = taskSession.ContinueWith(continuationFunction: previousTask =>
                     {
                         var session = previousTask.Result;
                         var buffer = session.ReadAllAvailableBytes();
+                        log.LogInfo($"Read {buffer.Length} bytes");
 
                         TcpMessageEventArgs eventArgs = new TcpMessageEventArgs
                         {

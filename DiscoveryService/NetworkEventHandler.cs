@@ -447,13 +447,13 @@ namespace LUC.DiscoveryService
                         var knownContact = new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address);
                         DistributedHashTable.Node.PingRemoteContact(DistributedHashTable.OurContact, knownContact);
 
-                        var key = knownContact.ID;
+                        //var key = knownContact.ID;
 
-                        DistributedHashTable.Node.Store(DistributedHashTable.OurContact, key, MachineId, knownContact);
-                        DistributedHashTable.Node.FindNode(OurContact, key, knownContact);
-                        DistributedHashTable.Node.FindValue(OurContact, key, knownContact);
+                        //DistributedHashTable.Node.Store(DistributedHashTable.OurContact, key, MachineId, knownContact);
+                        //DistributedHashTable.Node.FindNode(OurContact, key, knownContact);
+                        //DistributedHashTable.Node.FindValue(OurContact, key, knownContact);
 
-                        DistributedHashTable.Bootstrap(knownPeer: new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address));
+                        //DistributedHashTable.Bootstrap(knownPeer: new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address));
                     }
                 }
                 catch (Exception e)
