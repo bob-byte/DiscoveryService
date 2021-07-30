@@ -76,6 +76,7 @@ namespace LUC.DiscoveryService.Kademlia
                 else
                 {
                     remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], isRemoved: out _);
+                    cloneIpAddresses.RemoveAt(numAddress);
                 }
             }            
 

@@ -118,7 +118,11 @@ namespace LUC.DiscoveryService.Kademlia
                 {
                     isRemoved = ipAddresses.Remove(address);
 
-                    if(ipAddresses.Count == 0)
+                    if(ipAddresses.Count >= 0)
+                    {
+                        lastActiveIpAddress = ipAddresses[IpAddressesCount - 1];
+                    }
+                    else if(ipAddresses.Count == 0)
                     {
                         lastActiveIpAddress = null;
                     }
