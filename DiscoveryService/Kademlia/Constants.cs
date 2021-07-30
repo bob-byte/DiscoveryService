@@ -8,7 +8,7 @@ namespace LUC.DiscoveryService.Kademlia
 	public const int K = 20;
 	public const int ID_LENGTH_BYTES = 20;
 	public const int ID_LENGTH_BITS = 160;
-        public const int MaxCheckAvailableData = 4;
+        public const int MaxCheckAvailableData = 7;
 
         public const int MAX_THREADS = 4;
         public const int QUERY_TIME = 500;  // in ms.

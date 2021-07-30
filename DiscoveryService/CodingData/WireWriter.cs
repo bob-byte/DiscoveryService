@@ -250,10 +250,14 @@ namespace LUC.DiscoveryService.CodingData
             Write(contact.LastSeen.ToString(lastSeenFormat));
 
             Write((UInt32)contact.IpAddressesCount);
-            var addresses = contact.IpAddresses();
-            foreach (var address in addresses)
+            if(contact.IpAddressesCount > 0)
             {
-                Write(address.ToString());
+                var addresses = contact.IpAddresses();
+
+                foreach (var address in addresses)
+                {
+                    Write(address.ToString());
+                }
             }
         }
 

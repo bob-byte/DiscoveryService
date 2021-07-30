@@ -209,7 +209,7 @@ namespace LUC.DiscoveryService
                     await sender.Value.SendAsync(message, message.Length, endpoint)
                         .ConfigureAwait(continueOnCapturedContext: false);
 
-                    break;
+                    //break;
                 }
                 catch(SocketException e)
                 {

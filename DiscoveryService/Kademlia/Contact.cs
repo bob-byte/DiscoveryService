@@ -46,10 +46,10 @@ namespace LUC.DiscoveryService.Kademlia
             TcpPort = tcpPort;
             lockIpAddresses = new Object();
 
-            if(ipAddresses != null)
+            if(ipAddresses?.Count() >= 1)
             {
-                this.ipAddresses = ipAddresses?.ToList();
-                LastActiveIpAddress = ipAddresses?.Last();
+                this.ipAddresses = ipAddresses.ToList();
+                LastActiveIpAddress = ipAddresses.Last();
             }
             else
             {
@@ -117,6 +117,11 @@ namespace LUC.DiscoveryService.Kademlia
                 if(ipAddresses.Contains(address))
                 {
                     isRemoved = ipAddresses.Remove(address);
+
+                    if(ipAddresses.Count == 0)
+                    {
+                        lastActiveIpAddress = null;
+                    }
                 }
                 else
                 {
