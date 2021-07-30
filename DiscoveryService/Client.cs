@@ -289,7 +289,7 @@ namespace LUC.DiscoveryService
                     //using tasks provides unblocking event calls
                     _ = task.ContinueWith(taskReceiving =>
                     {
-                        Task.Run(() => TcpMessageReceived?.Invoke(tcpServer, taskReceiving.Result)).ConfigureAwait(continueOnCapturedContext: false);
+                        TcpMessageReceived?.Invoke(tcpServer, taskReceiving.Result);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(continueOnCapturedContext: false);

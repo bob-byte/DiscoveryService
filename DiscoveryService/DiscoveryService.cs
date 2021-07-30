@@ -131,12 +131,12 @@ namespace LUC.DiscoveryService
             {
                 HandleKademliaRequest<PingRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
                 {
-                    if(sender != null)
+                    PingResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
+
+                    if (sender != null)
                     {
                         Service.DistributedHashTable.Node.Ping(sender);
                     }
-
-                    PingResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
                 });
             };
 
@@ -144,9 +144,9 @@ namespace LUC.DiscoveryService
             {
                 HandleKademliaRequest<StoreRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
                 {
-                    Service.DistributedHashTable.Store(new ID(request.KeyToStore), request.Value);
-
                     StoreResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
+
+                    Service.DistributedHashTable.Store(new ID(request.KeyToStore), request.Value);
                 });
             };
 
@@ -225,7 +225,7 @@ namespace LUC.DiscoveryService
                     try
                     {
                         client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                        IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
+                        IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
 
                         ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
                             Constants.ConnectTimeout, ref client);
@@ -234,7 +234,7 @@ namespace LUC.DiscoveryService
                     {
                         if (client != null)
                         {
-                            await client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+                            await client.ReturnToPoolAsync(IOBehavior.Asynchronous).ConfigureAwait(continueOnCapturedContext: false);
                         }
                     }
                 }
