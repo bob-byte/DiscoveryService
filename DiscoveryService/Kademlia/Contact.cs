@@ -46,16 +46,15 @@ namespace LUC.DiscoveryService.Kademlia
             TcpPort = tcpPort;
             lockIpAddresses = new Object();
 
-            if(ipAddresses?.Count() >= 1)
+            this.ipAddresses = new List<IPAddress>();
+            if(ipAddresses != null)
             {
-                this.ipAddresses = ipAddresses.ToList();
-                LastActiveIpAddress = ipAddresses.Last();
+                foreach (var address in ipAddresses)
+                {
+                    TryAddIpAddress(address, isAdded: out _);
+                }
             }
-            else
-            {
-                this.ipAddresses = new List<IPAddress>();
-            }
-            
+
             LastSeen = lastSeen;
         }
 
@@ -99,6 +98,8 @@ namespace LUC.DiscoveryService.Kademlia
                     {
                         ipAddresses.Add(address);
                         isAdded = true;
+
+                        lastActiveIpAddress = address;
                     }
                     else
                     {
