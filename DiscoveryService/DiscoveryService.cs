@@ -225,7 +225,7 @@ namespace LUC.DiscoveryService
                     try
                     {
                         client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                        IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
+                        IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
 
                         ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
                             Constants.ConnectTimeout, ref client);
@@ -234,7 +234,7 @@ namespace LUC.DiscoveryService
                     {
                         if (client != null)
                         {
-                            await client.ReturnToPoolAsync(IOBehavior.Asynchronous).ConfigureAwait(continueOnCapturedContext: false);
+                            await client.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
                         }
                     }
                 }
