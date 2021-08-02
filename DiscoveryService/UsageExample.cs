@@ -80,11 +80,10 @@ namespace LUC.DiscoveryService
                 };
             };
 
-
+            Contact remoteContact = null;
             while (true)
             {
-                Contact remoteContact = null;
-                do
+                while (remoteContact == null)
                 {
                     discoveryService.QueryAllServices();//to get any contacts
 
@@ -94,12 +93,12 @@ namespace LUC.DiscoveryService
                     }
                     catch (IndexOutOfRangeException) //if knowContacts.Count == 0
                     {
-                        //do nothing
+                        ;//do nothing
                     }
 
                     Thread.Sleep(TimeSpan.FromSeconds(value: 3));
                 }
-                while (remoteContact == null);
+
 
                 TryExecuteSelectedOperationWhileKeyIsInvalid(remoteContact);
             }
@@ -271,6 +270,7 @@ namespace LUC.DiscoveryService
                                 remoteContact.TcpPort, machineId: discoveryService.MachineId));
                             discoveryService.SendTcpMessageAsync(discoveryService, eventArgs).GetAwaiter().GetResult();
 
+                            Thread.Sleep(TimeSpan.FromSeconds(value: 2));
                             return;
                         }
 

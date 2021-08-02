@@ -357,6 +357,11 @@ namespace LUC.DiscoveryService
                         log.LogError($"Receive handler failed: {e.Message}");
                         // eat the exception
                     }
+                    catch(InvalidOperationException e)
+                    {
+                        log.LogError($"Receive handler failed: {e.Message}");
+                        // eat the exception
+                    }
                 }
             }
         }
