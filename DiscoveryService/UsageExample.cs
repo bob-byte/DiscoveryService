@@ -235,7 +235,7 @@ namespace LUC.DiscoveryService
                     case ConsoleKey.NumPad3:
                     case ConsoleKey.D3:
                         {
-                            kadOperation.Store(discoveryService.Service.OurContact, remoteContact.ID,
+                            kadOperation.Store(discoveryService.Service.OurContact, discoveryService.Service.OurContact.ID,
                                 discoveryService.MachineId, remoteContact);
                             return;
                         }
@@ -250,7 +250,7 @@ namespace LUC.DiscoveryService
                     case ConsoleKey.NumPad5:
                     case ConsoleKey.D5:
                         {
-                            kadOperation.FindValue(discoveryService.Service.OurContact, remoteContact.ID, remoteContact);
+                            kadOperation.FindValue(discoveryService.Service.OurContact, discoveryService.Service.OurContact.ID, remoteContact);
                             return;
                         }
 

@@ -63,7 +63,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         public void AddContact(ref Contact contact)
         {
-            //Validate.IsFalse<OurNodeCannotBeAContactException>(ourID == contact.ID, "Cannot add ourselves as a contact!");
+            Validate.IsFalse<OurNodeCannotBeAContactException>(ourID == contact.ID, "Cannot add ourselves as a contact!");
             contact.Touch();            // Update the LastSeen to now.
 
             lock (this)

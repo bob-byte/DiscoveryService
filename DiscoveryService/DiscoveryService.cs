@@ -203,48 +203,54 @@ namespace LUC.DiscoveryService
         /// <param name="e">
         ///  Information about UDP sender, that we have received.
         /// </param>
-        public async Task SendTcpMessageAsync(Object sender, UdpMessageEventArgs e)
+        public async Task SendTcpMessageAsync(Object sender, UdpMessageEventArgs eventArgs)
         {
             //lock (this)
             //{
-                var udpMessage = e.Message<UdpMessage>(whetherReadMessage: false);
+            var udpMessage = eventArgs.Message<UdpMessage>(whetherReadMessage: false);
 
-                if ((udpMessage != null) && (e?.RemoteEndPoint is IPEndPoint ipEndPoint))
+            if ((udpMessage != null) && (eventArgs?.RemoteEndPoint is IPEndPoint ipEndPoint))
+            {
+                var sendingContact = Service.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
+
+                Random random = new Random();
+                var tcpMessage = new AcknowledgeTcpMessage(
+                    messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
+                    MachineId,
+                    sendingContact.ID.Value,
+                    RunningTcpPort,
+                    ProtocolVersion,
+                    groupsIds: GroupsSupported?.Keys?.ToList());
+                var bytesToSend = tcpMessage.ToByteArray();
+
+                var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
+                ConnectionPoolSocket client = null;
+                try
                 {
-                    var sendingContact = Service.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
+                    client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
+                    IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
 
-                    Random random = new Random();
-                    var tcpMessage = new AcknowledgeTcpMessage(
-                        messageId: (UInt32)random.Next(maxValue: Int32.MaxValue),
-                        MachineId,
-                        sendingContact.ID.Value,
-                        RunningTcpPort,
-                        ProtocolVersion,
-                        groupsIds: GroupsSupported?.Keys?.ToList());
-                    var bytesToSend = tcpMessage.ToByteArray();
+                    ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
+                        Constants.ConnectTimeout, ref client);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    log.LogError($"Receive handler failed: {ex.Message}");
+                    // eat the exception
+                }
 
-                    var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
-                    ConnectionPoolSocket client = null;
-                    try
+                finally
+                {
+                    if (client != null)
                     {
-                        client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                        IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
-
-                        ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
-                            Constants.ConnectTimeout, ref client);
-                    }
-                    finally
-                    {
-                        if (client != null)
-                        {
-                            await client.ReturnToPoolAsync(IOBehavior.Asynchronous).ConfigureAwait(continueOnCapturedContext: false);
-                        }
+                        await client.ReturnToPoolAsync(IOBehavior.Asynchronous).ConfigureAwait(continueOnCapturedContext: false);
                     }
                 }
-                else
-                {
-                    throw new ArgumentException($"Bad format of {nameof(e)}");
-                }
+            }
+            else
+            {
+                throw new ArgumentException($"Bad format of {nameof(eventArgs)}");
+            }
             //}
         }
 

@@ -73,11 +73,11 @@ namespace LUC.DiscoveryService.Kademlia
                 {
                     log.LogInfo($"The response is received:\n{response}");
                 }
-                else
-                {
-                    remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], isRemoved: out _);
-                    cloneIpAddresses.RemoveAt(numAddress);
-                }
+                //else
+                //{
+                //    remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], isRemoved: out _);
+                //    cloneIpAddresses.RemoveAt(numAddress);
+                //}
             }            
 
             rpcError = RpcError(request.RandomID, response, isTimeoutSocketOp, nodeError);
