@@ -89,13 +89,14 @@
     <Compile Include="DiscoveryServiceSocket.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\StringExtension.cs" />
+    <Compile Include="Kademlia\AbstractKademlia.cs" />
     <Compile Include="Kademlia\ClientPool\BackgroundConnectionResetHelper.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPoolSocket.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionSettings.cs" />
     <Compile Include="Kademlia\ClientPool\IOBehavior.cs" />
     <Compile Include="Kademlia\ClientPool\SocketHealth.cs" />
-    <Compile Include="Kademlia\KademliaOperation.cs" />
+    <Compile Include="Kademlia\ClientKadOperation.cs" />
     <Compile Include="Messages\KademliaResponses\ContactResponse.cs" />
     <Compile Include="SemaphoreLocker.cs" />
     <Compile Include="SocketState.cs" />

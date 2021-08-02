@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 
@@ -12,6 +14,12 @@ namespace LUC.DiscoveryService
     class UsageExample
     {
         private static readonly Object ttyLock = new Object();
+        private static DiscoveryService discoveryService;
+
+        ~UsageExample()
+        {
+            discoveryService.Stop();
+        }
 
         /// <summary>
         ///   User Groups with their SSL certificates.
@@ -41,6 +49,61 @@ namespace LUC.DiscoveryService
         /// This property is populated when OnGoodTcpMessage event arrives.
         /// </remarks>
         public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
+
+        static void Main(string[] args)
+        {
+            ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
+            groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
+            groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
+
+            discoveryService = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
+            discoveryService.Start();
+
+            foreach (var address in discoveryService.Service.RunningIpAddresses())
+            {
+                Console.WriteLine($"IP address {address}");
+            }
+
+            discoveryService.Service.AnswerReceived += OnGoodTcpMessage;
+            discoveryService.Service.QueryReceived += OnGoodUdpMessage;
+
+            discoveryService.Service.PingReceived += OnPingReceived;
+            discoveryService.Service.StoreReceived += OnStoreReceived;
+            discoveryService.Service.FindNodeReceived += OnFindNodeReceived;
+            discoveryService.Service.FindValueReceived += OnFindValueReceived;
+
+            discoveryService.Service.NetworkInterfaceDiscovered += (s, e) =>
+            {
+                foreach (var nic in e.NetworkInterfaces)
+                {
+                    Console.WriteLine($"discovered NIC '{nic.Name}'");
+                };
+            };
+
+
+            while (true)
+            {
+                Contact remoteContact = null;
+                do
+                {
+                    discoveryService.QueryAllServices();//to get any contacts
+
+                    try
+                    {
+                        remoteContact = RandomContact(discoveryService);
+                    }
+                    catch (IndexOutOfRangeException) //if knowContacts.Count == 0
+                    {
+                        //do nothing
+                    }
+
+                    Thread.Sleep(TimeSpan.FromSeconds(value: 3));
+                }
+                while (remoteContact == null);
+
+                TryExecuteSelectedOperationWhileKeyIsInvalid(remoteContact);
+            }
+        }
 
         private static void OnGoodTcpMessage(Object sender, TcpMessageEventArgs e)
         {
@@ -122,52 +185,99 @@ namespace LUC.DiscoveryService
             }
         }
 
-        static void Main(string[] args)
+        private static Contact RandomContact(DiscoveryService discoveryService)
         {
-            foreach (var a in NetworkEventHandler.IPAddresses())
-            {
-                Console.WriteLine($"IP address {a}");
-            }
+            var contacts = discoveryService.KnownContacts.Where(c => (c.ID != discoveryService.Service.OurContact.ID) &&
+                (c.LastActiveIpAddress != null)).ToArray();
 
-            ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
-            groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
-            groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
+            Random random = new Random();
+            var randomContact = contacts[random.Next(contacts.Length)];
 
-            var serviceDiscovery = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
-            serviceDiscovery.Start();
+            return randomContact;
+        }
 
-            serviceDiscovery.Service.AnswerReceived += OnGoodTcpMessage;
-            serviceDiscovery.Service.QueryReceived += OnGoodUdpMessage;
-
-            serviceDiscovery.Service.PingReceived += OnPingReceived;
-            serviceDiscovery.Service.StoreReceived += OnStoreReceived;
-            serviceDiscovery.Service.FindNodeReceived += OnFindNodeReceived;
-            serviceDiscovery.Service.FindValueReceived += OnFindValueReceived;
-
-            serviceDiscovery.Service.NetworkInterfaceDiscovered += (s, e) =>
-            {
-                foreach (var nic in e.NetworkInterfaces)
-                {
-                    Console.WriteLine($"discovered NIC '{nic.Name}'");
-                };
-            };
-
-            Console.WriteLine("If you want to start sending multicast messages, " +
-                "in order to receive TCP answers, press any key each time.\n" +
-                "If you want to stop, press Esc");
+        private static void TryExecuteSelectedOperationWhileKeyIsInvalid(Contact remoteContact)
+        {
+            Console.WriteLine($"Select operation:\n" +
+                    $"1 - send multicast\n" +
+                    $"2 - send {typeof(PingRequest).Name}\n" +
+                    $"3 - send {typeof(StoreRequest).Name}\n" +
+                    $"4 - send {typeof(FindNodeRequest).Name}\n" +
+                    $"5 - send {typeof(FindValueRequest).Name}\n" +
+                    $"6 - send {typeof(AcknowledgeTcpMessage).Name}\n");
 
             while (true)
             {
-                var pressedKey = Console.ReadKey(intercept: true).Key;//does not display pressed key
+                ClientKadOperation kadOperation = new ClientKadOperation();
 
-                if (pressedKey != ConsoleKey.Escape)
+                var pressedKey = Console.ReadKey(intercept: true).Key;//does not display pressed key
+                switch (pressedKey)
                 {
-                    serviceDiscovery.QueryAllServices();
-                }
-                else
-                {
-                    serviceDiscovery.Stop();
-                    break;
+                    case ConsoleKey.NumPad1:
+                    case ConsoleKey.D1:
+                        {
+                            discoveryService.QueryAllServices();
+
+                            //We need to wait, because Bootstrap method executes in another threads. 
+                            //When we send UDP messages, we will receive TCP messages and 
+                            //call NetworkEventHandler.DistributedHashTable.Bootstrap-s
+                            Thread.Sleep(TimeSpan.FromSeconds(value: 2));
+
+                            return;
+                        }
+
+                    case ConsoleKey.NumPad2:
+                    case ConsoleKey.D2:
+                        {
+                            kadOperation.Ping(discoveryService.Service.OurContact, remoteContact);
+                            return;
+                        }
+
+                    case ConsoleKey.NumPad3:
+                    case ConsoleKey.D3:
+                        {
+                            kadOperation.Store(discoveryService.Service.OurContact, remoteContact.ID,
+                                discoveryService.MachineId, remoteContact);
+                            return;
+                        }
+
+                    case ConsoleKey.NumPad4:
+                    case ConsoleKey.D4:
+                        {
+                            kadOperation.FindNode(discoveryService.Service.OurContact, remoteContact.ID, remoteContact);
+                            return;
+                        }
+
+                    case ConsoleKey.NumPad5:
+                    case ConsoleKey.D5:
+                        {
+                            kadOperation.FindValue(discoveryService.Service.OurContact, remoteContact.ID, remoteContact);
+                            return;
+                        }
+
+                    case ConsoleKey.NumPad6:
+                    case ConsoleKey.D6:
+                        {
+                            var remoteEndPoint = new IPEndPoint(remoteContact.LastActiveIpAddress, remoteContact.TcpPort);
+                            var eventArgs = new UdpMessageEventArgs
+                            {
+                                RemoteEndPoint = remoteEndPoint
+                            };
+
+                            Random random = new Random();
+                            UInt32 messageId = (UInt32)random.Next(maxValue: Int32.MaxValue);
+
+                            eventArgs.SetMessage(new UdpMessage(messageId, discoveryService.ProtocolVersion,
+                                remoteContact.TcpPort, machineId: discoveryService.MachineId));
+                            discoveryService.SendTcpMessageAsync(discoveryService, eventArgs).GetAwaiter().GetResult();
+
+                            return;
+                        }
+
+                    default:
+                        {
+                            continue;
+                        }
                 }
             }
         }

@@ -17,26 +17,26 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    class KademliaOperation
+    public class ClientKadOperation
     {
         private static ILoggingService log;
         private readonly UInt32 protocolVersion;
         private static ConnectionPool connectionPool;
 
-        public KademliaOperation()
+        public ClientKadOperation()
         {
-            ;//do nothing
-        }
-
-        public KademliaOperation(UInt32 protocolVersion)
-        {
-            this.protocolVersion = protocolVersion;
-
             log = new LoggingService
             {
                 SettingsService = new SettingsService()
             };
+
             connectionPool = ConnectionPool.Instance();
+        }
+
+        public ClientKadOperation(UInt32 protocolVersion)
+            : this()
+        {
+            this.protocolVersion = protocolVersion;
         }
 
         /// <inheritdoc/>
@@ -96,7 +96,7 @@ namespace LUC.DiscoveryService.Kademlia
             try
             {
                 client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).GetAwaiter().GetResult();
+                                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
 
                 //clean extra bytes
                 if (client.Available > 0)
@@ -183,7 +183,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             Validate.IsTrue<ArgumentNullException>(key != new ID(default(BigInteger)), $"{nameof(key)} is null");
 
-            return DiscoveryService.KnownContacts(protocolVersion).SingleOrDefault(c => c.Key == key.Value).Value;
+            return DiscoveryService.AllKnownContacts(protocolVersion).SingleOrDefault(c => c.Key == key.Value).Value;
         }
 
         /// <inheritdoc/>
@@ -226,7 +226,7 @@ namespace LUC.DiscoveryService.Kademlia
             return (closeContacts, response?.ValueInResponsingPeer, rpcError);
         }
 
-        protected RpcError RpcError(BigInteger id, Response resp, bool timeoutError, ErrorResponse peerError)
+        private RpcError RpcError(BigInteger id, Response resp, bool timeoutError, ErrorResponse peerError)
         {
             RpcError rpcError = new RpcError
             {

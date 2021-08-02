@@ -82,7 +82,7 @@ namespace LUC.DiscoveryService.Kademlia
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Touch()
         {
-            LastSeen = DateTime.Now;
+            LastSeen = DateTime.UtcNow;
         }
 
         public List<IPAddress> IpAddresses() =>

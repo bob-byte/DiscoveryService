@@ -209,7 +209,7 @@ namespace LUC.DiscoveryService
                     await sender.Value.SendAsync(message, message.Length, endpoint)
                         .ConfigureAwait(continueOnCapturedContext: false);
 
-                    //break;
+                    break;
                 }
                 catch(SocketException e)
                 {
@@ -289,7 +289,10 @@ namespace LUC.DiscoveryService
                     //using tasks provides unblocking event calls
                     _ = task.ContinueWith(taskReceiving =>
                     {
-                        TcpMessageReceived?.Invoke(tcpServer, taskReceiving.Result);
+                        var eventArgs = taskReceiving.Result;
+                        log.LogInfo($"Read {eventArgs.Buffer.Length} bytes");
+
+                        TcpMessageReceived?.Invoke(tcpServer, eventArgs);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
 
                     await task.ConfigureAwait(continueOnCapturedContext: false);

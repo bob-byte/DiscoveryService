@@ -49,7 +49,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         public void Touch()
         {
-            TimeStamp = DateTime.Now;
+            TimeStamp = DateTime.UtcNow;
         }
 
 		/// <summary>

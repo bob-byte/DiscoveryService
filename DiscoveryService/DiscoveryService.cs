@@ -22,7 +22,6 @@ namespace LUC.DiscoveryService
     public class DiscoveryService : AbstractService
     {
         private static DiscoveryService instance;
-        private static SemaphoreLocker asyncLocker; //it is static to every DS has only 1 sending TCP message at once
 
         private readonly ConnectionPool connectionPool;
 
@@ -60,8 +59,6 @@ namespace LUC.DiscoveryService
                 ProtocolVersion = profile.ProtocolVersion;
                 MachineId = profile.MachineId;
                 connectionPool = ConnectionPool.Instance();
-
-                asyncLocker = new SemaphoreLocker();
 
                 InitService();
             }
@@ -104,6 +101,8 @@ namespace LUC.DiscoveryService
         public ConcurrentDictionary<EndPoint, String> KnownIps { get; protected set; } = 
             new ConcurrentDictionary<EndPoint, String>();
 
+        public ICollection<Contact> KnownContacts => Service.DistributedHashTable.KnownContacts;
+
         /// <summary>
         ///   LightUpon.Cloud Discovery Service.
         /// </summary>
@@ -125,7 +124,7 @@ namespace LUC.DiscoveryService
             Service.QueryReceived += async (invokerEvent, eventArgs) => await SendTcpMessageAsync(invokerEvent, eventArgs);
 
             Service.AnswerReceived += AddEndpoint;
-            Service.AnswerReceived += Service.TryKademliaOperation;
+            Service.AnswerReceived += Service.Bootstrap;
 
             Service.PingReceived += (invokerEvent, eventArgs) =>
             {
@@ -146,7 +145,10 @@ namespace LUC.DiscoveryService
                 {
                     StoreResponse.SendSameRandomId(acceptedSocket, Constants.SendTimeout, request);
 
-                    Service.DistributedHashTable.Store(new ID(request.KeyToStore), request.Value);
+                    if (sender != null)
+                    {
+                        Service.DistributedHashTable.Node.Store(sender, new ID(request.KeyToStore), request.Value);
+                    }
                 });
             };
 
@@ -161,7 +163,6 @@ namespace LUC.DiscoveryService
                     }
                     else
                     {
-                        //Service.DistributedHashTable.AddToPending(sender);
                         closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(request.KeyToFindCloseContacts), new ID(request.Sender));
                     }
                     
@@ -173,18 +174,20 @@ namespace LUC.DiscoveryService
             {
                 HandleKademliaRequest<FindValueRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
                 {
-                    //Service.DistributedHashTable.Node.FindValue(sender, new ID(request.KeyToFindCloseContacts), out var closeContacts, out var nodeValue);
-                    Service.DistributedHashTable.FindValue(new ID(request.KeyToFindCloseContacts), 
-                        out var isFound, out var closeContacts, out var nodeValue);
+                    List<Contact> closeContacts;
+                    String nodeValue = null;
 
-                    if(isFound)
+                    if (sender != null)
                     {
-                        FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, nodeValue);
+                        Service.DistributedHashTable.Node.FindValue(sender, new ID(request.KeyToFindCloseContacts),
+                        out closeContacts, out nodeValue);
                     }
                     else
                     {
-                        //TODO send response with another MessageOperation or just do nothing
+                        closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(request.KeyToFindCloseContacts), new ID(request.Sender));
                     }
+
+                    FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, nodeValue);
                 });
             };
         }
@@ -250,7 +253,7 @@ namespace LUC.DiscoveryService
             var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
             if ((tcpMessage != null) && (e.SendingEndPoint is IPEndPoint ipEndPoint))
             {
-                var knownContacts = KnownContacts(ProtocolVersion);
+                var knownContacts = AllKnownContacts(ProtocolVersion);
                 knownContacts.TryAdd(tcpMessage.IdOfSendingContact, new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address));
 
                 foreach (var groupId in tcpMessage.GroupIds)
@@ -334,7 +337,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        internal static ConcurrentDictionary<BigInteger, Contact> KnownContacts(UInt32 protocolVersion)
+        public static ConcurrentDictionary<BigInteger, Contact> AllKnownContacts(UInt32 protocolVersion)
         {
             knownContacts.TryAdd(protocolVersion, new ConcurrentDictionary<BigInteger, Contact>());
             return knownContacts[protocolVersion];

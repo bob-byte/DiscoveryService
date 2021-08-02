@@ -1,6 +1,4 @@
-﻿#define TRY_CLOSEST_BUCKET
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -159,7 +157,7 @@ namespace LUC.DiscoveryService.Kademlia.Routers
         /// </summary>
         protected void SetQueryTime()
         {
-            now = DateTime.Now;
+            now = DateTime.UtcNow;
         }
 
         /// <summary>
@@ -167,7 +165,7 @@ namespace LUC.DiscoveryService.Kademlia.Routers
         /// </summary>
         protected bool QueryTimeExpired()
         {
-            return (DateTime.Now - now).TotalMilliseconds > Constants.QUERY_TIME;
+            return (DateTime.UtcNow - now).TotalMilliseconds > Constants.QUERY_TIME;
         }
 
         protected void InitializeThreadPool()

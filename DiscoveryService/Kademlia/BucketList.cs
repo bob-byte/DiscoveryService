@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class BucketList : IBucketList
+    public class BucketList : AbstractKademlia, IBucketList
     {
         public List<KBucket> Buckets { get { return buckets; } set { buckets = value; } }
 
@@ -91,7 +91,7 @@ namespace LUC.DiscoveryService.Kademlia
                     else
                     {
                         Contact lastSeenContact = kbucket.Contacts.OrderBy(c => c.LastSeen).First();
-                        RpcError error = Dht.Node.PingRemoteContact(ourContact, lastSeenContact);
+                        RpcError error = clientKadOperation.Ping(ourContact, lastSeenContact);
 
                         if (error.HasError)
                         {

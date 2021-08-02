@@ -67,7 +67,7 @@ namespace LUC.DiscoveryService.Kademlia
 		/// </summary>
 		public void Touch(BigInteger key)
         {
-            store[key].RepublishTimeStamp = DateTime.Now;
+            store[key].RepublishTimeStamp = DateTime.UtcNow;
         }
 
         public void Set(ID key, string val, int expirationTime)

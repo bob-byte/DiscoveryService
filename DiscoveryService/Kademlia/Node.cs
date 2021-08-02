@@ -9,11 +9,10 @@ using LUC.Services.Implementation;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class Node : INode
+    public class Node : AbstractKademlia, INode
     {
-        private static LoggingService log;
-        private readonly UInt32 protocolVersion;
-        private readonly KademliaOperation kademliaOperation;
+        //private static ILoggingService log;
+        //private readonly UInt32 protocolVersion;
 
         public Contact OurContact { get { return ourContact; } set { ourContact = value; } }
         public IBucketList BucketList { get { return bucketList; } set { bucketList = value; } }
@@ -52,14 +51,12 @@ namespace LUC.DiscoveryService.Kademlia
                 this.cacheStorage = new VirtualStorage();
             }
 
-            this.protocolVersion = protocolVersion;
+            //this.protocolVersion = protocolVersion;
 
-            log = new LoggingService
-            {
-                SettingsService = new SettingsService()
-            };
-
-            kademliaOperation = new KademliaOperation(protocolVersion);
+            //log = new LoggingService
+            //{
+            //    SettingsService = new SettingsService()
+            //};
         }
 
         /// <summary>
@@ -227,7 +224,7 @@ namespace LUC.DiscoveryService.Kademlia
                     // If our contact is closer, store the contact on its node.
                     if ((k ^ ourContact.ID) < distance)
                         {
-                            var error = Store(ourContact, new ID(k), storage.Get(k), sender);
+                            var error = clientKadOperation.Store(ourContact, new ID(k), storage.Get(k), sender);
                             dht?.HandleError(error, sender);
                         }
                     });
@@ -258,22 +255,5 @@ namespace LUC.DiscoveryService.Kademlia
 
             return !ret;
         }
-
-        /// <param name="ourContact">
-        /// Current peer
-        /// </param>
-        public RpcError PingRemoteContact(Contact ourContact, Contact remoteContact) =>
-            kademliaOperation.Ping(ourContact, remoteContact);
-
-        ///<inheritdoc/>
-        public RpcError Store(Contact sender, ID key, string val, Contact remoteContact, bool isCached = false, int expirationTimeSec = 0) =>
-            kademliaOperation.Store(sender, key, val, remoteContact, isCached, expirationTimeSec);
-
-        /// <inheritdoc/>
-        public (List<Contact> contacts, RpcError error) FindNode(Contact sender, ID keyToFindContacts, Contact remoteContact) => kademliaOperation.FindNode(sender, keyToFindContacts, remoteContact);
-
-        /// <inheritdoc/>
-        public (List<Contact> contacts, string val, RpcError error) FindValue(Contact sender, ID keyToFindContact, Contact remoteContact) =>
-            kademliaOperation.FindValue(sender, keyToFindContact, remoteContact);
     }
 }

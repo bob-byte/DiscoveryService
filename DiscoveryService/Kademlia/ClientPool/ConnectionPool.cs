@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -124,32 +125,44 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                         desiredSocket = null;
                     }
                     
-                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);                    
+                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);
                 }
             });
 
-            if(desiredSocket == null)
+            Boolean takenFromPool = desiredSocket != null;
+            if (!takenFromPool)
             {
-                Boolean isInPool = sockets.ContainsKey(remoteEndPoint);
-                if (isInPool)
+                Boolean isInPool;
+                
+                lock (sockets)
                 {
-                    lock (sockets)
+                    isInPool = sockets.ContainsKey(remoteEndPoint);
+
+                    if(isInPool)
                     {
                         desiredSocket = sockets[remoteEndPoint];
                         sockets.Remove(remoteEndPoint);
                     }
+                }
 
+                if (isInPool)
+                {
                     desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);
                 }
                 else
                 {
-                    desiredSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
+                    desiredSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, 
+                        ProtocolType.Tcp, remoteEndPoint, instance, log);
                     await ConnectInDifferentWayAsync(desiredSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
                 }
 
                 lock (leasedSockets)
                 {
-                    leasedSockets.Add(remoteEndPoint, desiredSocket);
+                    if(!leasedSockets.ContainsKey(remoteEndPoint))
+                    {
+                        leasedSockets.Add(remoteEndPoint, desiredSocket);
+                    }
+
                     desiredSocket.IsInPool = false;
                 }
             }

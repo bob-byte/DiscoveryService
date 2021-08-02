@@ -82,7 +82,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 
                 foreach (var closeContact in CloseSenderContacts)
                 {
-                    writer.WriteLine($"{closeContact};\n");
+                    writer.WriteLine($"Close contact: {closeContact}\n");
                 }
 
                 return writer.ToString();

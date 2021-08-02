@@ -116,7 +116,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 {
                     foreach (var closeContact in CloseContactsToRepsonsingPeer)
                     {
-                        writer.WriteLine($"{closeContact};\n");
+                        writer.WriteLine($"Close contact: {closeContact}\n");
                     }
                 }
 

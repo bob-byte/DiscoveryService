@@ -15,7 +15,7 @@ namespace LUC.DiscoveryService.Kademlia
     /// <summary>
     /// DHT - distributed hash table. It minimize settings count of messages, which <seealso cref="Contact"/>s should send to learn each other 
     /// </summary>
-    public class Dht : IDht
+    public class Dht : AbstractKademlia, IDht
     {
         public BaseRouter Router { get { return router; } set { router = value; } }
 
@@ -97,6 +97,8 @@ namespace LUC.DiscoveryService.Kademlia
             SetupTimers();
         }
 
+        public ICollection<Contact> KnownContacts => Node.BucketList.Buckets.SelectMany(c => c.Contacts).ToList();
+
         public Contact KnownContact(ID contactId)
         {
             Contact foundContact = node.BucketList.GetKBucket(contactId).Contacts.Single(c => c.ID == contactId);
@@ -147,7 +149,7 @@ namespace LUC.DiscoveryService.Kademlia
         public RpcError Bootstrap(Contact knownPeer)
         {
             node.BucketList.AddContact(ref knownPeer);
-            var (contacts, error) = Node.FindNode(ourContact, ourContact.ID, knownPeer);
+            var (contacts, error) = clientKadOperation.FindNode(ourContact, ourContact.ID, knownPeer);
 
             if (!error.HasError)
             {
@@ -204,7 +206,7 @@ namespace LUC.DiscoveryService.Kademlia
                     {
                         int separatingNodes = GetSeparatingNodesCount(ourContact, storeTo);
                         int expTimeSec = (int)(Constants.EXPIRATION_TIME_SECONDS / Math.Pow(2, separatingNodes));
-                        RpcError error = Node.Store(Node.OurContact, key, lookup.val, storeTo, true, expTimeSec);
+                        RpcError error = clientKadOperation.Store(Node.OurContact, key, lookup.val, storeTo, true, expTimeSec);
                         HandleError(error, storeTo);
                     }
                 }
@@ -420,7 +422,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         protected void BucketRefreshTimerElapsed(object sender, ElapsedEventArgs e)
         {
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.UtcNow;
 
             // Put into a separate list as bucket collections may be modified.
             List<KBucket> currentBuckets = new List<KBucket>(node.BucketList.Buckets.
@@ -435,7 +437,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         protected void KeyValueRepublishElapsed(object sender, ElapsedEventArgs e)
         {
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.UtcNow;
 
             republishStorage.Keys.Where(k => (now - republishStorage.GetTimeStamp(k)).TotalMilliseconds >= Constants.KEY_VALUE_REPUBLISH_INTERVAL).ForEach(k =>
             {
@@ -447,7 +449,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         protected void OriginatorRepublishElapsed(object sender, ElapsedEventArgs e)
         {
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.UtcNow;
 
             originatorStorage.Keys.Where(k => (now - originatorStorage.GetTimeStamp(k)).TotalMilliseconds >= Constants.ORIGINATOR_REPUBLISH_INTERVAL).ForEach(k =>
             {
@@ -457,7 +459,7 @@ namespace LUC.DiscoveryService.Kademlia
 
                 contacts.ForEach(c =>
                 {
-                    RpcError error = Node.Store(ourContact, key, originatorStorage.Get(key), c);
+                    RpcError error = clientKadOperation.Store(ourContact, key, originatorStorage.Get(key), c);
                     HandleError(error, c);
                 });
 
@@ -476,7 +478,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         protected void RemoveExpiredData(IStorage store)
         {
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.UtcNow;
             // ToList so our key list is resolved now as we remove keys.
             store.Keys.Where(k => (now - store.GetTimeStamp(k)).TotalSeconds >= store.GetExpirationTimeSec(k)).ToList().ForEach(k =>
             {
@@ -490,7 +492,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         protected void StoreOnCloserContacts(ID key, string val)
         {
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.UtcNow;
 
             KBucket kbucket = node.BucketList.GetKBucket(key);
             List<Contact> closerContacts;
@@ -507,7 +509,35 @@ namespace LUC.DiscoveryService.Kademlia
 
             closerContacts.ForEach(closerContact =>
             {
-                RpcError error = Node.Store(node.OurContact, key, val, closerContact);
+                RpcError error = clientKadOperation.Store(node.OurContact, key, val, closerContact);
+                HandleError(error, closerContact);
+            });
+        }
+
+        /// <summary>
+        /// Perform a lookup if the bucket containing the key has not been refreshed, 
+        /// otherwise just get the contacts the k closest contacts we know about.
+        /// </summary>
+        protected void StoreOnCloserContacts(ID senderKey, ID key, string val)
+        {
+            DateTime now = DateTime.UtcNow;
+
+            KBucket kbucket = node.BucketList.GetKBucket(key);
+            List<Contact> closerContacts;
+
+            if ((now - kbucket.TimeStamp).TotalMilliseconds < Constants.BUCKET_REFRESH_INTERVAL)
+            {
+                // Bucket has been refreshed recently, so don't do a lookup as we have the k closes contacts.
+                closerContacts = node.BucketList.GetCloseContacts(key, node.OurContact.ID);
+            }
+            else
+            {
+                closerContacts = router.Lookup(key, router.RpcFindNodes).contacts;
+            }
+
+            closerContacts.ForEach(closerContact =>
+            {
+                RpcError error = clientKadOperation.Store(node.OurContact, key, val, closerContact);
                 HandleError(error, closerContact);
             });
         }
@@ -526,7 +556,7 @@ namespace LUC.DiscoveryService.Kademlia
 
                 contacts.ForEach(contact =>
                 {
-                    var (newContacts, timeoutError) = Node.FindNode(ourContact, rndId, contact);
+                    var (newContacts, timeoutError) = clientKadOperation.FindNode(ourContact, rndId, contact);
                     HandleError(timeoutError, contact);
 
                     newContacts?.ForEach(otherContact => node.BucketList.AddContact(ref otherContact));

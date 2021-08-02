@@ -371,8 +371,8 @@ namespace LUC.DiscoveryService
         /// </param>
         private void RaiseAnswerReceived(Object sender, TcpMessageEventArgs receiveResult)
         {
-            lock (this)
-            {
+            //lock (this)
+            //{
                 try
                 {
                     var lastActiveAddress = (receiveResult.LocalEndPoint as IPEndPoint).Address;
@@ -422,7 +422,7 @@ namespace LUC.DiscoveryService
                 {
                     log.LogError($"Cannot to handle TCP message: {ex}");
                 }
-            }
+            //}
         }
 
         private void HandleReceivedTcpMessage<T>(Object sender, TcpMessageEventArgs receiveResult, EventHandler<TcpMessageEventArgs> receiveEvent)
@@ -435,7 +435,7 @@ namespace LUC.DiscoveryService
             receiveEvent?.Invoke(sender, receiveResult);
         }
 
-        public void TryKademliaOperation(Object sender, TcpMessageEventArgs receiveResult)
+        public void Bootstrap(Object sender, TcpMessageEventArgs receiveResult)
         {
             lock (this)
             {
@@ -447,14 +447,6 @@ namespace LUC.DiscoveryService
                         var knownContact = new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address);
 
                         DistributedHashTable.Bootstrap(knownContact);
-
-                        DistributedHashTable.Node.PingRemoteContact(DistributedHashTable.OurContact, knownContact);
-
-                        var key = knownContact.ID;
-
-                        DistributedHashTable.Node.Store(DistributedHashTable.OurContact, key, MachineId, knownContact);
-                        //DistributedHashTable.Node.FindNode(OurContact, key, knownContact);
-                        //DistributedHashTable.Node.FindValue(OurContact, key, knownContact);
                     }
                 }
                 catch (Exception e)
@@ -464,21 +456,6 @@ namespace LUC.DiscoveryService
                 }
             }
         }
-
-        //public void Bootstrap(Object sender, TcpMessageEventArgs receiveResult)
-        //{
-        //    lock (this)
-        //    {
-        //        var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
-        //        if ((tcpMessage != null) && (receiveResult.RemoteContact is IPEndPoint ipEndPoint))
-        //        {
-        //            Protocol.Ping(DistributedHashTable.OurContact, ipEndPoint.Address, (Int32)tcpMessage.TcpPort);
-
-        //            //DistributedHashTable.Bootstrap(knownPeer: new Contact(Protocol, new ID(tcpMessage.IdOfSendingContact), ipEndPoint.Address, tcpMessage.TcpPort));
-        //        }
-        //    }
-        //}
-
         /// <summary>
         ///   Start the service.
         /// </summary>

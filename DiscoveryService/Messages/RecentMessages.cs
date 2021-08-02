@@ -41,7 +41,7 @@ namespace LUC.DiscoveryService.Messages
         public bool TryAdd(UInt32 messageId)
         {
             Prune();
-            return Messages.TryAdd(messageId, DateTime.Now);
+            return Messages.TryAdd(messageId, DateTime.UtcNow);
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace LUC.DiscoveryService.Messages
         /// </remarks>
         public int Prune()
         {
-            var dead = DateTime.Now - Interval;
+            var dead = DateTime.UtcNow - Interval;
             var count = 0;
 
             foreach (var stale in Messages.Where(x => x.Value < dead))
