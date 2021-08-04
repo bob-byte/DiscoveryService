@@ -18,14 +18,34 @@ namespace LUC.DiscoveryService.Test
     [TestFixture]
     class DiscoveryServiceSocketTest
     {
+        private DiscoveryService discoveryService;
+
+        [SetUp]
+        public void SetUpDiscoveryService()
+        {
+            discoveryService = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
+        }
+
+        [TearDown]
+        public void StopDiscoveryService()
+        {
+            discoveryService.Stop();
+        }
+
         [Test]
         public void Connect_RemoteEndPointIsNull_GetException()
         {
             var dsSocket = InitializedTcpSocket();
 
-            Assert.That(() => 
-                    dsSocket.Connect(remoteEndPoint: null, TimeSpan.FromSeconds(1)), 
+            Assert.That(() =>
+                    dsSocket.Connect(remoteEndPoint: null, TimeSpan.FromSeconds(1)),
                     Throws.TypeOf(typeof(ArgumentNullException)));
+        }
+
+        [Test]
+        public void A()
+        {
+            //connect with default timeout
         }
 
         [Test]
@@ -41,7 +61,6 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Receive_SendPingRequestAndReceiveResponse_NotFailed()
         {
-            DiscoveryService discoveryService = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
             discoveryService.Start();
 
             var client = InitializedTcpSocket();
@@ -49,14 +68,7 @@ namespace LUC.DiscoveryService.Test
             var endPoint = AvailableIpAddress(discoveryService, client.AddressFamily);
             client.Connect(endPoint, Constants.ConnectTimeout);
 
-            var pingRequest = new PingRequest
-            {
-                MessageOperation = MessageOperation.Ping,
-                RandomID = ID.RandomID.Value, 
-                Sender = ID.RandomIDInKeySpace.Value
-            };
-
-            client.Send(pingRequest.ToByteArray(), Constants.SendTimeout);
+            SendPingRequest(client, Constants.SendTimeout);
 
             Thread.Sleep(TimeSpan.FromSeconds(value: 5));
             if(client.Available > 0)
@@ -91,6 +103,24 @@ namespace LUC.DiscoveryService.Test
             return endPoint;
         }
 
+        private void SendPingRequest(DiscoveryServiceSocket socket, TimeSpan timeout)
+        {
+            var pingRequest = InitializedPingRequest();
+            socket.Send(pingRequest.ToByteArray(), timeout);
+        }
+
+        private PingRequest InitializedPingRequest()
+        {
+            var pingRequest = new PingRequest
+            {
+                MessageOperation = MessageOperation.Ping,
+                RandomID = ID.RandomID.Value,
+                Sender = ID.RandomIDInKeySpace.Value
+            };
+
+            return pingRequest;
+        }
+
         //private EndPoint EndPointConnectedToInternet()
         //{
         //    var udpClient = new UdpClient(Dns.GetHostName(), discoveryService.RunningTcpPort);
@@ -99,6 +129,42 @@ namespace LUC.DiscoveryService.Test
 
         //    return endPointConnectedToInternet;
         //}
+
+        [Test]
+        public void Send_SendPingWithDefaultTimeout_DsReceivesPingRequest()
+        {
+            discoveryService.Start();
+
+            var socket = InitializedTcpSocket();
+
+            var endPoint = AvailableIpAddress(discoveryService, socket.AddressFamily);
+            socket.Connect(endPoint, Constants.ConnectTimeout);
+
+            ManualResetEvent receivedPingRequest = new ManualResetEvent(initialState: false);
+            discoveryService.Service.PingReceived += (sender, eventArgs) =>
+            {
+                var message = eventArgs.Message<PingRequest>(whetherReadMessage: false);
+                if (message != null)
+                {
+                    receivedPingRequest.Set();
+                }
+            };
+
+            SendPingRequest(socket, timeout: default);
+
+            Assert.IsTrue(receivedPingRequest.WaitOne(TimeSpan.FromSeconds(value: 2)), message: "DS didn\'t receive ping request");
+        }
+
+        [Test]
+        public void Send_WithoutConnection_GetException()
+        {
+            var socket = InitializedTcpSocket();
+
+            Assert.That(() => socket.Send(new Byte[] { 0, 1, 2 }, Constants.ReceiveTimeout), 
+                Throws.TypeOf(typeof(InvalidOperationException)));
+        }
+
+        [Test]
 
     }
 }

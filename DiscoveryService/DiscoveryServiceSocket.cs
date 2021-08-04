@@ -335,25 +335,34 @@ namespace LUC.DiscoveryService
         {
             //lock(sendDone)
             //{
-                VerifyConnected();
+            VerifyConnected();
 
-                if (sendDone == null)
-                {
-                    sendDone = new AutoResetEvent(initialState: false);
-                }
+            if (sendDone == null)
+            {
+                sendDone = new AutoResetEvent(initialState: false);
+            }
 
-                //Begin sending the data to the remote device
-                BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
-                var isSent = sendDone.WaitOne(timeout);
+            //Begin sending the data to the remote device
+            BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
 
-                if (isSent)
-                {
-                    State = SocketState.Connected;
-                }
-                else
-                {
-                    throw new TimeoutException();
-                }
+            Boolean isSent;
+            if(timeout != default)
+            {
+                isSent = sendDone.WaitOne(timeout);
+            }
+            else
+            {
+                isSent = sendDone.WaitOne();
+            }
+
+            if (isSent)
+            {
+                State = SocketState.Connected;
+            }
+            else
+            {
+                throw new TimeoutException();
+            }
             //}
         }
 
