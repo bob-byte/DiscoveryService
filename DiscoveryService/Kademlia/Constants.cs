@@ -35,7 +35,7 @@ namespace LUC.DiscoveryService.Kademlia
         public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
         public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(1);
         public static readonly TimeSpan TimeCheckDataToRead = TimeSpan.FromSeconds(0.4);
-        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(2);
+        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(5);
         public static readonly TimeSpan TimeWaitReturnToPool = ConnectTimeout + SendTimeout + SendTimeout + ReceiveTimeout;//it's max of execution Kademlia operation 
         public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
 

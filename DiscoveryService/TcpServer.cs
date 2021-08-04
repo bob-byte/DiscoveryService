@@ -77,7 +77,7 @@ namespace LUC.DiscoveryService
         /// <remarks>
         /// This option will set the listening socket's backlog size
         /// </remarks>
-        public int OptionAcceptorBacklog { get; set; } = 1024;
+        public int OptionAcceptorBacklog { get; set; } = 10;
         /// <summary>
         /// Option: dual mode socket
         /// </summary>
@@ -376,11 +376,19 @@ namespace LUC.DiscoveryService
         public async Task<TcpSession> SessionWithNewDataAsync()
         {
             TcpSession sessionWithData = null;
-
+            var maxSessions = 100000;
+            
             while (sessionWithData == null)
             {
                 foreach (var tcpSession in Sessions.Values)
                 {
+                    //we should to check every time because if many peers connect to network we can overflow OptionAcceptorBacklog
+                    //we use OptionAcceptorBacklog - 1 for more safety
+                    if (Sessions.Values.Count >= maxSessions)
+                    {
+                        Sessions.TryRemove(Sessions.First().Key, value: out _);
+                    }
+
                     if (tcpSession.Socket?.Available > 0)
                     {
                         sessionWithData = tcpSession;

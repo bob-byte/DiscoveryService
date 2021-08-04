@@ -99,13 +99,6 @@ namespace LUC.DiscoveryService.Kademlia
 
         public ICollection<Contact> KnownContacts => Node.BucketList.Buckets.SelectMany(c => c.Contacts).ToList();
 
-        public Contact KnownContact(ID contactId)
-        {
-            Contact foundContact = node.BucketList.GetKBucket(contactId).Contacts.Single(c => c.ID == contactId);
-
-            return foundContact;
-        }
-
         /// <summary>
         /// Returns a JSON string of the serialized DHT.
         /// </summary>

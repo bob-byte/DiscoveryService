@@ -149,6 +149,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DiscoveryService.cs" />
     <Compile Include="ServiceProfile.cs" />
+    <Compile Include="StateObjectForAccept.cs" />
     <Compile Include="TcpServer.cs" />
     <Compile Include="TcpSession.cs" />
     <Compile Include="UsageExample.cs" />

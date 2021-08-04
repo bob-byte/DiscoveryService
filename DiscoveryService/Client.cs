@@ -312,6 +312,8 @@ namespace LUC.DiscoveryService
                 {
                     log.LogError($"Failed to listen on TCP port.\n" +
                         $"{e}");
+
+                    ListenTcp(tcpServer);
                 }
             });
         }

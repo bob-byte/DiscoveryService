@@ -197,7 +197,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// IP-addresses which <seealso cref="DiscoveryService"/> uses to exchange messages
         /// </summary>
-        public List<IPAddress> RunningIpAddresses() =>
+        public List<IPAddress> RunningIpAddresses =>
             Client.IpAddressesOfInterfaces(networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics, UseIpv4, UseIpv6);
 
         /// <summary>
@@ -283,7 +283,7 @@ namespace LUC.DiscoveryService
 
         private void InitClient()
         {
-            client = new Client(UseIpv4, UseIpv6, RunningIpAddresses());
+            client = new Client(UseIpv4, UseIpv6, RunningIpAddresses);
             client.UdpMessageReceived += OnUdpMessage;
             client.TcpMessageReceived += RaiseAnswerReceived;
         }
@@ -373,55 +373,64 @@ namespace LUC.DiscoveryService
         {
             //lock (this)
             //{
-                try
+            try
+            {
+                var lastActiveAddress = (receiveResult.LocalEndPoint as IPEndPoint).Address;
+                OurContact.LastActiveIpAddress = lastActiveAddress;
+                DistributedHashTable.OurContact.LastActiveIpAddress = lastActiveAddress;
+
+                Message message = receiveResult.Message<Message>();
+                switch (message.MessageOperation)
                 {
-                    var lastActiveAddress = (receiveResult.LocalEndPoint as IPEndPoint).Address;
-                    OurContact.LastActiveIpAddress = lastActiveAddress;
-                    DistributedHashTable.OurContact.LastActiveIpAddress = lastActiveAddress;
+                    case MessageOperation.Acknowledge:
+                        {
+                            HandleReceivedTcpMessage<AcknowledgeTcpMessage>(sender, receiveResult, AnswerReceived);
+                            break;
+                        }
 
-                    Message message = receiveResult.Message<Message>();
-                    switch (message.MessageOperation)
-                    {
-                        case MessageOperation.Acknowledge:
-                            {
-                                HandleReceivedTcpMessage<AcknowledgeTcpMessage>(sender, receiveResult, AnswerReceived);
-                                break;
-                            }
+                    case MessageOperation.Ping:
+                        {
+                            /// Someone is pinging us.  Register the contact and respond.
+                            HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, PingReceived);
+                            break;
+                        }
 
-                        case MessageOperation.Ping:
-                            {
-                                /// Someone is pinging us.  Register the contact and respond.
-                                HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, PingReceived);
-                                break;
-                            }
+                    case MessageOperation.Store:
+                        {
+                            HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, StoreReceived);
+                            break;
+                        }
 
-                        case MessageOperation.Store:
-                            {
-                                HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, StoreReceived);
-                                break;
-                            }
+                    case MessageOperation.FindNode:
+                        {
+                            HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, FindNodeReceived);
+                            break;
+                        }
 
-                        case MessageOperation.FindNode:
-                            {
-                                HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, FindNodeReceived);
-                                break;
-                            }
-
-                        case MessageOperation.FindValue:
-                            {
-                                HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, FindValueReceived);
-                                break;
-                            }
-                    }
+                    case MessageOperation.FindValue:
+                        {
+                            HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, FindValueReceived);
+                            break;
+                        }
                 }
-                catch(EndOfStreamException ex)
-                {
-                    log.LogError($"Received malformed message: {ex}");
-                }
-                catch (SocketException ex)
-                {
-                    log.LogError($"Cannot to handle TCP message: {ex}");
-                }
+            }
+            catch (EndOfStreamException ex)
+            {
+                log.LogError($"Received malformed message: {ex}");
+            }
+            catch (InvalidDataException ex)
+            {
+                log.LogError($"Received malformed message: {ex}");
+            }
+            catch (SocketException ex)
+            {
+                log.LogError($"Cannot to handle TCP message: {ex}");
+            }
+            catch (Exception ex)
+            {
+                log.LogError($"Cannot to handle TCP message: {ex}");
+            }
+
             //}
         }
 

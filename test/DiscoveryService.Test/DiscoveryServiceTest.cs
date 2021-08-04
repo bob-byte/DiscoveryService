@@ -39,6 +39,8 @@ namespace LUC.DiscoveryService.Test
         public void QueryAllServices_GetOwnUdpMessage_DontGet()
         {
             var done = new ManualResetEvent(initialState: false);
+            discoveryService.Start();
+
             discoveryService.Service.QueryReceived += (sender, e) =>
             {
                 if (e.Message<UdpMessage>() != null)
@@ -47,9 +49,8 @@ namespace LUC.DiscoveryService.Test
                 }
             };
 
-            discoveryService.Service.NetworkInterfaceDiscovered += (sender, e) => discoveryService.QueryAllServices();
+            discoveryService.QueryAllServices();
 
-            discoveryService.Start();
             Assert.IsFalse(done.WaitOne(TimeSpan.FromSeconds(value: 1)), message: "Got own UDP message");
         }
 
@@ -107,7 +108,7 @@ namespace LUC.DiscoveryService.Test
                 done.Set();
             };
 
-            var availableIps = discoveryService.Service.RunningIpAddresses().ToArray();
+            var availableIps = discoveryService.Service.RunningIpAddresses.ToArray();
             var eventArgs = new UdpMessageEventArgs
             {
                 RemoteEndPoint = new IPEndPoint(availableIps[1], discoveryService.RunningTcpPort)

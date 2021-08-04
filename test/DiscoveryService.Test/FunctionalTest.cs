@@ -1,26 +1,27 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading;
-using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Management.Automation;
+using System.Net;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Test
 {
-    class UsageExample
+    class FunctionalTest
     {
         private static readonly Object ttyLock = new Object();
         private static DiscoveryService discoveryService;
 
-        ~UsageExample()
+        ~FunctionalTest()
         {
-            discoveryService.Stop();
+            discoveryService?.Stop();
         }
 
         /// <summary>
@@ -82,27 +83,21 @@ namespace LUC.DiscoveryService
                 };
             };
 
-            Contact remoteContact = null;
             while (true)
             {
-                while (remoteContact == null)
+                ShowAvailableUserOptions();
+
+                var pressedKey = Console.ReadKey().Key;
+                Console.WriteLine();
+
+                Contact remoteContact = null;
+                if (((ConsoleKey.D1 <= pressedKey) && (pressedKey <= ConsoleKey.D6)) || 
+                    ((ConsoleKey.NumPad1 <= pressedKey) && (pressedKey <= ConsoleKey.NumPad6)))
                 {
-                    discoveryService.QueryAllServices();//to get any contacts
-
-                    try
-                    {
-                        remoteContact = RandomContact(discoveryService);
-                    }
-                    catch (IndexOutOfRangeException) //if knowContacts.Count == 0
-                    {
-                        ;//do nothing
-                    }
-
-                    Thread.Sleep(TimeSpan.FromSeconds(value: 3));
+                    RemoteContact(discoveryService, ref remoteContact);
                 }
 
-
-                TryExecuteSelectedOperationWhileKeyIsInvalid(remoteContact);
+                TryExecuteSelectedOperationWhileKeyIsInvalid(remoteContact, pressedKey);
             }
         }
 
@@ -186,6 +181,37 @@ namespace LUC.DiscoveryService
             }
         }
 
+        private static void ShowAvailableUserOptions()
+        {
+            Console.WriteLine($"Select an operation:\n" +
+                              $"1 - send multicast\n" +
+                              $"2 - send {typeof(PingRequest).Name}\n" +
+                              $"3 - send {typeof(StoreRequest).Name}\n" +
+                              $"4 - send {typeof(FindNodeRequest).Name}\n" +
+                              $"5 - send {typeof(FindValueRequest).Name}\n" +
+                              $"6 - send {typeof(AcknowledgeTcpMessage).Name}\n" +
+                              $"7 - test count available connections");
+        }
+
+        private static void RemoteContact(DiscoveryService discoveryService, ref Contact remoteContact)
+        {
+            while (remoteContact == null)
+            {
+                discoveryService.QueryAllServices();//to get any contacts
+
+                try
+                {
+                    remoteContact = RandomContact(discoveryService);
+                }
+                catch (IndexOutOfRangeException) //if knowContacts.Count == 0
+                {
+                    ;//do nothing
+                }
+
+                Thread.Sleep(TimeSpan.FromSeconds(value: 3));
+            }
+        }
+
         private static Contact RandomContact(DiscoveryService discoveryService)
         {
             var contacts = discoveryService.KnownContacts.Where(c => (c.ID != discoveryService.Service.OurContact.ID) &&
@@ -197,22 +223,11 @@ namespace LUC.DiscoveryService
             return randomContact;
         }
 
-        private static void TryExecuteSelectedOperationWhileKeyIsInvalid(Contact remoteContact)
+        private static void TryExecuteSelectedOperationWhileKeyIsInvalid(Contact remoteContact, ConsoleKey pressedKey)
         {
-            Console.WriteLine($"Select an operation:\n" +
-                    $"1 - send multicast\n" +
-                    $"2 - send {typeof(PingRequest).Name}\n" +
-                    $"3 - send {typeof(StoreRequest).Name}\n" +
-                    $"4 - send {typeof(FindNodeRequest).Name}\n" +
-                    $"5 - send {typeof(FindValueRequest).Name}\n" +
-                    $"6 - send {typeof(AcknowledgeTcpMessage).Name}");
-
             while (true)
             {
                 ClientKadOperation kadOperation = new ClientKadOperation();
-
-                var pressedKey = Console.ReadKey().Key;
-                Console.WriteLine();
 
                 switch (pressedKey)
                 {
@@ -261,20 +276,24 @@ namespace LUC.DiscoveryService
                     case ConsoleKey.NumPad6:
                     case ConsoleKey.D6:
                         {
-                            var remoteEndPoint = new IPEndPoint(remoteContact.LastActiveIpAddress, remoteContact.TcpPort);
-                            var eventArgs = new UdpMessageEventArgs
-                            {
-                                RemoteEndPoint = remoteEndPoint
-                            };
-
-                            Random random = new Random();
-                            UInt32 messageId = (UInt32)random.Next(maxValue: Int32.MaxValue);
-
-                            eventArgs.SetMessage(new UdpMessage(messageId, discoveryService.ProtocolVersion,
-                                remoteContact.TcpPort, machineId: discoveryService.MachineId));
-                            discoveryService.SendTcpMessageAsync(discoveryService, eventArgs).GetAwaiter().GetResult();
-
+                            SendTcpMessage(remoteContact);
                             Thread.Sleep(TimeSpan.FromSeconds(value: 2));//because we listen TCP messages in other threads
+
+                            return;
+                        }
+
+                    case ConsoleKey.NumPad7:
+                    case ConsoleKey.D7:
+                        {
+                            try
+                            {
+                                CountAvailableConnectionsTest();
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine(ex.ToString());
+                            }
+
                             return;
                         }
 
@@ -284,6 +303,100 @@ namespace LUC.DiscoveryService
                         }
                 }
             }
+        }
+
+        private static void SendTcpMessage(Contact remoteContact)
+        {
+            var remoteEndPoint = new IPEndPoint(remoteContact.LastActiveIpAddress, remoteContact.TcpPort);
+            var eventArgs = new UdpMessageEventArgs
+            {
+                RemoteEndPoint = remoteEndPoint
+            };
+
+            Random random = new Random();
+            UInt32 messageId = (UInt32)random.Next(maxValue: Int32.MaxValue);
+
+            eventArgs.SetMessage(new UdpMessage(messageId, discoveryService.ProtocolVersion,
+                remoteContact.TcpPort, machineId: discoveryService.MachineId));
+            discoveryService.SendTcpMessageAsync(discoveryService, eventArgs).GetAwaiter().GetResult();
+        }
+
+        private static void CountAvailableConnectionsTest()
+        {
+            using (var powerShell = PowerShell.Create())
+            {
+                var webClient = new WebClient();
+                var pathToPowercatScript = "https://raw.githubusercontent.com/besimorhino/powercat/master/powercat.ps1";
+                var script = webClient.DownloadString(pathToPowercatScript);
+
+                try
+                {
+                    powerShell.AddScript(script).AddScript("Invoke-Method").Invoke();
+                }
+                catch (ParseException)
+                {
+                    throw;
+                }
+                powerShell.AddCommand(cmdlet: "powercat");
+
+                var parameters = PowercatParameters();
+                powerShell.AddParameters(parameters);
+
+                Int32 countConnection;
+                do
+                {
+                    Console.Write($"Input count times you want to send the file: ");
+                }
+                while (!Int32.TryParse(Console.ReadLine(), out countConnection));
+
+                for (Int32 numConnection = 1; numConnection <= countConnection; numConnection++)
+                {
+                    Console.WriteLine($"{nameof(numConnection)} = {numConnection}");
+
+                    powerShell.BeginInvoke();
+
+                    var waitToServerRead = TimeSpan.FromSeconds(0.5);
+                    Thread.Sleep(waitToServerRead);
+
+                    powerShell.Stop();
+                }
+            }
+        }
+
+        private static Dictionary<String, Object> PowercatParameters()
+        {
+            Dictionary<String, Object> parameters = new Dictionary<String, Object>();
+
+            IPAddress serverIpAddress = null;
+            do
+            {
+                Console.Write("Input IP-address of a server to connect: ");
+
+                try
+                {
+                    serverIpAddress = IPAddress.Parse(Console.ReadLine());
+                }
+                catch (FormatException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            while (serverIpAddress == null);
+
+            parameters.Add(key: "c", value: serverIpAddress.ToString());
+            parameters.Add("p", discoveryService.RunningTcpPort.ToString());
+
+            String pathToFileToSend;
+            do
+            {
+                Console.Write($"Input full path to file which you want to send to server: ");
+                pathToFileToSend = Console.ReadLine();
+            }
+            while (!File.Exists(pathToFileToSend));
+
+            parameters.Add("i", pathToFileToSend);
+
+            return parameters;
         }
     }
 }

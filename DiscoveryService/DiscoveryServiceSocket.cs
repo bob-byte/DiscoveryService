@@ -54,6 +54,30 @@ namespace LUC.DiscoveryService
 
         private readonly ConcurrentQueue<Socket> acceptedSockets = new ConcurrentQueue<Socket>();
 
+        public void Accept(TimeSpan timeout, out Socket acceptedSocket)
+        {
+            VerifyWorkState();
+
+            StateObjectForAccept stateAccept = new StateObjectForAccept(this);
+            var asyncResult = BeginAccept(new AsyncCallback(AcceptCallback), stateAccept);
+
+            if (!asyncResult.IsCompleted)
+            {
+                asyncResult.AsyncWaitHandle.WaitOne(timeout);
+            }
+
+            acceptedSocket = stateAccept.AcceptedSocket;
+        }
+
+        private void AcceptCallback(IAsyncResult asyncResult)
+        {
+            //Get the socket that handles the client request
+            StateObjectForAccept stateAccept = (StateObjectForAccept)asyncResult.AsyncState;
+            stateAccept.AcceptedSocket = stateAccept.Listener.EndAccept(asyncResult);
+
+            acceptDone.Set();
+        }
+
         private async Task<Socket> AcceptedSocketAsync(Int32 lengthStorageOfAcceptedSockets, TimeSpan howOftenCheckAcceptedClient)
         {
             if (acceptDone == null)
@@ -278,7 +302,15 @@ namespace LUC.DiscoveryService
             try
             {
                 taskReadBytes = ReadBytesAsync(this);
-                isReceived = receiveDone.WaitOne(timeout);
+
+                if(timeout != default)
+                {
+                    isReceived = receiveDone.WaitOne(timeout);
+                }
+                else
+                {
+                    isReceived = receiveDone.WaitOne();
+                }
             }
             catch (SocketException)
             {

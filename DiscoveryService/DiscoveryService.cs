@@ -285,7 +285,7 @@ namespace LUC.DiscoveryService
             try
             {
                 request = eventArgs.Message<T>(whetherReadMessage: false);
-                sender = Service.DistributedHashTable.KnownContact(new ID(request.Sender));
+                sender = Service.DistributedHashTable.KnownContacts.Single(c => c.ID == new ID(request.Sender));
             }
             catch(InvalidOperationException ex)
             {
