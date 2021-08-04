@@ -13,7 +13,7 @@ namespace LUC.DiscoveryService.CodingData
     /// <summary>
     /// Methods to read wire formatted data items.
     /// </summary>
-    public class WireReader : Binary, IDisposable
+    public class WireReader : BinaryProtocol, IDisposable
     {
         /// <summary>
         ///   Creates a new instance of the <see cref="WireReader"/> on the

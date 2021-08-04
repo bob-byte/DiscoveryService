@@ -12,7 +12,7 @@ namespace LUC.DiscoveryService.CodingData
     /// <summary>
     /// Methods to write wire formatted data items.
     /// </summary>
-    public class WireWriter : Binary, IDisposable
+    public class WireWriter : BinaryProtocol, IDisposable
     {
         /// <summary>
         /// Creates a new instance of the <see cref="WireWriter"/> on the
