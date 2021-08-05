@@ -18,6 +18,12 @@ namespace LUC.DiscoveryService
     /// <remarks>Thread-safe</remarks>
     public class TcpServer : IDisposable
     {
+        private const Int32 DecrementSession = 100;
+
+        private Int64 maxConnectedSessions = 80000;
+
+        private Int32 countHandeledException = 0;
+
         private readonly TimeSpan WaitForCheckingWaitingSocket = TimeSpan.FromSeconds(0.5);
 
         private AutoResetEvent receiveDone;
@@ -298,14 +304,43 @@ namespace LUC.DiscoveryService
         {
             if (e.SocketError == SocketError.Success)
             {
-                // Create a new session to register
-                var session = CreateSession();
+                TcpSession session = null;
+                while (session == null || session.IsConnected)
+                {
+                    try
+                    {
+                        // Create a new session to register
+                        session = CreateSession();
 
-                // Register the session
-                RegisterSession(session);
+                        // Register the session
+                        Boolean isRegistered;
+                        do
+                        {
+                            RegisterSession(session, out isRegistered);
+                        }
+                        while (!isRegistered);
 
-                // Connect new session
-                session.Connect(e.AcceptSocket);
+                        // Connect new session
+                        session.Connect(e.AcceptSocket);
+                    }
+                    catch (SocketException ex)
+                    {
+                        log.LogError(ex.ToString());
+                        return;
+                    }
+                    catch (OutOfMemoryException ex)
+                    {
+                        log.LogError($"Failed to register new session: {ex}");
+
+                        //decrease maxConnectedSessions at DecrementSession
+                        maxConnectedSessions -= DecrementSession;
+
+                        //Delete first {DecrementSession} sessions from {Sessions}
+                        Sessions.RemoveRange(Sessions.Take(DecrementSession).ToList());
+
+                        countHandeledException++;
+                    }
+                }
             }
             else
                 SendError(e.SocketError);
@@ -376,25 +411,10 @@ namespace LUC.DiscoveryService
         public async Task<TcpSession> SessionWithNewDataAsync()
         {
             TcpSession sessionWithData = null;
-            var maxSessions = 100000;
-            
+
             while (sessionWithData == null)
             {
-                foreach (var tcpSession in Sessions.Values)
-                {
-                    //we should to check every time because if many peers connect to network we can overflow OptionAcceptorBacklog
-                    //we use OptionAcceptorBacklog - 1 for more safety
-                    if (Sessions.Values.Count >= maxSessions)
-                    {
-                        Sessions.TryRemove(Sessions.First().Key, value: out _);
-                    }
-
-                    if (tcpSession.Socket?.Available > 0)
-                    {
-                        sessionWithData = tcpSession;
-                        break;
-                    }
-                }
+                sessionWithData = Sessions.LastOrDefault(c => c.Value.Socket?.Available > 0).Value;
 
                 if (sessionWithData == null)
                 {
