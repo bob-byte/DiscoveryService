@@ -220,7 +220,7 @@ namespace LUC.DiscoveryService
                     sendingContact.ID.Value,
                     RunningTcpPort,
                     ProtocolVersion,
-                    groupsIds: GroupsSupported?.Keys?.ToList());
+                    groupsIds: GroupsSupported.Keys?.ToList());
                 var bytesToSend = tcpMessage.ToByteArray();
 
                 var remoteEndPoint = new IPEndPoint(ipEndPoint.Address, (Int32)udpMessage.TcpPort);
@@ -233,12 +233,16 @@ namespace LUC.DiscoveryService
                     ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
                         Constants.ConnectTimeout, ref client);
                 }
+                catch(SocketException ex)
+                {
+                    log.LogError($"Receive handler failed: {ex.Message}");
+                    // eat the exception
+                }
                 catch (InvalidOperationException ex)
                 {
                     log.LogError($"Receive handler failed: {ex.Message}");
                     // eat the exception
                 }
-
                 finally
                 {
                     if (client != null)

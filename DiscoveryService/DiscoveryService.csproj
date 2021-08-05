@@ -97,6 +97,9 @@
     <Compile Include="Kademlia\ClientPool\IOBehavior.cs" />
     <Compile Include="Kademlia\ClientPool\SocketHealth.cs" />
     <Compile Include="Kademlia\ClientKadOperation.cs" />
+    <Compile Include="Kademlia\Interfaces\IBucketList.cs" />
+    <Compile Include="Kademlia\Interfaces\IDht.cs" />
+    <Compile Include="Kademlia\Interfaces\INode.cs" />
     <Compile Include="Messages\KademliaResponses\ContactResponse.cs" />
     <Compile Include="SemaphoreLocker.cs" />
     <Compile Include="SocketState.cs" />
@@ -129,7 +132,7 @@
     <Compile Include="Kademlia\ExtensionMethods.cs" />
     <Compile Include="Kademlia\FindResult.cs" />
     <Compile Include="Kademlia\ID.cs" />
-    <Compile Include="Kademlia\Interfaces.cs" />
+    <Compile Include="Kademlia\Interfaces\IStorage.cs" />
     <Compile Include="Kademlia\KBucket.cs" />
     <Compile Include="Kademlia\Node.cs" />
     <Compile Include="Kademlia\Routers\ParallelRouter.cs" />
@@ -159,7 +162,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Kademlia\Interfaces\" />
+    <Folder Include="Kademlia\Exceptions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

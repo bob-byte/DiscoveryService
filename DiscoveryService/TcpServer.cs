@@ -1,5 +1,7 @@
 ﻿using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
+using LUC.Interfaces;
+using LUC.Services.Implementation;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -18,6 +20,8 @@ namespace LUC.DiscoveryService
     /// <remarks>Thread-safe</remarks>
     public class TcpServer : IDisposable
     {
+        private static ILoggingService log;
+
         private const Int32 DecrementSession = 100;
 
         private Int64 maxConnectedSessions = 80000;
@@ -27,6 +31,14 @@ namespace LUC.DiscoveryService
         private readonly TimeSpan WaitForCheckingWaitingSocket = TimeSpan.FromSeconds(0.5);
 
         private AutoResetEvent receiveDone;
+
+        static TcpServer()
+        {
+            log = new LoggingService
+            {
+                SettingsService = new SettingsService()
+            };
+        }
 
         /// <summary>
         /// Initialize TCP server with a given IP address and port number
@@ -313,12 +325,7 @@ namespace LUC.DiscoveryService
                         session = CreateSession();
 
                         // Register the session
-                        Boolean isRegistered;
-                        do
-                        {
-                            RegisterSession(session, out isRegistered);
-                        }
-                        while (!isRegistered);
+                            RegisterSession(session);
 
                         // Connect new session
                         session.Connect(e.AcceptSocket);

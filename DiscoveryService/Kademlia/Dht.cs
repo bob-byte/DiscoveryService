@@ -47,7 +47,7 @@ namespace LUC.DiscoveryService.Kademlia
         public IStorage OriginatorStorage { get { return originatorStorage; } set { originatorStorage = value; } }
 
         /// <summary>
-        /// IP-address TCP port and ID where we listen and send messages 
+        /// IP-address, TCP port, and ID which we listen and send messages 
         /// </summary>
         public Contact OurContact { get { return ourContact; } set { ourContact = value; } }
 

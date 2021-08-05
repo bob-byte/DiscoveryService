@@ -2,21 +2,34 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-
+using LUC.DiscoveryService.Kademlia.Interfaces;
 using Newtonsoft.Json;
 
 namespace LUC.DiscoveryService.Kademlia
 {
     public class BucketList : AbstractKademlia, IBucketList
     {
+        /// <summary>
+        /// <seealso cref="Kademlia.KBucket"/>s of our <seealso cref="Node"/>. First <see cref="Buckets"/> has 1 full bucket then 
+        /// it can be splited into more buckets during <see cref="AddContact(ref Contact)"/> method
+        /// </summary>
         public List<KBucket> Buckets { get { return buckets; } set { buckets = value; } }
 
+        /// <summary>
+        /// <see cref="ID"/> of <seealso cref="OurContact"/>
+        /// </summary>
         [JsonIgnore]
         public ID OurID { get { return ourID; } set { ourID = value; } }
 
+        /// <summary>
+        /// IP-addresses, TCP port, and ID which we use to listen and send messages 
+        /// </summary>
         [JsonIgnore]
         public Contact OurContact { get { return ourContact; } set { ourContact = value; } }
 
+        /// <summary>
+        /// Allow to delay eviction and add to pending list of distributed hash table (DHT)
+        /// </summary>
         [JsonIgnore]
         public IDht Dht { get { return dht; } set { dht = value; } }
 
@@ -47,6 +60,9 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize the bucket list with our host ID and create a single bucket for the full ID range.
         /// </summary>
+        /// <param name="ourContact">
+        /// Contact of current peer
+        /// </param>
         public BucketList(Contact ourContact)
         {
             this.ourContact = ourContact;
@@ -61,6 +77,9 @@ namespace LUC.DiscoveryService.Kademlia
         /// Add a contact if possible, based on the algorithm described
         /// in sections 2.2, 2.4 and 4.2
         /// </summary>
+        /// <param name="contact">
+        /// <see cref="Contact"/> which we try to add to any bucket
+        /// </param>
         public void AddContact(ref Contact contact)
         {
             Validate.IsFalse<OurNodeCannotBeAContactException>(ourID == contact.ID, "Cannot add ourselves as a contact!");
@@ -68,7 +87,7 @@ namespace LUC.DiscoveryService.Kademlia
 
             lock (this)
             {
-                KBucket kbucket = GetKBucket(contact.ID);
+                KBucket kbucket = KBucket(contact.ID);
 
                 if (kbucket.Contains(contact.ID))
                 {
@@ -113,7 +132,16 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
-        public KBucket GetKBucket(ID otherID)
+        /// <summary>
+        /// Get <see cref="Kademlia.KBucket"/> in which <paramref name="otherID"/> is contained
+        /// </summary>
+        /// <param name="otherID">
+        /// <see cref="ID"/> by which you want to find <see cref="Kademlia.KBucket"/>
+        /// </param>
+        /// <returns>
+        /// <see cref="Kademlia.KBucket"/> in which <paramref name="otherID"/> is contained
+        /// </returns>
+        public KBucket KBucket(ID otherID)
         {
             lock (this)
             {
@@ -121,7 +149,16 @@ namespace LUC.DiscoveryService.Kademlia
             }
 		}
 
-        public KBucket GetKBucket(BigInteger otherID)
+        /// <summary>
+        /// Get <see cref="Kademlia.KBucket"/> in which <paramref name="otherID"/> is contained
+        /// </summary>
+        /// <param name="otherID">
+        /// <see cref="ID"/> by which you want to find <see cref="Kademlia.KBucket"/>
+        /// </param>
+        /// <returns>
+        /// <see cref="Kademlia.KBucket"/> in which <paramref name="otherID"/> is contained
+        /// </returns>
+        public KBucket KBucket(BigInteger otherID)
         {
             lock (this)
             {
@@ -132,6 +169,9 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Returns true if the contact, by ID, exists in our bucket list.
         /// </summary>
+        /// <param name="sender">
+        /// Defines whether contact exist in any <see cref="Buckets"/>
+        /// </param>
         public bool ContactExists(Contact sender)
         {
             lock (this)
