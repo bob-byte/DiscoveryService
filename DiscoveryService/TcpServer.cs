@@ -314,19 +314,41 @@ namespace LUC.DiscoveryService
         {
             if (e.SocketError == SocketError.Success)
             {
-                // Create a new session to register
-                var session = CreateSession();
-
-                // Register the session
-                Boolean isRegistered;
-                do
+                TcpSession session = null;
+                while(session == null || session.IsConnected)
                 {
-                    RegisterSession(session, out isRegistered);
-                }
-                while (!isRegistered);
+                    try
+                    {
+                        // Create a new session to register
+                        session = CreateSession();
 
-                // Connect new session
-                session.Connect(e.AcceptSocket);
+                        // Register the session
+                        Boolean isRegistered;
+                        do
+                        {
+                            RegisterSession(session, out isRegistered);
+                        }
+                        while (!isRegistered);
+
+                        // Connect new session
+                        session.Connect(e.AcceptSocket);
+                    }
+                    catch (SocketException ex)
+                    {
+                        log.LogError(ex.ToString());
+                        return;
+                    }
+                    catch (OutOfMemoryException ex)
+                    {
+                        log.LogError($"Failed to register new session: {ex}");
+
+                        //decrease maxConnectedSessions at DecrementSession
+                        maxConnectedSessions -= DecrementSession;
+
+                        //Delete first {DecrementSession} sessions from {Sessions}
+                        Sessions.RemoveRange(Sessions.Take(DecrementSession).ToList());
+                    }
+                }
             }
             else
                 SendError(e.SocketError);
@@ -400,7 +422,7 @@ namespace LUC.DiscoveryService
             
             while (sessionWithData == null)
             {
-                sessionWithData = Sessions.LastOrDefault(c => c.Value.Socket.Available > 0).Value;
+                sessionWithData = Sessions.LastOrDefault(c => c.Value.Socket?.Available > 0).Value;
 
                 if (sessionWithData == null)
                 {
@@ -474,24 +496,13 @@ namespace LUC.DiscoveryService
         internal void RegisterSession(TcpSession session, out Boolean isAdded)
         {
             //TODO add compare Sessions.Count and MaxConnectedSessions
+            //if(ConnectedSessions == maxConnectedSessions)
+            //{
+            //    Sessions.RemoveRange(Sessions.Take(DecrementSession).ToList());
+            //}
 
-            try
-            {
-                // Register a new session
-                isAdded = Sessions.TryAdd(session.Id, session);
-            }
-            catch (OutOfMemoryException ex)
-            {
-                log.LogError($"Failed to register new session: {ex}");
-
-                //decrease maxConnectedSessions at DecrementSession
-                maxConnectedSessions -= DecrementSession;
-
-                //Delete first {DecrementSession} sessions from {Sessions}
-                Sessions.RemoveRange(Sessions.Take(DecrementSession).ToList());
-
-                isAdded = false;
-            }
+            // Register a new session
+            isAdded = Sessions.TryAdd(session.Id, session);
         }
 
         /// <summary>
