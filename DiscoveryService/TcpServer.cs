@@ -1,5 +1,7 @@
 ﻿using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
+using LUC.Interfaces;
+using LUC.Services.Implementation;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -18,9 +20,23 @@ namespace LUC.DiscoveryService
     /// <remarks>Thread-safe</remarks>
     public class TcpServer : IDisposable
     {
+        private const Int32 DecrementSession = 100;
+
+        private Int64 maxConnectedSessions = 80000;
+
         private readonly TimeSpan WaitForCheckingWaitingSocket = TimeSpan.FromSeconds(0.5);
 
         private AutoResetEvent receiveDone;
+
+        private readonly static ILoggingService log;
+
+        static TcpServer()
+        {
+            log = new LoggingService
+            {
+                SettingsService = new SettingsService()
+            };
+        }
 
         /// <summary>
         /// Initialize TCP server with a given IP address and port number
@@ -302,7 +318,12 @@ namespace LUC.DiscoveryService
                 var session = CreateSession();
 
                 // Register the session
-                RegisterSession(session);
+                Boolean isRegistered;
+                do
+                {
+                    RegisterSession(session, out isRegistered);
+                }
+                while (!isRegistered);
 
                 // Connect new session
                 session.Connect(e.AcceptSocket);
@@ -376,25 +397,10 @@ namespace LUC.DiscoveryService
         public async Task<TcpSession> SessionWithNewDataAsync()
         {
             TcpSession sessionWithData = null;
-            var maxSessions = 100000;
             
             while (sessionWithData == null)
             {
-                foreach (var tcpSession in Sessions.Values)
-                {
-                    //we should to check every time because if many peers connect to network we can overflow OptionAcceptorBacklog
-                    //we use OptionAcceptorBacklog - 1 for more safety
-                    if (Sessions.Values.Count >= maxSessions)
-                    {
-                        Sessions.TryRemove(Sessions.First().Key, value: out _);
-                    }
-
-                    if (tcpSession.Socket?.Available > 0)
-                    {
-                        sessionWithData = tcpSession;
-                        break;
-                    }
-                }
+                sessionWithData = Sessions.LastOrDefault(c => c.Value.Socket.Available > 0).Value;
 
                 if (sessionWithData == null)
                 {
@@ -465,10 +471,27 @@ namespace LUC.DiscoveryService
         /// Register a new session
         /// </summary>
         /// <param name="session">Session to register</param>
-        internal void RegisterSession(TcpSession session)
+        internal void RegisterSession(TcpSession session, out Boolean isAdded)
         {
-            // Register a new session
-            Sessions.TryAdd(session.Id, session);
+            //TODO add compare Sessions.Count and MaxConnectedSessions
+
+            try
+            {
+                // Register a new session
+                isAdded = Sessions.TryAdd(session.Id, session);
+            }
+            catch (OutOfMemoryException ex)
+            {
+                log.LogError($"Failed to register new session: {ex}");
+
+                //decrease maxConnectedSessions at DecrementSession
+                maxConnectedSessions -= DecrementSession;
+
+                //Delete first {DecrementSession} sessions from {Sessions}
+                Sessions.RemoveRange(Sessions.Take(DecrementSession).ToList());
+
+                isAdded = false;
+            }
         }
 
         /// <summary>

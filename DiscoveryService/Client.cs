@@ -315,6 +315,12 @@ namespace LUC.DiscoveryService
 
                     ListenTcp(tcpServer);
                 }
+                catch(OutOfMemoryException e)
+                {
+                    log.LogError($"Unhandled {e.GetType().Name}: {e}");
+
+                    return;
+                }
             });
         }
 
