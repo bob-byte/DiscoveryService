@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Numerics;
-
+using LUC.DiscoveryService.Kademlia.Interfaces;
 using Newtonsoft.Json;
 
 namespace LUC.DiscoveryService.Kademlia

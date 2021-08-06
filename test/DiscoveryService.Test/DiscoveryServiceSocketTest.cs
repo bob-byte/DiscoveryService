@@ -163,8 +163,5 @@ namespace LUC.DiscoveryService.Test
             Assert.That(() => socket.Send(new Byte[] { 0, 1, 2 }, Constants.ReceiveTimeout), 
                 Throws.TypeOf(typeof(InvalidOperationException)));
         }
-
-        [Test]
-
     }
 }

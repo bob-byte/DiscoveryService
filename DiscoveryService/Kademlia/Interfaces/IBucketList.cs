@@ -12,7 +12,7 @@ namespace LUC.DiscoveryService.Kademlia.Interfaces
         ID OurID { get; set; }
         Contact OurContact { get; set; }
         void AddContact(ref Contact contact);
-        KBucket KBucket(ID otherID);
+        KBucket GetKBucket(ID otherID);
         List<Contact> GetCloseContacts(ID key, ID exclude);
         bool ContactExists(Contact contact);
     }

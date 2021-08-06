@@ -6,6 +6,7 @@ using System;
 using LUC.Interfaces;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.Services.Implementation;
+using LUC.DiscoveryService.Kademlia.Interfaces;
 
 namespace LUC.DiscoveryService.Kademlia
 {

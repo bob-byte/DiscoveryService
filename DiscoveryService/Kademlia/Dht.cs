@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 
 using LUC.DiscoveryService.Kademlia.Routers;
 using LUC.Interfaces;
+using LUC.DiscoveryService.Kademlia.Interfaces;
 
 namespace LUC.DiscoveryService.Kademlia
 {

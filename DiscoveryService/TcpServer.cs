@@ -20,13 +20,9 @@ namespace LUC.DiscoveryService
     /// <remarks>Thread-safe</remarks>
     public class TcpServer : IDisposable
     {
-        private static ILoggingService log;
+        private const Int32 MaxConnectedSessions = 10000;
 
-        private const Int32 DecrementSession = 100;
-
-        private Int64 maxConnectedSessions = 80000;
-
-        private Int32 countHandeledException = 0;
+        private readonly static ILoggingService log;
 
         private readonly TimeSpan WaitForCheckingWaitingSocket = TimeSpan.FromSeconds(0.5);
 
@@ -316,43 +312,23 @@ namespace LUC.DiscoveryService
         {
             if (e.SocketError == SocketError.Success)
             {
-                TcpSession session = null;
-                while (session == null || session.IsConnected)
+                if (MaxConnectedSessions <= ConnectedSessions + 1)
                 {
-                    try
-                    {
-                        // Create a new session to register
-                        session = CreateSession();
-
-                        // Register the session
-                            RegisterSession(session);
-
-                        // Connect new session
-                        session.Connect(e.AcceptSocket);
-                    }
-                    catch (SocketException ex)
-                    {
-                        log.LogError(ex.ToString());
-                        return;
-                    }
-                    catch (OutOfMemoryException ex)
-                    {
-                        log.LogError($"Failed to register new session: {ex}");
-
-                        //decrease maxConnectedSessions at DecrementSession
-                        maxConnectedSessions -= DecrementSession;
-
-                        //Delete first {DecrementSession} sessions from {Sessions}
-                        Sessions.RemoveRange(Sessions.Take(DecrementSession).ToList());
-
-                        countHandeledException++;
-                    }
+                    UnregisterSession();
                 }
+
+                var session = CreateSession();
+
+                // Register the session
+                RegisterSession(session);
+
+                // Connect new session
+                session.Connect(e.AcceptSocket);
             }
             else
                 SendError(e.SocketError);
 
-            // Accept the next client connection
+                // Accept the next client connection
             if (IsAccepting)
                 StartAccept(e);
         }
@@ -496,6 +472,16 @@ namespace LUC.DiscoveryService
         {
             // Register a new session
             Sessions.TryAdd(session.Id, session);
+        }
+
+        /// <summary>
+        /// Unregister the oldest session which has Socket == null or !Socket.Connected
+        /// </summary>
+        internal void UnregisterSession()
+        {
+            var oldestDisconnectedSession = Sessions.FirstOrDefault(c => (c.Value.Socket == null) || !(c.Value.Socket.Connected)).Value;
+
+            UnregisterSession(oldestDisconnectedSession.Id);
         }
 
         /// <summary>

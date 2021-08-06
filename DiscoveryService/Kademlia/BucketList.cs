@@ -87,7 +87,7 @@ namespace LUC.DiscoveryService.Kademlia
 
             lock (this)
             {
-                KBucket kbucket = KBucket(contact.ID);
+                KBucket kbucket = GetKBucket(contact.ID);
 
                 if (kbucket.Contains(contact.ID))
                 {
@@ -141,7 +141,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <returns>
         /// <see cref="Kademlia.KBucket"/> in which <paramref name="otherID"/> is contained
         /// </returns>
-        public KBucket KBucket(ID otherID)
+        public KBucket GetKBucket(ID otherID)
         {
             lock (this)
             {
@@ -158,7 +158,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <returns>
         /// <see cref="Kademlia.KBucket"/> in which <paramref name="otherID"/> is contained
         /// </returns>
-        public KBucket KBucket(BigInteger otherID)
+        public KBucket GetKBucket(BigInteger otherID)
         {
             lock (this)
             {
