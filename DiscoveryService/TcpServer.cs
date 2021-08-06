@@ -20,15 +20,13 @@ namespace LUC.DiscoveryService
     /// <remarks>Thread-safe</remarks>
     public class TcpServer : IDisposable
     {
-        private const Int32 DecrementSession = 100;
+        private const Int32 MaxConnectedSessions = 10000;
 
-        private Int64 maxConnectedSessions = 80000;
+        private readonly static ILoggingService log;
 
         private readonly TimeSpan WaitForCheckingWaitingSocket = TimeSpan.FromSeconds(0.5);
 
         private AutoResetEvent receiveDone;
-
-        private readonly static ILoggingService log;
 
         static TcpServer()
         {
@@ -43,13 +41,13 @@ namespace LUC.DiscoveryService
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public TcpServer(IPAddress address, int port) : this(new IPEndPoint(address, port)) {}
+        public TcpServer(IPAddress address, int port) : this(new IPEndPoint(address, port)) { }
         /// <summary>
         /// Initialize TCP server with a given IP address and port number
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public TcpServer(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port)) {}
+        public TcpServer(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port)) { }
         /// <summary>
         /// Initialize TCP server with a given IP endpoint
         /// </summary>
@@ -261,7 +259,7 @@ namespace LUC.DiscoveryService
                 // Update the acceptor socket disposed flag
                 IsSocketDisposed = true;
             }
-            catch (ObjectDisposedException) {}
+            catch (ObjectDisposedException) { }
 
             // Disconnect all sessions
             DisconnectAll();
@@ -314,41 +312,18 @@ namespace LUC.DiscoveryService
         {
             if (e.SocketError == SocketError.Success)
             {
-                TcpSession session = null;
-                while(session == null || session.IsConnected)
+                if (MaxConnectedSessions <= Sessions.Count + 1)
                 {
-                    try
-                    {
-                        // Create a new session to register
-                        session = CreateSession();
-
-                        // Register the session
-                        Boolean isRegistered;
-                        do
-                        {
-                            RegisterSession(session, out isRegistered);
-                        }
-                        while (!isRegistered);
-
-                        // Connect new session
-                        session.Connect(e.AcceptSocket);
-                    }
-                    catch (SocketException ex)
-                    {
-                        log.LogError(ex.ToString());
-                        return;
-                    }
-                    catch (OutOfMemoryException ex)
-                    {
-                        log.LogError($"Failed to register new session: {ex}");
-
-                        //decrease maxConnectedSessions at DecrementSession
-                        maxConnectedSessions -= DecrementSession;
-
-                        //Delete first {DecrementSession} sessions from {Sessions}
-                        Sessions.RemoveRange(Sessions.Take(DecrementSession).ToList());
-                    }
+                    UnregisterSession();
                 }
+
+                var session = CreateSession();
+
+                // Register the session
+                RegisterSession(session);
+
+                // Connect new session
+                session.Connect(e.AcceptSocket);
             }
             else
                 SendError(e.SocketError);
@@ -419,7 +394,7 @@ namespace LUC.DiscoveryService
         public async Task<TcpSession> SessionWithNewDataAsync()
         {
             TcpSession sessionWithData = null;
-            
+
             while (sessionWithData == null)
             {
                 sessionWithData = Sessions.LastOrDefault(c => c.Value.Socket?.Available > 0).Value;
@@ -493,16 +468,33 @@ namespace LUC.DiscoveryService
         /// Register a new session
         /// </summary>
         /// <param name="session">Session to register</param>
-        internal void RegisterSession(TcpSession session, out Boolean isAdded)
+        internal void RegisterSession(TcpSession session)
         {
-            //TODO add compare Sessions.Count and MaxConnectedSessions
-            //if(ConnectedSessions == maxConnectedSessions)
-            //{
-            //    Sessions.RemoveRange(Sessions.Take(DecrementSession).ToList());
-            //}
-
             // Register a new session
-            isAdded = Sessions.TryAdd(session.Id, session);
+            Sessions.TryAdd(session.Id, session);
+        }
+
+        /// <summary>
+        /// Unregister the oldest session
+        /// </summary>
+        internal void UnregisterSession()
+        {
+            var oldestSession = Sessions.FirstOrDefault(c => (c.Value.Socket == null) || !(c.Value.Socket.Connected)).Value;
+
+            if (oldestSession == null)
+            {
+                oldestSession = Sessions.FirstOrDefault(c => c.Value.Socket?.Available == 0).Value;
+
+                if (oldestSession == null)
+                {
+                    oldestSession = Sessions.FirstOrDefault().Value;
+                }
+            }
+
+            if (Sessions.Count != 0)
+            {
+                UnregisterSession(oldestSession.Id);
+            }
         }
 
         /// <summary>
@@ -562,46 +554,46 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Handle server starting notification
         /// </summary>
-        protected virtual void OnStarting() {}
+        protected virtual void OnStarting() { }
         /// <summary>
         /// Handle server started notification
         /// </summary>
-        protected virtual void OnStarted() {}
+        protected virtual void OnStarted() { }
         /// <summary>
         /// Handle server stopping notification
         /// </summary>
-        protected virtual void OnStopping() {}
+        protected virtual void OnStopping() { }
         /// <summary>
         /// Handle server stopped notification
         /// </summary>
-        protected virtual void OnStopped() {}
+        protected virtual void OnStopped() { }
 
         /// <summary>
         /// Handle session connecting notification
         /// </summary>
         /// <param name="session">Connecting session</param>
-        protected virtual void OnConnecting(TcpSession session) {}
+        protected virtual void OnConnecting(TcpSession session) { }
         /// <summary>
         /// Handle session connected notification
         /// </summary>
         /// <param name="session">Connected session</param>
-        protected virtual void OnConnected(TcpSession session) {}
+        protected virtual void OnConnected(TcpSession session) { }
         /// <summary>
         /// Handle session disconnecting notification
         /// </summary>
         /// <param name="session">Disconnecting session</param>
-        protected virtual void OnDisconnecting(TcpSession session) {}
+        protected virtual void OnDisconnecting(TcpSession session) { }
         /// <summary>
         /// Handle session disconnected notification
         /// </summary>
         /// <param name="session">Disconnected session</param>
-        protected virtual void OnDisconnected(TcpSession session) {}
+        protected virtual void OnDisconnected(TcpSession session) { }
 
         /// <summary>
         /// Handle error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        protected virtual void OnError(SocketError error) {}
+        protected virtual void OnError(SocketError error) { }
 
         internal void OnConnectingInternal(TcpSession session) { OnConnecting(session); }
         internal void OnConnectedInternal(TcpSession session) { OnConnected(session); }
