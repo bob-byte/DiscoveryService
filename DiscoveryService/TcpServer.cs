@@ -20,7 +20,7 @@ namespace LUC.DiscoveryService
     /// <remarks>Thread-safe</remarks>
     public class TcpServer : IDisposable
     {
-        private const Int32 MaxConnectedSessions = 10000;
+        private const Int32 MaxSessionsCount = 10000;
 
         private readonly static ILoggingService log;
 
@@ -312,7 +312,7 @@ namespace LUC.DiscoveryService
         {
             if (e.SocketError == SocketError.Success)
             {
-                if (MaxConnectedSessions <= Sessions.Count + 1)
+                if (MaxSessionsCount <= Sessions.Count + 1)
                 {
                     UnregisterSession();
                 }
@@ -401,7 +401,7 @@ namespace LUC.DiscoveryService
 
                 if (sessionWithData == null)
                 {
-                    await Task.Delay(Constants.TimeCheckDataToRead);
+                    await Task.Delay(WaitForCheckingWaitingSocket);
                 }
             }
 

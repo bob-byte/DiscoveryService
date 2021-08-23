@@ -290,7 +290,7 @@ namespace LUC.DiscoveryService
                     _ = task.ContinueWith(taskReceiving =>
                     {
                         var eventArgs = taskReceiving.Result;
-                        log.LogInfo($"Read {eventArgs.Buffer.Length} bytes");
+                        log.LogInfo($"Received {eventArgs.Buffer.Length} bytes");
 
                         TcpMessageReceived?.Invoke(tcpServer, eventArgs);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
@@ -314,12 +314,6 @@ namespace LUC.DiscoveryService
                         $"{e}");
 
                     ListenTcp(tcpServer);
-                }
-                catch(OutOfMemoryException e)
-                {
-                    log.LogError($"Unhandled {e.GetType().Name}: {e}");
-
-                    return;
                 }
             });
         }

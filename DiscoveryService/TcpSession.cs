@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Kademlia;
 
 namespace LUC.DiscoveryService
 {
@@ -399,20 +400,45 @@ namespace LUC.DiscoveryService
         public async Task<Byte[]> ReadBytesAsync(AutoResetEvent receiveDone)
         {
             List<Byte> allMessage = new List<Byte>();
-            var availableDataToRead = Socket.Available;
+            Int32 availableDataToRead = Socket.Available;
 
-            for (Int32 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0;)
+            Int32 chunkSize;
+            Int32 countReadBytes;
+            do
             {
-                var buffer = new ArraySegment<Byte>(new Byte[availableDataToRead]);
+                chunkSize = ChunkSize(availableDataToRead);
+
+                var buffer = new ArraySegment<Byte>(new Byte[chunkSize]);
                 countReadBytes = await Socket.ReceiveAsync(buffer, SocketFlags.None);
                 allMessage.AddRange(buffer);
 
                 availableDataToRead = Socket.Available;
             }
+            while ((countReadBytes > 0) && (availableDataToRead > 0));
 
             receiveDone.Set();
 
             return allMessage.ToArray();
+        }
+
+        private Int32 ChunkSize(Int32 availableDataToRead)
+        {
+            Int32 chunkSize;
+
+            if (availableDataToRead < Constants.MaxChunkSize)
+            {
+                chunkSize = availableDataToRead;
+            }
+            else if (Constants.MaxChunkSize <= availableDataToRead)
+            {
+                chunkSize = Constants.MaxChunkSize;
+            }
+            else
+            {
+                throw new InvalidOperationException();
+            }
+
+            return chunkSize;
         }
 
         /// <summary>

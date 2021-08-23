@@ -41,13 +41,12 @@
     <Reference Include="DeviceId, Version=5.2.0.0, Culture=neutral, PublicKeyToken=f755c371b5c59c52, processorArchitecture=MSIL">
       <HintPath>..\..\UDPtest\packages\DeviceId.5.2.0\lib\net40\DeviceId.dll</HintPath>
     </Reference>
+    <Reference Include="LUC.DVVSet">
+      <HintPath>..\..\..\LUC\WpfClient\LUC.DVVSet\bin\Debug\LUC.DVVSet.dll</HintPath>
+    </Reference>
     <Reference Include="LUC.Interfaces, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>bin\Debug\LUC.Interfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="LUC.Services.Implementation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\LUC.Services.Implementation.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\..\LUC\WpfClient\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -86,6 +85,7 @@
     <Compile Include="AbstractService.cs" />
     <Compile Include="CodingData\Binary.cs" />
     <Compile Include="CodingData\Buffer.cs" />
+    <Compile Include="Download.cs" />
     <Compile Include="DiscoveryServiceSocket.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\StringExtension.cs" />
@@ -97,7 +97,12 @@
     <Compile Include="Kademlia\ClientPool\IOBehavior.cs" />
     <Compile Include="Kademlia\ClientPool\SocketHealth.cs" />
     <Compile Include="Kademlia\ClientKadOperation.cs" />
+    <Compile Include="Messages\KademliaRequests\CheckFileExistsRequest.cs" />
+    <Compile Include="Messages\KademliaRequests\ContantRange.cs" />
+    <Compile Include="Messages\KademliaRequests\DownloadFileRequest.cs" />
+    <Compile Include="Messages\KademliaResponses\CheckFileExistsResponse.cs" />
     <Compile Include="Messages\KademliaResponses\ContactResponse.cs" />
+    <Compile Include="Messages\KademliaResponses\DownloadFileResponse.cs" />
     <Compile Include="SemaphoreLocker.cs" />
     <Compile Include="SocketState.cs" />
     <Compile Include="Messages\DiscoveryServiceMessage.cs" />
@@ -160,6 +165,12 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Kademlia\Interfaces\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\LUC\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
+      <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
+      <Name>LUC.Services.Implementation</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

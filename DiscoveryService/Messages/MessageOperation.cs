@@ -26,6 +26,9 @@ namespace LUC.DiscoveryService.Messages
         FindNodeResponse = 6,
         FindValue = 7,
         FindValueResponseWithValue = 8,
-        FindValueResponseWithCloseContacts = 9
+        FindValueResponseWithCloseContacts = 9,
+
+        CheckFileExists,
+        CheckFileExistsResponse
     }
 }

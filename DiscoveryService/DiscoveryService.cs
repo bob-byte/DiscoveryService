@@ -27,11 +27,6 @@ namespace LUC.DiscoveryService
 
         private Boolean isDiscoveryServiceStarted = false;
 
-        //
-        // Kademilia contacts
-        //
-        private static readonly ConcurrentDictionary<UInt32, ConcurrentDictionary<BigInteger, Contact>> knownContacts = new ConcurrentDictionary<UInt32, ConcurrentDictionary<BigInteger, Contact>>();
-
         /// <summary>
         ///   Raised when a servive instance is shutting down.
         /// </summary>
@@ -259,9 +254,6 @@ namespace LUC.DiscoveryService
             var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
             if ((tcpMessage != null) && (e.SendingEndPoint is IPEndPoint ipEndPoint))
             {
-                var knownContacts = AllKnownContacts(ProtocolVersion);
-                knownContacts.TryAdd(tcpMessage.IdOfSendingContact, new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address));
-
                 foreach (var groupId in tcpMessage.GroupIds)
                 {
                     if (!KnownIps.TryAdd(ipEndPoint, groupId))
@@ -341,12 +333,6 @@ namespace LUC.DiscoveryService
             {
                 throw new InvalidOperationException("First you need to start discovery service");
             }
-        }
-
-        public static ConcurrentDictionary<BigInteger, Contact> AllKnownContacts(UInt32 protocolVersion)
-        {
-            knownContacts.TryAdd(protocolVersion, new ConcurrentDictionary<BigInteger, Contact>());
-            return knownContacts[protocolVersion];
         }
 
         private static void StopDiscovery(Object sender, EventArgs e)

@@ -21,16 +21,18 @@ namespace LUC.DiscoveryService.Kademlia
     {
         private static ILoggingService log;
         private readonly UInt32 protocolVersion;
-        private static ConnectionPool connectionPool;
 
-        public ClientKadOperation()
+        static ClientKadOperation()
         {
             log = new LoggingService
             {
                 SettingsService = new SettingsService()
             };
+        }
 
-            connectionPool = ConnectionPool.Instance();
+        public ClientKadOperation()
+        {
+            
         }
 
         public ClientKadOperation(UInt32 protocolVersion)
@@ -50,113 +52,8 @@ namespace LUC.DiscoveryService.Kademlia
                 MessageOperation = MessageOperation.Ping
             };
 
-            GetRequestResult<PingResponse>(remoteContact, request, response: out _, out var rpcError);
+            request.GetRequestResult<PingResponse>(remoteContact, request, response: out _, out var rpcError);
             return rpcError;
-        }
-
-        private void GetRequestResult<TResponse>(Contact remoteContact, Request request, 
-            out TResponse response, out RpcError rpcError) 
-            where TResponse : Response, new()
-        {
-            ErrorResponse nodeError = null;
-            Boolean isTimeoutSocketOp = false;
-            response = null;
-
-            var cloneIpAddresses = remoteContact.IpAddresses();
-            for (Int32 numAddress = cloneIpAddresses.Count - 1;
-                (numAddress >= 0) && (response == null); numAddress--)
-            {
-                var ipEndPoint = new IPEndPoint(cloneIpAddresses[numAddress], remoteContact.TcpPort);
-                ClientStart(ipEndPoint, request, out isTimeoutSocketOp, out nodeError, out response);
-
-                if (response != null)
-                {
-                    log.LogInfo($"The response is received:\n{response}");
-                }
-                //else
-                //{
-                //    remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], isRemoved: out _);
-                //    cloneIpAddresses.RemoveAt(numAddress);
-                //}
-            }            
-
-            rpcError = RpcError(request.RandomID, response, isTimeoutSocketOp, nodeError);
-        }
-
-        private void ClientStart<TResponse>(EndPoint remoteEndPoint, Request request, 
-            out Boolean isTimeoutSocketOp, out ErrorResponse nodeError, out TResponse response)
-            where TResponse : Response, new()
-        {
-            nodeError = null;
-            isTimeoutSocketOp = false;
-            response = null;
-            var bytesOfRequest = request.ToByteArray();
-
-            ConnectionPoolSocket client = null;
-            try
-            {
-                client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
-
-                //clean extra bytes
-                if (client.Available > 0)
-                {
-                    client.Receive(Constants.ReceiveTimeout);
-                }
-
-                ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesOfRequest, 
-                    Constants.SendTimeout, Constants.ConnectTimeout, ref client);
-                log.LogInfo($"Request {request.GetType().Name} is sent to {client.Id}:\n" +
-                            $"{request}\n");
-
-                Int32 countCheck = 0;
-                while((client.Available == 0) && (countCheck <= Constants.MaxCheckAvailableData))
-                {
-                    Thread.Sleep(Constants.TimeCheckDataToRead);
-                    countCheck++;
-                }
-
-                if(countCheck <= Constants.MaxCheckAvailableData)
-                {
-                    var bytesOfResponse = client.Receive(Constants.ReceiveTimeout);
-
-                    response = new TResponse();
-                    response.Read(bytesOfResponse);
-                }
-                else
-                {
-                    client.Disconnect(reuseSocket: false, Constants.DisconnectTimeout);
-                    throw new TimeoutException();
-                }
-            }
-            catch (TimeoutException ex)
-            {
-                isTimeoutSocketOp = true;
-                HandleException(ex, ref nodeError);
-            }
-            catch (SocketException ex)
-            {
-                isTimeoutSocketOp = false;
-                HandleException(ex, ref nodeError);
-            }
-            catch (EndOfStreamException ex)
-            {
-                isTimeoutSocketOp = false;
-                HandleException(ex, ref nodeError);
-            }
-            finally
-            {
-                client?.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
-            }
-        }
-
-        private void HandleException(Exception exception, ref ErrorResponse nodeError)
-        {
-            nodeError = new ErrorResponse
-            {
-                ErrorMessage = exception.Message
-            };
-            log.LogError(exception.ToString());
         }
 
         ///<inheritdoc/>
@@ -175,7 +72,7 @@ namespace LUC.DiscoveryService.Kademlia
             };
 
             //var remoteContact = RemoteContact(key);
-            GetRequestResult<StoreResponse>(remoteContact, request, response: out _, out var rpcError);
+            request.GetRequestResult<StoreResponse>(remoteContact, request, response: out _, out var rpcError);
             return rpcError;
         }
 
@@ -197,7 +94,7 @@ namespace LUC.DiscoveryService.Kademlia
                 RandomID = id,
                 MessageOperation = MessageOperation.FindNode
             };
-            GetRequestResult<FindNodeResponse>(remoteContact, request, out var response, out var rpcError);
+            request.GetRequestResult<FindNodeResponse>(remoteContact, request, out var response, out var rpcError);
 
             return (response?.CloseSenderContacts?.ToList() ?? EmptyContactList(), rpcError);
         }
@@ -220,32 +117,10 @@ namespace LUC.DiscoveryService.Kademlia
                 RandomID = id,
             };
 
-            GetRequestResult<FindValueResponse>(remoteContact, request, out var response, out var rpcError);
+            request.GetRequestResult<FindValueResponse>(remoteContact, request, out var response, out var rpcError);
             var closeContacts = response?.CloseContactsToRepsonsingPeer?.ToList() ?? EmptyContactList();
 
             return (closeContacts, response?.ValueInResponsingPeer, rpcError);
-        }
-
-        private RpcError RpcError(BigInteger id, Response resp, bool timeoutError, ErrorResponse peerError)
-        {
-            RpcError rpcError = new RpcError
-            {
-                TimeoutError = timeoutError,
-                PeerError = peerError != null,
-                PeerErrorMessage = peerError?.ErrorMessage
-            };
-
-            if ((resp != null) && (id != default))
-            {
-                rpcError.IDMismatchError = id != resp.RandomID;
-            }
-            else
-            {
-                rpcError.IDMismatchError = false;
-            }
-
-            log.LogInfo(rpcError.ToString());
-            return rpcError;
         }
     }
 }

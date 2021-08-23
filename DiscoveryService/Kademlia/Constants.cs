@@ -4,7 +4,9 @@ namespace LUC.DiscoveryService.Kademlia
 {
 	public static class Constants
 	{
-	public const int B = 5;
+        public const Int32 MaxChunkSize = 4056;
+
+        public const int B = 5;
 	public const int K = 20;
 	public const int ID_LENGTH_BYTES = 20;
 	public const int ID_LENGTH_BITS = 160;
