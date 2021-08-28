@@ -30,13 +30,18 @@ namespace LUC.DiscoveryService
     ///   raised when a <see cref="DiscoveryServiceMessage"/> is received.
     ///   </para>
     /// </remarks>
-    public class NetworkEventHandler : AbstractService
+    public class NetworkEventInvoker : AbstractService
     {
         /// <summary>
         ///   Recently received messages.
         /// </summary>
         private readonly RecentMessages receivedMessages = new RecentMessages();
         private const Int32 MaxDatagramSize = UdpMessage.MaxLength;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private static Dictionary<UInt16, Dht> dhts = new Dictionary<UInt16, Dht>();
 
         private Client client;
 
@@ -103,13 +108,17 @@ namespace LUC.DiscoveryService
         /// </summary>
         public event EventHandler<TcpMessageEventArgs> FindValueReceived;
 
+        public event EventHandler<TcpMessageEventArgs> CheckFileExistsReceived;
+
+        public event EventHandler<TcpMessageEventArgs> DownloadFileReceived;
+
         /// <summary>
-        ///   Create a new instance of the <see cref="NetworkEventHandler"/> class.
+        ///   Create a new instance of the <see cref="NetworkEventInvoker"/> class.
         /// </summary>
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        internal NetworkEventHandler(String machineId, Boolean useIpv4, Boolean useIpv6, 
+        internal NetworkEventInvoker(String machineId, Boolean useIpv4, Boolean useIpv6, 
             UInt16 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
             MachineId = machineId;
@@ -118,7 +127,8 @@ namespace LUC.DiscoveryService
             ProtocolVersion = protocolVersion;
 
             OurContact = new Contact(ID.RandomIDInKeySpace, RunningTcpPort);
-            DistributedHashTable = new Dht(OurContact, ProtocolVersion, () => new VirtualStorage(), new ParallelRouter());
+            var distributedHashTable = new Dht(OurContact, ProtocolVersion, () => new VirtualStorage(), new ParallelRouter());
+            dhts.Add(protocolVersion, distributedHashTable);
 
             networkInterfacesFilter = filter;
 
@@ -127,7 +137,6 @@ namespace LUC.DiscoveryService
 
         public Contact OurContact { get; }
         
-        public Dht DistributedHashTable { get; private set; }
 
         /// <summary>
         /// Known network interfaces
@@ -145,6 +154,18 @@ namespace LUC.DiscoveryService
         ///   will be ignored.
         /// </remarks>
         public Boolean IgnoreDuplicateMessages { get; set; }
+
+        public static Dht DistributedHashTable(UInt16 protocolVersion)
+        {
+            if(dhts.ContainsKey(protocolVersion))
+            {
+                return dhts[protocolVersion];
+            }
+            else
+            {
+                throw new ArgumentException($"DHT with {protocolVersion} isn\'t created");
+            }
+        }
 
         /// <summary>
         ///   Get the network interfaces that are useable.
@@ -221,7 +242,7 @@ namespace LUC.DiscoveryService
 
         private void FindNetworkInterfaces()
         {
-            log.LogInfo("Finding network interfaces");
+            LoggingService.LogInfo("Finding network interfaces");
 
             try
             {
@@ -235,7 +256,7 @@ namespace LUC.DiscoveryService
                     oldNics.Add(nic);
 
 #if DEBUG
-                    log.LogInfo($"Removed nic \'{nic.Name}\'.");
+                    LoggingService.LogInfo($"Removed nic \'{nic.Name}\'.");
 #endif
                 }
 
@@ -244,7 +265,7 @@ namespace LUC.DiscoveryService
                     newNics.Add(nic);
 
 #if DEBUG
-                    log.LogInfo($"Found nic '{nic.Name}'.");
+                    LoggingService.LogInfo($"Found nic '{nic.Name}'.");
 #endif
                 }
 
@@ -277,7 +298,7 @@ namespace LUC.DiscoveryService
             }
             catch (Exception e)
             {
-                log.LogError(e, "FindNics failed");
+                LoggingService.LogError(e, "FindNics failed");
             }
         }
 
@@ -330,10 +351,10 @@ namespace LUC.DiscoveryService
                 }
 
                 // If recently received, then ignore.
-                var isRecentlyReceived = !receivedMessages.TryAdd(message.MessageId);
+                var isRecentlyReceived = /*!*/receivedMessages.TryAdd(message.MessageId);
 
                 if ((!IgnoreDuplicateMessages || !isRecentlyReceived) &&
-                    ((message.ProtocolVersion == ProtocolVersion) &&
+                    ((message.ProtocolVersion == ProtocolVersion) ||
                     (message.MachineId != MachineId)))
                 {
                     result.SetMessage(message);
@@ -344,17 +365,17 @@ namespace LUC.DiscoveryService
                     }
                     catch (TimeoutException e)
                     {
-                        log.LogError($"Receive handler failed: {e.Message}");
+                        LoggingService.LogError($"Receive handler failed: {e.Message}");
                         // eat the exception
                     }
                     catch (SocketException e)
                     {
-                        log.LogError($"Receive handler failed: {e.Message}");
+                        LoggingService.LogError($"Receive handler failed: {e.Message}");
                         // eat the exception
                     }
                     catch (EndOfStreamException e)
                     {
-                        log.LogError($"Receive handler failed: {e.Message}");
+                        LoggingService.LogError($"Receive handler failed: {e.Message}");
                         // eat the exception
                     }
                 }
@@ -377,7 +398,7 @@ namespace LUC.DiscoveryService
             {
                 var lastActiveAddress = (receiveResult.LocalEndPoint as IPEndPoint).Address;
                 OurContact.LastActiveIpAddress = lastActiveAddress;
-                DistributedHashTable.OurContact.LastActiveIpAddress = lastActiveAddress;
+                dhts[ProtocolVersion].OurContact.LastActiveIpAddress = lastActiveAddress;
 
                 Message message = receiveResult.Message<Message>();
                 switch (message.MessageOperation)
@@ -412,23 +433,35 @@ namespace LUC.DiscoveryService
                             HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, FindValueReceived);
                             break;
                         }
+
+                    case MessageOperation.CheckFileExists:
+                        {
+                            HandleReceivedTcpMessage<CheckFileExistsRequest>(sender, receiveResult, CheckFileExistsReceived);
+                            break;
+                        }
+
+                    case MessageOperation.DownloadFile:
+                        {
+                            HandleReceivedTcpMessage<DownloadFileRequest>(sender, receiveResult, DownloadFileReceived);
+                            break;
+                        }
                 }
             }
             catch (EndOfStreamException ex)
             {
-                log.LogError($"Received malformed message: {ex}");
+                LoggingService.LogError($"Received malformed message: {ex}");
             }
             catch (InvalidDataException ex)
             {
-                log.LogError($"Received malformed message: {ex}");
+                LoggingService.LogError($"Received malformed message: {ex}");
             }
             catch (SocketException ex)
             {
-                log.LogError($"Cannot to handle TCP message: {ex}");
+                LoggingService.LogError($"Cannot to handle TCP message: {ex}");
             }
             catch (Exception ex)
             {
-                log.LogError($"Cannot to handle TCP message: {ex}");
+                LoggingService.LogError($"Cannot to handle TCP message: {ex}");
             }
 
             //}
@@ -455,12 +488,12 @@ namespace LUC.DiscoveryService
                     {
                         var knownContact = new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address);
 
-                        DistributedHashTable.Bootstrap(knownContact);
+                        dhts[ProtocolVersion].Bootstrap(knownContact);
                     }
                 }
                 catch (Exception e)
                 {
-                    log.LogError($"Kademlia operation failed: {e}");
+                    LoggingService.LogError($"Kademlia operation failed: {e}");
                     // eat the exception
                 }
             }

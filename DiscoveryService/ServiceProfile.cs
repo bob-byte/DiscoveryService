@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService
         static ServiceProfile()
         {
             // Make sure Service is inited.
-            NetworkEventHandler.ReferenceEquals(null, null);
+            NetworkEventInvoker.ReferenceEquals(null, null);
         }
 
         /// <summary>
@@ -53,6 +53,6 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Known network interfaces
         /// </summary>
-        public ICollection<NetworkInterface> NetworkInterfaces => NetworkEventHandler.KnownNics;
+        public IList<NetworkInterface> NetworkInterfaces => NetworkEventInvoker.KnownNics;
     }
 }

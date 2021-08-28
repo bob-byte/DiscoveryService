@@ -77,6 +77,19 @@ namespace LUC.DiscoveryService.CodingData
             Position += 4;
         }
 
+        /// <summary>
+        ///   Writes a four-byte unsigned integer to the current stream and advances the stream position by four bytes.
+        /// </summary>
+        /// <param name="value">
+        /// The four-byte unsigned integer to write.
+        /// </param>
+        public void Write(UInt64 value)
+        {
+            Write(countOfBits: 64, (m_byte) => (Byte)(value >> m_byte));
+
+            Position += 8;
+        }
+
         public void Write(BigInteger value)
         {
             var bytes = value.ToByteArray();

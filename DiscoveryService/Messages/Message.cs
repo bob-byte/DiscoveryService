@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService.Messages
         /// <summary>
         ///   The kind of message.
         /// </summary>
-        public virtual MessageOperation MessageOperation { get; set; }
+        public virtual MessageOperation MessageOperation { get; protected set; }
 
         /// <summary>
         ///   Length in bytes of the object when serialised.

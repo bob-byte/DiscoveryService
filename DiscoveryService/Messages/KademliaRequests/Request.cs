@@ -3,6 +3,7 @@ using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages.KademliaResponses;
 using LUC.Interfaces;
+using LUC.Services.Implementation;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,10 +24,17 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
         public BigInteger RandomID { get; set; }
         public BigInteger Sender { get; set; }
+        public UInt16 ProtocolVersion { get; set; } = 1;
+
+        /// <summary>
+        /// Returns whether received right response to <a href="last"/> request
+        /// </summary>
+        public Boolean IsReceivedLastRightResp { get; private set; } = false;
 
         static Request()
         {
             connectionPool = ConnectionPool.Instance();
+            log = new LoggingService();
         }
 
         /// <inheritdoc/>
@@ -81,14 +89,20 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 {
                     log.LogInfo($"The response is received:\n{response}");
                 }
-                else
-                {
-                    remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], isRemoved: out _);
-                    cloneIpAddresses.RemoveAt(numAddress);
-                }
+                //else
+                //{
+                //    remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], isRemoved: out _);
+                //    cloneIpAddresses.RemoveAt(numAddress);
+                //}
             }
 
             rpcError = RpcError(RandomID, response, isTimeoutSocketOp, nodeError);
+            IsReceivedLastRightResp = !rpcError.HasError;
+
+            if(!IsReceivedLastRightResp)
+            {
+                TryToEvictContact(remoteContact);
+            }
         }
 
         private void ClientStart<TResponse>(EndPoint remoteEndPoint, out Boolean isTimeoutSocketOp, 
@@ -104,7 +118,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             try
             {
                 client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                                IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
+                    IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
 
                 //clean extra bytes
                 if (client.Available > 0)
@@ -187,6 +201,14 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
             log.LogInfo(rpcError.ToString());
             return rpcError;
+        }
+
+        private void TryToEvictContact(Contact remoteContact)
+        {
+            var dht = NetworkEventInvoker.DistributedHashTable(ProtocolVersion);
+            var newContactInDht = dht.PendingContacts.FirstOrDefault();
+
+            dht.DelayEviction(remoteContact, newContactInDht);
         }
     }
 }

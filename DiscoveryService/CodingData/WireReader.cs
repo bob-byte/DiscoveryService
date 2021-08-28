@@ -43,7 +43,7 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public Byte ReadByte()
         {
-            var value = stream.ReadByte();
+            Int32 value = stream.ReadByte();
             if(value < 0)
             {
                 throw new EndOfStreamException();
@@ -61,12 +61,10 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public UInt16 ReadUInt16()
         {
-            Int32 value = ReadByte();
+            UInt16 value = ReadByte();
 
-            Int32 bitInByte = 8;
-            value = (value << bitInByte | ReadByte());
-
-            return (UInt16)value;
+            value = (UInt16)ReadRestNumValue(value, countBytes: 2);
+            return value;
         }
 
         /// <summary>
@@ -77,14 +75,24 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public UInt32 ReadUInt32()
         {
-            Int32 value = ReadByte();
+            UInt32 value = ReadByte();
 
-            Int32 bitInByte = 8;
-            value = value << bitInByte | ReadByte();
-            value = value << bitInByte | ReadByte();
-            value = value << bitInByte | ReadByte();
+            value = (UInt32)ReadRestNumValue(value, countBytes: 4);
+            return value;
+        }
 
-            return (UInt32)value;
+        /// <summary>
+        ///   Read unsigned integer of 32 bits
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public UInt64 ReadUInt64()
+        {
+            UInt64 value = ReadByte();
+
+            value = ReadRestNumValue(value, countBytes: 8);
+            return value;
         }
 
         /// <summary>
@@ -260,5 +268,23 @@ namespace LUC.DiscoveryService.CodingData
 
         public void Dispose() =>
             stream.Close();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="readValue">
+        /// Already read value
+        /// </param>
+        /// <returns></returns>
+        private UInt64 ReadRestNumValue(UInt64 readValue, Int32 countBytes)
+        {
+            //numByte starts from 1 because one byte should be already read
+            for (Int32 numByte = 1; numByte < countBytes; numByte++)
+            {
+                readValue = readValue << BitsInOneByte | ReadByte();
+            }
+
+            return readValue;
+        }
     }
 }

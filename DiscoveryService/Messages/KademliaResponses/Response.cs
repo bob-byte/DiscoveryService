@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Kademlia;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 using System;
@@ -13,7 +14,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     public abstract class Response : Message
     {
-        protected static ILoggingService log;
+        protected static LoggingService log;
 
         static Response()
         {
@@ -21,6 +22,11 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 SettingsService = new SettingsService()
             };
+        }
+
+        public Response()
+        {
+            RandomID = ID.RandomID.Value;
         }
 
         public BigInteger RandomID { get; set; }

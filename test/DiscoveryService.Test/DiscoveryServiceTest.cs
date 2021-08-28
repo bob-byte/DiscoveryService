@@ -19,7 +19,7 @@ namespace LUC.DiscoveryService.Test
         [SetUp]
         public void SetupService()
         {
-            discoveryService = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
+            discoveryService = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
         }
 
         [TearDown]
@@ -31,7 +31,7 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Ctor_PassNullPar_GetException()
         {
-            Assert.That(code: () => discoveryService = DiscoveryService.Instance(null), 
+            Assert.That(code: () => discoveryService = new DiscoveryService(null), 
                 constraint: Throws.TypeOf(expectedType: typeof(ArgumentNullException)));
         }
 
@@ -41,7 +41,7 @@ namespace LUC.DiscoveryService.Test
             var done = new ManualResetEvent(initialState: false);
             discoveryService.Start();
 
-            discoveryService.Service.QueryReceived += (sender, e) =>
+            discoveryService.NetworkEventInvoker.QueryReceived += (sender, e) =>
             {
                 if (e.Message<UdpMessage>() != null)
                 {
@@ -93,7 +93,7 @@ namespace LUC.DiscoveryService.Test
         {
             var expected = discoveryService.MachineId;
 
-            var actual = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1)).MachineId;
+            var actual = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1)).MachineId;
 
             Assert.AreEqual(expected, actual);
         }
@@ -103,12 +103,12 @@ namespace LUC.DiscoveryService.Test
         {
             var done = new ManualResetEvent(false);
             discoveryService.Start();
-            discoveryService.Service.AnswerReceived += (sender, e) =>
+            discoveryService.NetworkEventInvoker.AnswerReceived += (sender, e) =>
             {
                 done.Set();
             };
 
-            var availableIps = discoveryService.Service.RunningIpAddresses.ToArray();
+            var availableIps = discoveryService.NetworkEventInvoker.RunningIpAddresses.ToArray();
             var eventArgs = new UdpMessageEventArgs
             {
                 RemoteEndPoint = new IPEndPoint(availableIps[1], discoveryService.RunningTcpPort)
@@ -178,7 +178,7 @@ namespace LUC.DiscoveryService.Test
             DiscoveryService discoveryService2 = null;
             Task.Run(() =>
             {
-                discoveryService2 = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, 
+                discoveryService2 = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, 
                     protocolVersion: 2));
             }).Wait();
 

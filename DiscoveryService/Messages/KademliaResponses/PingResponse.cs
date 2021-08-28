@@ -13,6 +13,11 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     public class PingResponse : Response 
     {
+        public PingResponse()
+        {
+            MessageOperation = MessageOperation.PingResponse;
+        }
+
         public static void SendSameRandomId(Socket sender, TimeSpan timeoutToSend, PingRequest request)
         {
             if (request?.RandomID != default)

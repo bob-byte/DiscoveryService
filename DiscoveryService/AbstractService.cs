@@ -30,11 +30,11 @@ namespace LUC.DiscoveryService
         protected UInt16 runningTcpPort;
 
         [Import(typeof(ILoggingService))]
-        protected static readonly LoggingService log = new LoggingService();
+        public static readonly LoggingService LoggingService = new LoggingService();
 
         public AbstractService()
         {
-            log.SettingsService = new SettingsService();
+            LoggingService.SettingsService = new SettingsService();
 
             runningTcpPort = DefaultPort;
             MinValueTcpPort = DefaultPort;

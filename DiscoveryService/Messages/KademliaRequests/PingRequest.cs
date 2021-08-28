@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
     {
         public PingRequest()
         {
-            ;//do nothing
+            MessageOperation = MessageOperation.Ping;
         }
 
         public override string ToString()

@@ -16,6 +16,11 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     class FindNodeResponse : Response
     {
+        public FindNodeResponse()
+        {
+            MessageOperation = MessageOperation.FindNodeResponse;
+        }
+
         public ICollection<Contact> CloseSenderContacts { get; set; }
 
         public static void SendOurCloseContacts(Socket sender, IEnumerable<Contact> closeContactsToLocalContactId, 

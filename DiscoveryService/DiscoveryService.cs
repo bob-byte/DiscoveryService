@@ -13,6 +13,10 @@ using System.Threading;
 using System.Numerics;
 using System.Threading.Tasks;
 using System.IO;
+using LUC.Services.Implementation.Models;
+using LUC.Interfaces.Extensions;
+using LUC.Interfaces;
+using LUC.DiscoveryService.NetworkEventHandlers;
 
 namespace LUC.DiscoveryService
 {
@@ -21,7 +25,7 @@ namespace LUC.DiscoveryService
     /// </summary>
     public class DiscoveryService : AbstractService
     {
-        private static DiscoveryService instance;
+        private readonly Dht distributedHashTable;
 
         private readonly ConnectionPool connectionPool;
 
@@ -39,7 +43,17 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public event EventHandler<TcpMessageEventArgs> ServiceInstanceShutdown;
 
-        private DiscoveryService(ServiceProfile profile)
+        /// <summary>
+        /// For functional tests
+        /// </summary>
+        public DiscoveryService(ServiceProfile profile, ICurrentUserProvider currentUserProvider)
+            : this(profile)
+        {
+            LoggingService.SettingsService.CurrentUserProvider = currentUserProvider;
+            _ = new NetworkEventHandler(NetworkEventInvoker, currentUserProvider);//puts in events of NetworkEventInvoker sendings response
+        }
+
+        public DiscoveryService(ServiceProfile profile)
         {
             if(profile == null)
             {
@@ -56,26 +70,8 @@ namespace LUC.DiscoveryService
                 connectionPool = ConnectionPool.Instance();
 
                 InitService();
+                distributedHashTable = NetworkEventInvoker.DistributedHashTable(ProtocolVersion);
             }
-        }
-
-        /// <summary>
-        ///   Creates a new instance of the <see cref="DiscoveryService"/> class.
-        /// </summary>
-        /// <param name="groupsSupported">
-        /// Groups which current machine supports.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a SSL certificate of group
-        /// </param>
-        /// <param name="knownIps">
-        /// IP address of groups which were discovered.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a network in a format "IPAddress:port"
-        /// </param>
-        public static DiscoveryService Instance(ServiceProfile profile)
-        {
-            Lock.InitWithLock(Lock.LockService, new DiscoveryService(profile), ref instance);
-            return instance;
         }
 
         ///// <summary>
@@ -86,7 +82,12 @@ namespace LUC.DiscoveryService
         //    Stop();
         //}
 
-        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
+        /// <summary>
+        /// Groups which current peer supports.
+        /// Key is a name of group, which current peer supports.
+        /// Value is a SSL certificate of group
+        /// </summary>
+        public static ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
 
         /// <summary>
         /// IP address of peers which were discovered.
@@ -96,7 +97,7 @@ namespace LUC.DiscoveryService
         public ConcurrentDictionary<EndPoint, String> KnownIps { get; protected set; } = 
             new ConcurrentDictionary<EndPoint, String>();
 
-        public ICollection<Contact> KnownContacts => Service.DistributedHashTable.KnownContacts;
+        public List<Contact> KnownContacts => NetworkEventInvoker.DistributedHashTable(ProtocolVersion).KnownContacts;
 
         /// <summary>
         ///   LightUpon.Cloud Discovery Service.
@@ -110,18 +111,18 @@ namespace LUC.DiscoveryService
         ///   raised when a <see cref="DiscoveryServiceMessage"/> is received.
         ///   </para>
         /// </remarks>
-        public NetworkEventHandler Service { get; private set; }
+        public NetworkEventInvoker NetworkEventInvoker { get; private set; }
 
         private void InitService()
         {
-            Service = new NetworkEventHandler(MachineId, UseIpv4, UseIpv6, ProtocolVersion);
+            NetworkEventInvoker = new NetworkEventInvoker(MachineId, UseIpv4, UseIpv6, ProtocolVersion);
 
-            Service.QueryReceived += async (invokerEvent, eventArgs) => await SendTcpMessageAsync(invokerEvent, eventArgs);
+            NetworkEventInvoker.QueryReceived += async (invokerEvent, eventArgs) => await SendTcpMessageAsync(invokerEvent, eventArgs);
 
-            Service.AnswerReceived += AddEndpoint;
-            Service.AnswerReceived += Service.Bootstrap;
+            NetworkEventInvoker.AnswerReceived += AddEndpoint;
+            NetworkEventInvoker.AnswerReceived += NetworkEventInvoker.Bootstrap;
 
-            Service.PingReceived += (invokerEvent, eventArgs) =>
+            NetworkEventInvoker.PingReceived += (invokerEvent, eventArgs) =>
             {
                 HandleKademliaRequest<PingRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
                 {
@@ -129,12 +130,12 @@ namespace LUC.DiscoveryService
 
                     if (sender != null)
                     {
-                        Service.DistributedHashTable.Node.Ping(sender);
+                        distributedHashTable.Node.Ping(sender);
                     }
                 });
             };
 
-            Service.StoreReceived += (invokerEvent, eventArgs) =>
+            NetworkEventInvoker.StoreReceived += (invokerEvent, eventArgs) =>
             {
                 HandleKademliaRequest<StoreRequest>(eventArgs.AcceptedSocket, eventArgs, handleRequest: (acceptedSocket, sender, request) =>
                 {
@@ -142,30 +143,30 @@ namespace LUC.DiscoveryService
 
                     if (sender != null)
                     {
-                        Service.DistributedHashTable.Node.Store(sender, new ID(request.KeyToStore), request.Value);
+                        distributedHashTable.Node.Store(sender, new ID(request.KeyToStore), request.Value);
                     }
                 });
             };
 
-            Service.FindNodeReceived += (invokerEvent, eventArgs) =>
+            NetworkEventInvoker.FindNodeReceived += (invokerEvent, eventArgs) =>
             {
                 HandleKademliaRequest<FindNodeRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
                 {
                     List<Contact> closeContacts;
                     if (sender != null)
                     {
-                        Service.DistributedHashTable.Node.FindNode(sender, new ID(request.KeyToFindCloseContacts), out closeContacts);
+                        distributedHashTable.Node.FindNode(sender, new ID(request.KeyToFindCloseContacts), out closeContacts);
                     }
                     else
                     {
-                        closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(request.KeyToFindCloseContacts), new ID(request.Sender));
+                        closeContacts = distributedHashTable.Node.BucketList.GetCloseContacts(new ID(request.KeyToFindCloseContacts), new ID(request.Sender));
                     }
                     
                     FindNodeResponse.SendOurCloseContacts(client, closeContacts, Constants.SendTimeout, request);
                 });
             };
 
-            Service.FindValueReceived += (invokerEvent, eventArgs) =>
+            NetworkEventInvoker.FindValueReceived += (invokerEvent, eventArgs) =>
             {
                 HandleKademliaRequest<FindValueRequest>(eventArgs.AcceptedSocket, eventArgs, (client, sender, request) =>
                 {
@@ -174,12 +175,12 @@ namespace LUC.DiscoveryService
 
                     if (sender != null)
                     {
-                        Service.DistributedHashTable.Node.FindValue(sender, new ID(request.KeyToFindCloseContacts),
+                        distributedHashTable.Node.FindValue(sender, new ID(request.KeyToFindCloseContacts),
                         out closeContacts, out nodeValue);
                     }
                     else
                     {
-                        closeContacts = Service.DistributedHashTable.Node.BucketList.GetCloseContacts(new ID(request.KeyToFindCloseContacts), new ID(request.Sender));
+                        closeContacts = distributedHashTable.Node.BucketList.GetCloseContacts(new ID(request.KeyToFindCloseContacts), new ID(request.Sender));
                     }
 
                     FindValueResponse.SendOurCloseContactsAndMachineValue(request, client, closeContacts, Constants.SendTimeout, nodeValue);
@@ -190,10 +191,10 @@ namespace LUC.DiscoveryService
         //TODO: check SSL certificate with SNI
         /// <summary>
         ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.SendingEndPoint"/> using <seealso cref="UdpMessage.TcpPort"/>
-        ///  It is added to <seealso cref="NetworkEventHandler.QueryReceived"/>. 
+        ///  It is added to <seealso cref="NetworkEventInvoker.QueryReceived"/>. 
         /// </summary>
         /// <param name="sender">
-        ///  Object which invoked event <seealso cref="NetworkEventHandler.QueryReceived"/>
+        ///  Object which invoked event <seealso cref="NetworkEventInvoker.QueryReceived"/>
         /// </param>
         /// <param name="e">
         ///  Information about UDP sender, that we have received.
@@ -206,7 +207,7 @@ namespace LUC.DiscoveryService
 
             if ((udpMessage != null) && (eventArgs?.RemoteEndPoint is IPEndPoint ipEndPoint))
             {
-                var sendingContact = Service.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
+                var sendingContact = NetworkEventInvoker.OurContact/*.Single(c => c.ID.Value == e.LocalContactId)*/;
 
                 Random random = new Random();
                 var tcpMessage = new AcknowledgeTcpMessage(
@@ -230,7 +231,7 @@ namespace LUC.DiscoveryService
                 }
                 catch (InvalidOperationException ex)
                 {
-                    log.LogError($"Receive handler failed: {ex.Message}");
+                    LoggingService.LogError($"Receive handler failed: {ex.Message}");
                     // eat the exception
                 }
 
@@ -277,15 +278,15 @@ namespace LUC.DiscoveryService
             try
             {
                 request = eventArgs.Message<T>(whetherReadMessage: false);
-                sender = Service.DistributedHashTable.KnownContacts.Single(c => c.ID == new ID(request.Sender));
+                sender = KnownContacts.Single(c => c.ID == new ID(request.Sender));
             }
             catch(InvalidOperationException ex)
             {
-                log.LogInfo($"Cannot find sender of {typeof(T).Name}: {ex.Message}");
+                LoggingService.LogInfo($"Cannot find sender of {typeof(T).Name}: {ex.Message}");
             }
             catch(EndOfStreamException ex)
             {
-                log.LogInfo($"Failed to answer at a {typeof(T).Name}: {ex}");
+                LoggingService.LogInfo($"Failed to answer at a {typeof(T).Name}: {ex}");
                 return;
             }
 
@@ -295,12 +296,38 @@ namespace LUC.DiscoveryService
             }
             catch (SocketException ex)
             {
-                log.LogInfo($"Failed to answer at a {typeof(T).Name}: {ex}");
+                LoggingService.LogInfo($"Failed to answer at a {typeof(T).Name}: {ex}");
             }
             catch (TimeoutException ex)
             {
-                log.LogInfo($"Failed to answer at a {typeof(T).Name}: {ex}");
+                LoggingService.LogInfo($"Failed to answer at a {typeof(T).Name}: {ex}");
             }
+        }
+
+        private void SendFileDescription(Object sender, TcpMessageEventArgs eventArgs)
+        {
+            //check request
+            var request = eventArgs.Message<CheckFileExistsRequest>(whetherReadMessage: false);
+            if (request != null)
+            {
+
+            }
+
+            //check file exists
+            //send response
+        }
+
+        private void SendSomeBytesOfFile(Object sender, TcpMessageEventArgs eventArgs)
+        {
+            //check request
+            var request = eventArgs.Message<DownloadFileRequest>(whetherReadMessage: false);
+            if (request != null)
+            {
+                
+            }
+
+            //check file exists
+            //send response
         }
 
         /// <summary>
@@ -310,11 +337,11 @@ namespace LUC.DiscoveryService
         {
             if (!isDiscoveryServiceStarted)
             {
-                if (Service == null)
+                if (NetworkEventInvoker == null)
                 {
                     InitService();
                 }
-                Service.Start();
+                NetworkEventInvoker.Start();
 
                 isDiscoveryServiceStarted = true;
             }
@@ -327,17 +354,12 @@ namespace LUC.DiscoveryService
         {
             if (isDiscoveryServiceStarted)
             {
-                Service.SendQuery();
+                NetworkEventInvoker.SendQuery();
             }
             else
             {
                 throw new InvalidOperationException("First you need to start discovery service");
             }
-        }
-
-        private static void StopDiscovery(Object sender, EventArgs e)
-        {
-            instance?.Stop();
         }
 
         /// <summary>
@@ -347,8 +369,8 @@ namespace LUC.DiscoveryService
         {
             if (isDiscoveryServiceStarted)
             {
-                Service.Stop();
-                Service = null;
+                NetworkEventInvoker.Stop();
+                NetworkEventInvoker = null;
                 ServiceInstanceShutdown?.Invoke(this, new TcpMessageEventArgs());
                 connectionPool.ClearPoolAsync(IOBehavior.Synchronous, respectMinPoolSize: false, CancellationToken.None).GetAwaiter();
 

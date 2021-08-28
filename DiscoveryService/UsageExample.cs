@@ -58,23 +58,23 @@ namespace LUC.DiscoveryService
             groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
             groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
 
-            discoveryService = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
+            discoveryService = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
             discoveryService.Start();
 
-            foreach (var address in discoveryService.Service.RunningIpAddresses)
+            foreach (var address in discoveryService.NetworkEventInvoker.RunningIpAddresses)
             {
                 Console.WriteLine($"IP address {address}");
             }
 
-            discoveryService.Service.AnswerReceived += OnGoodTcpMessage;
-            discoveryService.Service.QueryReceived += OnGoodUdpMessage;
+            discoveryService.NetworkEventInvoker.AnswerReceived += OnGoodTcpMessage;
+            discoveryService.NetworkEventInvoker.QueryReceived += OnGoodUdpMessage;
 
-            discoveryService.Service.PingReceived += OnPingReceived;
-            discoveryService.Service.StoreReceived += OnStoreReceived;
-            discoveryService.Service.FindNodeReceived += OnFindNodeReceived;
-            discoveryService.Service.FindValueReceived += OnFindValueReceived;
+            discoveryService.NetworkEventInvoker.PingReceived += OnPingReceived;
+            discoveryService.NetworkEventInvoker.StoreReceived += OnStoreReceived;
+            discoveryService.NetworkEventInvoker.FindNodeReceived += OnFindNodeReceived;
+            discoveryService.NetworkEventInvoker.FindValueReceived += OnFindValueReceived;
 
-            discoveryService.Service.NetworkInterfaceDiscovered += (s, e) =>
+            discoveryService.NetworkEventInvoker.NetworkInterfaceDiscovered += (s, e) =>
             {
                 foreach (var nic in e.NetworkInterfaces)
                 {
@@ -188,7 +188,7 @@ namespace LUC.DiscoveryService
 
         private static Contact RandomContact(DiscoveryService discoveryService)
         {
-            var contacts = discoveryService.KnownContacts.Where(c => (c.ID != discoveryService.Service.OurContact.ID) &&
+            var contacts = discoveryService.KnownContacts.Where(c => (c.ID != discoveryService.NetworkEventInvoker.OurContact.ID) &&
                 (c.LastActiveIpAddress != null)).ToArray();
 
             Random random = new Random();
@@ -232,14 +232,14 @@ namespace LUC.DiscoveryService
                     case ConsoleKey.NumPad2:
                     case ConsoleKey.D2:
                         {
-                            kadOperation.Ping(discoveryService.Service.OurContact, remoteContact);
+                            kadOperation.Ping(discoveryService.NetworkEventInvoker.OurContact, remoteContact);
                             return;
                         }
 
                     case ConsoleKey.NumPad3:
                     case ConsoleKey.D3:
                         {
-                            kadOperation.Store(discoveryService.Service.OurContact, discoveryService.Service.OurContact.ID,
+                            kadOperation.Store(discoveryService.NetworkEventInvoker.OurContact, discoveryService.NetworkEventInvoker.OurContact.ID,
                                 discoveryService.MachineId, remoteContact);
                             return;
                         }
@@ -247,14 +247,14 @@ namespace LUC.DiscoveryService
                     case ConsoleKey.NumPad4:
                     case ConsoleKey.D4:
                         {
-                            kadOperation.FindNode(discoveryService.Service.OurContact, remoteContact.ID, remoteContact);
+                            kadOperation.FindNode(discoveryService.NetworkEventInvoker.OurContact, remoteContact.ID, remoteContact);
                             return;
                         }
 
                     case ConsoleKey.NumPad5:
                     case ConsoleKey.D5:
                         {
-                            kadOperation.FindValue(discoveryService.Service.OurContact, discoveryService.Service.OurContact.ID, remoteContact);
+                            kadOperation.FindValue(discoveryService.NetworkEventInvoker.OurContact, discoveryService.NetworkEventInvoker.OurContact.ID, remoteContact);
                             return;
                         }
 

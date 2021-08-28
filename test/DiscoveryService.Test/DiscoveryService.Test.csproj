@@ -50,14 +50,6 @@
     <Reference Include="Common.Logging.Core, Version=3.4.1.0, Culture=neutral, PublicKeyToken=af08829b84f0328e, processorArchitecture=MSIL">
       <HintPath>..\packages\Common.Logging.Core.3.4.1\lib\net40\Common.Logging.Core.dll</HintPath>
     </Reference>
-    <Reference Include="LUC.Interfaces, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\DiscoveryService\bin\Debug\LUC.Interfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="LUC.Services.Implementation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\LUC.Services.Implementation.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\MSTest.TestFramework.2.1.1\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.dll</HintPath>
@@ -91,6 +83,18 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\LUC\WpfClient\LUC.ApiClient\LUC.ApiClient.csproj">
+      <Project>{f071e944-a1ee-4aee-b74a-36fd5b246ba5}</Project>
+      <Name>LUC.ApiClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\LUC\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
+      <Project>{0f5f0967-f62a-4099-a6d7-2687cba9e4df}</Project>
+      <Name>LUC.Interfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\LUC\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
+      <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
+      <Name>LUC.Services.Implementation</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\DiscoveryService\DiscoveryService.csproj">
       <Project>{9daf9ac8-c899-4d34-a5f8-8850fa45f26e}</Project>
       <Name>DiscoveryService</Name>

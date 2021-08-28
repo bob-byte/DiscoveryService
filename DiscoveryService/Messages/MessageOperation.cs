@@ -29,6 +29,9 @@ namespace LUC.DiscoveryService.Messages
         FindValueResponseWithCloseContacts = 9,
 
         CheckFileExists,
-        CheckFileExistsResponse
+        CheckFileExistsResponse,
+
+        DownloadFile,
+        DownloadFileResponse
     }
 }

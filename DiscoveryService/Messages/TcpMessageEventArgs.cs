@@ -9,8 +9,8 @@ using System.Numerics;
 namespace LUC.DiscoveryService.Messages
 {
     /// <summary>
-    ///   The event data for <see cref="NetworkEventHandler.QueryReceived"/> or
-    ///   <see cref="NetworkEventHandler.AnswerReceived"/>.
+    ///   The event data for <see cref="NetworkEventInvoker.QueryReceived"/> or
+    ///   <see cref="NetworkEventInvoker.AnswerReceived"/>.
     /// </summary>
     public class TcpMessageEventArgs : MessageEventArgs
     {

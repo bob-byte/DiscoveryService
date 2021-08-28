@@ -21,7 +21,7 @@ namespace LUC.DiscoveryService.Messages
         /// </summary>
         public AcknowledgeTcpMessage()
         {
-            ;//do nothing
+            MessageOperation = MessageOperation.Acknowledge;
         }
 
         /// <summary>
@@ -52,14 +52,6 @@ namespace LUC.DiscoveryService.Messages
             TcpPort = tcpPort;
             IdOfSendingContact = idOfSendingContact;
         }
-
-        /// <summary>
-        ///   The kind of message.
-        /// </summary>
-        /// <value>
-        ///   Defaults to <see cref="MessageOperation.Acknowledge"/>.
-        /// </value>
-        public override MessageOperation MessageOperation { get; set; } = MessageOperation.Acknowledge;
 
         public BigInteger IdOfSendingContact { get; set; }
 

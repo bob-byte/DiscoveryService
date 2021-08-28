@@ -13,6 +13,11 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     class StoreResponse : Response
     {
+        public StoreResponse()
+        {
+            MessageOperation = MessageOperation.StoreResponse;
+        }
+
         public static void SendSameRandomId(Socket sender, TimeSpan timeoutToSend, StoreRequest request)
         {
             if (request?.RandomID != default)

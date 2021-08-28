@@ -11,15 +11,15 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     public class StoreRequest : Request
     {
+        public StoreRequest()
+        {
+            MessageOperation = MessageOperation.Store;
+        }
+
         public BigInteger KeyToStore { get; set; }
         public String Value { get; set; }
         public Boolean IsCached { get; set; }
         public Int32 ExpirationTimeSec { get; set; }
-
-        public StoreRequest()
-        {
-            ;//do nothing
-        }
 
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)

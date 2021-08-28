@@ -15,7 +15,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
         public FindNodeRequest()
         {
-            ;//do nothing
+            MessageOperation = MessageOperation.FindNode;
         }
 
         /// <inheritdoc/>

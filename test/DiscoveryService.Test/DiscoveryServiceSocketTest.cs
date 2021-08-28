@@ -41,7 +41,7 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Receive_SendPingRequestAndReceiveResponse_NotFailed()
         {
-            DiscoveryService discoveryService = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
+            DiscoveryService discoveryService = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
             discoveryService.Start();
 
             var client = InitializedTcpSocket();
@@ -51,7 +51,6 @@ namespace LUC.DiscoveryService.Test
 
             var pingRequest = new PingRequest
             {
-                MessageOperation = MessageOperation.Ping,
                 RandomID = ID.RandomID.Value, 
                 Sender = ID.RandomIDInKeySpace.Value
             };
@@ -81,7 +80,7 @@ namespace LUC.DiscoveryService.Test
 
         private IPEndPoint AvailableIpAddress(DiscoveryService discoveryService, AddressFamily addressFamily)
         {
-            var allPossibleIpAddresses = discoveryService.Service.RunningIpAddresses.Where(c => c.AddressFamily == addressFamily).ToArray();
+            var allPossibleIpAddresses = discoveryService.NetworkEventInvoker.RunningIpAddresses.Where(c => c.AddressFamily == addressFamily).ToArray();
 
             Random random = new Random();
             var ipAddress = allPossibleIpAddresses[1/*random.Next(allPossibleIpAddresses.Count())*/];

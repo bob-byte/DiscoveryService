@@ -97,7 +97,7 @@ namespace LUC.DiscoveryService.Kademlia
             SetupTimers();
         }
 
-        public ICollection<Contact> KnownContacts => Node.BucketList.Buckets.SelectMany(c => c.Contacts).ToList();
+        public List<Contact> KnownContacts => Node.BucketList.Buckets.SelectMany(c => c.Contacts).ToList();
 
         /// <summary>
         /// Returns a JSON string of the serialized DHT.

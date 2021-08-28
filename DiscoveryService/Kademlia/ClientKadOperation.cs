@@ -49,10 +49,9 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 RandomID = id.Value,
                 Sender = sender.ID.Value,
-                MessageOperation = MessageOperation.Ping
             };
 
-            request.GetRequestResult<PingResponse>(remoteContact, request, response: out _, out var rpcError);
+            request.GetRequestResult<PingResponse>(remoteContact, response: out _, out var rpcError);
             return rpcError;
         }
 
@@ -68,19 +67,11 @@ namespace LUC.DiscoveryService.Kademlia
                 IsCached = isCached,
                 ExpirationTimeSec = expirationTimeSec,
                 RandomID = id,
-                MessageOperation = MessageOperation.Store
             };
 
             //var remoteContact = RemoteContact(key);
-            request.GetRequestResult<StoreResponse>(remoteContact, request, response: out _, out var rpcError);
+            request.GetRequestResult<StoreResponse>(remoteContact, response: out _, out var rpcError);
             return rpcError;
-        }
-
-        private Contact RemoteContact(ID key)
-        {
-            Validate.IsTrue<ArgumentNullException>(key != new ID(default(BigInteger)), $"{nameof(key)} is null");
-
-            return DiscoveryService.AllKnownContacts(protocolVersion).SingleOrDefault(c => c.Key == key.Value).Value;
         }
 
         /// <inheritdoc/>
@@ -92,9 +83,8 @@ namespace LUC.DiscoveryService.Kademlia
                 Sender = sender.ID.Value,
                 KeyToFindCloseContacts = keyToFindContacts.Value,
                 RandomID = id,
-                MessageOperation = MessageOperation.FindNode
             };
-            request.GetRequestResult<FindNodeResponse>(remoteContact, request, out var response, out var rpcError);
+            request.GetRequestResult<FindNodeResponse>(remoteContact, out var response, out var rpcError);
 
             return (response?.CloseSenderContacts?.ToList() ?? EmptyContactList(), rpcError);
         }
@@ -112,12 +102,11 @@ namespace LUC.DiscoveryService.Kademlia
             var request = new FindValueRequest
             {
                 KeyToFindCloseContacts = keyToFindContact.Value,
-                MessageOperation = MessageOperation.FindValue,
                 Sender = sender.ID.Value,
                 RandomID = id,
             };
 
-            request.GetRequestResult<FindValueResponse>(remoteContact, request, out var response, out var rpcError);
+            request.GetRequestResult<FindValueResponse>(remoteContact, out var response, out var rpcError);
             var closeContacts = response?.CloseContactsToRepsonsingPeer?.ToList() ?? EmptyContactList();
 
             return (closeContacts, response?.ValueInResponsingPeer, rpcError);

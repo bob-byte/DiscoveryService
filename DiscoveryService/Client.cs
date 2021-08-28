@@ -163,7 +163,7 @@ namespace LUC.DiscoveryService
                 }
                 catch (Exception e)
                 {
-                    log.LogError($"Cannot setup send socket for {address}: {e.Message}");
+                    LoggingService.LogError($"Cannot setup send socket for {address}: {e.Message}");
                     senderUdp.Dispose();
                 }
             }
@@ -213,11 +213,11 @@ namespace LUC.DiscoveryService
                 }
                 catch(SocketException e)
                 {
-                    log.LogError($"Failed to send UDP message, SocketException: {e.Message}");
+                    LoggingService.LogError($"Failed to send UDP message, SocketException: {e.Message}");
                 }
                 catch (InvalidOperationException e)
                 {
-                    log.LogError($"Failed to send UDP message, InvalidOperationException: {e.Message}");
+                    LoggingService.LogError($"Failed to send UDP message, InvalidOperationException: {e.Message}");
                 }
             }
         }
@@ -261,7 +261,7 @@ namespace LUC.DiscoveryService
                 }
                 catch (SocketException e)
                 {
-                    log.LogError($"Failed to listen UDP message, SocketException: {e.Message}");
+                    LoggingService.LogError($"Failed to listen UDP message, SocketException: {e.Message}");
                     return;
                 }
             });
@@ -290,7 +290,7 @@ namespace LUC.DiscoveryService
                     _ = task.ContinueWith(taskReceiving =>
                     {
                         var eventArgs = taskReceiving.Result;
-                        log.LogInfo($"Received {eventArgs.Buffer.Length} bytes");
+                        LoggingService.LogInfo($"Received {eventArgs.Buffer.Length} bytes");
 
                         TcpMessageReceived?.Invoke(tcpServer, eventArgs);
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously);
@@ -304,13 +304,13 @@ namespace LUC.DiscoveryService
                 catch (SocketException e)
                 {
                     //TODO don't return. Change absolutely TCP port (in TcpListener), but take into account maxValueTcpPort
-                    log.LogError($"Failed to listen on TCP port.\n" +
+                    LoggingService.LogError($"Failed to listen on TCP port.\n" +
                         $"{e}");
                     return;
                 }
                 catch(TimeoutException e)
                 {
-                    log.LogError($"Failed to listen on TCP port.\n" +
+                    LoggingService.LogError($"Failed to listen on TCP port.\n" +
                         $"{e}");
 
                     ListenTcp(tcpServer);

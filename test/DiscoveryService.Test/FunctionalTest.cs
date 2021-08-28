@@ -1,6 +1,9 @@
-﻿using LUC.DiscoveryService.Kademlia;
+﻿using LUC.ApiClient;
+using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
+using LUC.Interfaces;
+using LUC.Services.Implementation;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,10 +21,21 @@ namespace LUC.DiscoveryService.Test
     {
         private static readonly Object ttyLock = new Object();
         private static DiscoveryService discoveryService;
+        private static readonly LoggingService loggingService;
+        private static readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+        static FunctionalTest()
+        {
+            loggingService = new LoggingService
+            {
+                SettingsService = new SettingsService()
+            };
+        }
 
         ~FunctionalTest()
         {
             discoveryService?.Stop();
+            cancellationTokenSource.Cancel();
         }
 
         /// <summary>
@@ -53,35 +67,44 @@ namespace LUC.DiscoveryService.Test
         /// </remarks>
         public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
             groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
             groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
 
-            discoveryService = DiscoveryService.Instance(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
+            discoveryService = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
             discoveryService.Start();
 
-            foreach (var address in discoveryService.Service.RunningIpAddresses)
+            foreach (var address in discoveryService.NetworkEventInvoker.RunningIpAddresses)
             {
                 Console.WriteLine($"IP address {address}");
             }
 
-            discoveryService.Service.AnswerReceived += OnGoodTcpMessage;
-            discoveryService.Service.QueryReceived += OnGoodUdpMessage;
+            discoveryService.NetworkEventInvoker.AnswerReceived += OnGoodTcpMessage;
+            discoveryService.NetworkEventInvoker.QueryReceived += OnGoodUdpMessage;
 
-            discoveryService.Service.PingReceived += OnPingReceived;
-            discoveryService.Service.StoreReceived += OnStoreReceived;
-            discoveryService.Service.FindNodeReceived += OnFindNodeReceived;
-            discoveryService.Service.FindValueReceived += OnFindValueReceived;
+            discoveryService.NetworkEventInvoker.PingReceived += OnPingReceived;
+            discoveryService.NetworkEventInvoker.StoreReceived += OnStoreReceived;
+            discoveryService.NetworkEventInvoker.FindNodeReceived += OnFindNodeReceived;
+            discoveryService.NetworkEventInvoker.FindValueReceived += OnFindValueReceived;
 
-            discoveryService.Service.NetworkInterfaceDiscovered += (s, e) =>
+            discoveryService.NetworkEventInvoker.NetworkInterfaceDiscovered += (s, e) =>
             {
                 foreach (var nic in e.NetworkInterfaces)
                 {
                     Console.WriteLine($"discovered NIC '{nic.Name}'");
                 };
             };
+
+            loggingService.SettingsService.CurrentUserProvider = new CurrentUserProvider();
+
+            ApiClient.ApiClient apiClient = new ApiClient.ApiClient(loggingService.SettingsService.CurrentUserProvider, loggingService);
+
+            String Login = "integration1";
+            String Password = "integration1";
+            await apiClient.LoginAsync(Login, Password).ConfigureAwait(continueOnCapturedContext: false);
+            apiClient.CurrentUserProvider.RootFolderPath = loggingService.SettingsService.ReadUserRootFolderPath();
 
             while (true)
             {
@@ -94,10 +117,10 @@ namespace LUC.DiscoveryService.Test
                 if (((ConsoleKey.D1 <= pressedKey) && (pressedKey <= ConsoleKey.D6)) || 
                     ((ConsoleKey.NumPad1 <= pressedKey) && (pressedKey <= ConsoleKey.NumPad6)))
                 {
-                    RemoteContact(discoveryService, ref remoteContact);
+                    GetRemoteContact(discoveryService, ref remoteContact);
                 }
 
-                TryExecuteSelectedOperationWhileKeyIsInvalid(remoteContact, pressedKey);
+                await TryExecuteSelectedOperationAsync(remoteContact, apiClient, loggingService.SettingsService.CurrentUserProvider, pressedKey);
             }
         }
 
@@ -190,10 +213,11 @@ namespace LUC.DiscoveryService.Test
                               $"4 - send {typeof(FindNodeRequest).Name}\n" +
                               $"5 - send {typeof(FindValueRequest).Name}\n" +
                               $"6 - send {typeof(AcknowledgeTcpMessage).Name}\n" +
-                              $"7 - test count available connections");
+                              $"7 - test count available connections\n" +
+                              $"8 - download random file from another contact(-s)");
         }
 
-        private static void RemoteContact(DiscoveryService discoveryService, ref Contact remoteContact)
+        private static void GetRemoteContact(DiscoveryService discoveryService, ref Contact remoteContact)
         {
             while (remoteContact == null)
             {
@@ -214,7 +238,7 @@ namespace LUC.DiscoveryService.Test
 
         private static Contact RandomContact(DiscoveryService discoveryService)
         {
-            var contacts = discoveryService.KnownContacts.Where(c => (c.ID != discoveryService.Service.OurContact.ID) &&
+            var contacts = discoveryService.KnownContacts.Where(c => (c.ID != discoveryService.NetworkEventInvoker.OurContact.ID) &&
                 (c.LastActiveIpAddress != null)).ToArray();
 
             Random random = new Random();
@@ -223,7 +247,15 @@ namespace LUC.DiscoveryService.Test
             return randomContact;
         }
 
-        private static void TryExecuteSelectedOperationWhileKeyIsInvalid(Contact remoteContact, ConsoleKey pressedKey)
+        /// <summary>
+        /// Try execute selected operation while key is invalid
+        /// </summary>
+        /// <param name="remoteContact"></param>
+        /// <param name="apiClient"></param>
+        /// <param name="currentUserProvider"></param>
+        /// <param name="pressedKey"></param>
+        /// <returns></returns>
+        private static async Task TryExecuteSelectedOperationAsync(Contact remoteContact, IApiClient apiClient, ICurrentUserProvider currentUserProvider, ConsoleKey pressedKey)
         {
             while (true)
             {
@@ -239,7 +271,7 @@ namespace LUC.DiscoveryService.Test
                             //We need to wait, because Bootstrap method executes in other threads. 
                             //When we send UDP messages, we will receive TCP messages and 
                             //call NetworkEventHandler.DistributedHashTable.Bootstrap-s
-                            Thread.Sleep(TimeSpan.FromSeconds(value: 2));
+                            await Task.Delay(TimeSpan.FromSeconds(value: 2)).ConfigureAwait(continueOnCapturedContext: false);
 
                             return;
                         }
@@ -247,14 +279,14 @@ namespace LUC.DiscoveryService.Test
                     case ConsoleKey.NumPad2:
                     case ConsoleKey.D2:
                         {
-                            kadOperation.Ping(discoveryService.Service.OurContact, remoteContact);
+                            kadOperation.Ping(discoveryService.NetworkEventInvoker.OurContact, remoteContact);
                             return;
                         }
 
                     case ConsoleKey.NumPad3:
                     case ConsoleKey.D3:
                         {
-                            kadOperation.Store(discoveryService.Service.OurContact, discoveryService.Service.OurContact.ID,
+                            kadOperation.Store(discoveryService.NetworkEventInvoker.OurContact, discoveryService.NetworkEventInvoker.OurContact.ID,
                                 discoveryService.MachineId, remoteContact);
                             return;
                         }
@@ -262,14 +294,14 @@ namespace LUC.DiscoveryService.Test
                     case ConsoleKey.NumPad4:
                     case ConsoleKey.D4:
                         {
-                            kadOperation.FindNode(discoveryService.Service.OurContact, remoteContact.ID, remoteContact);
+                            kadOperation.FindNode(discoveryService.NetworkEventInvoker.OurContact, remoteContact.ID, remoteContact);
                             return;
                         }
 
                     case ConsoleKey.NumPad5:
                     case ConsoleKey.D5:
                         {
-                            kadOperation.FindValue(discoveryService.Service.OurContact, discoveryService.Service.OurContact.ID, remoteContact);
+                            kadOperation.FindValue(discoveryService.NetworkEventInvoker.OurContact, discoveryService.NetworkEventInvoker.OurContact.ID, remoteContact);
                             return;
                         }
 
@@ -277,7 +309,7 @@ namespace LUC.DiscoveryService.Test
                     case ConsoleKey.D6:
                         {
                             SendTcpMessage(remoteContact);
-                            Thread.Sleep(TimeSpan.FromSeconds(value: 2));//because we listen TCP messages in other threads
+                            await Task.Delay(TimeSpan.FromSeconds(value: 2)).ConfigureAwait(continueOnCapturedContext: false);//because we listen TCP messages in other threads
 
                             return;
                         }
@@ -293,6 +325,28 @@ namespace LUC.DiscoveryService.Test
                             {
                                 Console.WriteLine(ex.ToString());
                             }
+
+                            return;
+                        }
+
+                    case ConsoleKey.NumPad8:
+                    case ConsoleKey.D8:
+                        {
+                            var download = new Download(discoveryService);
+                            var localFolderPath = loggingService.SettingsService.ReadUserRootFolderPath();
+
+                            var bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
+
+                            var random = new Random();
+                            var rndBcktDrctrPths = bucketDirectoryPathes[random.Next(bucketDirectoryPathes.Count)];
+                            var serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath(rndBcktDrctrPths).ServerName;
+
+                            String filePrefix = String.Empty;
+                            var objectsListResponse = await apiClient.ListAsync(serverBucketName, filePrefix).ConfigureAwait(continueOnCapturedContext: false);
+
+                            var rndFlDscrptn = objectsListResponse.ObjectFileDescriptions[random.Next(objectsListResponse.ObjectFileDescriptions.Length)];
+
+                            download.DownloadFile(localFolderPath, rndFlDscrptn.OriginalName, filePrefix, (UInt64)rndFlDscrptn.Bytes, cancellationTokenSource.Token);
 
                             return;
                         }
