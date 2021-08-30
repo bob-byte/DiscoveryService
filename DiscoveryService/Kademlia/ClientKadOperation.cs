@@ -51,7 +51,7 @@ namespace LUC.DiscoveryService.Kademlia
                 Sender = sender.ID.Value,
             };
 
-            request.GetRequestResult<PingResponse>(remoteContact, response: out _, out var rpcError);
+            request.GetResult<PingResponse>(remoteContact, response: out _, out var rpcError);
             return rpcError;
         }
 
@@ -70,7 +70,7 @@ namespace LUC.DiscoveryService.Kademlia
             };
 
             //var remoteContact = RemoteContact(key);
-            request.GetRequestResult<StoreResponse>(remoteContact, response: out _, out var rpcError);
+            request.GetResult<StoreResponse>(remoteContact, response: out _, out var rpcError);
             return rpcError;
         }
 
@@ -84,7 +84,7 @@ namespace LUC.DiscoveryService.Kademlia
                 KeyToFindCloseContacts = keyToFindContacts.Value,
                 RandomID = id,
             };
-            request.GetRequestResult<FindNodeResponse>(remoteContact, out var response, out var rpcError);
+            request.GetResult<FindNodeResponse>(remoteContact, out var response, out var rpcError);
 
             return (response?.CloseSenderContacts?.ToList() ?? EmptyContactList(), rpcError);
         }
@@ -106,8 +106,8 @@ namespace LUC.DiscoveryService.Kademlia
                 RandomID = id,
             };
 
-            request.GetRequestResult<FindValueResponse>(remoteContact, out var response, out var rpcError);
-            var closeContacts = response?.CloseContactsToRepsonsingPeer?.ToList() ?? EmptyContactList();
+            request.GetResult<FindValueResponse>(remoteContact, out var response, out var rpcError);
+            var closeContacts = response?.CloseContacts?.ToList() ?? EmptyContactList();
 
             return (closeContacts, response?.ValueInResponsingPeer, rpcError);
         }

@@ -117,7 +117,7 @@
     <Compile Include="Kademlia\ClientPool\ConnectionPool.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPoolSocket.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionSettings.cs" />
-    <Compile Include="Kademlia\ClientPool\IOBehavior.cs" />
+    <Compile Include="IOBehavior.cs" />
     <Compile Include="Kademlia\ClientPool\SocketHealth.cs" />
     <Compile Include="Kademlia\ClientKadOperation.cs" />
     <Compile Include="Messages\KademliaRequests\CheckFileExistsRequest.cs" />

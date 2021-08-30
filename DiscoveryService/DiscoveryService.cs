@@ -226,8 +226,8 @@ namespace LUC.DiscoveryService
                     client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
                     IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
 
-                    ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesToSend, Constants.SendTimeout,
-                        Constants.ConnectTimeout, ref client);
+                    client = await client.SendWithAvoidErrorsInNetworkAsync(bytesToSend, Constants.SendTimeout,
+                        Constants.ConnectTimeout, IOBehavior.Asynchronous).ConfigureAwait(false);
                 }
                 catch (InvalidOperationException ex)
                 {

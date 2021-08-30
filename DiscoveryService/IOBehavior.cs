@@ -1,9 +1,9 @@
-namespace LUC.DiscoveryService.Kademlia.ClientPool
+namespace LUC.DiscoveryService
 {
 	/// <summary>
 	/// Specifies whether to perform synchronous or asynchronous I/O.
 	/// </summary>
-	enum IOBehavior
+    public enum IOBehavior
 	{
 		/// <summary>
 		/// Use synchronous I/O.

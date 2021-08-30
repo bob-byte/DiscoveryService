@@ -353,30 +353,33 @@ namespace LUC.DiscoveryService
                 // If recently received, then ignore.
                 var isRecentlyReceived = /*!*/receivedMessages.TryAdd(message.MessageId);
 
-                if ((!IgnoreDuplicateMessages || !isRecentlyReceived) &&
+                lock(this)
+                {
+                    if ((!IgnoreDuplicateMessages || !isRecentlyReceived) &&
                     ((message.ProtocolVersion == ProtocolVersion) ||
                     (message.MachineId != MachineId)))
-                {
-                    result.SetMessage(message);
+                    {
+                        result.SetMessage(message);
 
-                    try
-                    {
-                        QueryReceived?.Invoke(sender, result);
-                    }
-                    catch (TimeoutException e)
-                    {
-                        LoggingService.LogError($"Receive handler failed: {e.Message}");
-                        // eat the exception
-                    }
-                    catch (SocketException e)
-                    {
-                        LoggingService.LogError($"Receive handler failed: {e.Message}");
-                        // eat the exception
-                    }
-                    catch (EndOfStreamException e)
-                    {
-                        LoggingService.LogError($"Receive handler failed: {e.Message}");
-                        // eat the exception
+                        try
+                        {
+                            QueryReceived?.Invoke(sender, result);
+                        }
+                        catch (TimeoutException e)
+                        {
+                            LoggingService.LogError($"Receive handler failed: {e.Message}");
+                            // eat the exception
+                        }
+                        catch (SocketException e)
+                        {
+                            LoggingService.LogError($"Receive handler failed: {e.Message}");
+                            // eat the exception
+                        }
+                        catch (EndOfStreamException e)
+                        {
+                            LoggingService.LogError($"Receive handler failed: {e.Message}");
+                            // eat the exception
+                        }
                     }
                 }
             }

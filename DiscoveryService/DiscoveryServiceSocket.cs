@@ -208,6 +208,18 @@ namespace LUC.DiscoveryService
             return allMessage.ToArray();
         }
 
+        public async Task ConnectAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
+        {
+            if (ioBehavior == IOBehavior.Asynchronous)
+            {
+                await ConnectAsync(remoteEndPoint, timeoutToConnect);
+            }
+            else if (ioBehavior == IOBehavior.Synchronous)
+            {
+                Connect(remoteEndPoint, timeoutToConnect);
+            }
+        }
+
         public async Task ConnectAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect)
         {
             var taskConnection = Task.Run(() =>
@@ -290,6 +302,29 @@ namespace LUC.DiscoveryService
             }
         }
 
+        public async Task<Byte[]> ReceiveAsync(IOBehavior ioBehavior, TimeSpan timeout)
+        {
+            Byte[] bytesOfResponse;
+            if (ioBehavior == IOBehavior.Asynchronous)
+            {
+                bytesOfResponse = await ReceiveAsync(timeout).ConfigureAwait(continueOnCapturedContext: false);
+            }
+            else if (ioBehavior == IOBehavior.Synchronous)
+            {
+                bytesOfResponse = Receive(timeout);
+            }
+            else
+            {
+                throw new ArgumentException($"{nameof(ioBehavior)} = {default(IOBehavior)}");
+            }
+
+            return bytesOfResponse;
+        }
+
+        //TODO: optimize it
+        public async Task<Byte[]> ReceiveAsync(TimeSpan timeout) =>
+            await Task.Run(() => Receive(timeout)).ConfigureAwait(continueOnCapturedContext: false);
+
         public Byte[] Receive(TimeSpan timeout)
         {
             if (receiveDone == null)
@@ -329,6 +364,26 @@ namespace LUC.DiscoveryService
                 throw new TimeoutException();
             }
         }
+
+        public async Task SendAsync(Byte[] bytesToSend, TimeSpan timeoutToSend, IOBehavior ioBehavior)
+        {
+            if (ioBehavior == IOBehavior.Asynchronous)
+            {
+                await SendAsync(bytesToSend, timeoutToSend);
+            }
+            else if (ioBehavior == IOBehavior.Synchronous)
+            {
+                Send(bytesToSend, timeoutToSend);
+            }
+            else
+            {
+                throw new ArgumentException($"{nameof(ioBehavior)} is default");
+            }
+        }
+
+        //TODO: optimize it
+        public async Task SendAsync(Byte[] bytesToSend, TimeSpan timeout) =>
+            await Task.Run(() => Send(bytesToSend, timeout)).ConfigureAwait(continueOnCapturedContext: false);
 
         //Maybe we should use lock to avoid sending several packages
         public void Send(Byte[] bytesToSend, TimeSpan timeout)
@@ -382,6 +437,22 @@ namespace LUC.DiscoveryService
                 Log.LogInfo($"Sent {bytesSent} bytes to {client.RemoteEndPoint}");
 
                 sendDone.Set();
+        }
+
+        public async Task DisconnectAsync(IOBehavior ioBehavior, Boolean reuseSocket)
+        {
+            if (ioBehavior == IOBehavior.Asynchronous)
+            {
+                await DisconnectAsync(reuseSocket, Constants.DisconnectTimeout).ConfigureAwait(continueOnCapturedContext: false);
+            }
+            else if (ioBehavior == IOBehavior.Synchronous)
+            {
+                Disconnect(reuseSocket, Constants.DisconnectTimeout);
+            }
+            else
+            {
+                throw new ArgumentException($"{nameof(ioBehavior)} = {default(IOBehavior)}");
+            }
         }
 
         public void Disconnect(Boolean reuseSocket, TimeSpan timeout)

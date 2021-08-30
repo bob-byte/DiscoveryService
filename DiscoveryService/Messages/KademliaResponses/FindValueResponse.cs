@@ -16,11 +16,15 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     class FindValueResponse : Response
     {
-        public ICollection<Contact> CloseContactsToRepsonsingPeer { get; set; }
+        public ICollection<Contact> CloseContacts { get; set; }
         public String ValueInResponsingPeer { get; set; }
 
-        public static void SendOurCloseContactsAndMachineValue(FindValueRequest request, Socket sender, 
-            IEnumerable<Contact> closeContacts, TimeSpan timeoutToSend, String machineValue)
+        public static void SendOurCloseContactsAndMachineValue(
+            FindValueRequest request, 
+            Socket sender, 
+            IEnumerable<Contact> closeContacts, 
+            TimeSpan timeoutToSend, 
+            String machineValue)
         {
             if ((request?.RandomID != default) && (sender != null))
             {
@@ -42,7 +46,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 {
                     MessageOperation = kadOperation,
                     RandomID = request.RandomID,
-                    CloseContactsToRepsonsingPeer = closeContacts?.ToList(),
+                    CloseContacts = closeContacts?.ToList(),
                     ValueInResponsingPeer = machineValue
                 };
 
@@ -70,7 +74,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 }
                 else if(MessageOperation == MessageOperation.FindValueResponseWithCloseContacts)
                 {
-                    CloseContactsToRepsonsingPeer = reader.ReadListOfContacts(Constants.LastSeenFormat);
+                    CloseContacts = reader.ReadListOfContacts(Constants.LastSeenFormat);
                 }
 
                 return this;
@@ -92,9 +96,9 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 {
                     writer.Write(ValueInResponsingPeer);
                 }
-                else if(CloseContactsToRepsonsingPeer != null)
+                else if(CloseContacts != null)
                 {
-                    writer.WriteEnumerable(CloseContactsToRepsonsingPeer, Constants.LastSeenFormat);
+                    writer.WriteEnumerable(CloseContacts, Constants.LastSeenFormat);
                 }
             }
             else
@@ -110,11 +114,11 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 writer.WriteLine($"{GetType().Name}:\n" +
                                  $"{PropertyWithValue(nameof(RandomID), RandomID)};\n" +
                                  $"{PropertyWithValue(nameof(ValueInResponsingPeer), ValueInResponsingPeer)};\n" +
-                                 $"{nameof(CloseContactsToRepsonsingPeer)}:");
+                                 $"{nameof(CloseContacts)}:");
 
-                if(CloseContactsToRepsonsingPeer != null)
+                if(CloseContacts != null)
                 {
-                    foreach (var closeContact in CloseContactsToRepsonsingPeer)
+                    foreach (var closeContact in CloseContacts)
                     {
                         writer.WriteLine($"Close contact: {closeContact}\n");
                     }

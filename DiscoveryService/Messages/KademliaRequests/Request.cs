@@ -22,6 +22,12 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         private static ConnectionPool connectionPool;
         private static ILoggingService log;
 
+        static Request()
+        {
+            connectionPool = ConnectionPool.Instance();
+            log = new LoggingService();
+        }
+
         public BigInteger RandomID { get; set; }
         public BigInteger Sender { get; set; }
         public UInt16 ProtocolVersion { get; set; } = 1;
@@ -30,12 +36,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         /// Returns whether received right response to <a href="last"/> request
         /// </summary>
         public Boolean IsReceivedLastRightResp { get; private set; } = false;
-
-        static Request()
-        {
-            connectionPool = ConnectionPool.Instance();
-            log = new LoggingService();
-        }
 
         /// <inheritdoc/>
         public override IWireSerialiser Read(WireReader reader)
@@ -71,19 +71,31 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
         }
 
-        public void GetRequestResult<TResponse>(Contact remoteContact, out TResponse response, out RpcError rpcError)
+        public void GetResult<TResponse>(Contact remoteContact, out TResponse response, out RpcError rpcError)
+            where TResponse : Response, new()
+        {
+            (response, rpcError) = ResultAsync<TResponse>(remoteContact, IOBehavior.Synchronous).GetAwaiter().GetResult();
+        }
+
+        public async Task<(TResponse, RpcError)> ResultAsync<TResponse>(Contact remoteContact)
+            where TResponse : Response, new()
+        {
+            return await ResultAsync<TResponse>(remoteContact, IOBehavior.Asynchronous).ConfigureAwait(continueOnCapturedContext: false);
+        }
+
+        public async Task<(TResponse, RpcError)> ResultAsync<TResponse>(Contact remoteContact, IOBehavior ioBehavior)
             where TResponse : Response, new()
         {
             ErrorResponse nodeError = null;
             Boolean isTimeoutSocketOp = false;
-            response = null;
+            TResponse response = null;
 
             var cloneIpAddresses = remoteContact.IpAddresses();
             for (Int32 numAddress = cloneIpAddresses.Count - 1;
                 (numAddress >= 0) && (response == null); numAddress--)
             {
                 var ipEndPoint = new IPEndPoint(cloneIpAddresses[numAddress], remoteContact.TcpPort);
-                ClientStart(ipEndPoint, out isTimeoutSocketOp, out nodeError, out response);
+                (isTimeoutSocketOp, nodeError, response) = await ClientStartAsync<TResponse>(ipEndPoint, ioBehavior).ConfigureAwait(continueOnCapturedContext: false);
 
                 if (response != null)
                 {
@@ -96,58 +108,60 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 //}
             }
 
-            rpcError = RpcError(RandomID, response, isTimeoutSocketOp, nodeError);
+            RpcError rpcError = RpcError(RandomID, response, isTimeoutSocketOp, nodeError);
             IsReceivedLastRightResp = !rpcError.HasError;
 
-            if(!IsReceivedLastRightResp)
+            if (!IsReceivedLastRightResp)
             {
                 TryToEvictContact(remoteContact);
             }
+
+            return (response, rpcError);
         }
 
-        private void ClientStart<TResponse>(EndPoint remoteEndPoint, out Boolean isTimeoutSocketOp, 
-            out ErrorResponse nodeError, out TResponse response)
+        private async Task<(Boolean, ErrorResponse, TResponse)> ClientStartAsync<TResponse>(EndPoint remoteEndPoint, IOBehavior ioBehavior)
             where TResponse : Response, new()
         {
-            nodeError = null;
-            isTimeoutSocketOp = false;
-            response = null;
+            ErrorResponse nodeError = null;
+            Boolean isTimeoutSocketOp = false;
+            TResponse response = null;
             var bytesOfRequest = this.ToByteArray();
 
             ConnectionPoolSocket client = null;
             try
             {
-                client = connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                    IOBehavior.Synchronous, Constants.TimeWaitReturnToPool).Result;
+                client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
+                    ioBehavior, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
 
                 //clean extra bytes
                 if (client.Available > 0)
                 {
-                    client.Receive(Constants.ReceiveTimeout);
+                    await client.ReceiveAsync(ioBehavior, Constants.ReceiveTimeout).ConfigureAwait(false);
                 }
 
-                ConnectionPoolSocket.SendWithAvoidErrorsInNetwork(bytesOfRequest,
-                    Constants.SendTimeout, Constants.ConnectTimeout, ref client);
+                client = await client.SendWithAvoidErrorsInNetworkAsync(bytesOfRequest,
+                    Constants.SendTimeout, Constants.ConnectTimeout, ioBehavior).ConfigureAwait(false);
                 log.LogInfo($"Request {GetType().Name} is sent to {client.Id}:\n" +
                             $"{this}\n");
 
                 Int32 countCheck = 0;
                 while ((client.Available == 0) && (countCheck <= Constants.MaxCheckAvailableData))
                 {
-                    Thread.Sleep(Constants.TimeCheckDataToRead);
+                    await Wait(ioBehavior, Constants.TimeCheckDataToRead).ConfigureAwait(false);
+
                     countCheck++;
                 }
 
                 if (countCheck <= Constants.MaxCheckAvailableData)
                 {
-                    var bytesOfResponse = client.Receive(Constants.ReceiveTimeout);
+                    Byte[] bytesOfResponse = await client.ReceiveAsync(ioBehavior, Constants.ReceiveTimeout).ConfigureAwait(false);
 
                     response = new TResponse();
                     response.Read(bytesOfResponse);
                 }
                 else
                 {
-                    client.Disconnect(reuseSocket: false, Constants.DisconnectTimeout);
+                    await client.DisconnectAsync(ioBehavior, reuseSocket: false).ConfigureAwait(false);
                     throw new TimeoutException();
                 }
             }
@@ -169,6 +183,20 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             finally
             {
                 client?.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+            }
+
+            return (isTimeoutSocketOp, nodeError, response);
+        }
+
+        private async Task Wait(IOBehavior ioBehavior, TimeSpan timeToWait)
+        {
+            if (ioBehavior == IOBehavior.Asynchronous)
+            {
+                await Task.Delay(timeToWait);
+            }
+            else
+            {
+                Thread.Sleep(timeToWait);
             }
         }
 

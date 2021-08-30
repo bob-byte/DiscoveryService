@@ -15,7 +15,7 @@ namespace LUC.DiscoveryService.Messages
     public class Message : IWireSerialiser
     {
         /// <summary>
-        ///   The kind of message.
+        ///   The kind of message. This value always is first byte in it
         /// </summary>
         public virtual MessageOperation MessageOperation { get; protected set; }
 

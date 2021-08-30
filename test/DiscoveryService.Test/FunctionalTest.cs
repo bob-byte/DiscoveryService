@@ -1,5 +1,6 @@
 ﻿using LUC.ApiClient;
 using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.Interfaces;
@@ -346,7 +347,9 @@ namespace LUC.DiscoveryService.Test
 
                             var rndFlDscrptn = objectsListResponse.ObjectFileDescriptions[random.Next(objectsListResponse.ObjectFileDescriptions.Length)];
 
-                            download.DownloadFile(localFolderPath, rndFlDscrptn.OriginalName, filePrefix, (UInt64)rndFlDscrptn.Bytes, cancellationTokenSource.Token);
+                            await download.DownloadFileAsync(localFolderPath, rndFlDscrptn.OriginalName, filePrefix, 
+                                rndFlDscrptn.Bytes, IOBehavior.Asynchronous, 
+                                cancellationTokenSource.Token).ConfigureAwait(false);
 
                             return;
                         }

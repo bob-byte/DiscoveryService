@@ -33,21 +33,35 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             Pool = belongPool;
         }
 
-        public static void SendWithAvoidErrorsInNetwork(Byte[] bytesToSend, TimeSpan timeoutToSend, TimeSpan timeoutToConnect,
-            ref ConnectionPoolSocket client)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bytesToSend"></param>
+        /// <param name="timeoutToSend"></param>
+        /// <param name="timeoutToConnect"></param>
+        /// <param name="ioBehavior"></param>
+        /// <param name="client"></param>
+        /// <returns>
+        /// If <paramref name="bytesToSend"/> is immediately sent, method will return <paramref name="client"/>, else it will return new created <see cref="ConnectionPoolSocket"/>
+        /// </returns>
+        public async Task<ConnectionPoolSocket> SendWithAvoidErrorsInNetworkAsync(Byte[] bytesToSend, 
+            TimeSpan timeoutToSend, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
         {
             try
             {
-                client.Send(bytesToSend, timeoutToSend);
+                await SendAsync(bytesToSend, timeoutToSend, ioBehavior).ConfigureAwait(continueOnCapturedContext: false);
+                return this;
             }
             catch (SocketException e)
             {
                 Log.LogError($"Receive handler failed: {e.Message}");
 
-                client = new ConnectionPoolSocket(client.Id.AddressFamily, SocketType.Stream, ProtocolType.Tcp, client.Id, client.Pool, Log);
-                client.Connect(client.Id, timeoutToConnect);
+                var newSocket = new ConnectionPoolSocket(Id.AddressFamily, SocketType, ProtocolType, Id, Pool, Log);
+                await ConnectAsync(remoteEndPoint: newSocket.Id, timeoutToConnect, ioBehavior).ConfigureAwait(false);
 
-                client.Send(bytesToSend, timeoutToSend);
+                await SendAsync(bytesToSend, timeoutToSend, ioBehavior).ConfigureAwait(false);
+
+                return newSocket;
             }
         }
 
