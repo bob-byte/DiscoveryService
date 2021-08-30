@@ -353,10 +353,10 @@ namespace LUC.DiscoveryService
                 // If recently received, then ignore.
                 var isRecentlyReceived = /*!*/receivedMessages.TryAdd(message.MessageId);
 
-                lock(this)
+                lock(client)
                 {
                     if ((!IgnoreDuplicateMessages || !isRecentlyReceived) &&
-                    ((message.ProtocolVersion == ProtocolVersion) ||
+                    ((message.ProtocolVersion == ProtocolVersion) &&
                     (message.MachineId != MachineId)))
                     {
                         result.SetMessage(message);
@@ -482,7 +482,7 @@ namespace LUC.DiscoveryService
 
         public void Bootstrap(Object sender, TcpMessageEventArgs receiveResult)
         {
-            lock (this)
+            lock (Lock.LockService)
             {
                 var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
                 try

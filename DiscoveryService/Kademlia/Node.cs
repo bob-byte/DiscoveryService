@@ -11,9 +11,6 @@ namespace LUC.DiscoveryService.Kademlia
 {
     public class Node : AbstractKademlia, INode
     {
-        //private static ILoggingService log;
-        //private readonly UInt32 protocolVersion;
-
         public Contact OurContact { get { return ourContact; } set { ourContact = value; } }
         public IBucketList BucketList { get { return bucketList; } set { bucketList = value; } }
         public IStorage Storage { get { return storage; } set { storage = value; } }
@@ -50,13 +47,6 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 this.cacheStorage = new VirtualStorage();
             }
-
-            //this.protocolVersion = protocolVersion;
-
-            //log = new LoggingService
-            //{
-            //    SettingsService = new SettingsService()
-            //};
         }
 
         /// <summary>

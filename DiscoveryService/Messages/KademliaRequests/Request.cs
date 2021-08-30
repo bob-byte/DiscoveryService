@@ -25,7 +25,10 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         static Request()
         {
             connectionPool = ConnectionPool.Instance();
-            log = new LoggingService();
+            log = new LoggingService
+            {
+                SettingsService = new SettingsService()
+            };
         }
 
         public BigInteger RandomID { get; set; }

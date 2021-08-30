@@ -32,7 +32,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         public ClientKadOperation()
         {
-            
+            ;//do nothing
         }
 
         public ClientKadOperation(UInt32 protocolVersion)
