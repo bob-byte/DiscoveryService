@@ -20,17 +20,17 @@ namespace LUC.DiscoveryService.Test
 {
     class FunctionalTest
     {
-        private static readonly Object ttyLock = new Object();
+        private static readonly Object ttyLock;
         private static DiscoveryService discoveryService;
-        private static readonly LoggingService loggingService;
-        private static readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        private static readonly SettingsService settingsService;
+        private static readonly CancellationTokenSource cancellationTokenSource;
 
         static FunctionalTest()
         {
-            loggingService = new LoggingService
-            {
-                SettingsService = new SettingsService()
-            };
+            ttyLock = new Object();
+
+            settingsService = new SettingsService();
+            cancellationTokenSource = new CancellationTokenSource();
         }
 
         ~FunctionalTest()
@@ -70,6 +70,8 @@ namespace LUC.DiscoveryService.Test
 
         static async Task Main(string[] args)
         {
+            SetUpTests.AssemblyInitialize();
+
             ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
             groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
             groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
@@ -98,14 +100,15 @@ namespace LUC.DiscoveryService.Test
                 };
             };
 
-            loggingService.SettingsService.CurrentUserProvider = new CurrentUserProvider();
+            settingsService.CurrentUserProvider = new CurrentUserProvider();
 
-            ApiClient.ApiClient apiClient = new ApiClient.ApiClient(loggingService.SettingsService.CurrentUserProvider, loggingService);
+            ApiClient.ApiClient apiClient = new ApiClient.ApiClient(settingsService.CurrentUserProvider, SetUpTests.LoggingService);
 
             String Login = "integration1";
             String Password = "integration1";
             await apiClient.LoginAsync(Login, Password).ConfigureAwait(continueOnCapturedContext: false);
-            apiClient.CurrentUserProvider.RootFolderPath = loggingService.SettingsService.ReadUserRootFolderPath();
+
+            apiClient.CurrentUserProvider.RootFolderPath = settingsService.ReadUserRootFolderPath();
 
             while (true)
             {
@@ -121,7 +124,7 @@ namespace LUC.DiscoveryService.Test
                     GetRemoteContact(discoveryService, ref remoteContact);
                 }
 
-                await TryExecuteSelectedOperationAsync(remoteContact, apiClient, loggingService.SettingsService.CurrentUserProvider, pressedKey);
+                await TryExecuteSelectedOperationAsync(remoteContact, apiClient, settingsService.CurrentUserProvider, pressedKey);
             }
         }
 
@@ -310,7 +313,9 @@ namespace LUC.DiscoveryService.Test
                     case ConsoleKey.D6:
                         {
                             SendTcpMessage(remoteContact);
-                            await Task.Delay(TimeSpan.FromSeconds(value: 2)).ConfigureAwait(continueOnCapturedContext: false);//because we listen TCP messages in other threads
+
+                            //because we listen TCP messages in other threads
+                            await Task.Delay(TimeSpan.FromSeconds(value: 2)).ConfigureAwait(continueOnCapturedContext: false);
 
                             return;
                         }
@@ -334,7 +339,7 @@ namespace LUC.DiscoveryService.Test
                     case ConsoleKey.D8:
                         {
                             var download = new Download(discoveryService);
-                            var localFolderPath = loggingService.SettingsService.ReadUserRootFolderPath();
+                            var localFolderPath = settingsService.ReadUserRootFolderPath();
 
                             var bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
 

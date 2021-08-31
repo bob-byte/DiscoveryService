@@ -75,7 +75,7 @@ namespace LUC.DiscoveryService.Test
                 AddressFamily.InterNetwork, 
                 SocketType.Stream, 
                 ProtocolType.Tcp, 
-                Logging.log
+                SetUpTests.LoggingService
             );
 
         private IPEndPoint AvailableIpAddress(DiscoveryService discoveryService, AddressFamily addressFamily)

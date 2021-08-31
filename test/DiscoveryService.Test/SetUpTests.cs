@@ -8,24 +8,18 @@ using NUnit.Framework;
 namespace LUC.DiscoveryService.Test
 {
     [SetUpFixture]
-    public static class Logging
+    public static class SetUpTests
     {
-        internal static ILoggingService log;
+        internal static ILoggingService LoggingService { get; private set; }
 
         [OneTimeSetUp]
         public static void AssemblyInitialize()
         {
             //set logger factory
-            log = new LoggingService
+            LoggingService = new LoggingService
             {
                 SettingsService = new SettingsService()
             };
-        }
-
-        [OneTimeTearDown]
-        public static void AssemblyCleanup()
-        {
-            ;
         }
     }
 }
