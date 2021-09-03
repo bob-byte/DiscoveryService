@@ -259,6 +259,7 @@ namespace LUC.DiscoveryService.CodingData
 
         public Contact ReadContact(String lastSeenFormat)
         {
+            var machineId = ReadAsciiString();
             var idAsBigInt = ReadBigInteger();
             var tcpPort = ReadUInt16();
             var lastSeen = DateTime.ParseExact(ReadAsciiString(), lastSeenFormat, provider: null);
@@ -270,7 +271,7 @@ namespace LUC.DiscoveryService.CodingData
                 addresses.Add(IPAddress.Parse(ReadAsciiString()));
             }
 
-            Contact contact = new Contact(new ID(idAsBigInt), tcpPort, addresses, lastSeen);
+            Contact contact = new Contact(machineId, new ID(idAsBigInt), tcpPort, addresses, lastSeen);
             return contact;
         }
 

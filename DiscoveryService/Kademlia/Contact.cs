@@ -18,9 +18,11 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(ID contactID, UInt16 tcpPort)
+        public Contact(String machineId, ID contactID, UInt16 tcpPort)
         {
+            MachineId = machineId;
             ID = contactID;
+
             TcpPort = tcpPort;
             ipAddresses = new List<IPAddress>();
             lockIpAddresses = new Object();
@@ -31,8 +33,8 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(ID contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress)
-            : this(contactID, tcpPort)
+        public Contact(String machineId, ID contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress)
+            : this(machineId, contactID, tcpPort)
         {
             LastActiveIpAddress = lastActiveIpAddress;
         }
@@ -40,9 +42,11 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(ID contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen)
+        public Contact(String machineId, ID contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen)
         {
+            MachineId = machineId;
             ID = contactID;
+
             TcpPort = tcpPort;
             lockIpAddresses = new Object();
 
@@ -59,6 +63,8 @@ namespace LUC.DiscoveryService.Kademlia
         }
 
         public DateTime LastSeen { get; set; }
+
+        public String MachineId { get; set; }
 
         public ID ID { get; }
 

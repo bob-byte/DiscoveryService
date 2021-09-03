@@ -118,6 +118,7 @@
     <Compile Include="AbstractService.cs" />
     <Compile Include="CodingData\Binary.cs" />
     <Compile Include="CodingData\Buffer.cs" />
+    <Compile Include="Display.cs" />
     <Compile Include="Download.cs" />
     <Compile Include="DiscoveryServiceSocket.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />

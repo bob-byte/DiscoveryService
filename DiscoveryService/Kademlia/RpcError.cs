@@ -6,7 +6,7 @@ using System.Text;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    class RpcError : Message
+    class RpcError
     {
         public Boolean HasError => 
             TimeoutError || IDMismatchError || PeerError;
@@ -21,15 +21,15 @@ namespace LUC.DiscoveryService.Kademlia
             using (StringWriter stringWriter = new StringWriter())
             {
                 stringWriter.Write($"{GetType().Name}:\n" +
-                $"{PropertyWithValue(nameof(HasError), HasError)}");
+                $"{Display.PropertyWithValue(nameof(HasError), HasError)}");
 
                 if (HasError)
                 {
                     stringWriter.WriteLine($";\n" +
-                        $"{PropertyWithValue(nameof(TimeoutError), TimeoutError)};\n" +
-                        $"{PropertyWithValue(nameof(IDMismatchError), IDMismatchError)};\n" +
-                        $"{PropertyWithValue(nameof(PeerError), PeerError)};\n" +
-                        $"{PropertyWithValue(nameof(PeerErrorMessage), PeerErrorMessage)}");
+                        $"{Display.PropertyWithValue(nameof(TimeoutError), TimeoutError)};\n" +
+                        $"{Display.PropertyWithValue(nameof(IDMismatchError), IDMismatchError)};\n" +
+                        $"{Display.PropertyWithValue(nameof(PeerError), PeerError)};\n" +
+                        $"{Display.PropertyWithValue(nameof(PeerErrorMessage), PeerErrorMessage)}");
                 }
 
                 return stringWriter.ToString();

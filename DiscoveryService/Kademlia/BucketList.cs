@@ -66,7 +66,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             if(!OnlyInNetwork.IsOnlyInNetwork(ourContact.ID, contact.ID))
             {
-                Validate.IsFalse<OurNodeCannotBeAContactException>(ourID == contact.ID, "Cannot add ourselves as a contact!");
+                Validate.IsFalse<OurNodeCannotBeAContactException>(ourContact.MachineId == contact.MachineId, "Cannot add ourselves as a contact!");
             }
 
             // Update the LastSeen to now.

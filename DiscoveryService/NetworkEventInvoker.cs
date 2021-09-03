@@ -126,7 +126,7 @@ namespace LUC.DiscoveryService
             UseIpv6 = useIpv6;
             ProtocolVersion = protocolVersion;
 
-            OurContact = new Contact(ID.RandomIDInKeySpace, RunningTcpPort);
+            OurContact = new Contact(MachineId, ID.RandomIDInKeySpace, RunningTcpPort);
             var distributedHashTable = new Dht(OurContact, ProtocolVersion, 
                 storageFactory: () => new VirtualStorage(), new ParallelRouter(ProtocolVersion));
             dhts.Add(protocolVersion, distributedHashTable);
@@ -137,7 +137,6 @@ namespace LUC.DiscoveryService
         }
 
         public Contact OurContact { get; }
-        
 
         /// <summary>
         /// Known network interfaces
@@ -498,7 +497,7 @@ namespace LUC.DiscoveryService
                 {
                     if ((tcpMessage != null) && (receiveResult.SendingEndPoint is IPEndPoint ipEndPoint))
                     {
-                        var knownContact = new Contact(new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address);
+                        var knownContact = new Contact(tcpMessage.MachineId, new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address);
 
                         dhts[ProtocolVersion].Bootstrap(knownContact);
                     }

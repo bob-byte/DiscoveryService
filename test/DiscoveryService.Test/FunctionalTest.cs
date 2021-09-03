@@ -562,6 +562,7 @@ namespace LUC.DiscoveryService.Test
                 {
                     shouldBeDownloaded = !isFileInCurrentPc;
                 }
+                shouldBeDownloaded &= !cachedFileInServer.IsDeleted;
 
                 return shouldBeDownloaded;
             }).ToList();

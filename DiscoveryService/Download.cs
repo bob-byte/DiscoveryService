@@ -62,53 +62,61 @@ namespace LUC.DiscoveryService
         public async Task DownloadFileAsync(String localFolderPath, String bucketName, String filePrefix, String localOriginalName,
             Int64 bytesCount, String fileVersion, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            List<Contact> onlineContacts = discoveryService.OnlineContacts.ToList();
-            String fullPathToFile = FullPathToFile(onlineContacts, localFolderPath, bucketName, localOriginalName, filePrefix);
-            //String localFileVersion = AdsExtensions.ReadLastSeenVersion(fullPathToFile);
-
-            try
+            if(cancellationToken != default)
             {
-                //Boolean isNewFile = (!File.Exists(fullPathToFile))/* && (fileVersion != localFileVersion)*/;
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
-                if (/*(isNewFile) && */(onlineContacts.Count >= 1))
+            Boolean isRightParameters = IsRightInputParameters(localFolderPath, bucketName, filePrefix, 
+                localOriginalName, bytesCount, fileVersion);
+            if(isRightParameters)
+            {
+                List<Contact> onlineContacts = discoveryService.OnlineContacts.ToList();
+                String fullPathToFile = FullPathToFile(onlineContacts, localFolderPath, bucketName, localOriginalName, filePrefix);
+                //String localFileVersion = AdsExtensions.ReadLastSeenVersion(fullPathToFile);
+
+                try
                 {
-                    var initialRequest = new DownloadFileRequest
-                    {
-                        FullPathToFile = fullPathToFile,
-                        FileOriginalName = localOriginalName,
-                        BucketName = bucketName,
-                        Range = new Range { Start = 0, Total = (UInt64)bytesCount },
-                        FilePrefix = filePrefix,
-                        FileVersion = fileVersion
-                    };
+                    //Boolean isNewFile = (!File.Exists(fullPathToFile))/* && (fileVersion != localFileVersion)*/;
 
-                    List<Contact> contactsWithFile = await ContactsWithFileAsync(onlineContacts, initialRequest, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
-                    if (contactsWithFile.Count >= 1)
+                    if (/*(isNewFile) && */(onlineContacts.Count >= 1))
                     {
-                        if (bytesCount <= Constants.MaxChunkSize)
+                        var initialRequest = new DownloadFileRequest
                         {
-                            await DownloadSmallFileAsync(contactsWithFile, initialRequest, cancellationToken).ConfigureAwait(false);
+                            FullPathToFile = fullPathToFile,
+                            FileOriginalName = localOriginalName,
+                            BucketName = bucketName,
+                            Range = new Range { Start = 0, Total = (UInt64)bytesCount },
+                            FilePrefix = filePrefix,
+                            FileVersion = fileVersion
+                        };
+
+                        List<Contact> contactsWithFile = await ContactsWithFileAsync(onlineContacts, initialRequest, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+                        if (contactsWithFile.Count >= 1)
+                        {
+                            if (bytesCount <= Constants.MaxChunkSize)
+                            {
+                                await DownloadSmallFileAsync(contactsWithFile, initialRequest, cancellationToken).ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                await DownloadBigFileAsync(contactsWithFile, initialRequest, cancellationToken).ConfigureAwait(false);
+                            }
                         }
                         else
                         {
-                            await DownloadBigFileAsync(contactsWithFile, initialRequest, cancellationToken).ConfigureAwait(false);
+                            LoggingService.LogInfo(MessIfThisFileDoesntExistInAnyNode);
                         }
                     }
-                    else
-                    {
-                        LoggingService.LogInfo(MessIfThisFileDoesntExistInAnyNode);
-                    }
                 }
-            }
-            catch (OperationCanceledException ex)
-            {
-                HandleException(ex, bytesCount, fullPathToFile);
-            }
-            catch (InvalidOperationException ex)
-            {
-                HandleException(ex, bytesCount, fullPathToFile);
+                catch (OperationCanceledException ex)
+                {
+                    HandleException(ex, bytesCount, fullPathToFile);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    HandleException(ex, bytesCount, fullPathToFile);
+                }
             }
         }
 
@@ -125,6 +133,32 @@ namespace LUC.DiscoveryService
             {
                 TryDeleteFile(fullPathToFile);
             }
+        }
+        
+        private Boolean IsRightInputParameters(String localFolderPath, String bucketName, String filePrefix, String localOriginalName,
+            Int64 bytesCount, String fileVersion)
+        {
+            Boolean isRightInputParameters = (Directory.Exists(localFolderPath)) && 
+                (bytesCount > 0) && (fileVersion != null);
+            if (isRightInputParameters)
+            {
+                String pathToBucketName = Path.Combine(localFolderPath, bucketName);
+                isRightInputParameters = Directory.Exists(pathToBucketName);
+
+                if(isRightInputParameters)
+                {
+                    String pathFilePrefix = Path.Combine(localFolderPath, bucketName, filePrefix);
+                    isRightInputParameters = Directory.Exists(pathFilePrefix);
+
+                    if (isRightInputParameters)
+                    {
+                        String fullPathToFile = Path.Combine(pathFilePrefix, localFolderPath);
+                        isRightInputParameters = !File.Exists(fullPathToFile); //file shouldn't exist before download
+                    }
+                }
+            }
+
+            return isRightInputParameters;
         }
 
         private void TryDeleteFile(String fullPathToFile)
@@ -263,10 +297,10 @@ namespace LUC.DiscoveryService
                 cancellationToken.ThrowIfCancellationRequested();
 
                 Boolean isRightResponse = IsRightDownloadFileResponse(lastRequest, response, rpcError);
-
                 if (isRightResponse)
                 {
                     fileStream.Write(response.Buffer, offset: 0, response.Buffer.Length);
+                    isWritenInFile = true;
                 }
             }
             else
@@ -456,6 +490,11 @@ namespace LUC.DiscoveryService
             else
             {
                 tempFullPath = $"{fullPathToFile}{PostfixTempFile}";
+            }
+
+            while(File.Exists(tempFullPath))
+            {
+                tempFullPath += "_";
             }
 
             return tempFullPath;

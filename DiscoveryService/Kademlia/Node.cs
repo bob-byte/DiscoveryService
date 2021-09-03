@@ -58,7 +58,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// </returns>
         public Contact Ping(Contact sender)
         {
-            Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
+            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
             bucketList.AddContact(ref sender);
 
@@ -91,7 +91,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// </returns>
         public void Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
         {
-            Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
+            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
             bucketList.AddContact(ref sender);
 
             if (isCached)
@@ -135,7 +135,7 @@ namespace LUC.DiscoveryService.Kademlia
             Boolean isOnlyInNetwork = OnlyInNetwork.IsOnlyInNetwork(ourContact.ID, sender.ID);
             if (!isOnlyInNetwork)
             {
-                Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
+                Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
                 SendKeyValuesIfNewContact(sender);
             }
 
@@ -166,7 +166,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// </returns>
         public void FindValue(Contact sender, ID key, out List<Contact> contacts, out String nodeValue)
         {
-            Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
+            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
             bucketList.AddContact(ref sender);
 
