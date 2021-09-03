@@ -123,11 +123,12 @@ namespace LUC.DiscoveryService
         private void HandleException(Exception exception, Int64 bytesCount, String fullPathToFile)
         {
             LoggingService.LogInfo(exception.ToString());
-
             if (bytesCount > Constants.MaxChunkSize)
             {
-                String tempFullPathToFile = TempFullFileName(fullPathToFile);
-                TryDeleteFile(tempFullPathToFile);
+                TryDeleteFile(fullPathToFile);
+
+                var dictionaryPath = Path.GetPathRoot(fullPathToFile);
+                DeleteTempFiles(dictionaryPath);
             }
             else
             {
@@ -245,7 +246,7 @@ namespace LUC.DiscoveryService
 
                 for (Int32 numContact = 0; (numContact < contactsWithFile.Count) && (!isRightDownloaded); numContact++)
                 {
-                    (isRightDownloaded, _) = await DownloadProcessAsync(contactsWithFile[numContact], request, fileStream,  cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+                    (isRightDownloaded, _) = await DownloadProcessSmallFileAsync(contactsWithFile[numContact], request, fileStream,  cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
 
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -277,62 +278,28 @@ namespace LUC.DiscoveryService
             return fullPathToFile;
         }
 
+        /// <summary>
+        /// <paramref name="downloadFileRequest"/> should be absolutelly initialized outside this method
+        /// </summary>
         /// <returns>
         /// First value returns whether <see cref="DownloadFileRequest.CountDownloadedBytes"/> is writen in <paramref name="fileStream"/>. The second returns <paramref name="downloadFileRequest"/> with updated <see cref="DownloadFileRequest.CountDownloadedBytes"/>, <paramref name="downloadFileRequest"/> will not be changed
         /// </returns>
-        private async Task<(Boolean, DownloadFileRequest)> DownloadProcessAsync(Contact remoteContact, 
+        private async Task<(Boolean, DownloadFileRequest)> DownloadProcessSmallFileAsync(Contact remoteContact, 
             DownloadFileRequest downloadFileRequest, Stream fileStream, CancellationToken cancellationToken)
         {
-            UInt32 maxChunkSize = Constants.MaxChunkSize;
-            Range initialContantRange = downloadFileRequest.Range;
             var isWritenInFile = false;
             DownloadFileRequest lastRequest = (DownloadFileRequest)downloadFileRequest.Clone();
 
-            //initialContantRange.End(downloadFileRequest.Range) should be initialized outside this method in this case
-            if (initialContantRange.TotalPerContact <= maxChunkSize)
-            {
-                (DownloadFileResponse response, RpcError rpcError) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate
+            (DownloadFileResponse response, RpcError rpcError) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate
                     (remoteContact, IOBehavior, discoveryService.ProtocolVersion).ConfigureAwait(continueOnCapturedContext: false);
 
-                cancellationToken.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
 
-                Boolean isRightResponse = IsRightDownloadFileResponse(lastRequest, response, rpcError);
-                if (isRightResponse)
-                {
-                    fileStream.Write(response.Buffer, offset: 0, response.Buffer.Length);
-                    isWritenInFile = true;
-                }
-            }
-            else
+            Boolean isRightResponse = IsRightDownloadFileResponse(lastRequest, response, rpcError);
+            if (isRightResponse)
             {
-                UInt64 start = lastRequest.Range.Start;
-                
-                for (UInt64 end = maxChunkSize - 1; !IsFinishedDownload(start, end);
-                    start = end + 1,
-                    end = ((end + maxChunkSize) < initialContantRange.TotalPerContact) ?
-                    (end + maxChunkSize) : initialContantRange.TotalPerContact - 1)
-                {
-                    lastRequest.Range.Start = start;
-                    lastRequest.Range.End = end;
-
-                    (DownloadFileResponse response, RpcError rpcError) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate(remoteContact, IOBehavior, discoveryService.ProtocolVersion).ConfigureAwait(false);
-
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    Boolean isRightResponse = IsRightDownloadFileResponse(lastRequest, response, rpcError);
-                    if (isRightResponse)
-                    {
-                        //we use lock, because method fileStream.Write can be invoked from wrong position 
-                        //(in case method seek is called by another thread)
-                        lock (lockWriteFile)
-                        {
-                            fileStream.Seek((Int64)start, SeekOrigin.Begin);
-                            fileStream.Write(response.Buffer, offset: 0, response.Buffer.Length);
-                        }
-
-                        isWritenInFile = true;
-                    }
-                }
+                fileStream.Write(response.Chunk, offset: 0, response.Chunk.Length);
+                isWritenInFile = true;
             }
 
             return (isWritenInFile, lastRequest);
@@ -344,7 +311,7 @@ namespace LUC.DiscoveryService
         private Boolean IsRightDownloadFileResponse(DownloadFileRequest request, DownloadFileResponse response, RpcError rpcError)
         {
             Boolean isReceivedRequiredRange = (!rpcError.HasError) && (response.IsRightBucket) && 
-                (response.FileExists) && ((Int32)(request.Range.End - request.Range.Start) == response.Buffer.Length - 1);
+                (response.FileExists) && ((Int32)(request.Range.End - request.Range.Start) == response.Chunk.Length - 1);
 
             //file can be changed in remote contact during download process
             Boolean isTheSameFileInRemoteContact;
@@ -363,80 +330,203 @@ namespace LUC.DiscoveryService
         private async Task DownloadBigFileAsync(IList<Contact> contactsWithFile, DownloadFileRequest initialRequest, CancellationToken cancellationToken)
         {
             ConcurrentDictionary<Contact, DownloadFileRequest> dictContactsWithRequest = ContactsAndRequestsToDownload(initialRequest, contactsWithFile, cancellationToken);
-
-            //create temp file in order to another contacts don't download it
-            String tempFullPath = TempFullFileName(initialRequest.FullPathToFile);
+            ConcurrentDictionary<Range, String> dictRangesWithTempFullPath = new ConcurrentDictionary<Range, String>();
 
             Boolean isDownloadedFile = false;
             do
             {
                 try
                 {
-                    //if file was renamed during download processes by user, it will be created again
-                    using (Stream fileStream = File.OpenWrite(tempFullPath))
+                    var parallelOptions = new ExecutionDataflowBlockOptions
                     {
-                        var parallelOptions = new ExecutionDataflowBlockOptions
-                        {
-                            MaxDegreeOfParallelism = Constants.MAX_THREADS,
-                            CancellationToken = cancellationToken
-                        };
+                        MaxDegreeOfParallelism = Constants.MAX_THREADS,
+                        CancellationToken = cancellationToken
+                    };
 
-                        //Producer/consumer pattern:
-                        //current thread is producer and  produce contact and request to
-                        //download some parts of the file using method ActionBlock.Post. 
-                        //Consumers send request, receive response and write accepted bytes in stream.
-                        var downloadProcess = new ActionBlock<KeyValuePair<Contact, DownloadFileRequest>>(async (contactWithRequest) =>
-                        {
-                            (_, DownloadFileRequest lastRequest) = await DownloadProcessAsync(contactWithRequest.Key,
-                                contactWithRequest.Value, fileStream, cancellationToken)
-                                .ConfigureAwait(continueOnCapturedContext: false);
-                            cancellationToken.ThrowIfCancellationRequested();
+                    //Producer/consumer pattern:
+                    //current thread is producer and  produce contact and request to
+                    //download some parts of the file using method ActionBlock.Post. 
+                    //Consumers send request, receive response and write accepted bytes in stream.
+                    var downloadProcess = new ActionBlock<KeyValuePair<Contact, DownloadFileRequest>>(async (contactWithRequest) =>
+                    {
+                        DownloadFileRequest updatedRequest = await DownloadProcessBigFileAsync(dictRangesWithTempFullPath, contactWithRequest.Key, contactWithRequest.Value, cancellationToken);
 
-                            //downloadProcess returns fixed request so we need to update contactsWithRequest
-                            dictContactsWithRequest.AddOrUpdate(contactWithRequest.Key, lastRequest, (contact, oldRequest) => lastRequest);
-                        }, parallelOptions);
+                        //downloadProcess returns fixed request so we need to update contactsWithRequest
+                        dictContactsWithRequest.AddOrUpdate(contactWithRequest.Key, updatedRequest, (contact, oldRequest) => updatedRequest);
+                    }, parallelOptions);
 
-                        foreach (var contactWithRequest in dictContactsWithRequest)
+                    foreach (var contactWithRequest in dictContactsWithRequest)
+                    {
+                        downloadProcess.Post(contactWithRequest);
+                    }
+
+                    //Signals that we will not post more contactWithRequest
+                    //and also here is start of the download processes
+                    downloadProcess.Complete();
+
+                    //await completion of download all file
+                    await downloadProcess.Completion.ConfigureAwait(false);
+
+                    GatherBigFile(dictRangesWithTempFullPath, initialRequest.FullPathToFile, out isDownloadedFile);
+
+                    if (!isDownloadedFile)
+                    {
+                        //get new contacts and requests considering the previous download
+                        dictContactsWithRequest = await ContactsWithRequestToDownloadAsync(dictContactsWithRequest,
+                            cancellationToken).ConfigureAwait(false);
+
+                        if (dictContactsWithRequest.Count == 0)
                         {
-                            downloadProcess.Post(contactWithRequest);
+                            throw new InvalidOperationException(MessIfThisFileDoesntExistInAnyNode);
                         }
-
-                        //Signals that we will not post more contactWithRequest
-                        //and also here is start of the download processes
-                        downloadProcess.Complete();
-
-                        //await completion of download all file
-                        await downloadProcess.Completion.ConfigureAwait(false);
-
-                        isDownloadedFile = IsDownloadedFile(tempFullPath, (Int64)initialRequest.Range.Total, fileStream);
-                        if (!isDownloadedFile)
-                        {
-                            //get new contacts and requests considering the previous download
-                            dictContactsWithRequest = await ContactsWithRequestToDownloadAsync(dictContactsWithRequest,
-                                cancellationToken).ConfigureAwait(false);
-
-                            if (dictContactsWithRequest.Count == 0)
-                            {
-                                throw new InvalidOperationException(MessIfThisFileDoesntExistInAnyNode);
-                            }
-                        }
-                    } //Writes all bytes in file only in the end of the using construction
+                    }
                 }
-                catch(AggregateException ex)
+                catch (AggregateException ex)
                 {
                     LoggingService.LogError(ex.ToString());
                 }
             }
             while (!isDownloadedFile);
 
-            if (!cancellationToken.IsCancellationRequested)
+            DeleteTempFiles();
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                //rename file to requisite
-                File.Move(tempFullPath, initialRequest.FullPathToFile);
+                File.Delete($"{initialRequest.FullPathToFile}");
+            }
+        }
+
+        private async Task<DownloadFileRequest> DownloadProcessBigFileAsync(ConcurrentDictionary<Range, String> dictRangesWithTempFullPath, Contact contact, DownloadFileRequest request, CancellationToken cancellationToken)
+        {
+            DownloadFileRequest updatedRequest;
+
+            if (request.Range.TotalPerContact <= Constants.MaxChunkSize)
+            {
+                String tempFileName = TempFullFileName();
+                Boolean isFileWriten;
+
+                using (var fileStream = new FileStream(tempFileName, FileMode.Create, FileAccess.Write))
+                {
+                    (isFileWriten, updatedRequest) = await DownloadProcessSmallFileAsync(contact, request, fileStream, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+                }
+
+                AddNewRangeWithTempFileName(dictRangesWithTempFullPath, updatedRequest.Range, tempFileName);
             }
             else
             {
-                File.Delete($"{initialRequest.FullPathToFile}{PostfixTempFile}");
+                ConcurrentDictionary<Range, String> newRangesWithTempFileName;
+                (updatedRequest, newRangesWithTempFileName) = await DownloadBigTotalPerContactBytesAsync(contact, request, cancellationToken).ConfigureAwait(false);
+
+                foreach (var item in newRangesWithTempFileName)
+                {
+                    AddNewRangeWithTempFileName(dictRangesWithTempFullPath, item.Key, item.Value);
+                }
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return updatedRequest;
+        }
+
+        private String TempFullFileName()
+        {
+
+        }
+
+        private void AddNewRangeWithTempFileName(ConcurrentDictionary<Range, String> dictRangesWithTempFileName, Range range, String tempFileName)
+        {
+            while (!dictRangesWithTempFileName.TryAdd(range, tempFileName))
+            {
+                String destFileName = TempFullFileName();
+                RenameFile(tempFileName, destFileName);
+                tempFileName = destFileName;
+
+                LoggingService.LogError($"Created the same temp file name {tempFileName}. It renamed to {destFileName}");
+            }
+        }
+
+        private void RenameFile(String sourceFileName, String destFileName)
+        {
+            File.Move(sourceFileName, destFileName);
+        }
+
+        private async Task<(DownloadFileRequest, ConcurrentDictionary<Range, String>)> DownloadBigTotalPerContactBytesAsync(Contact remoteContact, DownloadFileRequest sampleRequest, CancellationToken cancellationToken)
+        {
+            UInt32 maxChunkSize = Constants.MaxChunkSize;
+            Range initialContantRange = sampleRequest.Range;
+            DownloadFileRequest lastRequest = (DownloadFileRequest)sampleRequest.Clone();
+            ConcurrentDictionary<Range, String> newRangesWithTempFileName = new ConcurrentDictionary<Range, String>();
+
+            UInt64 start = lastRequest.Range.Start;
+
+            //is set to true to start next circle
+            Boolean isRightLastResponse = true;
+            Boolean isWritenInFile = true;
+
+            for (UInt64 end = maxChunkSize - 1; 
+                (!IsFinishedDownload(start, end)) && (isRightLastResponse) && (isWritenInFile);
+                start = end + 1, end = ((end + maxChunkSize) < initialContantRange.TotalPerContact) ? (end + maxChunkSize) : initialContantRange.TotalPerContact - 1)
+            {
+                lastRequest.Range.Start = start;
+                lastRequest.Range.End = end;
+
+                (DownloadFileResponse response, RpcError rpcError) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate(remoteContact, IOBehavior, discoveryService.ProtocolVersion).ConfigureAwait(false);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                Boolean isRightResponse = IsRightDownloadFileResponse(lastRequest, response, rpcError);
+                if (isRightResponse)
+                {
+                    String tempFileName = TempFullFileName();
+                    using (var tempFileStream = new FileStream(tempFileName, FileMode.Create, FileAccess.Write))
+                    {
+                        tempFileStream.Seek((Int64)lastRequest.Range.Start, SeekOrigin.Begin);
+                        tempFileStream.Write(response.Chunk, offset: 0, response.Chunk.Length);
+
+                        isWritenInFile = newRangesWithTempFileName.TryAdd((Range)lastRequest.Range.Clone(), tempFileName);
+                    }
+                }
+            }
+
+            return (lastRequest, newRangesWithTempFileName);
+        }
+
+        private void GatherBigFile(ConcurrentDictionary<Range, String> rangesWithTempFileName, String fullPathToFile, out Boolean isDownloadedFile)
+        {
+            var orderedRangesWithTempFileName = rangesWithTempFileName.OrderBy(c => c.Key.Start);
+            using (var streamOfBigFile = new FileStream(fullPathToFile, FileMode.Create, FileAccess.Write))
+            {
+                foreach (var item in orderedRangesWithTempFileName)
+                {
+                    using (var streamOfTempFile = new FileStream(item.Value, FileMode.Open, FileAccess.Read))
+                    {
+                        Int32 countReadBytes = 0;
+                        Int32 chunkSizeToWrite;
+
+                        for (Int64 offset = 0; offset < streamOfTempFile.Length; offset += countReadBytes)
+                        {
+                            if(streamOfTempFile.Length - offset >= Constants.MaxChunkSize)
+                            {
+                                chunkSizeToWrite = Constants.MaxChunkSize;
+                            }
+                            else
+                            {
+                                chunkSizeToWrite = (Int32)(streamOfBigFile.Length - offset);
+                            }
+
+                            Byte[] chunk = new Byte[chunkSizeToWrite];
+                            streamOfTempFile.Seek(offset, SeekOrigin.Begin);
+                            streamOfTempFile.Read(chunk, offset: 0, chunkSizeToWrite);
+
+                            streamOfBigFile.Seek(offset + (Int64)item.Key.Start, SeekOrigin.Begin);
+                            streamOfBigFile.Write(chunk, offset: 0, count: chunkSizeToWrite);
+
+                            offset = chunkSizeToWrite;
+                        }
+                    }
+                }
+
+                isDownloadedFile = IsDownloadedFile(fullPathToFile, (Int64)rangesWithTempFileName.Keys.First().Total, streamOfBigFile);
             }
         }
 
@@ -476,29 +566,7 @@ namespace LUC.DiscoveryService
             return contactsAndRequests;
         }
 
-        private String TempFullFileName(String fullPathToFile)
-        {
-            String tempFullPath;
-            Boolean hasFileExt = Path.HasExtension(fullPathToFile);
-            if (hasFileExt)
-            {
-                String ext = Path.GetExtension(fullPathToFile);
-                String fullPathWithoutExt = fullPathToFile.TrimEnd(ext.ToCharArray());
-
-                tempFullPath = $"{fullPathWithoutExt}{PostfixTempFile}{ext}";
-            }
-            else
-            {
-                tempFullPath = $"{fullPathToFile}{PostfixTempFile}";
-            }
-
-            while(File.Exists(tempFullPath))
-            {
-                tempFullPath += "_";
-            }
-
-            return tempFullPath;
-        }
+        
 
         private Boolean IsDownloadedFile(String fullPathToFile, Int64 countOfBytes, Stream fileStream)
         {

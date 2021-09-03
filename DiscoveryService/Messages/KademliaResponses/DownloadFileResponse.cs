@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             MessageOperation = MessageOperation.DownloadFileResponse;
         }
 
-        public Byte[] Buffer { get; set; }
+        public Byte[] Chunk { get; set; }
 
         public override void Write(WireWriter writer)
         {
@@ -25,8 +25,8 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             {
                 base.Write(writer);
 
-                writer.Write((UInt32)Buffer.Length);
-                writer.WriteBytes(Buffer);
+                writer.Write((UInt32)Chunk.Length);
+                writer.WriteBytes(Chunk);
             }
         }
 
@@ -35,7 +35,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             base.Read(reader);
 
             var bytesCount = reader.ReadUInt32();
-            Buffer = reader.ReadBytes((Int32)bytesCount);
+            Chunk = reader.ReadBytes((Int32)bytesCount);
 
             return this;
         }

@@ -80,7 +80,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
                             }                                
                         }
 
-                        downloadFileResponse.Buffer = fileBytes;
+                        downloadFileResponse.Chunk = fileBytes;
                         downloadFileResponse.Send(request, eventArgs.AcceptedSocket);
                     }
                 }
