@@ -22,7 +22,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
     class ConnectionPoolSocket : DiscoveryServiceSocket
     {
         private readonly Object m_lock = new Object();
-        private SocketState m_state;
         private Boolean isInPool = false;
 
         /// <inheritdoc/>
@@ -129,25 +128,26 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
         }
 
+        /// <summary>
+        /// TODO: optimize it
+        /// </summary>
         public new void Dispose()
         {
             // attempt to gracefully close the connection, ignoring any errors (it may have been closed already by the server, etc.)
-            SocketState state;
-            lock (m_lock)
+            if((base.State != SocketState.Closing) && (base.State != SocketState.Closed))
             {
-                if (m_state == SocketState.Connected || m_state == SocketState.Failed)
+                lock (m_lock)
                 {
-                    m_state = SocketState.Closing;
+                    State = SocketState.Closing;
                 }
 
-                state = m_state;
+                ShutdownSocket();
+                lock (m_lock)
+                {
+                    State = SocketState.Closed;
+                }
             }
-
-            ShutdownSocket();
-            lock (m_lock)
-            {
-                m_state = SocketState.Closed;
-            }
+            
         }
 
         public async Task<Boolean> TryResetConnectionAsync(Boolean returnToPool, Boolean reuseSocket, IOBehavior ioBehavior)
@@ -172,7 +172,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
             finally
             {
-                base.Dispose();
+                Dispose();
             }
         }
 

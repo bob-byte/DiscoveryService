@@ -51,7 +51,6 @@ namespace LUC.DiscoveryService.Test
 
             var pingRequest = new PingRequest
             {
-                RandomID = ID.RandomID.Value, 
                 Sender = ID.RandomIDInKeySpace.Value
             };
 

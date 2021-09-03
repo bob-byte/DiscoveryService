@@ -13,9 +13,9 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
     {
 		static readonly Object s_lock = new Object();
 		static readonly SemaphoreSlim s_semaphore = new SemaphoreSlim(initialCount: 1, maxCount: 1);
-		static readonly CancellationTokenSource s_cancellationTokenSource = new CancellationTokenSource();
+		//static readonly CancellationTokenSource s_cancellationTokenSource = new CancellationTokenSource();
 		static readonly List<Task<Boolean>> s_resetTasks = new List<Task<Boolean>>();
-		static Task s_workerTask;
+		//static Task s_workerTask;
 
 		public static void AddSocket(ConnectionPoolSocket socket, ILoggingService log)
         {

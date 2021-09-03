@@ -41,6 +41,14 @@
     <Reference Include="DeviceId, Version=5.2.0.0, Culture=neutral, PublicKeyToken=f755c371b5c59c52, processorArchitecture=MSIL">
       <HintPath>..\..\UDPtest\packages\DeviceId.5.2.0\lib\net40\DeviceId.dll</HintPath>
     </Reference>
+    <Reference Include="LUC.Interfaces, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\LUC.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="LUC.Services.Implementation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\LUC.Services.Implementation.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\..\LUC\WpfClient\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -94,6 +102,9 @@
       <Private>True</Private>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.Threading.Tasks.Dataflow, Version=5.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\TryDs\packages\System.Threading.Tasks.Dataflow.5.0.0\lib\net461\System.Threading.Tasks.Dataflow.dll</HintPath>
+    </Reference>
     <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\..\TryDs\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
     </Reference>
@@ -121,14 +132,17 @@
     <Compile Include="Kademlia\ClientPool\SocketHealth.cs" />
     <Compile Include="Kademlia\ClientKadOperation.cs" />
     <Compile Include="Messages\KademliaRequests\CheckFileExistsRequest.cs" />
-    <Compile Include="Messages\KademliaRequests\ContantRange.cs" />
+    <Compile Include="Messages\KademliaRequests\FileRequest.cs" />
+    <Compile Include="Messages\KademliaRequests\Range.cs" />
     <Compile Include="Messages\KademliaRequests\DownloadFileRequest.cs" />
     <Compile Include="Messages\KademliaResponses\CheckFileExistsResponse.cs" />
     <Compile Include="Messages\KademliaResponses\DownloadFileResponse.cs" />
     <Compile Include="Messages\KademliaResponses\ErrorResponse.cs" />
+    <Compile Include="Messages\KademliaResponses\FileResponse.cs" />
     <Compile Include="NetworkEventHandlers\CheckFileExistsHandler.cs" />
     <Compile Include="NetworkEventHandlers\DownloadFileHandler.cs" />
     <Compile Include="NetworkEventHandlers\NetworkEventHandler.cs" />
+    <Compile Include="OnlyInNetwork.cs" />
     <Compile Include="SemaphoreLocker.cs" />
     <Compile Include="SocketState.cs" />
     <Compile Include="Messages\DiscoveryServiceMessage.cs" />
@@ -163,7 +177,6 @@
     <Compile Include="Kademlia\KBucket.cs" />
     <Compile Include="Kademlia\Node.cs" />
     <Compile Include="Kademlia\Routers\ParallelRouter.cs" />
-    <Compile Include="Kademlia\Routers\Router.cs" />
     <Compile Include="Kademlia\RpcError.cs" />
     <Compile Include="Kademlia\StoreValue.cs" />
     <Compile Include="Kademlia\Validate.cs" />
@@ -182,7 +195,6 @@
     <Compile Include="StateObjectForAccept.cs" />
     <Compile Include="TcpServer.cs" />
     <Compile Include="TcpSession.cs" />
-    <Compile Include="UsageExample.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -190,16 +202,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Kademlia\Interfaces\" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\LUC\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
-      <Project>{0f5f0967-f62a-4099-a6d7-2687cba9e4df}</Project>
-      <Name>LUC.Interfaces</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\LUC\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
-      <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
-      <Name>LUC.Services.Implementation</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

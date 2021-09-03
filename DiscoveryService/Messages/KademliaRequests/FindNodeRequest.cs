@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
-    public class FindNodeRequest : Request
+    class FindNodeRequest : Request
     {
         public BigInteger KeyToFindCloseContacts { get; set; }
 

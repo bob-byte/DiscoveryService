@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class BucketList : AbstractKademlia, IBucketList
+    class BucketList : AbstractKademlia, IBucketList
     {
         public List<KBucket> Buckets { get { return buckets; } set { buckets = value; } }
 
@@ -25,29 +25,30 @@ namespace LUC.DiscoveryService.Kademlia
         protected Contact ourContact;
         protected IDht dht;
 
-#if DEBUG       // For unit testing
-        public BucketList(ID id, Contact dummyContact)
-        {
-            ourID = id;
-            ourContact = dummyContact;
-            buckets = new List<KBucket>();
+//#if DEBUG       // For unit testing
+//        public BucketList(ID id, Contact dummyContact)
+//        {
+//            ourID = id;
+//            ourContact = dummyContact;
+//            buckets = new List<KBucket>();
 
-            // First kbucket has max range.
-            buckets.Add(new KBucket());
-        }
-#endif
+//            // First kbucket has max range.
+//            buckets.Add(new KBucket());
+//        }
+//#endif
 
-        /// <summary>
-        /// For serialization.
-        /// </summary>
-        public BucketList()
-        {
-        }
+//        /// <summary>
+//        /// For serialization.
+//        /// </summary>
+//        public BucketList()
+//        {
+//        }
 
         /// <summary>
         /// Initialize the bucket list with our host ID and create a single bucket for the full ID range.
         /// </summary>
-        public BucketList(Contact ourContact)
+        public BucketList(Contact ourContact, UInt16 protocolVersion)
+            : base(protocolVersion)
         {
             this.ourContact = ourContact;
             ourID = ourContact.ID;
@@ -63,8 +64,13 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         public void AddContact(ref Contact contact)
         {
-            Validate.IsFalse<OurNodeCannotBeAContactException>(ourID == contact.ID, "Cannot add ourselves as a contact!");
-            contact.Touch();            // Update the LastSeen to now.
+            if(!OnlyInNetwork.IsOnlyInNetwork(ourContact.ID, contact.ID))
+            {
+                Validate.IsFalse<OurNodeCannotBeAContactException>(ourID == contact.ID, "Cannot add ourselves as a contact!");
+            }
+
+            // Update the LastSeen to now.
+            contact.Touch();
 
             lock (this)
             {

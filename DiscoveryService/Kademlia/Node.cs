@@ -9,7 +9,7 @@ using LUC.Services.Implementation;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class Node : AbstractKademlia, INode
+    class Node : AbstractKademlia, INode
     {
         public Contact OurContact { get { return ourContact; } set { ourContact = value; } }
         public IBucketList BucketList { get { return bucketList; } set { bucketList = value; } }
@@ -25,21 +25,22 @@ namespace LUC.DiscoveryService.Kademlia
         protected IStorage cacheStorage;
         protected Dht dht;
 
-        /// <summary>
-        /// For serialization.
-        /// </summary>
-        public Node()
-        {
-        }
+        ///// <summary>
+        ///// For serialization.
+        ///// </summary>
+        //public Node()
+        //{
+        //}
 
         /// <summary>
         /// If cache storage is not explicity provided, we use an in-memory virtual storage.
         /// </summary>
         public Node(Contact contact, UInt16 protocolVersion,
             IStorage storage, IStorage cacheStorage = null)
+            : base(protocolVersion)
         {
             ourContact = contact;
-            bucketList = new BucketList(contact);
+            bucketList = new BucketList(contact, protocolVersion);
             this.storage = storage;
             this.cacheStorage = cacheStorage;
 
@@ -131,8 +132,13 @@ namespace LUC.DiscoveryService.Kademlia
         //TODO it shouldn't return val
         public void FindNode(Contact sender, ID key, out List<Contact> contacts)
         {
-            Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
-            SendKeyValuesIfNewContact(sender);
+            Boolean isOnlyInNetwork = OnlyInNetwork.IsOnlyInNetwork(ourContact.ID, sender.ID);
+            if (!isOnlyInNetwork)
+            {
+                Validate.IsFalse<SendingQueryToSelfException>(sender.ID == ourContact.ID, "Sender should not be ourself!");
+                SendKeyValuesIfNewContact(sender);
+            }
+
             bucketList.AddContact(ref sender);
 
             contacts = bucketList.GetCloseContacts(key, exclude: sender.ID);

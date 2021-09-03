@@ -9,12 +9,12 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
 {
     class NetworkEventHandler
     {
-        public NetworkEventHandler(NetworkEventInvoker networkEventInvoker, ICurrentUserProvider currentUserProvider)
+        public NetworkEventHandler(DiscoveryService discoveryService, NetworkEventInvoker networkEventInvoker, ICurrentUserProvider currentUserProvider)
         {
-            var checkFileExistsHandler = new CheckFileExistsHandler(currentUserProvider);
+            var checkFileExistsHandler = new CheckFileExistsHandler(currentUserProvider, discoveryService);
             networkEventInvoker.CheckFileExistsReceived += checkFileExistsHandler.SendResponse;
             
-            var downloadFileHandler = new DownloadFileHandler(currentUserProvider);
+            var downloadFileHandler = new DownloadFileHandler(currentUserProvider, discoveryService);
             networkEventInvoker.DownloadFileReceived += downloadFileHandler.SendResponse;
         }
     }

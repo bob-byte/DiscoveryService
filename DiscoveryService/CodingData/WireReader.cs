@@ -1,5 +1,6 @@
 ﻿using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
+using LUC.DiscoveryService.Messages.KademliaRequests;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +14,7 @@ namespace LUC.DiscoveryService.CodingData
     /// <summary>
     /// Methods to read wire formatted data items.
     /// </summary>
-    public class WireReader : Binary, IDisposable
+    class WireReader : Binary, IDisposable
     {
         /// <summary>
         ///   Creates a new instance of the <see cref="WireReader"/> on the
@@ -184,7 +185,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="InvalidDataException">
         ///   Only ASCII characters are allowed.
         /// </exception>
-        public String ReadString()
+        public String ReadAsciiString()
         {
             var bytes = ReadByteLengthPrefixedBytes();
             if(!bytes.Any(c => c > MaxValueCharInAscii))
@@ -195,6 +196,13 @@ namespace LUC.DiscoveryService.CodingData
             {
                 throw new InvalidDataException("Only ASCII characters are allowed");
             }
+        }
+
+        public String ReadUtf32String()
+        {
+            Byte[] bytes = ReadByteLengthPrefixedBytes();
+            
+            return Encoding.UTF32.GetString(bytes);
         }
 
         /// <summary>
@@ -212,7 +220,7 @@ namespace LUC.DiscoveryService.CodingData
             {
                 for (Int32 i = 0; i < length; i++)
                 {
-                    list.Add(ReadString());
+                    list.Add(ReadAsciiString());
                 }
             }
 
@@ -253,17 +261,27 @@ namespace LUC.DiscoveryService.CodingData
         {
             var idAsBigInt = ReadBigInteger();
             var tcpPort = ReadUInt16();
-            var lastSeen = DateTime.ParseExact(ReadString(), lastSeenFormat, provider: null);
+            var lastSeen = DateTime.ParseExact(ReadAsciiString(), lastSeenFormat, provider: null);
             
             var addressesCount = ReadUInt32();
             ICollection<IPAddress> addresses = new List<IPAddress>((Int32)addressesCount);
             for (Int32 numAddress = 0; numAddress < addressesCount; numAddress++)
             {
-                addresses.Add(IPAddress.Parse(ReadString()));
+                addresses.Add(IPAddress.Parse(ReadAsciiString()));
             }
 
             Contact contact = new Contact(new ID(idAsBigInt), tcpPort, addresses, lastSeen);
             return contact;
+        }
+
+        public Range ReadRange()
+        {
+            var start = ReadUInt64();
+            var end = ReadUInt64();
+            var total = ReadUInt64();
+
+            var readRange = new Range(start, end, total);
+            return readRange;
         }
 
         public void Dispose() =>

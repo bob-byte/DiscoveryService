@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace LUC.DiscoveryService.Kademlia.Routers
 {
-    public abstract class BaseRouter : AbstractKademlia
+    abstract class BaseRouter : AbstractKademlia
     {
 #if DEBUG       // for unit testing
         [JsonIgnore]
@@ -24,6 +24,12 @@ namespace LUC.DiscoveryService.Kademlia.Routers
         protected Dht dht;
         protected Node node;
         protected object locker = new object();
+
+        public BaseRouter(UInt16 protocolVersion)
+            : base(protocolVersion)
+        {
+            ;//do nothing
+        }
 
         public abstract (bool found, List<Contact> contacts, Contact foundBy, string val) Lookup(
             ID key,

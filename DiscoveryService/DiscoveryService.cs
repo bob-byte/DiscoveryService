@@ -17,7 +17,9 @@ using LUC.Services.Implementation.Models;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces;
 using LUC.DiscoveryService.NetworkEventHandlers;
+using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("DiscoveryService.Test")]
 namespace LUC.DiscoveryService
 {
     /// <summary>
@@ -26,6 +28,8 @@ namespace LUC.DiscoveryService
     public class DiscoveryService : AbstractService
     {
         private readonly Dht distributedHashTable;
+
+        private readonly NetworkEventHandler networkEventHandler;
 
         private readonly ConnectionPool connectionPool;
 
@@ -49,8 +53,7 @@ namespace LUC.DiscoveryService
         public DiscoveryService(ServiceProfile profile, ICurrentUserProvider currentUserProvider)
             : this(profile)
         {
-            LoggingService.SettingsService.CurrentUserProvider = currentUserProvider;
-            _ = new NetworkEventHandler(NetworkEventInvoker, currentUserProvider);//puts in events of NetworkEventInvoker sendings response
+            networkEventHandler = new NetworkEventHandler(this, NetworkEventInvoker, currentUserProvider);//puts in events of NetworkEventInvoker sendings response
         }
 
         public DiscoveryService(ServiceProfile profile)
@@ -87,7 +90,22 @@ namespace LUC.DiscoveryService
         /// Key is a name of group, which current peer supports.
         /// Value is a SSL certificate of group
         /// </summary>
-        public static ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
+        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
+
+        public ID ContactId
+        {
+            get
+            {
+                if(isDiscoveryServiceStarted)
+                {
+                    return NetworkEventInvoker.OurContact.ID;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"{nameof(DiscoveryService)} is stopped");
+                }
+            }
+        }
 
         /// <summary>
         /// IP address of peers which were discovered.
@@ -97,7 +115,7 @@ namespace LUC.DiscoveryService
         public ConcurrentDictionary<EndPoint, String> KnownIps { get; protected set; } = 
             new ConcurrentDictionary<EndPoint, String>();
 
-        public List<Contact> KnownContacts => NetworkEventInvoker.DistributedHashTable(ProtocolVersion).KnownContacts;
+        public List<Contact> OnlineContacts => NetworkEventInvoker.DistributedHashTable(ProtocolVersion).OnlineContacts;
 
         /// <summary>
         ///   LightUpon.Cloud Discovery Service.
@@ -278,7 +296,7 @@ namespace LUC.DiscoveryService
             try
             {
                 request = eventArgs.Message<T>(whetherReadMessage: false);
-                sender = KnownContacts.Single(c => c.ID == new ID(request.Sender));
+                sender = OnlineContacts.Single(c => c.ID == new ID(request.Sender));
             }
             catch(InvalidOperationException ex)
             {

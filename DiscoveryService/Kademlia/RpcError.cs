@@ -6,7 +6,7 @@ using System.Text;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class RpcError : Message
+    class RpcError : Message
     {
         public Boolean HasError => 
             TimeoutError || IDMismatchError || PeerError;

@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace LUC.DiscoveryService.Kademlia.Routers
 {
-    public class ParallelRouter : BaseRouter
+    class ParallelRouter : BaseRouter
     {
         // ======================
         // For parallel querying:
@@ -20,7 +20,8 @@ namespace LUC.DiscoveryService.Kademlia.Routers
         // ======================
 
 #if DEBUG   // Used for unit testing when creating the DHT.  The DHT sets the node.
-        public ParallelRouter()
+        public ParallelRouter(UInt16 protocolVersion)
+            : base(protocolVersion)
         {
             contactQueue = new ConcurrentQueue<ContactQueueItem>();
             semaphore = new Semaphore(0, Int32.MaxValue);
@@ -28,7 +29,8 @@ namespace LUC.DiscoveryService.Kademlia.Routers
         }
 #endif
 
-        public ParallelRouter(Node node)
+        public ParallelRouter(Node node, UInt16 protocolVersion)
+            : base(protocolVersion)
         {
             this.node = node;
             contactQueue = new ConcurrentQueue<ContactQueueItem>();

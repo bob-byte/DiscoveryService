@@ -14,7 +14,7 @@ namespace LUC.DiscoveryService.Messages
     /// <summary>
     /// Allows to write and read TCP message to/from <see cref="Stream"/>
     /// </summary>
-    public class AcknowledgeTcpMessage : DiscoveryServiceMessage
+    class AcknowledgeTcpMessage : DiscoveryServiceMessage
     {
         /// <summary>
         /// Create a new instance of the <see cref="AcknowledgeTcpMessage"/> class. This constructor is often used to read message
@@ -91,7 +91,7 @@ namespace LUC.DiscoveryService.Messages
 
                 MessageId = reader.ReadUInt32();
                 IdOfSendingContact = reader.ReadBigInteger();
-                MachineId = reader.ReadString();
+                MachineId = reader.ReadAsciiString();
 
                 ProtocolVersion = reader.ReadUInt16();
                 TcpPort = reader.ReadUInt16();
@@ -129,7 +129,7 @@ namespace LUC.DiscoveryService.Messages
 
                 writer.Write(MessageId);
                 writer.Write(IdOfSendingContact);
-                writer.Write(MachineId);
+                writer.WriteAsciiString(MachineId);
                 writer.Write(ProtocolVersion);
                 writer.Write(TcpPort);
                 writer.WriteEnumerable(GroupIds);

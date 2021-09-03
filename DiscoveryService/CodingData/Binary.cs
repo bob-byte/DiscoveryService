@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.CodingData
 {
-    public abstract class Binary
+    abstract class Binary
     {
         /// <summary>
         /// 0x7F = 127

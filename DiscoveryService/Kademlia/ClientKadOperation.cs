@@ -17,10 +17,10 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class ClientKadOperation
+    class ClientKadOperation
     {
         private static ILoggingService log;
-        private readonly UInt32 protocolVersion;
+        private readonly UInt16 protocolVersion;
 
         static ClientKadOperation()
         {
@@ -30,13 +30,12 @@ namespace LUC.DiscoveryService.Kademlia
             };
         }
 
-        public ClientKadOperation()
-        {
-            ;//do nothing
-        }
+        //public ClientKadOperation()
+        //{
+        //    ;//do nothing
+        //}
 
-        public ClientKadOperation(UInt32 protocolVersion)
-            : this()
+        public ClientKadOperation(UInt16 protocolVersion)
         {
             this.protocolVersion = protocolVersion;
         }
@@ -47,18 +46,16 @@ namespace LUC.DiscoveryService.Kademlia
             var id = ID.RandomID;
             PingRequest request = new PingRequest
             {
-                RandomID = id.Value,
                 Sender = sender.ID.Value,
             };
 
-            request.GetResult<PingResponse>(remoteContact, response: out _, out var rpcError);
+            request.GetResult<PingResponse>(remoteContact, protocolVersion, response: out _, out var rpcError);
             return rpcError;
         }
 
         ///<inheritdoc/>
         public RpcError Store(Contact sender, ID key, string val, Contact remoteContact, bool isCached = false, int expirationTimeSec = 0)
         {
-            var id = ID.RandomID.Value;
             var request = new StoreRequest
             {
                 Sender = sender.ID.Value,
@@ -66,11 +63,10 @@ namespace LUC.DiscoveryService.Kademlia
                 Value = val,
                 IsCached = isCached,
                 ExpirationTimeSec = expirationTimeSec,
-                RandomID = id,
             };
 
             //var remoteContact = RemoteContact(key);
-            request.GetResult<StoreResponse>(remoteContact, response: out _, out var rpcError);
+            request.GetResult<StoreResponse>(remoteContact, protocolVersion, response: out _, out var rpcError);
             return rpcError;
         }
 
@@ -82,9 +78,8 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 Sender = sender.ID.Value,
                 KeyToFindCloseContacts = keyToFindContacts.Value,
-                RandomID = id,
             };
-            request.GetResult<FindNodeResponse>(remoteContact, out var response, out var rpcError);
+            request.GetResult<FindNodeResponse>(remoteContact, protocolVersion, out var response, out var rpcError);
 
             return (response?.CloseSenderContacts?.ToList() ?? EmptyContactList(), rpcError);
         }
@@ -103,10 +98,9 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 KeyToFindCloseContacts = keyToFindContact.Value,
                 Sender = sender.ID.Value,
-                RandomID = id,
             };
 
-            request.GetResult<FindValueResponse>(remoteContact, out var response, out var rpcError);
+            request.GetResult<FindValueResponse>(remoteContact, protocolVersion, out var response, out var rpcError);
             var closeContacts = response?.CloseContacts?.ToList() ?? EmptyContactList();
 
             return (closeContacts, response?.ValueInResponsingPeer, rpcError);

@@ -15,7 +15,7 @@ namespace LUC.DiscoveryService.Kademlia
     /// <summary>
     /// DHT - distributed hash table. It minimize settings count of messages, which <seealso cref="Contact"/>s should send to learn each other 
     /// </summary>
-    public class Dht : AbstractKademlia, IDht
+    class Dht : AbstractKademlia, IDht
     {
         public BaseRouter Router { get { return router; } set { router = value; } }
 
@@ -67,10 +67,10 @@ namespace LUC.DiscoveryService.Kademlia
         protected ConcurrentDictionary<BigInteger, int> evictionCount;
         protected List<Contact> pendingContacts;
 
-        // For serializer, empty constructor needed.
-        public Dht()
-        {
-        }
+        //// For serializer, empty constructor needed.
+        //public Dht()
+        //{
+        //}
 
         /// <summary>
         /// Use this constructor to initialize the stores to the same instance.
@@ -87,6 +87,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// to be a key-value database.
         /// </summary>
         public Dht(Contact contact, BaseRouter router, UInt16 protocolVersion, IStorage originatorStorage, IStorage republishStorage, IStorage cacheStorage)
+            : base(protocolVersion)
         {
             this.originatorStorage = originatorStorage;
             this.republishStorage = republishStorage;
@@ -97,7 +98,7 @@ namespace LUC.DiscoveryService.Kademlia
             SetupTimers();
         }
 
-        public List<Contact> KnownContacts => Node.BucketList.Buckets.SelectMany(c => c.Contacts).ToList();
+        public List<Contact> OnlineContacts => Node.BucketList.Buckets.SelectMany(c => c.Contacts).ToList();
 
         /// <summary>
         /// Returns a JSON string of the serialized DHT.
@@ -258,11 +259,14 @@ namespace LUC.DiscoveryService.Kademlia
         /// <param name="toReplace">The contact that can replace the non-responding contact.</param>
         public void DelayEviction(Contact toEvict, Contact toReplace)
         {
-            // Non-concurrent list needs locking.
-            lock (pendingContacts)
+            if(toReplace != null)
             {
-                // Add only if it's a new pending contact.
-                pendingContacts.AddDistinctBy(toReplace, c => c.ID);
+                // Non-concurrent list needs locking.
+                lock (pendingContacts)
+                {
+                    // Add only if it's a new pending contact.
+                    pendingContacts.AddDistinctBy(toReplace, c => c.ID);
+                }
             }
 
             BigInteger key = toEvict.ID.Value;

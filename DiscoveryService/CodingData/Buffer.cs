@@ -7,7 +7,7 @@ namespace LUC.DiscoveryService.CodingData
     /// <summary>
     /// Dynamic byte buffer
     /// </summary>
-    public class Buffer
+    class Buffer
     {
         private byte[] _data;
         private long _size;

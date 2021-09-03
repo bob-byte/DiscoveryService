@@ -6,7 +6,7 @@ namespace LUC.DiscoveryService.Messages
     /// <summary>
     /// <b>Abstract</b> class for messages
     /// </summary>
-    public abstract class DiscoveryServiceMessage : Message
+    abstract class DiscoveryServiceMessage : Message
     {
         public DiscoveryServiceMessage()
         {

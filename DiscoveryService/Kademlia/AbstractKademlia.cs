@@ -6,8 +6,13 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public abstract class AbstractKademlia
+    abstract class AbstractKademlia
     {
-        protected readonly ClientKadOperation clientKadOperation = new ClientKadOperation();
+        protected readonly ClientKadOperation clientKadOperation;
+
+        public AbstractKademlia(UInt16 protocolVersion)
+        {
+            clientKadOperation = new ClientKadOperation(protocolVersion);
+        }
     }
 }

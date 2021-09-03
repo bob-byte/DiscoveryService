@@ -4,6 +4,8 @@ using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.Interfaces;
+using LUC.Interfaces.Models;
+using LUC.Interfaces.OutputContracts;
 using LUC.Services.Implementation;
 using System;
 using System.Collections.Concurrent;
@@ -72,11 +74,44 @@ namespace LUC.DiscoveryService.Test
         {
             SetUpTests.AssemblyInitialize();
 
-            ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
-            groupsSupported.TryAdd("the-dubstack-engineers-res", "<SSL-Cert1>");
-            groupsSupported.TryAdd("the-dubstack-architects-res", "<SSL-Cert2>");
+            settingsService.CurrentUserProvider = new CurrentUserProvider();
 
-            discoveryService = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported));
+            ApiClient.ApiClient apiClient = new ApiClient.ApiClient(settingsService.CurrentUserProvider, SetUpTests.LoggingService);
+            apiClient.SyncingObjectsList = new SyncingObjectsList();
+
+            String Login = "integration1";
+            String Password = "integration1";
+
+            LoginResponse loginResponse = null;
+            do
+            {
+                loginResponse = await apiClient.LoginAsync(Login, Password).ConfigureAwait(continueOnCapturedContext: false);
+
+                if(!loginResponse.IsSuccess)
+                {
+                    Console.WriteLine("Check your connection to Internet, because you cannot login\n" +
+                        "If you did that, press any keyboard key to try login again");
+
+                    //intercept: true says that pressed key won't be shown in console
+                    Console.ReadKey(intercept: true);
+                }
+            }
+            while (!loginResponse.IsSuccess);
+
+            apiClient.CurrentUserProvider.RootFolderPath = settingsService.ReadUserRootFolderPath();
+
+            ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
+
+            var bucketDirectoryPathes = settingsService.CurrentUserProvider.ProvideBucketDirectoryPathes();
+            var sslCert = "<SSL-Cert>";
+            foreach (var bucketPath in bucketDirectoryPathes)
+            {
+                var bucketName = Path.GetFileName(bucketPath);
+                groupsSupported.TryAdd(bucketName, sslCert);
+                groupsSupported.TryAdd(bucketName, sslCert);
+            }
+
+            discoveryService = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported), settingsService.CurrentUserProvider);
             discoveryService.Start();
 
             foreach (var address in discoveryService.NetworkEventInvoker.RunningIpAddresses)
@@ -100,31 +135,37 @@ namespace LUC.DiscoveryService.Test
                 };
             };
 
-            settingsService.CurrentUserProvider = new CurrentUserProvider();
-
-            ApiClient.ApiClient apiClient = new ApiClient.ApiClient(settingsService.CurrentUserProvider, SetUpTests.LoggingService);
-
-            String Login = "integration1";
-            String Password = "integration1";
-            await apiClient.LoginAsync(Login, Password).ConfigureAwait(continueOnCapturedContext: false);
-
-            apiClient.CurrentUserProvider.RootFolderPath = settingsService.ReadUserRootFolderPath();
+            
 
             while (true)
             {
+                Boolean isTesterOnlyInNetwork = IsTesterOnlyInNetwork();
+
                 ShowAvailableUserOptions();
 
                 var pressedKey = Console.ReadKey().Key;
                 Console.WriteLine();
 
-                Contact remoteContact = null;
-                if (((ConsoleKey.D1 <= pressedKey) && (pressedKey <= ConsoleKey.D6)) || 
-                    ((ConsoleKey.NumPad1 <= pressedKey) && (pressedKey <= ConsoleKey.NumPad6)))
+                try
                 {
-                    GetRemoteContact(discoveryService, ref remoteContact);
-                }
+                    Contact contact = null;
+                    if ((!isTesterOnlyInNetwork) && (((ConsoleKey.D1 <= pressedKey) && (pressedKey <= ConsoleKey.D6)) ||
+                        ((ConsoleKey.NumPad1 <= pressedKey) && (pressedKey <= ConsoleKey.NumPad6))))
+                    {
+                        GetRemoteContact(discoveryService, ref contact);
+                    }
+                    else if (isTesterOnlyInNetwork)
+                    {
+                        contact = discoveryService.NetworkEventInvoker.OurContact;
+                    }
 
-                await TryExecuteSelectedOperationAsync(remoteContact, apiClient, settingsService.CurrentUserProvider, pressedKey);
+                    await TryExecuteSelectedOperationAsync(contact, apiClient, settingsService.CurrentUserProvider, pressedKey)
+                        .ConfigureAwait(continueOnCapturedContext: false);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
             }
         }
 
@@ -208,6 +249,34 @@ namespace LUC.DiscoveryService.Test
             }
         }
 
+        private static Boolean IsTesterOnlyInNetwork()
+        {
+            Boolean isTesterOnlyInNetwork = false;
+            String readLine = null;
+            String isTrue = "1";
+            String isFalse = "2";
+
+            do
+            {
+                Console.WriteLine("Are you only in network?\n" +
+                "1 - yes\n" +
+                "2 - no");
+                readLine = Console.ReadLine().Trim();
+
+                if (readLine == isTrue)
+                {
+                    isTesterOnlyInNetwork = true;
+                }
+                else if (readLine == isFalse)
+                {
+                    isTesterOnlyInNetwork = false;
+                }
+            }
+            while ((readLine != isTrue) && (readLine != isFalse));
+
+            return isTesterOnlyInNetwork;
+        }
+
         private static void ShowAvailableUserOptions()
         {
             Console.WriteLine($"Select an operation:\n" +
@@ -242,7 +311,7 @@ namespace LUC.DiscoveryService.Test
 
         private static Contact RandomContact(DiscoveryService discoveryService)
         {
-            var contacts = discoveryService.KnownContacts.Where(c => (c.ID != discoveryService.NetworkEventInvoker.OurContact.ID) &&
+            var contacts = discoveryService.OnlineContacts.Where(c => (c.ID != discoveryService.NetworkEventInvoker.OurContact.ID) &&
                 (c.LastActiveIpAddress != null)).ToArray();
 
             Random random = new Random();
@@ -263,7 +332,7 @@ namespace LUC.DiscoveryService.Test
         {
             while (true)
             {
-                ClientKadOperation kadOperation = new ClientKadOperation();
+                ClientKadOperation kadOperation = new ClientKadOperation(discoveryService.ProtocolVersion);
 
                 switch (pressedKey)
                 {
@@ -338,23 +407,7 @@ namespace LUC.DiscoveryService.Test
                     case ConsoleKey.NumPad8:
                     case ConsoleKey.D8:
                         {
-                            var download = new Download(discoveryService);
-                            var localFolderPath = settingsService.ReadUserRootFolderPath();
-
-                            var bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
-
-                            var random = new Random();
-                            var rndBcktDrctrPths = bucketDirectoryPathes[random.Next(bucketDirectoryPathes.Count)];
-                            var serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath(rndBcktDrctrPths).ServerName;
-
-                            String filePrefix = String.Empty;
-                            var objectsListResponse = await apiClient.ListAsync(serverBucketName, filePrefix).ConfigureAwait(continueOnCapturedContext: false);
-
-                            var rndFlDscrptn = objectsListResponse.ObjectFileDescriptions[random.Next(objectsListResponse.ObjectFileDescriptions.Length)];
-
-                            await download.DownloadFileAsync(localFolderPath, rndFlDscrptn.OriginalName, filePrefix, 
-                                rndFlDscrptn.Bytes, IOBehavior.Asynchronous, 
-                                cancellationTokenSource.Token).ConfigureAwait(false);
+                            await DownloadRandomFile(apiClient, currentUserProvider, remoteContact).ConfigureAwait(false);
 
                             return;
                         }
@@ -459,6 +512,77 @@ namespace LUC.DiscoveryService.Test
             parameters.Add("i", pathToFileToSend);
 
             return parameters;
+        }
+
+        /// <summary>
+        /// Will download random file which isn't in current PC if you aren't only in network. Otherwise it will download file which is
+        /// </summary>
+        /// <returns></returns>
+        private async static Task DownloadRandomFile(IApiClient apiClient, 
+            ICurrentUserProvider currentUserProvider, Contact remoteContact)
+        {
+            var download = new Download(discoveryService, IOBehavior.Asynchronous);
+            var localFolderPath = settingsService.ReadUserRootFolderPath();
+
+            String filePrefix = String.Empty;
+            var randomFileToDownload = await RandomFileToDownload(apiClient, currentUserProvider, remoteContact, localFolderPath, filePrefix).ConfigureAwait(false);
+
+            await download.DownloadFileAsync(localFolderPath, bucketName: discoveryService.GroupsSupported.First().Key,
+                filePrefix, randomFileToDownload.OriginalName, randomFileToDownload.Bytes, 
+                randomFileToDownload.Version, cancellationTokenSource.Token)
+                .ConfigureAwait(false);
+        }
+
+        private async static Task<ObjectDescriptionModel> RandomFileToDownload(IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String localFolderPath, String filePrefix)
+        {
+            var bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
+
+            var random = new Random();
+            var rndBcktDrctrPth = bucketDirectoryPathes[random.Next(bucketDirectoryPathes.Count)];
+            var serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath(rndBcktDrctrPth).ServerName;
+
+            var objectsListResponse = await apiClient.ListAsync(serverBucketName, filePrefix).ConfigureAwait(continueOnCapturedContext: false);
+            var objectsListModel = objectsListResponse.ToObjectsListModel();
+
+            Boolean isOnlyInNetwork = discoveryService.ContactId == remoteContact.ID;
+
+            //select from objectsListModel files which exist in current PC if tester is only in network. 
+            //If the last one is not, select files which don't exist in current PC
+            var bjctDscrptnsFrDwnld = objectsListModel.ObjectDescriptions.Where(cachedFileInServer =>
+            {
+                var fullPathToFile = Path.Combine(localFolderPath, rndBcktDrctrPth, filePrefix, cachedFileInServer.OriginalName);
+                var isFileInCurrentPc = File.Exists(fullPathToFile);
+
+                Boolean shouldBeDownloaded;
+                if(isOnlyInNetwork)
+                {
+                    shouldBeDownloaded = isFileInCurrentPc;
+                }
+                else
+                {
+                    shouldBeDownloaded = !isFileInCurrentPc;
+                }
+
+                return shouldBeDownloaded;
+            }).ToList();
+
+            ObjectDescriptionModel randomFileToDownload;
+            if (bjctDscrptnsFrDwnld.Count == 0 && isOnlyInNetwork)
+            {
+                randomFileToDownload = objectsListModel.ObjectDescriptions[random.Next(objectsListModel.ObjectDescriptions.Count)];
+                await apiClient.DownloadFileAsync(serverBucketName, filePrefix, localFolderPath, randomFileToDownload.OriginalName, randomFileToDownload).ConfigureAwait(false);
+            }
+            else if(bjctDscrptnsFrDwnld.Count > 0)
+            {
+                randomFileToDownload = bjctDscrptnsFrDwnld[random.Next(bjctDscrptnsFrDwnld.Count)];
+            }
+            else
+            {
+                Console.WriteLine($"You should put few file in {localFolderPath} and using WpfClient, upload it");
+                throw new InvalidOperationException();
+            }
+
+            return randomFileToDownload;
         }
     }
 }

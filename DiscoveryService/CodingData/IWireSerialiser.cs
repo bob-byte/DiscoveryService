@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using LUC.DiscoveryService.Messages;
 
 namespace LUC.DiscoveryService.CodingData
 {
-    public interface IWireSerialiser
+    interface IWireSerialiser
     {
         /// <summary>
         ///   Reads the <see cref="DiscoveryServiceMessage"/> object that is encoded in the wire format.
@@ -17,7 +18,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <returns>
         ///   The final Message object.
         /// </returns>
-        IWireSerialiser Read(WireReader reader);
+        IWireSerialiser Read(Byte[] buffer);
 
         /// <summary>
         ///   Writes the <see cref="DiscoveryServiceMessage"/> object encoded in the wire format.
@@ -25,6 +26,6 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="writer">
         ///   The destination of the <see cref="DiscoveryServiceMessage"/> object.
         /// </param>
-        void Write(WireWriter writer);
+        void Write(Stream stream);
     }
 }

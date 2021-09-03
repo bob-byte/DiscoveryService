@@ -1,5 +1,6 @@
 ﻿using LUC.DiscoveryService.CodingData;
 using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 using System;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
-    public abstract class Response : Message
+    abstract class Response : Message
     {
         protected static LoggingService log;
 
@@ -24,12 +25,28 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             };
         }
 
-        public Response()
-        {
-            RandomID = ID.RandomID.Value;
-        }
+        //public Response(BigInteger requestRandomId)
+        //{
+        //    RandomID = requestRandomId;
+        //}
 
         public BigInteger RandomID { get; set; }
+
+        public virtual void Send(Request request, Socket sender)
+        {
+            if (request != null)
+            {
+                sender.SendTimeout = (Int32)Constants.SendTimeout.TotalMilliseconds;
+                var buffer = ToByteArray();
+                sender.Send(buffer);
+
+                LogResponse(sender, this);
+            }
+            else
+            {
+                throw new ArgumentNullException($"Bad format of {nameof(request)}");
+            }
+        }
 
         protected static void LogResponse(Socket sender, Response response)
         {

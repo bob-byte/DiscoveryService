@@ -4,7 +4,7 @@ namespace LUC.DiscoveryService.Kademlia
 {
 	public static class Constants
 	{
-        public const Int32 MaxChunkSize = 4056;
+        public const Int32 MaxChunkSize = 2000000;
 
         public const int B = 5;
 	public const int K = 20;
@@ -34,12 +34,20 @@ namespace LUC.DiscoveryService.Kademlia
         public const int EVICTION_LIMIT = 5;
 #endif
 
-        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
-        public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(1);
-        public static readonly TimeSpan TimeCheckDataToRead = TimeSpan.FromSeconds(0.4);
-        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds(5);
-        public static readonly TimeSpan TimeWaitReturnToPool = ConnectTimeout + SendTimeout + SendTimeout + ReceiveTimeout;//it's max of execution Kademlia operation 
-        public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(1);
+        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromMinutes(value: 3);
+        public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromMinutes(3);
+        public static readonly TimeSpan SendTimeout = TimeSpan.FromMinutes(3);
+        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromMinutes(3);
+
+        /// <summary>
+        /// it's max of execution Kademlia operation (first we connect to new contact, then if it is failed, we will be failed to send, then we will try to connect and send again. If we send actually, we will try to receive 
+        /// </summary>
+        /// <value>
+        /// <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ReceiveTimeout"/>
+        /// </value>
+        public static readonly TimeSpan TimeWaitReturnToPool = ConnectTimeout + SendTimeout + ConnectTimeout + SendTimeout + ReceiveTimeout;
+
+        public static readonly TimeSpan TimeCheckDataToRead = TimeSpan.FromSeconds(1);
 
         public const String LastSeenFormat = "yyyy-MM-dd HH:mm:ss";
 

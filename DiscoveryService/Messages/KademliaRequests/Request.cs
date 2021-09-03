@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
-    public abstract class Request : Message
+    abstract class Request : Message
     {
         private static ConnectionPool connectionPool;
         private static ILoggingService log;
@@ -31,9 +31,13 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             };
         }
 
-        public BigInteger RandomID { get; set; }
+        public Request()
+        {
+            RandomID = ID.RandomID.Value;
+        }
+
+        public BigInteger RandomID { get; private set; }
         public BigInteger Sender { get; set; }
-        public UInt16 ProtocolVersion { get; set; } = 1;
 
         /// <summary>
         /// Returns whether received right response to <a href="last"/> request
@@ -74,19 +78,19 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
         }
 
-        public void GetResult<TResponse>(Contact remoteContact, out TResponse response, out RpcError rpcError)
+        public void GetResult<TResponse>(Contact remoteContact, UInt16 protocolVersion, out TResponse response, out RpcError rpcError)
             where TResponse : Response, new()
         {
-            (response, rpcError) = ResultAsync<TResponse>(remoteContact, IOBehavior.Synchronous).GetAwaiter().GetResult();
+            (response, rpcError) = ResultAsync<TResponse>(remoteContact, IOBehavior.Synchronous, protocolVersion).GetAwaiter().GetResult();
         }
 
-        public async Task<(TResponse, RpcError)> ResultAsync<TResponse>(Contact remoteContact)
+        public async Task<(TResponse, RpcError)> ResultAsync<TResponse>(Contact remoteContact, UInt16 protocolVersion)
             where TResponse : Response, new()
         {
-            return await ResultAsync<TResponse>(remoteContact, IOBehavior.Asynchronous).ConfigureAwait(continueOnCapturedContext: false);
+            return await ResultAsync<TResponse>(remoteContact, IOBehavior.Asynchronous, protocolVersion).ConfigureAwait(continueOnCapturedContext: false);
         }
 
-        public async Task<(TResponse, RpcError)> ResultAsync<TResponse>(Contact remoteContact, IOBehavior ioBehavior)
+        public async Task<(TResponse, RpcError)> ResultAsync<TResponse>(Contact remoteContact, IOBehavior ioBehavior, UInt16 protocolVersion)
             where TResponse : Response, new()
         {
             ErrorResponse nodeError = null;
@@ -116,7 +120,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
             if (!IsReceivedLastRightResp)
             {
-                TryToEvictContact(remoteContact);
+                TryToEvictContact(remoteContact, protocolVersion);
             }
 
             return (response, rpcError);
@@ -128,11 +132,12 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             ErrorResponse nodeError = null;
             Boolean isTimeoutSocketOp = false;
             TResponse response = null;
-            var bytesOfRequest = this.ToByteArray();
 
             ConnectionPoolSocket client = null;
             try
             {
+                Byte[] bytesOfRequest = this.ToByteArray();
+
                 client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
                     ioBehavior, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
 
@@ -179,6 +184,11 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 HandleException(ex, ref nodeError);
             }
             catch (EndOfStreamException ex)
+            {
+                isTimeoutSocketOp = false;
+                HandleException(ex, ref nodeError);
+            }
+            catch (ArgumentException ex)
             {
                 isTimeoutSocketOp = false;
                 HandleException(ex, ref nodeError);
@@ -234,12 +244,12 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return rpcError;
         }
 
-        private void TryToEvictContact(Contact remoteContact)
+        private void TryToEvictContact(Contact remoteContact, UInt16 protocolVersion)
         {
-            var dht = NetworkEventInvoker.DistributedHashTable(ProtocolVersion);
-            var newContactInDht = dht.PendingContacts.FirstOrDefault();
+            var dht = NetworkEventInvoker.DistributedHashTable(protocolVersion);
 
-            dht.DelayEviction(remoteContact, newContactInDht);
+            //"toReplace: null", because we don't get new contact in Kademlia request
+            dht.DelayEviction(remoteContact, toReplace: null);
         }
     }
 }

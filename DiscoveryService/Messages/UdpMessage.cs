@@ -9,7 +9,7 @@ namespace LUC.DiscoveryService.Messages
     /// <summary>
     /// Allows to write and read multicast message to/from <see cref="Stream"/>
     /// </summary>
-    public class UdpMessage : DiscoveryServiceMessage
+    class UdpMessage : DiscoveryServiceMessage
     {
         /// <summary>
         /// Maximum bytes of a message.
@@ -51,7 +51,7 @@ namespace LUC.DiscoveryService.Messages
             if (reader != null)
             {
                 MessageId = reader.ReadUInt32();
-                MachineId = reader.ReadString();
+                MachineId = reader.ReadAsciiString();
 
                 ProtocolVersion = reader.ReadUInt16();
                 TcpPort = (UInt16)reader.ReadUInt32();                
@@ -70,7 +70,7 @@ namespace LUC.DiscoveryService.Messages
             if(writer != null)
             {
                 writer.Write(MessageId);
-                writer.Write(MachineId);
+                writer.WriteAsciiString(MachineId);
                 writer.Write(ProtocolVersion);
                 writer.Write((UInt32)TcpPort);
             }

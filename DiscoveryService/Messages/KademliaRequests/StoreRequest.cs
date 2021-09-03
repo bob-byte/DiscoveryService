@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
-    public class StoreRequest : Request
+    class StoreRequest : Request
     {
         public StoreRequest()
         {
@@ -29,7 +29,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 base.Read(reader);
 
                 KeyToStore = reader.ReadBigInteger();
-                Value = reader.ReadString();
+                Value = reader.ReadAsciiString();
                 IsCached = reader.ReadBoolean();
                 ExpirationTimeSec = (Int32)reader.ReadUInt32();
 
@@ -49,7 +49,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 base.Write(writer);
 
                 writer.Write(KeyToStore);
-                writer.Write(Value);
+                writer.WriteAsciiString(Value);
                 writer.Write(IsCached);
                 writer.Write((UInt32)ExpirationTimeSec);
             }

@@ -13,7 +13,7 @@ namespace LUC.DiscoveryService
     /// TCP session is used to read and write data from the connected TCP client
     /// </summary>
     /// <remarks>Thread-safe</remarks>
-    public class TcpSession : IDisposable
+    class TcpSession : IDisposable
     {
         /// <summary>
         /// Initialize the session with a given server

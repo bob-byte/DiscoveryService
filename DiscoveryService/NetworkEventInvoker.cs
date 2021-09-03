@@ -127,7 +127,8 @@ namespace LUC.DiscoveryService
             ProtocolVersion = protocolVersion;
 
             OurContact = new Contact(ID.RandomIDInKeySpace, RunningTcpPort);
-            var distributedHashTable = new Dht(OurContact, ProtocolVersion, () => new VirtualStorage(), new ParallelRouter());
+            var distributedHashTable = new Dht(OurContact, ProtocolVersion, 
+                storageFactory: () => new VirtualStorage(), new ParallelRouter(ProtocolVersion));
             dhts.Add(protocolVersion, distributedHashTable);
 
             networkInterfacesFilter = filter;
@@ -155,7 +156,7 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public Boolean IgnoreDuplicateMessages { get; set; }
 
-        public static Dht DistributedHashTable(UInt16 protocolVersion)
+        internal static Dht DistributedHashTable(UInt16 protocolVersion)
         {
             if(dhts.ContainsKey(protocolVersion))
             {
@@ -355,8 +356,10 @@ namespace LUC.DiscoveryService
 
                 lock(client)
                 {
-                    if ((!IgnoreDuplicateMessages || !isRecentlyReceived) &&
-                    ((message.ProtocolVersion == ProtocolVersion) &&
+                    Boolean isDsPort = IsMessageFromDs(message.TcpPort);
+
+                    if ((!IgnoreDuplicateMessages || !isRecentlyReceived) && (isDsPort) &&
+                    ((message.ProtocolVersion == ProtocolVersion) ||
                     (message.MachineId != MachineId)))
                     {
                         result.SetMessage(message);
@@ -404,50 +407,56 @@ namespace LUC.DiscoveryService
                 dhts[ProtocolVersion].OurContact.LastActiveIpAddress = lastActiveAddress;
 
                 Message message = receiveResult.Message<Message>();
-                switch (message.MessageOperation)
+                var ipEndPoint = receiveResult.AcceptedSocket.LocalEndPoint as IPEndPoint;
+                Boolean isMessageFromDs = IsMessageFromDs(ipEndPoint?.Port);
+
+                if(isMessageFromDs)
                 {
-                    case MessageOperation.Acknowledge:
-                        {
-                            HandleReceivedTcpMessage<AcknowledgeTcpMessage>(sender, receiveResult, AnswerReceived);
-                            break;
-                        }
+                    switch (message.MessageOperation)
+                    {
+                        case MessageOperation.Acknowledge:
+                            {
+                                HandleReceivedTcpMessage<AcknowledgeTcpMessage>(sender, receiveResult, AnswerReceived);
+                                break;
+                            }
 
-                    case MessageOperation.Ping:
-                        {
-                            /// Someone is pinging us.  Register the contact and respond.
-                            HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, PingReceived);
-                            break;
-                        }
+                        case MessageOperation.Ping:
+                            {
+                                /// Someone is pinging us.  Register the contact and respond.
+                                HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, PingReceived);
+                                break;
+                            }
 
-                    case MessageOperation.Store:
-                        {
-                            HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, StoreReceived);
-                            break;
-                        }
+                        case MessageOperation.Store:
+                            {
+                                HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, StoreReceived);
+                                break;
+                            }
 
-                    case MessageOperation.FindNode:
-                        {
-                            HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, FindNodeReceived);
-                            break;
-                        }
+                        case MessageOperation.FindNode:
+                            {
+                                HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, FindNodeReceived);
+                                break;
+                            }
 
-                    case MessageOperation.FindValue:
-                        {
-                            HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, FindValueReceived);
-                            break;
-                        }
+                        case MessageOperation.FindValue:
+                            {
+                                HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, FindValueReceived);
+                                break;
+                            }
 
-                    case MessageOperation.CheckFileExists:
-                        {
-                            HandleReceivedTcpMessage<CheckFileExistsRequest>(sender, receiveResult, CheckFileExistsReceived);
-                            break;
-                        }
+                        case MessageOperation.CheckFileExists:
+                            {
+                                HandleReceivedTcpMessage<CheckFileExistsRequest>(sender, receiveResult, CheckFileExistsReceived);
+                                break;
+                            }
 
-                    case MessageOperation.DownloadFile:
-                        {
-                            HandleReceivedTcpMessage<DownloadFileRequest>(sender, receiveResult, DownloadFileReceived);
-                            break;
-                        }
+                        case MessageOperation.DownloadFile:
+                            {
+                                HandleReceivedTcpMessage<DownloadFileRequest>(sender, receiveResult, DownloadFileReceived);
+                                break;
+                            }
+                    }
                 }
             }
             catch (EndOfStreamException ex)

@@ -13,7 +13,7 @@ namespace LUC.DiscoveryService.Messages
 
         public Byte[] Buffer { get; set; }
 
-        public Boolean IsReadMessage<T>()
+        internal Boolean IsReadMessage<T>()
             where T: Message, new()
         {
             return message as T != null;
@@ -30,7 +30,7 @@ namespace LUC.DiscoveryService.Messages
         /// <value>
         ///   The received message.
         /// </value>
-        public T Message<T>(Boolean whetherReadMessage = true)
+        internal T Message<T>(Boolean whetherReadMessage = true)
             where T: Message, new()
         {
             if (whetherReadMessage && !IsReadMessage<T>())
@@ -42,7 +42,7 @@ namespace LUC.DiscoveryService.Messages
             return message as T;
         }
 
-        public void SetMessage<T>(T message)
+        internal void SetMessage<T>(T message)
             where T : Message, new()
         {
             this.message = message;

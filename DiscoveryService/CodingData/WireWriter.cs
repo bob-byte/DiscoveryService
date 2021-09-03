@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Messages.KademliaRequests;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +13,7 @@ namespace LUC.DiscoveryService.CodingData
     /// <summary>
     /// Methods to write wire formatted data items.
     /// </summary>
-    public class WireWriter : Binary, IDisposable
+    class WireWriter : Binary, IDisposable
     {
         /// <summary>
         /// Creates a new instance of the <see cref="WireWriter"/> on the
@@ -184,19 +185,44 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
-        public void Write(String value)
+        public void WriteAsciiString(String value)
         {
             if(value != null)
             {
                 if (!value.Any(c => c > MaxValueCharInAscii))
                 {
-                    var bytes = Encoding.ASCII.GetBytes(value);
+                    Byte[] bytes = Encoding.ASCII.GetBytes(value);
                     WriteByteLengthPrefixedBytes(bytes);
                 }
                 else
                 {
                     throw new ArgumentException("Only ASCII characters are allowed");
                 }
+            }
+            else
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+        }
+
+        /// <summary>
+        /// Writes a length-prefixed string to this stream in the current encoding of the WireWriter, and advances the current position of the stream in accordance with the encoding used and the specific characters being written to the stream.
+        /// </summary>
+        /// <param name="value">
+        /// The value to write.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="value"/> is equal to null
+        /// </exception>
+        /// <exception cref="EncoderFallbackException">
+        /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
+        /// </exception>
+        public void WriteUtf32String(String value)
+        {
+            if (value != null)
+            {
+                Byte[] bytes = Encoding.UTF32.GetBytes(value);
+                WriteByteLengthPrefixedBytes(bytes);
             }
             else
             {
@@ -221,7 +247,7 @@ namespace LUC.DiscoveryService.CodingData
 
                 foreach (var item in enumerable)
                 {
-                    Write(item);
+                    WriteAsciiString(item);
                 }
             }
             else
@@ -260,7 +286,7 @@ namespace LUC.DiscoveryService.CodingData
         {
             Write(contact.ID.Value);
             Write(contact.TcpPort);
-            Write(contact.LastSeen.ToString(lastSeenFormat));
+            WriteAsciiString(contact.LastSeen.ToString(lastSeenFormat));
 
             Write((UInt32)contact.IpAddressesCount);
             if(contact.IpAddressesCount > 0)
@@ -269,8 +295,22 @@ namespace LUC.DiscoveryService.CodingData
 
                 foreach (var address in addresses)
                 {
-                    Write(address.ToString());
+                    WriteAsciiString(address.ToString());
                 }
+            }
+        }
+
+        public void Write(Range range)
+        {
+            if(range != null)
+            {
+                Write(range.Start);
+                Write(range.End);
+                Write(range.Total);
+            }
+            else
+            {
+                throw new ArgumentNullException($"{nameof(range)} is null");
             }
         }
 

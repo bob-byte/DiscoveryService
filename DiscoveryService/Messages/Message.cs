@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages
 {
-    public class Message : IWireSerialiser
+    class Message : IWireSerialiser
     {
         /// <summary>
         ///   The kind of message. This value always is first byte in it

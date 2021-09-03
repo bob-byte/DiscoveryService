@@ -71,14 +71,17 @@ namespace LUC.DiscoveryService
         public UInt16 MaxValueTcpPort { get; }
 
         /// <summary>
-        /// TCP port which current peer is using in TCP connections
+        /// TCP port which current peer is using in TCP connections. 
+        /// If you want to set more than <see cref="MaxValueTcpPort"/>, 
+        /// this property will be equal to <see cref="MinValueTcpPort"/> 
+        /// in order to <see cref="DiscoveryService"/> can normal increment this property. If we set <see cref="MaxValueTcpPort"/> in this situation, <see cref="DiscoveryService"/> will have errors, because it wants to change port to work normally
         /// </summary>
         public UInt16 RunningTcpPort
         {
             get => runningTcpPort;
             protected set
             {
-                runningTcpPort = (MinValueTcpPort <= value) && (value <= MaxValueTcpPort) ?
+                runningTcpPort = IsMessageFromDs(tcpPort: value) ?
                     value : MinValueTcpPort;
             }
         }
@@ -95,5 +98,8 @@ namespace LUC.DiscoveryService
         ///   Integer.
         /// </value>
         public UInt16 ProtocolVersion { get; protected set; }
+
+        protected Boolean IsMessageFromDs(Int32? tcpPort) =>
+            (MinValueTcpPort <= tcpPort) && (tcpPort <= MaxValueTcpPort);
     }
 }

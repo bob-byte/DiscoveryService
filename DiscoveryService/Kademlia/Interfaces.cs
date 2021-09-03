@@ -11,14 +11,14 @@ namespace LUC.DiscoveryService.Kademlia
     //    BigInteger High { get; }
     //}
 
-    public interface IDht
+    interface IDht
     {
         Node Node { get; set; }
         void DelayEviction(Contact toEvict, Contact toReplace);
         void AddToPending(Contact pending);
     }
 
-    public interface IBucketList
+    interface IBucketList
     {
         List<KBucket> Buckets { get; }
         IDht Dht { get; set; }
@@ -30,13 +30,13 @@ namespace LUC.DiscoveryService.Kademlia
         bool ContactExists(Contact contact);
     }
 
-    public interface INode
+    interface INode
     {
         Contact OurContact { get; }
         IBucketList BucketList { get; }
     }
 
-    public interface IStorage
+    interface IStorage
     {
         bool Contains(ID key);
         bool TryGetValue(ID key, out string val);

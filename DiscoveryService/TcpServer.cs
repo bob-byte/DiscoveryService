@@ -18,7 +18,7 @@ namespace LUC.DiscoveryService
     /// TCP server is used to connect, disconnect and manage TCP sessions
     /// </summary>
     /// <remarks>Thread-safe</remarks>
-    public class TcpServer : IDisposable
+    class TcpServer : IDisposable
     {
         private const Int32 MaxSessionsCount = 10000;
 

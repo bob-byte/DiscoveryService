@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
-    public class PingResponse : Response 
+    class PingResponse : Response 
     {
         public PingResponse()
         {

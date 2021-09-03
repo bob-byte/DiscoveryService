@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
-    public class PingRequest : Request
+    class PingRequest : Request
     {
         public PingRequest()
         {

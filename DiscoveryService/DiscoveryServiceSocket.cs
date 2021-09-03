@@ -50,7 +50,7 @@ namespace LUC.DiscoveryService
 
         public BigInteger ContactId { get; set; }
 
-        public SocketState State { get; private set; }
+        public SocketState State { get; protected set; }
 
         private readonly ConcurrentQueue<Socket> acceptedSockets = new ConcurrentQueue<Socket>();
 
@@ -516,7 +516,7 @@ namespace LUC.DiscoveryService
 
         public new void Dispose()
         {
-            State = SocketState.Closed;
+            State = SocketState.Closing;
 
             foreach (var acceptedSocket in acceptedSockets)
             {
@@ -532,6 +532,8 @@ namespace LUC.DiscoveryService
             DisposeAllResetEvent();
 
             base.Dispose();
+
+            State = SocketState.Closed;
         }
 
         private void DisposeAllResetEvent()

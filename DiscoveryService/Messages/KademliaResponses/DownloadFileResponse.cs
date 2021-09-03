@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
-    class DownloadFileResponse : Response
+    class DownloadFileResponse : FileResponse
     {
         public DownloadFileResponse()
         {
@@ -18,6 +18,17 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         }
 
         public Byte[] Buffer { get; set; }
+
+        public override void Write(WireWriter writer)
+        {
+            if(writer != null)
+            {
+                base.Write(writer);
+
+                writer.Write((UInt32)Buffer.Length);
+                writer.WriteBytes(Buffer);
+            }
+        }
 
         public override IWireSerialiser Read(WireReader reader)
         {
@@ -27,25 +38,6 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             Buffer = reader.ReadBytes((Int32)bytesCount);
 
             return this;
-        }
-
-        public void Send(Socket socket, DownloadFileRequest request)
-        {
-            if((request?.RandomID != default) && 
-               (request?.Prefix != null) && 
-               (request?.FileOriginalName != null) && 
-               (request?.ContantRange != null))
-            {
-                socket.SendTimeout = (Int32)Constants.SendTimeout.TotalMilliseconds;
-                Byte[] buffer = this.ToByteArray();
-                socket.Send(buffer);
-
-                LogResponse(socket, this);
-            }
-            else
-            {
-                throw new ArgumentException($"Bad format of {request}");
-            }
         }
     }
 }

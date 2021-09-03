@@ -21,14 +21,14 @@ namespace LUC.DiscoveryService.Test
             var memoryStream = new MemoryStream();
             var writer = new WireWriter(memoryStream);
 
-            writer.Write(expectedStrValue);
+            writer.WriteAsciiString(expectedStrValue);
             writer.Write(expectedUintValue);
             writer.WriteBytes(expectedBytes);
             writer.WriteByteLengthPrefixedBytes(expectedBytes);
             memoryStream.Position = 0;
             var reader = new WireReader(memoryStream);
 
-            Assert.AreEqual(expected: expectedStrValue, actual: reader.ReadString());
+            Assert.AreEqual(expected: expectedStrValue, actual: reader.ReadAsciiString());
             Assert.AreEqual(expected: expectedUintValue, actual: reader.ReadUInt32());
             CollectionAssert.AreEqual(expected: expectedBytes, actual: reader.ReadBytes(3));
             CollectionAssert.AreEqual(expected: expectedBytes, actual: reader.ReadByteLengthPrefixedBytes());
@@ -40,7 +40,7 @@ namespace LUC.DiscoveryService.Test
             var memoryStream = new MemoryStream(new Byte[] { 10, 1 });
             var reader = new WireReader(memoryStream);
 
-            Assert.That(code: () => reader.ReadString(), constraint: Throws.TypeOf(typeof(EndOfStreamException)));
+            Assert.That(code: () => reader.ReadAsciiString(), constraint: Throws.TypeOf(typeof(EndOfStreamException)));
         }
 
         [Test]
@@ -57,7 +57,7 @@ namespace LUC.DiscoveryService.Test
         {
             var writer = new WireWriter(Stream.Null);
 
-            Assert.That(code: () => writer.Write("δοκιμή"), constraint: Throws.TypeOf(typeof(ArgumentException))); // test in Greek
+            Assert.That(code: () => writer.WriteAsciiString("δοκιμή"), constraint: Throws.TypeOf(typeof(ArgumentException))); // test in Greek
         }
 
         [Test]
@@ -65,7 +65,7 @@ namespace LUC.DiscoveryService.Test
         {
             var writer = new WireWriter(Stream.Null);
 
-            Assert.That(code: () => writer.Write(new String('a', count: 256)), constraint: Throws.TypeOf(typeof(ArgumentException)));
+            Assert.That(code: () => writer.WriteAsciiString(new String('a', count: 256)), constraint: Throws.TypeOf(typeof(ArgumentException)));
         }
 
         [Test]
@@ -74,7 +74,7 @@ namespace LUC.DiscoveryService.Test
             var memoryStream = new MemoryStream(new Byte[] { 1, 255 });
             var reader = new WireReader(memoryStream);
 
-             Assert.That(code: () => reader.ReadString(), constraint: Throws.TypeOf(typeof(InvalidDataException)));
+             Assert.That(code: () => reader.ReadAsciiString(), constraint: Throws.TypeOf(typeof(InvalidDataException)));
         }
 
         [Test]

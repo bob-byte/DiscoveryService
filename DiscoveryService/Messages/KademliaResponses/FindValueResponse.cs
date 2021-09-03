@@ -70,7 +70,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 
                 if(MessageOperation == MessageOperation.FindValueResponseWithValue)
                 {
-                    ValueInResponsingPeer = reader.ReadString();
+                    ValueInResponsingPeer = reader.ReadAsciiString();
                 }
                 else if(MessageOperation == MessageOperation.FindValueResponseWithCloseContacts)
                 {
@@ -94,7 +94,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 
                 if(ValueInResponsingPeer != null)
                 {
-                    writer.Write(ValueInResponsingPeer);
+                    writer.WriteAsciiString(ValueInResponsingPeer);
                 }
                 else if(CloseContacts != null)
                 {
