@@ -6,6 +6,7 @@ using System;
 using LUC.Interfaces;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.Services.Implementation;
+using LUC.DiscoveryService.Common;
 
 namespace LUC.DiscoveryService.Kademlia
 {
@@ -132,7 +133,7 @@ namespace LUC.DiscoveryService.Kademlia
         //TODO it shouldn't return val
         public void FindNode(Contact sender, ID key, out List<Contact> contacts)
         {
-            Boolean isOnlyInNetwork = OnlyInNetwork.IsOnlyInNetwork(ourContact.ID, sender.ID);
+            Boolean isOnlyInNetwork = FunctionTestType.CanCurrentPcToReceiveTcpMessFromItself(ourContact.ID, sender.ID);
             if (!isOnlyInNetwork)
             {
                 Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");

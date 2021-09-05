@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-
+using LUC.DiscoveryService.Common;
 using Newtonsoft.Json;
 
 namespace LUC.DiscoveryService.Kademlia
@@ -64,7 +64,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         public void AddContact(ref Contact contact)
         {
-            if(!OnlyInNetwork.IsOnlyInNetwork(ourContact.ID, contact.ID))
+            if(!FunctionTestType.CanCurrentPcToReceiveTcpMessFromItself(ourContact.ID, contact.ID))
             {
                 Validate.IsFalse<OurNodeCannotBeAContactException>(ourContact.MachineId == contact.MachineId, "Cannot add ourselves as a contact!");
             }

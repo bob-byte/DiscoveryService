@@ -11,7 +11,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
     {
         public Range()
         {
-            ;//do nothing
+            NumsUndownloadedChunk = new List<Int32>();
         }
 
         public Range(UInt64 start, UInt64 end, UInt64 total)
@@ -28,6 +28,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public UInt64 TotalPerContact { get; set; }
 
         public UInt64 Total { get; set; }
+
+        public List<Int32> NumsUndownloadedChunk { get; }
 
         public Object Clone() =>
             MemberwiseClone();

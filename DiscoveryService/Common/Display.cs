@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Common
 {
     static class Display
     {

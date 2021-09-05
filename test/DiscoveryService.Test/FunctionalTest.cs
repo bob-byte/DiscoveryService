@@ -1,4 +1,5 @@
 ﻿using LUC.ApiClient;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Common
 {
     public class SemaphoreLocker
     {

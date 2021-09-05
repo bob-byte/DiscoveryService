@@ -14,7 +14,7 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Common
 {
     public class DiscoveryServiceSocket : Socket
     {

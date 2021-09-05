@@ -1,4 +1,5 @@
 ﻿using DeviceId;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Kademlia;
 using System;

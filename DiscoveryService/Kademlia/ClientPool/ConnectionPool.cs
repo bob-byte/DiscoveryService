@@ -1,4 +1,5 @@
-﻿using LUC.Interfaces;
+﻿using LUC.DiscoveryService.Common;
+using LUC.Interfaces;
 using LUC.Services.Implementation;
 using System;
 using System.Collections;

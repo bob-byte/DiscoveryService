@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Common
 {
     /// <summary>
     /// Contrains locks and method for initialization variables

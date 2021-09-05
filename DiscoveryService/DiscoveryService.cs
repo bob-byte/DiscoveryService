@@ -18,6 +18,7 @@ using LUC.Interfaces.Extensions;
 using LUC.Interfaces;
 using LUC.DiscoveryService.NetworkEventHandlers;
 using System.Runtime.CompilerServices;
+using LUC.DiscoveryService.Common;
 
 [assembly: InternalsVisibleTo("DiscoveryService.Test")]
 namespace LUC.DiscoveryService

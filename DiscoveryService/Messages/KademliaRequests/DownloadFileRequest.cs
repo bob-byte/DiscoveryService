@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages.KademliaResponses;
 using System;
@@ -61,6 +62,9 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return this;
         }
 
+        /// <summary>
+        /// Also it removes first chunk from Range.NumsUndownloadedChunk
+        /// </summary>
         public async Task<(DownloadFileResponse, RpcError)> ResultAsyncWithCountDownloadedBytesUpdate(Contact remoteContact,
             IOBehavior ioBehavior, UInt16 protocolVersion)
         {
@@ -70,6 +74,9 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             if(downloadResponse?.Chunk?.Length > 0)
             {
                 CountDownloadedBytes += (UInt32)downloadResponse.Chunk.Length;
+
+                //remove next downloaded chunk
+                Range.NumsUndownloadedChunk.RemoveAt(index: 0);
             }
 
             return (downloadResponse, rpcError);

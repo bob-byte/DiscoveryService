@@ -1,4 +1,5 @@
-﻿using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using NUnit.Framework;
 using System;

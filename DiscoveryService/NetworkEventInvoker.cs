@@ -8,6 +8,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Threading.Tasks;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Kademlia.Routers;
@@ -38,9 +39,6 @@ namespace LUC.DiscoveryService
         private readonly RecentMessages receivedMessages = new RecentMessages();
         private const Int32 MaxDatagramSize = UdpMessage.MaxLength;
 
-        /// <summary>
-        /// 
-        /// </summary>
         private static Dictionary<UInt16, Dht> dhts = new Dictionary<UInt16, Dht>();
 
         private Client client;

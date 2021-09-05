@@ -41,6 +41,9 @@
     <Reference Include="DeviceId, Version=5.2.0.0, Culture=neutral, PublicKeyToken=f755c371b5c59c52, processorArchitecture=MSIL">
       <HintPath>..\..\UDPtest\packages\DeviceId.5.2.0\lib\net40\DeviceId.dll</HintPath>
     </Reference>
+    <Reference Include="LUC.DVVSet, Version=1.0.0.2, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\TryDs\packages\LUC.DVVSet.1.0.0.2\lib\net471\LUC.DVVSet.dll</HintPath>
+    </Reference>
     <Reference Include="LUC.Interfaces, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>bin\Debug\LUC.Interfaces.dll</HintPath>
@@ -48,6 +51,9 @@
     <Reference Include="LUC.Services.Implementation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>bin\Debug\LUC.Services.Implementation.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.HashCode, Version=1.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\..\TryDs\packages\Microsoft.Bcl.HashCode.1.1.1\lib\net461\Microsoft.Bcl.HashCode.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\..\LUC\WpfClient\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -115,12 +121,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AbstractService.cs" />
+    <Compile Include="Common\AbstractService.cs" />
     <Compile Include="CodingData\Binary.cs" />
     <Compile Include="CodingData\Buffer.cs" />
-    <Compile Include="Display.cs" />
+    <Compile Include="Common\Display.cs" />
     <Compile Include="Download.cs" />
-    <Compile Include="DiscoveryServiceSocket.cs" />
+    <Compile Include="Common\DiscoveryServiceSocket.cs" />
+    <Compile Include="DownloadedFile.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\StringExtension.cs" />
     <Compile Include="Interfaces\INetworkEventHandler.cs" />
@@ -129,7 +136,7 @@
     <Compile Include="Kademlia\ClientPool\ConnectionPool.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPoolSocket.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionSettings.cs" />
-    <Compile Include="IOBehavior.cs" />
+    <Compile Include="Common\IOBehavior.cs" />
     <Compile Include="Kademlia\ClientPool\SocketHealth.cs" />
     <Compile Include="Kademlia\ClientKadOperation.cs" />
     <Compile Include="Messages\KademliaRequests\CheckFileExistsRequest.cs" />
@@ -143,9 +150,9 @@
     <Compile Include="NetworkEventHandlers\CheckFileExistsHandler.cs" />
     <Compile Include="NetworkEventHandlers\DownloadFileHandler.cs" />
     <Compile Include="NetworkEventHandlers\NetworkEventHandler.cs" />
-    <Compile Include="OnlyInNetwork.cs" />
-    <Compile Include="SemaphoreLocker.cs" />
-    <Compile Include="SocketState.cs" />
+    <Compile Include="Common\FunctionTestType.cs" />
+    <Compile Include="Common\SemaphoreLocker.cs" />
+    <Compile Include="Common\SocketState.cs" />
     <Compile Include="Messages\DiscoveryServiceMessage.cs" />
     <Compile Include="Messages\KademliaRequests\FindNodeRequest.cs" />
     <Compile Include="Messages\KademliaRequests\FindValueRequest.cs" />
@@ -189,11 +196,11 @@
     <Compile Include="Messages\RecentMessages.cs" />
     <Compile Include="NetworkInterfaceEventArgs.cs" />
     <Compile Include="NetworkEventInvoker.cs" />
-    <Compile Include="Lock.cs" />
+    <Compile Include="Common\Lock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DiscoveryService.cs" />
     <Compile Include="ServiceProfile.cs" />
-    <Compile Include="StateObjectForAccept.cs" />
+    <Compile Include="Common\StateObjectForAccept.cs" />
     <Compile Include="TcpServer.cs" />
     <Compile Include="TcpSession.cs" />
   </ItemGroup>
