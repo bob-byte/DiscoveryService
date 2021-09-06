@@ -68,9 +68,9 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// True if a contact matches this ID.
         /// </summary>
-        public bool Contains(ID id)
+        public bool Contains(String machineId)
 		{
-			return contacts.Any(c => c.ID == id);
+			return contacts.Any(c => c.MachineId == machineId);
 		}
 
 		/// <summary>
@@ -93,8 +93,8 @@ namespace LUC.DiscoveryService.Kademlia
 		/// </summary>
 		public void ReplaceContact(ref Contact contact)
 		{
-			var contactId = contact.ID;
-			var contactInBucket = contacts.Single(c => c.ID == contactId);
+			var machineId = contact.MachineId;
+			var contactInBucket = contacts.Single(c => c.MachineId == machineId);
 
 			contactInBucket.LastActiveIpAddress = contact.LastActiveIpAddress;
 			contact = contactInBucket;
@@ -134,7 +134,7 @@ namespace LUC.DiscoveryService.Kademlia
 				// Start with the first contact.
 				bits = contacts[0].ID.Bytes.Bits().ToArray();
 
-				contacts.Skip(1).ForEach(c => bits = SharedBits(bits, c.ID));
+				contacts.Skip(count: 1).ForEach(c => bits = SharedBits(bits, c.ID));
 			}
 
 			return bits.Length;

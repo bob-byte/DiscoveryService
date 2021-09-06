@@ -76,7 +76,7 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 KBucket kbucket = GetKBucket(contact.ID);
 
-                if (kbucket.Contains(contact.ID))
+                if (kbucket.Contains(contact.MachineId))
                 {
                     // Replace the existing contact, updating the network info and LastSeen timestamp.
                     kbucket.ReplaceContact(ref contact);

@@ -306,7 +306,7 @@ namespace LUC.DiscoveryService.Kademlia
         protected void EvictContact(KBucket bucket, Contact toEvict)
         {
             evictionCount.TryRemove(toEvict.ID.Value, out _);
-            Validate.IsTrue<BucketDoesNotContainContactToEvict>(bucket.Contains(toEvict.ID), "Bucket doesn't contain the contact to be evicted.");
+            Validate.IsTrue<BucketDoesNotContainContactToEvict>(bucket.Contains(toEvict.MachineId), "Bucket doesn't contain the contact to be evicted.");
             bucket.EvictContact(toEvict);
         }
 

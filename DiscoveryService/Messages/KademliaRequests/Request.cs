@@ -7,6 +7,7 @@ using LUC.Interfaces;
 using LUC.Services.Implementation;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -98,7 +99,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             Boolean isTimeoutSocketOp = false;
             TResponse response = null;
 
-            var cloneIpAddresses = remoteContact.IpAddresses();
+            List<IPAddress> cloneIpAddresses = remoteContact.IpAddresses();
             for (Int32 numAddress = cloneIpAddresses.Count - 1;
                 (numAddress >= 0) && (response == null); numAddress--)
             {
@@ -109,11 +110,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 {
                     log.LogInfo($"The response is received:\n{response}");
                 }
-                //else
-                //{
-                //    remoteContact.TryRemoveIpAddress(cloneIpAddresses[numAddress], isRemoved: out _);
-                //    cloneIpAddresses.RemoveAt(numAddress);
-                //}
             }
 
             RpcError rpcError = RpcError(RandomID, response, isTimeoutSocketOp, nodeError);
@@ -127,7 +123,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return (response, rpcError);
         }
 
-        private async Task<(Boolean, ErrorResponse, TResponse)> ClientStartAsync<TResponse>(EndPoint remoteEndPoint, IOBehavior ioBehavior)
+        private async Task<(Boolean, ErrorResponse, TResponse)> ClientStartAsync<TResponse>(IPEndPoint remoteEndPoint, IOBehavior ioBehavior)
             where TResponse : Response, new()
         {
             ErrorResponse nodeError = null;
@@ -135,69 +131,82 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             TResponse response = null;
 
             ConnectionPoolSocket client = null;
-            try
+
+            Boolean isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork(remoteEndPoint.Address);
+            if(!isTheSameNetwork)
             {
-                Byte[] bytesOfRequest = this.ToByteArray();
-
-                client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
-                    ioBehavior, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
-
-                //clean extra bytes
-                if (client.Available > 0)
+                try
                 {
-                    await client.ReceiveAsync(ioBehavior, Constants.ReceiveTimeout).ConfigureAwait(false);
+                    Byte[] bytesOfRequest = ToByteArray();
+
+                    client = await connectionPool.SocketAsync(remoteEndPoint, Constants.ConnectTimeout,
+                        ioBehavior, Constants.TimeWaitReturnToPool).ConfigureAwait(continueOnCapturedContext: false);
+
+                    //clean extra bytes
+                    if (client.Available > 0)
+                    {
+                        await client.ReceiveAsync(ioBehavior, Constants.ReceiveTimeout).ConfigureAwait(false);
+                    }
+
+                    client = await client.SendWithAvoidErrorsInNetworkAsync(bytesOfRequest,
+                        Constants.SendTimeout, Constants.ConnectTimeout, ioBehavior).ConfigureAwait(false);
+                    log.LogInfo($"Request {GetType().Name} is sent to {client.Id}:\n" +
+                                $"{this}\n");
+
+                    Int32 countCheck = 0;
+                    while ((client.Available == 0) && (countCheck <= Constants.MaxCheckAvailableData))
+                    {
+                        await Wait(ioBehavior, Constants.TimeCheckDataToRead).ConfigureAwait(false);
+
+                        countCheck++;
+                    }
+
+                    if (countCheck <= Constants.MaxCheckAvailableData)
+                    {
+                        Byte[] bytesOfResponse = await client.ReceiveAsync(ioBehavior, Constants.ReceiveTimeout).ConfigureAwait(false);
+
+                        response = new TResponse();
+                        response.Read(bytesOfResponse);
+                    }
+                    else
+                    {
+                        await client.DisconnectAsync(ioBehavior, reuseSocket: false).ConfigureAwait(false);
+                        throw new TimeoutException();
+                    }
                 }
-
-                client = await client.SendWithAvoidErrorsInNetworkAsync(bytesOfRequest,
-                    Constants.SendTimeout, Constants.ConnectTimeout, ioBehavior).ConfigureAwait(false);
-                log.LogInfo($"Request {GetType().Name} is sent to {client.Id}:\n" +
-                            $"{this}\n");
-
-                Int32 countCheck = 0;
-                while ((client.Available == 0) && (countCheck <= Constants.MaxCheckAvailableData))
+                catch (TimeoutException ex)
                 {
-                    await Wait(ioBehavior, Constants.TimeCheckDataToRead).ConfigureAwait(false);
-
-                    countCheck++;
+                    isTimeoutSocketOp = true;
+                    HandleException(ex, ref nodeError);
                 }
-
-                if (countCheck <= Constants.MaxCheckAvailableData)
+                catch (SocketException ex)
                 {
-                    Byte[] bytesOfResponse = await client.ReceiveAsync(ioBehavior, Constants.ReceiveTimeout).ConfigureAwait(false);
-
-                    response = new TResponse();
-                    response.Read(bytesOfResponse);
+                    isTimeoutSocketOp = false;
+                    HandleException(ex, ref nodeError);
                 }
-                else
+                catch (EndOfStreamException ex)
                 {
-                    await client.DisconnectAsync(ioBehavior, reuseSocket: false).ConfigureAwait(false);
-                    throw new TimeoutException();
+                    isTimeoutSocketOp = false;
+                    HandleException(ex, ref nodeError);
                 }
-            }
-            catch (TimeoutException ex)
-            {
-                isTimeoutSocketOp = true;
-                HandleException(ex, ref nodeError);
-            }
-            catch (SocketException ex)
-            {
-                isTimeoutSocketOp = false;
-                HandleException(ex, ref nodeError);
-            }
-            catch (EndOfStreamException ex)
-            {
-                isTimeoutSocketOp = false;
-                HandleException(ex, ref nodeError);
-            }
-            catch (ArgumentException ex)
-            {
-                isTimeoutSocketOp = false;
-                HandleException(ex, ref nodeError);
-            }
-            finally
-            {
-                client?.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
-            }
+                catch (ArgumentException ex)
+                {
+                    isTimeoutSocketOp = false;
+                    HandleException(ex, ref nodeError);
+                }
+                catch (Win32Exception ex)
+                {
+                    isTimeoutSocketOp = false;
+                    HandleException(ex, ref nodeError);
+                }
+                finally
+                {
+                    if (client != null)
+                    {
+                        await client.ReturnToPoolAsync(ioBehavior).ConfigureAwait(continueOnCapturedContext: false);
+                    }
+                }
+            }            
 
             return (isTimeoutSocketOp, nodeError, response);
         }

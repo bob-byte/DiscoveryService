@@ -125,9 +125,13 @@
     <Compile Include="CodingData\Binary.cs" />
     <Compile Include="CodingData\Buffer.cs" />
     <Compile Include="Common\Display.cs" />
+    <Compile Include="Common\IpAddressFilter.cs" />
+    <Compile Include="Download.CheckFileExists.cs" />
+    <Compile Include="Download.ContactComparer.cs" />
     <Compile Include="Download.cs" />
     <Compile Include="Common\DiscoveryServiceSocket.cs" />
-    <Compile Include="DownloadedFile.cs" />
+    <Compile Include="Download.DownloadProcess.cs" />
+    <Compile Include="Download.DownloadedFile.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
     <Compile Include="Extensions\StringExtension.cs" />
     <Compile Include="Interfaces\INetworkEventHandler.cs" />

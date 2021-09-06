@@ -66,7 +66,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         public String MachineId { get; set; }
 
-        public ID ID { get; }
+        public ID ID { get; set; }
 
         public UInt16 TcpPort { get; set; }
 

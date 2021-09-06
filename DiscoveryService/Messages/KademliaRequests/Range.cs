@@ -29,6 +29,9 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
         public UInt64 Total { get; set; }
 
+        /// <summary>
+        /// For debugging only
+        /// </summary>
         public List<Int32> NumsUndownloadedChunk { get; }
 
         public Object Clone() =>

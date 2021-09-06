@@ -73,7 +73,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
             if(downloadResponse?.Chunk?.Length > 0)
             {
-                CountDownloadedBytes += (UInt32)downloadResponse.Chunk.Length;
+                CountDownloadedBytes += (UInt64)downloadResponse.Chunk.Length;
 
                 //remove next downloaded chunk
                 Range.NumsUndownloadedChunk.RemoveAt(index: 0);

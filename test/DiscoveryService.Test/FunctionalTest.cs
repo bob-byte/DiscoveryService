@@ -526,15 +526,15 @@ namespace LUC.DiscoveryService.Test
             var localFolderPath = settingsService.ReadUserRootFolderPath();
 
             String filePrefix = String.Empty;
-            var randomFileToDownload = await RandomFileToDownload(apiClient, currentUserProvider, remoteContact, localFolderPath, filePrefix).ConfigureAwait(false);
+            (ObjectDescriptionModel fileDescription, String bucketName) = await RandomFileToDownloadAsync(apiClient, currentUserProvider, remoteContact, localFolderPath, filePrefix).ConfigureAwait(false);
 
-            await download.DownloadFileAsync(localFolderPath, bucketName: discoveryService.GroupsSupported.First().Key,
-                filePrefix, randomFileToDownload.OriginalName, randomFileToDownload.Bytes, 
-                randomFileToDownload.Version, cancellationTokenSource.Token)
+            await download.DownloadFileAsync(localFolderPath, bucketName,
+                filePrefix, fileDescription.OriginalName, fileDescription.Bytes, 
+                fileDescription.Version, cancellationTokenSource.Token)
                 .ConfigureAwait(false);
         }
 
-        private async static Task<ObjectDescriptionModel> RandomFileToDownload(IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String localFolderPath, String filePrefix)
+        private async static Task<(ObjectDescriptionModel, String)> RandomFileToDownloadAsync(IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String localFolderPath, String filePrefix)
         {
             var bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
 
@@ -584,7 +584,8 @@ namespace LUC.DiscoveryService.Test
                 throw new InvalidOperationException();
             }
 
-            return randomFileToDownload;
+            String bucketName = Path.GetFileName(rndBcktDrctrPth);
+            return (randomFileToDownload, bucketName);
         }
     }
 }
