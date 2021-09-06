@@ -1,6 +1,7 @@
 ﻿using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
+using LUC.DiscoveryService.Kademlia.Exceptions;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.DiscoveryService.Messages.KademliaResponses;
 using LUC.DVVSet;
@@ -24,8 +25,23 @@ using System.Threading.Tasks.Dataflow;
 
 namespace LUC.DiscoveryService
 {
+    /// <summary>
+    /// Thread safe class for download files
+    /// </summary>
     public partial class Download
     {
+        public event EventHandler<Exception> DownloadErrorHappened;
+
+        /// <summary>
+        /// Event argument is full path to downloaded file
+        /// </summary>
+        public event EventHandler<String> FileIsDownloaded;
+
+        /// <summary>
+        /// Event argument is full path to downloaded file
+        /// </summary>
+        public event EventHandler<String> FilePartiallyDownloaded;
+
         private const String MessIfThisFileDoesntExistInAnyNode = "This file doesn't exist in any node";
 
         private readonly Object lockWriteFile;
@@ -58,8 +74,10 @@ namespace LUC.DiscoveryService
                 localOriginalName, bytesCount, fileVersion);
             if(isRightParameters)
             {
-                List<Contact> onlineContacts = discoveryService.OnlineContacts.ToList();
-                String fullPathToFile = downloadedFile.FullPathToFile(onlineContacts, discoveryService.MachineId, 
+                List<Contact> onlineContacts = discoveryService.OnlineContacts;
+
+                //Full file name is path to file, file name and extension
+                String fullFileName = downloadedFile.FullFileName(onlineContacts, discoveryService.MachineId, 
                     localFolderPath, bucketName, localOriginalName, filePrefix);
 
                 try
@@ -68,7 +86,7 @@ namespace LUC.DiscoveryService
                     {
                         var initialRequest = new DownloadFileRequest
                         {
-                            FullPathToFile = fullPathToFile,
+                            FullPathToFile = fullFileName,
                             FileOriginalName = localOriginalName,
                             BucketName = bucketName,
                             Range = new Range { Start = 0, Total = (UInt64)bytesCount },
@@ -87,6 +105,8 @@ namespace LUC.DiscoveryService
                             {
                                 await DownloadBigFileAsync(contactsWithFile, initialRequest, cancellationToken).ConfigureAwait(false);
                             }
+
+                            FileIsDownloaded?.Invoke(sender: this, fullFileName);
                         }
                         else
                         {
@@ -96,38 +116,52 @@ namespace LUC.DiscoveryService
                 }
                 catch (OperationCanceledException ex)
                 {
-                    HandleException(ex, bytesCount, fullPathToFile);
+                    HandleException(ex, bytesCount, fullFileName);
                 }
                 catch (InvalidOperationException ex)
                 {
-                    HandleException(ex, bytesCount, fullPathToFile);
+                    HandleException(ex, bytesCount, fullFileName);
                 }
                 catch (PathTooLongException ex)
                 {
-                    HandleException(ex, bytesCount, fullPathToFile);
+                    HandleException(ex, bytesCount, fullFileName);
                 }
                 catch (ArgumentException ex)
                 {
-                    HandleException(ex, bytesCount, fullPathToFile);
+                    HandleException(ex, bytesCount, fullFileName);
+                }
+                catch(FilePartiallyDownloadedException ex)
+                {
+                    LoggingService.LogError(ex.ToString());
+
+                    TryDeletePartsOfUndownloadedBigFile(fullFileName);
+                    FilePartiallyDownloaded?.Invoke(sender: this, fullFileName);
                 }
             }
         }
 
         private void HandleException(Exception exception, Int64 bytesCount, String fullPathToFile)
         {
-            LoggingService.LogInfo(exception.ToString());
+            LoggingService.LogError(exception.ToString());
 
-            if (bytesCount > Constants.MaxChunkSize)
+            if (bytesCount <= Constants.MaxChunkSize)
             {
                 downloadedFile.TryDeleteFile(fullPathToFile);
-
-                String tempFullPathToFile = downloadedFile.TempFullFileName(fullPathToFile);
-                downloadedFile.TryDeleteFile(tempFullPathToFile);
             }
             else
             {
-                downloadedFile.TryDeleteFile(fullPathToFile);
+                TryDeletePartsOfUndownloadedBigFile(fullPathToFile);
             }
+
+            DownloadErrorHappened?.Invoke(sender: this, exception);
+        }
+
+        private void TryDeletePartsOfUndownloadedBigFile(String fullFileName)
+        {
+            downloadedFile.TryDeleteFile(fullFileName);
+
+            String tempFullFileName = downloadedFile.TempFullFileName(fullFileName);
+            downloadedFile.TryDeleteFile(tempFullFileName);
         }
 
         private Boolean IsRightInputParameters(String localFolderPath, String bucketName, String filePrefix, String localOriginalName,
@@ -148,13 +182,8 @@ namespace LUC.DiscoveryService
                     if (isRightInputParameters)
                     {
                         //file shouldn't exist before download
-                        String fullPathToFile = downloadedFile.FullPathToFile(
-                            discoveryService.OnlineContacts, 
-                            discoveryService.MachineId, 
-                            localFolderPath, 
-                            bucketName, 
-                            localOriginalName, 
-                            filePrefix);
+                        String fullPathToFile = downloadedFile.FullFileName(discoveryService.OnlineContacts, discoveryService.MachineId, 
+                            localFolderPath, bucketName, localOriginalName, filePrefix);
 
                         isRightInputParameters = !File.Exists(fullPathToFile);
 

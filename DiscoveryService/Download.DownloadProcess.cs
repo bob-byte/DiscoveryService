@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Kademlia.Exceptions;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.DiscoveryService.Messages.KademliaResponses;
 using System;
@@ -179,7 +180,7 @@ namespace LUC.DiscoveryService
 
                             if (dictContactsWithRequest.Count == 0)
                             {
-                                throw new InvalidOperationException(MessIfThisFileDoesntExistInAnyNode);
+                                throw new FilePartiallyDownloadedException(MessIfThisFileDoesntExistInAnyNode);
                             }
                         }
                     }
@@ -352,7 +353,8 @@ namespace LUC.DiscoveryService
                 }
                 else
                 {
-                    throw new InvalidOperationException("Something was wrong during download process: too many bytes are downloaded from certain contact");
+                    throw new InvalidOperationException("Something was wrong during download process: " +
+                        "too many bytes are downloaded from certain contact");
                 }
             }
 
@@ -369,18 +371,26 @@ namespace LUC.DiscoveryService
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                DownloadFileRequest request = oldRequests[numRequest];
-                request.Range.TotalPerContact -= request.CountDownloadedBytes;
-                if (request.Range.TotalPerContact == 0)
+                DownloadFileRequest request;
+                Boolean wasDownloadedAllBytes;
+                do
                 {
-                    numRequest++;
                     request = oldRequests[numRequest];
+                    request.Range.TotalPerContact -= request.CountDownloadedBytes;
+
+                    wasDownloadedAllBytes = request.WasDownloadedAllBytes;
+                    if (wasDownloadedAllBytes)
+                    {
+                        numRequest++;
+                        request = oldRequests[numRequest];
+                    }
                 }
+                while (wasDownloadedAllBytes);
 
                 //maybe it should be call of method DownloadFileAsync in this if
-                if ((сountUndistributedBytes - oldRequests[numRequest].Range.TotalPerContact > 0) && (numContact == contactsWithFile.Count - 1))
+                if ((сountUndistributedBytes - request.Range.TotalPerContact > 0) && (numContact == contactsWithFile.Count - 1))
                 {
-                    throw new InvalidOperationException("Contacts have strange behavior. Cannot normally download file");
+                    throw new FilePartiallyDownloadedException("Contacts have strange behavior. Cannot normally download file");
                 }
 
                 if (request.Range.TotalPerContact <= maxChunkSize)

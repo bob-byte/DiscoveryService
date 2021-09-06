@@ -34,21 +34,6 @@ namespace LUC.DiscoveryService
     public class NetworkEventInvoker : AbstractService
     {
         /// <summary>
-        ///   Recently received messages.
-        /// </summary>
-        private readonly RecentMessages receivedMessages = new RecentMessages();
-        private const Int32 MaxDatagramSize = UdpMessage.MaxLength;
-
-        private static Dictionary<UInt16, Dht> dhts = new Dictionary<UInt16, Dht>();
-
-        private Client client;
-
-        /// <summary>
-        ///   Function used for listening filtered network interfaces.
-        /// </summary>
-        private readonly Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> networkInterfacesFilter;
-
-        /// <summary>
         ///   Raised when any service sends a query.
         /// </summary>
         /// <value>
@@ -110,6 +95,27 @@ namespace LUC.DiscoveryService
 
         public event EventHandler<TcpMessageEventArgs> DownloadFileReceived;
 
+        private const Int32 MaxDatagramSize = UdpMessage.MaxLength;
+
+        private static readonly Dictionary<UInt16, Dht> dhts;
+
+        /// <summary>
+        ///   Recently received messages.
+        /// </summary>
+        private readonly RecentMessages receivedMessages;
+
+        /// <summary>
+        ///   Function used for listening filtered network interfaces.
+        /// </summary>
+        private readonly Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> networkInterfacesFilter;
+
+        private Client client;
+
+        static NetworkEventInvoker()
+        {
+            dhts = new Dictionary<UInt16, Dht>();
+        }
+
         /// <summary>
         ///   Create a new instance of the <see cref="NetworkEventInvoker"/> class.
         /// </summary>
@@ -119,6 +125,8 @@ namespace LUC.DiscoveryService
         internal NetworkEventInvoker(String machineId, Boolean useIpv4, Boolean useIpv6, 
             UInt16 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
         {
+            receivedMessages = new RecentMessages();
+
             MachineId = machineId;
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;

@@ -71,7 +71,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             (DownloadFileResponse downloadResponse, RpcError rpcError) = await ResultAsync<DownloadFileResponse>(remoteContact,
             ioBehavior, protocolVersion).ConfigureAwait(continueOnCapturedContext: false);
 
-            if(downloadResponse?.Chunk?.Length > 0)
+            if((downloadResponse?.Chunk?.Length > 0) && 
+               (downloadResponse.FileVersion == FileVersion))
             {
                 CountDownloadedBytes += (UInt64)downloadResponse.Chunk.Length;
 

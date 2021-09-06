@@ -14,12 +14,16 @@ namespace LUC.DiscoveryService
 {
     public partial class Download
     {
+        /// <summary>
+        /// It is thread safety class. That is the reason why it is not static and has only methods
+        /// </summary>
         private class DownloadedFile
         {
             /// <returns>
+            /// Full file name involves path to <paramref name="localOriginalName"/> and <paramref name="localOriginalName"/>
             /// If it is Functional test where is in use only current PC, return will be <paramref name="localFolderPath"/> + <paramref name="filePrefix"/> + <paramref name="localOriginalName"/>, else <paramref name="bucketName"/> also will be used
             /// </returns>
-            public String FullPathToFile(ICollection<Contact> onlineContacts, String ourMachineId, String localFolderPath,
+            public String FullFileName(ICollection<Contact> onlineContacts, String ourMachineId, String localFolderPath,
                 String bucketName, String localOriginalName, String filePrefix)
             {
                 String fullPathToFile;
