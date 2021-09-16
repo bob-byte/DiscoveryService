@@ -162,7 +162,12 @@ namespace LUC.DiscoveryService
 
             if ( ( udpMessage != null ) && ( eventArgs?.RemoteEndPoint is IPEndPoint ipEndPoint ) )
             {
-                Boolean isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( ipEndPoint.Address );
+                Boolean isTheSameNetwork = true;
+
+#if RECEIVE_TCP_FROM_OURSELF
+                isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( ipEndPoint.Address );
+#endif
+
                 if ( isTheSameNetwork )
                 {
                     Contact sendingContact = NetworkEventInvoker.OurContact;

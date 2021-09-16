@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages.KademliaRequests;
@@ -42,6 +43,15 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             Chunk = reader.ReadBytes( (Int32)bytesCount );
 
             return this;
+        }
+
+        public override String ToString()
+        {
+            StringBuilder stringBuilder = new StringBuilder( base.ToString() );
+
+            stringBuilder.Append( $"{Display.PropertyWithValue( $"Length of the {nameof(Chunk)}", Chunk.Length )};\n" );
+
+            return stringBuilder.ToString();
         }
 
         protected override void DefaultInit( params Object[] args ) => 

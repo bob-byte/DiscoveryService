@@ -70,6 +70,27 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return this;
         }
 
+        public override String ToString()
+        {
+            StringBuilder stringBuilder = new StringBuilder( base.ToString() );
+
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( ChunkRange ), ChunkRange )};\n" );
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( FileVersion ), FileVersion )};\n" );
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( CountDownloadedBytes ), CountDownloadedBytes )};\n" );
+
+            stringBuilder.Append( $"{nameof( ChunkRange.NumsUndownloadedChunk )}: " );
+
+            foreach ( Int32 numChunk in ChunkRange.NumsUndownloadedChunk )
+            {
+                stringBuilder.Append( $"{numChunk}," );
+            }
+
+            stringBuilder.Remove( startIndex: stringBuilder.Length - 1, length: 1 );
+            stringBuilder.Append( "\n" );
+
+            return stringBuilder.ToString();
+        }
+
         /// <summary>
         /// Also it removes first chunk from Range.NumsUndownloadedChunk
         /// </summary>

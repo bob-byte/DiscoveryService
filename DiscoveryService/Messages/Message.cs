@@ -151,6 +151,9 @@ namespace LUC.DiscoveryService.Messages
             }
         }
 
+        public override String ToString() =>
+            $"{GetType().Name}:\n";
+
         protected virtual void DefaultInit( params Object[] args )
         {
             ;//do nothing

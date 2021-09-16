@@ -75,7 +75,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         }
 
         protected void LogResponse( Socket sender, Int32 sentBytesCount ) =>
-            s_log.LogInfo( $"Sent response ({sentBytesCount} bytes)  to {sender.RemoteEndPoint}:\n" +
+            s_log.LogInfo( $"Sent response ({sentBytesCount} bytes) to {sender.RemoteEndPoint}:\n" +
                          $"{this}" );
     }
 }

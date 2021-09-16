@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 
@@ -69,6 +70,18 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             }
 
             return this;
+        }
+
+        public override String ToString()
+        {
+            StringBuilder stringBuilder = new StringBuilder( base.ToString() );
+
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( IsRightBucket ), IsRightBucket )};\n" );
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( FileExists ), FileExists )};\n" );
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( FileVersion ), FileVersion )};\n" );
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( FileSize ), FileSize )};\n" );
+
+            return stringBuilder.ToString();
         }
 
         public Object Clone() =>

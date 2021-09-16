@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Interfaces;
 
 using System;
@@ -61,6 +62,17 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
 
             return this;
+        }
+
+        public override String ToString()
+        {
+            StringBuilder stringBuilder = new StringBuilder(capacity: 4);
+            stringBuilder.Append( base.ToString() );
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( FileOriginalName ), FileOriginalName )};\n" );
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( HexPrefix ), HexPrefix )};\n" );
+            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( BucketName ), BucketName )};\n" );
+
+            return stringBuilder.ToString();
         }
     }
 }
