@@ -2,6 +2,7 @@
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
+
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -20,13 +21,11 @@ namespace LUC.DiscoveryService
     /// <remarks>Thread-safe</remarks>
     class TcpServer : IDisposable
     {
-        private const Int32 MaxSessionsCount = 10000;
+        private const Int32 MAX_SESSIONS_COUNT = 10000;
 
         private readonly static ILoggingService log;
 
-        private readonly TimeSpan WaitForCheckingWaitingSocket = TimeSpan.FromSeconds(0.5);
-
-        private AutoResetEvent receiveDone;
+        private readonly TimeSpan m_waitForCheckingWaitingSocket = TimeSpan.FromSeconds( 0.5 );
 
         static TcpServer()
         {
@@ -41,18 +40,18 @@ namespace LUC.DiscoveryService
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public TcpServer(IPAddress address, int port) : this(new IPEndPoint(address, port)) { }
+        public TcpServer( IPAddress address, Int32 port ) : this( new IPEndPoint( address, port ) ) { }
         /// <summary>
         /// Initialize TCP server with a given IP address and port number
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public TcpServer(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port)) { }
+        public TcpServer( String address, Int32 port ) : this( new IPEndPoint( IPAddress.Parse( address ), port ) ) { }
         /// <summary>
         /// Initialize TCP server with a given IP endpoint
         /// </summary>
         /// <param name="endpoint">IP endpoint</param>
-        public TcpServer(IPEndPoint endpoint)
+        public TcpServer( IPEndPoint endpoint )
         {
             Id = Guid.NewGuid();
             Endpoint = endpoint;
@@ -71,19 +70,19 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Number of sessions connected to the server
         /// </summary>
-        public long ConnectedSessions { get { return Sessions.Count; } }
+        public Int64 ConnectedSessions => Sessions.Count;
         /// <summary>
         /// Number of bytes pending sent by the server
         /// </summary>
-        public long BytesPending { get { return _bytesPending; } }
+        public Int64 BytesPending => _bytesPending;
         /// <summary>
         /// Number of bytes sent by the server
         /// </summary>
-        public long BytesSent { get { return _bytesSent; } }
+        public Int64 BytesSent => _bytesSent;
         /// <summary>
         /// Number of bytes received by the server
         /// </summary>
-        public long BytesReceived { get { return _bytesReceived; } }
+        public Int64 BytesReceived => _bytesReceived;
 
         /// <summary>
         /// Option: acceptor backlog size
@@ -91,7 +90,7 @@ namespace LUC.DiscoveryService
         /// <remarks>
         /// This option will set the listening socket's backlog size
         /// </remarks>
-        public int OptionAcceptorBacklog { get; set; } = 10;
+        public Int32 OptionAcceptorBacklog { get; set; } = 10;
         /// <summary>
         /// Option: dual mode socket
         /// </summary>
@@ -99,43 +98,43 @@ namespace LUC.DiscoveryService
         /// Specifies whether the Socket is a dual-mode socket used for both IPv4 and IPv6.
         /// Will work only if socket is bound on IPv6 address.
         /// </remarks>
-        public bool OptionDualMode { get; set; }
+        public Boolean OptionDualMode { get; set; }
         /// <summary>
         /// Option: keep alive
         /// </summary>
         /// <remarks>
         /// This option will setup SO_KEEPALIVE if the OS support this feature
         /// </remarks>
-        public bool OptionKeepAlive { get; set; }
+        public Boolean OptionKeepAlive { get; set; }
         /// <summary>
         /// Option: no delay
         /// </summary>
         /// <remarks>
         /// This option will enable/disable Nagle's algorithm for TCP protocol
         /// </remarks>
-        public bool OptionNoDelay { get; set; }
+        public Boolean OptionNoDelay { get; set; }
         /// <summary>
         /// Option: reuse address
         /// </summary>
         /// <remarks>
         /// This option will enable/disable SO_REUSEADDR if the OS support this feature
         /// </remarks>
-        public bool OptionReuseAddress { get; set; }
+        public Boolean OptionReuseAddress { get; set; }
         /// <summary>
         /// Option: enables a socket to be bound for exclusive access
         /// </summary>
         /// <remarks>
         /// This option will enable/disable SO_EXCLUSIVEADDRUSE if the OS support this feature
         /// </remarks>
-        public bool OptionExclusiveAddressUse { get; set; }
+        public Boolean OptionExclusiveAddressUse { get; set; }
         /// <summary>
         /// Option: receive buffer size
         /// </summary>
-        public int OptionReceiveBufferSize { get; set; } = 8192;
+        public Int32 OptionReceiveBufferSize { get; set; } = 8192;
         /// <summary>
         /// Option: send buffer size
         /// </summary>
-        public int OptionSendBufferSize { get; set; } = 8192;
+        public Int32 OptionSendBufferSize { get; set; } = 8192;
 
         #region Start/Stop server
 
@@ -144,18 +143,18 @@ namespace LUC.DiscoveryService
         private SocketAsyncEventArgs _acceptorEventArg;
 
         // Server statistic
-        internal long _bytesPending;
-        internal long _bytesSent;
-        internal long _bytesReceived;
+        internal Int64 _bytesPending;
+        internal Int64 _bytesSent;
+        internal Int64 _bytesReceived;
 
         /// <summary>
         /// Is the server started?
         /// </summary>
-        public bool IsStarted { get; private set; }
+        public Boolean IsStarted { get; private set; }
         /// <summary>
         /// Is the server accepting new clients?
         /// </summary>
-        public bool IsAccepting { get; private set; }
+        public Boolean IsAccepting { get; private set; }
 
         /// <summary>
         /// Create a new socket object
@@ -164,19 +163,15 @@ namespace LUC.DiscoveryService
         /// Method may be override if you need to prepare some specific socket object in your implementation.
         /// </remarks>
         /// <returns>Socket object</returns>
-        protected virtual Socket CreateSocket()
-        {
-            return new Socket(Endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-        }
+        protected virtual Socket CreateSocket() => new Socket( Endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp );
 
         /// <summary>
         /// Start the server
         /// </summary>
         /// <returns>'true' if the server was successfully started, 'false' if the server failed to start</returns>
-        public virtual bool Start()
+        public virtual Boolean Start()
         {
-            Debug.Assert(!IsStarted, "TCP server is already started!");
-            if (IsStarted)
+            if ( IsStarted )
                 return false;
 
             // Setup acceptor event arg
@@ -190,15 +185,15 @@ namespace LUC.DiscoveryService
             IsSocketDisposed = false;
 
             // Apply the option: reuse address
-            _acceptorSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, OptionReuseAddress);
+            _acceptorSocket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, OptionReuseAddress );
             // Apply the option: exclusive address use
-            _acceptorSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, OptionExclusiveAddressUse);
+            _acceptorSocket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, OptionExclusiveAddressUse );
             // Apply the option: dual mode (this option must be applied before listening)
-            if (_acceptorSocket.AddressFamily == AddressFamily.InterNetworkV6)
+            if ( _acceptorSocket.AddressFamily == AddressFamily.InterNetworkV6 )
                 _acceptorSocket.DualMode = OptionDualMode;
 
             // Bind the acceptor socket to the IP endpoint
-            _acceptorSocket.Bind(Endpoint);
+            _acceptorSocket.Bind( Endpoint );
             // Refresh the endpoint property based on the actual endpoint created
             Endpoint = (IPEndPoint)_acceptorSocket.LocalEndPoint;
 
@@ -206,7 +201,7 @@ namespace LUC.DiscoveryService
             OnStarting();
 
             // Start listen to the acceptor socket with the given accepting backlog size
-            _acceptorSocket.Listen(OptionAcceptorBacklog);
+            _acceptorSocket.Listen( OptionAcceptorBacklog );
 
             // Reset statistic
             _bytesPending = 0;
@@ -221,7 +216,7 @@ namespace LUC.DiscoveryService
 
             // Perform the first server accept
             IsAccepting = true;
-            StartAccept(_acceptorEventArg);
+            StartAccept( _acceptorEventArg );
 
             return true;
         }
@@ -230,10 +225,9 @@ namespace LUC.DiscoveryService
         /// Stop the server
         /// </summary>
         /// <returns>'true' if the server was successfully stopped, 'false' if the server is already stopped</returns>
-        public virtual bool Stop()
+        public virtual Boolean Stop()
         {
-            Debug.Assert(IsStarted, "TCP server is not started!");
-            if (!IsStarted)
+            if ( !IsStarted )
                 return false;
 
             // Stop accepting new clients
@@ -259,7 +253,7 @@ namespace LUC.DiscoveryService
                 // Update the acceptor socket disposed flag
                 IsSocketDisposed = true;
             }
-            catch (ObjectDisposedException) { }
+            catch ( ObjectDisposedException ) { }
 
             // Disconnect all sessions
             DisconnectAll();
@@ -277,12 +271,12 @@ namespace LUC.DiscoveryService
         /// Restart the server
         /// </summary>
         /// <returns>'true' if the server was successfully restarted, 'false' if the server failed to restart</returns>
-        public virtual bool Restart()
+        public virtual Boolean Restart()
         {
-            if (!Stop())
+            if ( !Stop() )
                 return false;
 
-            while (IsStarted)
+            while ( IsStarted )
                 Thread.Yield();
 
             return Start();
@@ -295,45 +289,45 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Start accept a new client connection
         /// </summary>
-        private void StartAccept(SocketAsyncEventArgs e)
+        private void StartAccept( SocketAsyncEventArgs e )
         {
             // Socket must be cleared since the context object is being reused
             e.AcceptSocket = null;
 
             // Async accept a new client connection
-            if (!_acceptorSocket.AcceptAsync(e))
-                ProcessAccept(e);
+            if ( !_acceptorSocket.AcceptAsync( e ) )
+                ProcessAccept( e );
         }
 
         /// <summary>
         /// Process accepted client connection
         /// </summary>
-        private void ProcessAccept(SocketAsyncEventArgs e)
+        private void ProcessAccept( SocketAsyncEventArgs e )
         {
-            if (e.SocketError == SocketError.Success)
+            if ( e.SocketError == SocketError.Success )
             {
-                if (MaxSessionsCount <= Sessions.Count + 1)
+                if ( MAX_SESSIONS_COUNT <= Sessions.Count + 1 )
                 {
                     UnregisterSession();
                 }
 
-                var session = CreateSession();
+                TcpSession session = CreateSession();
 
                 // Register the session
-                RegisterSession(session);
+                RegisterSession( session );
 
                 // Connect new session
-                session.Connect(e.AcceptSocket);
+                session.Connect( e.AcceptSocket );
             }
             else
-                SendError(e.SocketError);
+                SendError( e.SocketError );
 
             // Accept the next client connection
-            if (IsAccepting)
-                StartAccept(e);
+            if ( IsAccepting )
+                StartAccept( e );
         }
 
-        public async Task<TcpMessageEventArgs> ReceiveAsync(TimeSpan timeoutToRead)
+        public async Task<TcpMessageEventArgs> ReceiveAsync( TimeSpan timeoutToRead )
         {
             IPEndPoint ipEndPoint;
             TcpSession clientToReadMessage;
@@ -342,32 +336,31 @@ namespace LUC.DiscoveryService
             try
             {
                 clientToReadMessage = await SessionWithNewDataAsync();
-                if (receiveDone == null)
-                {
-                    receiveDone = new AutoResetEvent(initialState: false);
-                }
-                var taskReadBytes = clientToReadMessage.ReadBytesAsync(receiveDone);
 
-                var isReceivedInTime = receiveDone.WaitOne(timeoutToRead);
-                if (isReceivedInTime)
+                AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
+                Task<Byte[]> taskReadBytes = clientToReadMessage.ReadBytesAsync( receiveDone );
+                taskReadBytes.ConfigureAwait( continueOnCapturedContext: false ).GetAwaiter();
+
+                Boolean isReceivedInTime = receiveDone.WaitOne( timeoutToRead );
+                if ( isReceivedInTime )
                 {
                     readBytes = taskReadBytes.Result;
                     ipEndPoint = clientToReadMessage.Socket.RemoteEndPoint as IPEndPoint;
                 }
                 else
                 {
-                    throw new TimeoutException($"Timeout to read data from {clientToReadMessage.Socket.RemoteEndPoint}");
+                    throw new TimeoutException( $"Timeout to read data from {clientToReadMessage.Socket.RemoteEndPoint}" );
                 }
             }
-            catch (ObjectDisposedException)
+            catch ( ObjectDisposedException )
             {
                 throw;
             }
-            catch (SocketException)
+            catch ( SocketException )
             {
-                if (IsSocketDisposed)
+                if ( IsSocketDisposed )
                 {
-                    throw new ObjectDisposedException($"Socket {_acceptorSocket.LocalEndPoint} is disposed");
+                    throw new ObjectDisposedException( $"Socket {_acceptorSocket.LocalEndPoint} is disposed" );
                 }
                 else
                 {
@@ -376,16 +369,16 @@ namespace LUC.DiscoveryService
             }
 
             TcpMessageEventArgs receiveResult = new TcpMessageEventArgs();
-            if (ipEndPoint != null)
+            if ( ipEndPoint != null )
             {
                 receiveResult.Buffer = readBytes;
-                receiveResult.SendingEndPoint = ipEndPoint;
+                receiveResult.RemoteEndPoint = ipEndPoint;
                 receiveResult.AcceptedSocket = clientToReadMessage.Socket;
                 receiveResult.LocalEndPoint = _acceptorSocket.LocalEndPoint;
             }
             else
             {
-                throw new InvalidOperationException("Cannot convert remote end point to IPEndPoint");
+                throw new InvalidOperationException( "Cannot convert remote end point to IPEndPoint" );
             }
 
             return receiveResult;
@@ -395,13 +388,13 @@ namespace LUC.DiscoveryService
         {
             TcpSession sessionWithData = null;
 
-            while (sessionWithData == null)
+            while ( sessionWithData == null )
             {
-                sessionWithData = Sessions.LastOrDefault(c => c.Value.Socket?.Available > 0).Value;
+                sessionWithData = Sessions.LastOrDefault( c => c.Value.Socket?.Available > 0 ).Value;
 
-                if (sessionWithData == null)
+                if ( sessionWithData == null )
                 {
-                    await Task.Delay(WaitForCheckingWaitingSocket);
+                    await Task.Delay( m_waitForCheckingWaitingSocket );
                 }
             }
 
@@ -412,12 +405,12 @@ namespace LUC.DiscoveryService
         /// This method is the callback method associated with Socket.AcceptAsync()
         /// operations and is invoked when an accept operation is complete
         /// </summary>
-        private void OnAsyncCompleted(object sender, SocketAsyncEventArgs e)
+        private void OnAsyncCompleted( Object sender, SocketAsyncEventArgs e )
         {
-            if (IsSocketDisposed)
+            if ( IsSocketDisposed )
                 return;
 
-            ProcessAccept(e);
+            ProcessAccept( e );
         }
 
         #endregion
@@ -428,7 +421,7 @@ namespace LUC.DiscoveryService
         /// Create TCP session factory method
         /// </summary>
         /// <returns>TCP session</returns>
-        protected virtual TcpSession CreateSession() { return new TcpSession(this); }
+        protected virtual TcpSession CreateSession() => new TcpSession( this );
 
         #endregion
 
@@ -441,13 +434,13 @@ namespace LUC.DiscoveryService
         /// Disconnect all connected sessions
         /// </summary>
         /// <returns>'true' if all sessions were successfully disconnected, 'false' if the server is not started</returns>
-        public virtual bool DisconnectAll()
+        public virtual Boolean DisconnectAll()
         {
-            if (!IsStarted)
+            if ( !IsStarted )
                 return false;
 
             // Disconnect all sessions
-            foreach (var session in Sessions.Values)
+            foreach ( TcpSession session in Sessions.Values )
                 session.Disconnect();
 
             return true;
@@ -458,42 +451,38 @@ namespace LUC.DiscoveryService
         /// </summary>
         /// <param name="id">Session Id</param>
         /// <returns>Session with a given Id or null if the session it not connected</returns>
-        public TcpSession FindSession(Guid id)
-        {
+        public TcpSession FindSession( Guid id ) =>
             // Try to find the required session
-            return Sessions.TryGetValue(id, out TcpSession result) ? result : null;
-        }
+            Sessions.TryGetValue( id, out TcpSession result ) ? result : null;
 
         /// <summary>
         /// Register a new session
         /// </summary>
         /// <param name="session">Session to register</param>
-        internal void RegisterSession(TcpSession session)
-        {
+        internal void RegisterSession( TcpSession session ) =>
             // Register a new session
-            Sessions.TryAdd(session.Id, session);
-        }
+            Sessions.TryAdd( session.Id, session );
 
         /// <summary>
         /// Unregister the oldest session
         /// </summary>
         internal void UnregisterSession()
         {
-            var oldestSession = Sessions.FirstOrDefault(c => (c.Value.Socket == null) || !(c.Value.Socket.Connected)).Value;
+            TcpSession oldestSession = Sessions.FirstOrDefault( c => ( c.Value.Socket == null ) || !( c.Value.Socket.Connected ) ).Value;
 
-            if (oldestSession == null)
+            if ( oldestSession == null )
             {
-                oldestSession = Sessions.FirstOrDefault(c => c.Value.Socket?.Available == 0).Value;
+                oldestSession = Sessions.FirstOrDefault( c => c.Value.Socket?.Available == 0 ).Value;
 
-                if (oldestSession == null)
+                if ( oldestSession == null )
                 {
                     oldestSession = Sessions.FirstOrDefault().Value;
                 }
             }
 
-            if (Sessions.Count != 0)
+            if ( Sessions.Count != 0 )
             {
-                UnregisterSession(oldestSession.Id);
+                UnregisterSession( oldestSession.Id );
             }
         }
 
@@ -501,11 +490,9 @@ namespace LUC.DiscoveryService
         /// Unregister session by Id
         /// </summary>
         /// <param name="id">Session Id</param>
-        internal void UnregisterSession(Guid id)
-        {
+        internal void UnregisterSession( Guid id ) =>
             // Unregister session by Id
-            Sessions.TryRemove(id, out TcpSession temp);
-        }
+            Sessions.TryRemove( id, out TcpSession temp );
 
         #endregion
 
@@ -516,7 +503,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         /// <param name="buffer">Buffer to multicast</param>
         /// <returns>'true' if the data was successfully multicasted, 'false' if the data was not multicasted</returns>
-        public virtual bool Multicast(byte[] buffer) { return Multicast(buffer, 0, buffer.Length); }
+        public virtual Boolean Multicast( Byte[] buffer ) => Multicast( buffer, 0, buffer.Length );
 
         /// <summary>
         /// Multicast data to all connected clients
@@ -525,17 +512,17 @@ namespace LUC.DiscoveryService
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>'true' if the data was successfully multicasted, 'false' if the data was not multicasted</returns>
-        public virtual bool Multicast(byte[] buffer, long offset, long size)
+        public virtual Boolean Multicast( Byte[] buffer, Int64 offset, Int64 size )
         {
-            if (!IsStarted)
+            if ( !IsStarted )
                 return false;
 
-            if (size == 0)
+            if ( size == 0 )
                 return true;
 
             // Multicast data to all sessions
-            foreach (var session in Sessions.Values)
-                session.SendAsync(buffer, offset, size);
+            foreach ( TcpSession session in Sessions.Values )
+                session.SendAsync( buffer, offset, size );
 
             return true;
         }
@@ -545,7 +532,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         /// <param name="text">Text string to multicast</param>
         /// <returns>'true' if the text was successfully multicasted, 'false' if the text was not multicasted</returns>
-        public virtual bool Multicast(string text) { return Multicast(Encoding.UTF8.GetBytes(text)); }
+        public virtual Boolean Multicast( String text ) => Multicast( Encoding.UTF8.GetBytes( text ) );
 
         #endregion
 
@@ -572,33 +559,33 @@ namespace LUC.DiscoveryService
         /// Handle session connecting notification
         /// </summary>
         /// <param name="session">Connecting session</param>
-        protected virtual void OnConnecting(TcpSession session) { }
+        protected virtual void OnConnecting( TcpSession session ) { }
         /// <summary>
         /// Handle session connected notification
         /// </summary>
         /// <param name="session">Connected session</param>
-        protected virtual void OnConnected(TcpSession session) { }
+        protected virtual void OnConnected( TcpSession session ) { }
         /// <summary>
         /// Handle session disconnecting notification
         /// </summary>
         /// <param name="session">Disconnecting session</param>
-        protected virtual void OnDisconnecting(TcpSession session) { }
+        protected virtual void OnDisconnecting( TcpSession session ) { }
         /// <summary>
         /// Handle session disconnected notification
         /// </summary>
         /// <param name="session">Disconnected session</param>
-        protected virtual void OnDisconnected(TcpSession session) { }
+        protected virtual void OnDisconnected( TcpSession session ) { }
 
         /// <summary>
         /// Handle error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        protected virtual void OnError(SocketError error) { }
+        protected virtual void OnError( SocketError error ) { }
 
-        internal void OnConnectingInternal(TcpSession session) { OnConnecting(session); }
-        internal void OnConnectedInternal(TcpSession session) { OnConnected(session); }
-        internal void OnDisconnectingInternal(TcpSession session) { OnDisconnecting(session); }
-        internal void OnDisconnectedInternal(TcpSession session) { OnDisconnected(session); }
+        internal void OnConnectingInternal( TcpSession session ) => OnConnecting( session );
+        internal void OnConnectedInternal( TcpSession session ) => OnConnected( session );
+        internal void OnDisconnectingInternal( TcpSession session ) => OnDisconnecting( session );
+        internal void OnDisconnectedInternal( TcpSession session ) => OnDisconnected( session );
 
         #endregion
 
@@ -608,17 +595,17 @@ namespace LUC.DiscoveryService
         /// Send error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        private void SendError(SocketError error)
+        private void SendError( SocketError error )
         {
             // Skip disconnect errors
-            if ((error == SocketError.ConnectionAborted) ||
-                (error == SocketError.ConnectionRefused) ||
-                (error == SocketError.ConnectionReset) ||
-                (error == SocketError.OperationAborted) ||
-                (error == SocketError.Shutdown))
+            if ( ( error == SocketError.ConnectionAborted ) ||
+                ( error == SocketError.ConnectionRefused ) ||
+                ( error == SocketError.ConnectionReset ) ||
+                ( error == SocketError.OperationAborted ) ||
+                ( error == SocketError.Shutdown ) )
                 return;
 
-            OnError(error);
+            OnError( error );
         }
 
         #endregion
@@ -628,21 +615,21 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Disposed flag
         /// </summary>
-        public bool IsDisposed { get; private set; }
+        public Boolean IsDisposed { get; private set; }
 
         /// <summary>
         /// Acceptor socket disposed flag
         /// </summary>
-        public bool IsSocketDisposed { get; private set; } = true;
+        public Boolean IsSocketDisposed { get; private set; } = true;
 
         // Implement IDisposable.
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            Dispose( true );
+            GC.SuppressFinalize( this );
         }
 
-        protected virtual void Dispose(bool disposingManagedResources)
+        protected virtual void Dispose( Boolean disposingManagedResources )
         {
             // The idea here is that Dispose(Boolean) knows whether it is
             // being called to do explicit cleanup (the Boolean is true)
@@ -656,9 +643,9 @@ namespace LUC.DiscoveryService
             // refer to reference type fields because those objects may
             // have already been finalized."
 
-            if (!IsDisposed)
+            if ( !IsDisposed )
             {
-                if (disposingManagedResources)
+                if ( disposingManagedResources )
                 {
                     // Dispose managed resources here...
                     Stop();
@@ -677,7 +664,7 @@ namespace LUC.DiscoveryService
         ~TcpServer()
         {
             // Simply call Dispose(false).
-            Dispose(false);
+            Dispose( false );
         }
 
         #endregion

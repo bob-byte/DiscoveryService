@@ -1,8 +1,11 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,79 +18,64 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
     abstract class Response : Message
     {
-        protected static LoggingService log;
+        protected readonly static LoggingService s_log;
 
         static Response()
         {
-            log = new LoggingService
+            s_log = new LoggingService
             {
                 SettingsService = new SettingsService()
             };
         }
 
-        //public Response(BigInteger requestRandomId)
-        //{
-        //    RandomID = requestRandomId;
-        //}
-
-        public BigInteger RandomID { get; set; }
-
-        public virtual void Send(Request request, Socket sender)
+        public Response( BigInteger requestRandomId )
         {
-            if (request != null)
-            {
-                sender.SendTimeout = (Int32)Constants.SendTimeout.TotalMilliseconds;
-                var buffer = ToByteArray();
-                sender.Send(buffer);
-
-                LogResponse(sender, this);
-            }
-            else
-            {
-                throw new ArgumentNullException($"Bad format of {nameof(request)}");
-            }
+            RandomID = requestRandomId;
         }
 
-        protected static void LogResponse(Socket sender, Response response)
+        public BigInteger RandomID { get; private set; }
+
+        public virtual void Send( Socket sender )
         {
-            log.LogInfo($"Sent response to {sender.RemoteEndPoint}:\n" +
-                            $"{response}");
+            sender.SendTimeout = (Int32)Constants.SendTimeout.TotalMilliseconds;
+            Byte[] buffer = ToByteArray();
+            sender.Send( buffer );
+
+            LogResponse( sender, buffer.Length );
         }
 
         /// <inheritdoc/>
-        public override IWireSerialiser Read(WireReader reader)
+        public override IWireSerialiser Read( WireReader reader )
         {
-            if (reader != null)
+            if ( reader != null )
             {
-                base.Read(reader);
+                base.Read( reader );
                 RandomID = reader.ReadBigInteger();
 
                 return this;
             }
             else
             {
-                throw new ArgumentNullException("ReaderNullException");
+                throw new ArgumentNullException( "ReaderNullException" );
             }
         }
 
         /// <inheritdoc/>
-        public override void Write(WireWriter writer)
+        public override void Write( WireWriter writer )
         {
-            if (writer != null)
+            if ( writer != null )
             {
-                base.Write(writer);
-                writer.Write(RandomID);
+                base.Write( writer );
+                writer.Write( RandomID );
             }
             else
             {
-                throw new ArgumentNullException("WriterNullException");
+                throw new ArgumentNullException( "WriterNullException" );
             }
         }
 
-        //protected virtual void Send(Socket sender, TimeSpan timeoutToSend, Byte[] bytesOfResponse)
-        //{
-        //    sender.SendTimeout = timeoutToSend.Milliseconds;
-        //    sender.Send(bytesOfResponse);
-        //}
+        protected void LogResponse( Socket sender, Int32 sentBytesCount ) =>
+            s_log.LogInfo( $"Sent response ({sentBytesCount} bytes)  to {sender.RemoteEndPoint}:\n" +
+                         $"{this}" );
     }
 }

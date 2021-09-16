@@ -13,20 +13,27 @@ namespace LUC.DiscoveryService.Messages
     /// <seealso cref="DiscoveryServiceMessage.Opcode"/>
     public enum MessageOperation : Byte
     {
+        ErrorResponse,
+
+        Multicast,
+
         /// <summary>
         ///   Acknowledge operation is type of TCP packet, sent on response to UDP message.
         /// </summary>
-        Acknowledge = 0,
+        Acknowledge,
 
-        Ping = 1,
-        PingResponse = 2,
-        Store = 3,
-        StoreResponse = 4,
-        FindNode = 5,
-        FindNodeResponse = 6,
-        FindValue = 7,
-        FindValueResponseWithValue = 8,
-        FindValueResponseWithCloseContacts = 9,
+        Ping,
+        PingResponse,
+
+        Store,
+        StoreResponse,
+
+        FindNode,
+        FindNodeResponse,
+
+        FindValue,
+        FindValueResponseWithValue,
+        FindValueResponseWithCloseContacts,
 
         CheckFileExists,
         CheckFileExistsResponse,

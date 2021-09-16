@@ -4,7 +4,14 @@ namespace LUC.DiscoveryService.Kademlia.Exceptions
 {
     public class BadIDException : Exception
     {
-        public BadIDException() { }
-        public BadIDException(string msg) : base(msg) { }
+        public BadIDException()
+        {
+            ;//do nothing
+        }
+        public BadIDException( String msg )
+            : base( msg )
+        {
+            ;//do nothing
+        }
     }
 }

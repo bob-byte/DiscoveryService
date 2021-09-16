@@ -1,16 +1,25 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Messages.KademliaRequests;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
-    abstract class FileResponse : Response, ICloneable
+    abstract class AbstactFileResponse : Response, ICloneable
     {
+        public AbstactFileResponse( BigInteger requestRandomId )
+            : base( requestRandomId )
+        {
+            FileExists = false;
+        }
+
         /// <value>
         /// Default value is <a href="false"/> to set it if <see cref="IsRightBucket"/> = <a href="false"/> and you can use this value in every case to define whether file exists in remote <see cref="Contact"/>
         /// </value>
@@ -22,44 +31,36 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 
         public UInt64 FileSize { get; set; }
 
-        public FileResponse()
+        public override void Write( WireWriter writer )
         {
-            FileExists = false;
-        }
-
-        public override void Write(WireWriter writer)
-        {
-            if (writer != null)
+            if ( writer != null )
             {
-                base.Write(writer);
+                base.Write( writer );
 
-                writer.Write(IsRightBucket);
-                writer.Write(FileExists);
+                writer.Write( IsRightBucket );
+                writer.Write( FileExists );
 
-                if (IsRightBucket)
+                if ( ( IsRightBucket ) && ( FileExists ) )
                 {
-                    if (FileExists)
-                    {
-                        writer.WriteAsciiString(FileVersion);
-                        writer.Write(FileSize);
-                    }
+                    writer.WriteAsciiString( FileVersion );
+                    writer.Write( FileSize );
                 }
             }
         }
 
-        public override IWireSerialiser Read(WireReader reader)
+        public override IWireSerialiser Read( WireReader reader )
         {
-            if (reader != null)
+            if ( reader != null )
             {
-                base.Read(reader);
+                base.Read( reader );
 
                 IsRightBucket = reader.ReadBoolean();
 
-                if (IsRightBucket)
+                if ( IsRightBucket )
                 {
                     FileExists = reader.ReadBoolean();
 
-                    if (FileExists)
+                    if ( FileExists )
                     {
                         FileVersion = reader.ReadAsciiString();
                         FileSize = reader.ReadUInt64();

@@ -1,5 +1,7 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Kademlia;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,7 +23,7 @@ namespace LUC.DiscoveryService.Messages
         /// </summary>
         public AcknowledgeTcpMessage()
         {
-            MessageOperation = MessageOperation.Acknowledge;
+            DefaultInit();
         }
 
         /// <summary>
@@ -36,18 +38,11 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="tcpPort">
         /// TCP port for Kademilia requests.
         /// </param>
-        public AcknowledgeTcpMessage(UInt32 messageId, String machineId, BigInteger idOfSendingContact, 
-            UInt16 tcpPort, UInt16 protocolVersion, List<String> groupsIds)
-            : base(messageId, machineId, protocolVersion)
+        public AcknowledgeTcpMessage( UInt32 messageId, String machineId, BigInteger idOfSendingContact,
+            UInt16 tcpPort, UInt16 protocolVersion, List<String> groupsIds )
+            : base( messageId, machineId, protocolVersion )
         {
-            if(groupsIds != null)
-            {
-                GroupIds = groupsIds;
-            }
-            else
-            {
-                GroupIds = new List<String>();
-            }
+            DefaultInit( groupsIds );
 
             TcpPort = tcpPort;
             IdOfSendingContact = idOfSendingContact;
@@ -62,19 +57,19 @@ namespace LUC.DiscoveryService.Messages
         /// </summary>
         public List<String> GroupIds { get; set; }
 
-        public virtual async Task Send(IPEndPoint endPoint, Byte[] bytes)
+        public virtual async Task Send( IPEndPoint endPoint, Byte[] bytes )
         {
             TcpClient client = null;
             NetworkStream stream = null;
 
             try
             {
-                client = new TcpClient(endPoint.AddressFamily);
+                client = new TcpClient( endPoint.AddressFamily );
 
-                client.Connect(endPoint.Address, endPoint.Port);
+                client.Connect( endPoint.Address, endPoint.Port );
 
                 stream = client.GetStream();
-                await stream.WriteAsync(bytes, offset: 0, bytes.Length);
+                await stream.WriteAsync( bytes, offset: 0, bytes.Length );
             }
             finally
             {
@@ -83,11 +78,11 @@ namespace LUC.DiscoveryService.Messages
             }
         }
 
-        public override IWireSerialiser Read(WireReader reader)
+        public override IWireSerialiser Read( WireReader reader )
         {
-            if(reader != null)
+            if ( reader != null )
             {
-                base.Read(reader);
+                base.Read( reader );
 
                 MessageId = reader.ReadUInt32();
                 IdOfSendingContact = reader.ReadBigInteger();
@@ -101,7 +96,7 @@ namespace LUC.DiscoveryService.Messages
             }
             else
             {
-                throw new ArgumentNullException("ReaderNullException");
+                throw new ArgumentNullException( "ReaderNullException" );
             }
         }
 
@@ -121,48 +116,69 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="InvalidDataException">
         /// 
         /// </exception>
-        public override void Write(WireWriter writer)
+        public override void Write( WireWriter writer )
         {
-            if (writer != null)
+            if ( writer != null )
             {
-                base.Write(writer);
+                base.Write( writer );
 
-                writer.Write(MessageId);
-                writer.Write(IdOfSendingContact);
-                writer.WriteAsciiString(MachineId);
-                writer.Write(ProtocolVersion);
-                writer.Write(TcpPort);
-                writer.WriteEnumerable(GroupIds);
+                writer.Write( MessageId );
+                writer.Write( IdOfSendingContact );
+                writer.WriteAsciiString( MachineId );
+                writer.Write( ProtocolVersion );
+                writer.Write( TcpPort );
+                writer.WriteEnumerable( GroupIds );
             }
             else
             {
-                throw new ArgumentNullException("WriterNullException");
+                throw new ArgumentNullException( "WriterNullException" );
             }
         }
 
-        public override string ToString()
+        public override String ToString()
         {
-            using(var writer = new StringWriter())
+            using ( StringWriter writer = new StringWriter() )
             {
-                writer.WriteLine($"TCP message:");
-                writer.WriteLine($"{base.ToString()};");
-                writer.WriteLine($"Message operation: {MessageOperation};\n" +
-                                   $"TCP port = {TcpPort};");
+                writer.WriteLine( $"TCP message:" );
+                writer.WriteLine( $"{base.ToString()};" );
+                writer.WriteLine( $"Message operation: {MessageOperation};\n" +
+                                   $"TCP port = {TcpPort};" );
 
-                writer.WriteLine($"{nameof(GroupIds)}:");
-                for (Int32 id = 0; id < GroupIds?.Count; id++)
+                writer.WriteLine( $"{nameof( GroupIds )}:" );
+                for ( Int32 id = 0; id < GroupIds?.Count; id++ )
                 {
-                    if(id == GroupIds.Count - 1)
+                    if ( id == GroupIds.Count - 1 )
                     {
-                        writer.WriteLine($"{GroupIds[id]}");
+                        writer.WriteLine( $"{GroupIds[ id ]}" );
                     }
                     else
                     {
-                        writer.WriteLine($"{GroupIds[id]};");
+                        writer.WriteLine( $"{GroupIds[ id ]};" );
                     }
                 }
 
                 return writer.ToString();
+            }
+        }
+
+        protected override void DefaultInit( params Object[] args )
+        {
+            MessageOperation = MessageOperation.Acknowledge;
+
+            if ( args.Length > 0 )
+            {
+                if ( args[ 0 ] is List<String> groupIds )
+                {
+                    GroupIds = groupIds;
+                }
+                else
+                {
+                    GroupIds = new List<String>();
+                }
+            }
+            else
+            {
+                GroupIds = new List<String>();
             }
         }
     }

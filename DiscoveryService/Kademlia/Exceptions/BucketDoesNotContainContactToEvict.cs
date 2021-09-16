@@ -4,7 +4,15 @@ namespace LUC.DiscoveryService.Kademlia.Exceptions
 {
     public class BucketDoesNotContainContactToEvict : Exception
     {
-        public BucketDoesNotContainContactToEvict() { }
-        public BucketDoesNotContainContactToEvict(string msg) : base(msg) { }
+        public BucketDoesNotContainContactToEvict()
+        {
+            ;//do nothing
+        }
+
+        public BucketDoesNotContainContactToEvict( String msg )
+            : base( msg )
+        {
+            ;//do nothing
+        }
     }
 }

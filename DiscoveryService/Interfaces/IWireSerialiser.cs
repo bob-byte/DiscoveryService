@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+
 using LUC.DiscoveryService.Messages;
 
-namespace LUC.DiscoveryService.CodingData
+namespace LUC.DiscoveryService.Interfaces
 {
     interface IWireSerialiser
     {
@@ -18,7 +19,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <returns>
         ///   The final Message object.
         /// </returns>
-        IWireSerialiser Read(Byte[] buffer);
+        IWireSerialiser Read( Byte[] buffer );
 
         /// <summary>
         ///   Writes the <see cref="DiscoveryServiceMessage"/> object encoded in the wire format.
@@ -26,6 +27,6 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="writer">
         ///   The destination of the <see cref="DiscoveryServiceMessage"/> object.
         /// </param>
-        void Write(Stream stream);
+        void Write( Stream stream );
     }
 }

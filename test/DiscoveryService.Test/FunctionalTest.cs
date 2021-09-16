@@ -8,6 +8,7 @@ using LUC.Interfaces;
 using LUC.Interfaces.Models;
 using LUC.Interfaces.OutputContracts;
 using LUC.Services.Implementation;
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,23 +24,23 @@ namespace LUC.DiscoveryService.Test
 {
     class FunctionalTest
     {
-        private static readonly Object ttyLock;
-        private static DiscoveryService discoveryService;
-        private static readonly SettingsService settingsService;
-        private static readonly CancellationTokenSource cancellationTokenSource;
+        private static readonly Object s_ttyLock;
+        private static DiscoveryService s_discoveryService;
+        private static readonly SettingsService s_settingsService;
+        private static readonly CancellationTokenSource s_cancellationTokenSource;
 
         static FunctionalTest()
         {
-            ttyLock = new Object();
+            s_ttyLock = new Object();
 
-            settingsService = new SettingsService();
-            cancellationTokenSource = new CancellationTokenSource();
+            s_settingsService = new SettingsService();
+            s_cancellationTokenSource = new CancellationTokenSource();
         }
 
         ~FunctionalTest()
         {
-            discoveryService?.Stop();
-            cancellationTokenSource.Cancel();
+            s_discoveryService?.Stop();
+            s_cancellationTokenSource.Cancel();
         }
 
         /// <summary>
@@ -71,13 +72,13 @@ namespace LUC.DiscoveryService.Test
         /// </remarks>
         public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
 
-        static async Task Main(string[] args)
+        static async Task Main( String[] args )
         {
             SetUpTests.AssemblyInitialize();
 
-            settingsService.CurrentUserProvider = new CurrentUserProvider();
+            s_settingsService.CurrentUserProvider = new CurrentUserProvider();
 
-            ApiClient.ApiClient apiClient = new ApiClient.ApiClient(settingsService.CurrentUserProvider, SetUpTests.LoggingService);
+            ApiClient.ApiClient apiClient = new ApiClient.ApiClient( s_settingsService.CurrentUserProvider, SetUpTests.LoggingService );
             apiClient.SyncingObjectsList = new SyncingObjectsList();
 
             String Login = "integration1";
@@ -86,237 +87,255 @@ namespace LUC.DiscoveryService.Test
             LoginResponse loginResponse = null;
             do
             {
-                loginResponse = await apiClient.LoginAsync(Login, Password).ConfigureAwait(continueOnCapturedContext: false);
+                loginResponse = await apiClient.LoginAsync( Login, Password ).ConfigureAwait( continueOnCapturedContext: false );
 
-                if(!loginResponse.IsSuccess)
+                if ( !loginResponse.IsSuccess )
                 {
-                    Console.WriteLine("Check your connection to Internet, because you cannot login\n" +
-                        "If you did that, press any keyboard key to try login again");
+                    Console.WriteLine( "Check your connection to Internet, because you cannot login\n" +
+                        "If you did that, press any keyboard key to try login again" );
 
                     //intercept: true says that pressed key won't be shown in console
-                    Console.ReadKey(intercept: true);
+                    Console.ReadKey( intercept: true );
                 }
             }
-            while (!loginResponse.IsSuccess);
+            while ( !loginResponse.IsSuccess );
 
-            apiClient.CurrentUserProvider.RootFolderPath = settingsService.ReadUserRootFolderPath();
+            apiClient.CurrentUserProvider.RootFolderPath = s_settingsService.ReadUserRootFolderPath();
 
             ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
 
-            var bucketDirectoryPathes = settingsService.CurrentUserProvider.ProvideBucketDirectoryPathes();
-            var sslCert = "<SSL-Cert>";
-            foreach (var bucketPath in bucketDirectoryPathes)
+            IList<String> serverBuckets = s_settingsService.CurrentUserProvider.GetServerBuckets();
+            String sslCert = "<SSL-Cert>";
+            foreach ( String bucketOnServer in serverBuckets )
             {
-                var bucketName = Path.GetFileName(bucketPath);
-                groupsSupported.TryAdd(bucketName, sslCert);
-                groupsSupported.TryAdd(bucketName, sslCert);
+                groupsSupported.TryAdd( bucketOnServer, sslCert );
+                groupsSupported.TryAdd( bucketOnServer, sslCert );
             }
 
-            discoveryService = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported), settingsService.CurrentUserProvider);
-            discoveryService.Start();
+            s_discoveryService = new DiscoveryService( new ServiceProfile( useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported ), s_settingsService.CurrentUserProvider );
+            s_discoveryService.Start();
 
-            foreach (var address in discoveryService.NetworkEventInvoker.RunningIpAddresses)
+            foreach ( IPAddress address in s_discoveryService.NetworkEventInvoker.RunningIpAddresses )
             {
-                Console.WriteLine($"IP address {address}");
+                Console.WriteLine( $"IP address {address}" );
             }
 
-            discoveryService.NetworkEventInvoker.AnswerReceived += OnGoodTcpMessage;
-            discoveryService.NetworkEventInvoker.QueryReceived += OnGoodUdpMessage;
+            s_discoveryService.NetworkEventInvoker.AnswerReceived += OnGoodTcpMessage;
+            s_discoveryService.NetworkEventInvoker.QueryReceived += OnGoodUdpMessage;
 
-            discoveryService.NetworkEventInvoker.PingReceived += OnPingReceived;
-            discoveryService.NetworkEventInvoker.StoreReceived += OnStoreReceived;
-            discoveryService.NetworkEventInvoker.FindNodeReceived += OnFindNodeReceived;
-            discoveryService.NetworkEventInvoker.FindValueReceived += OnFindValueReceived;
+            s_discoveryService.NetworkEventInvoker.PingReceived += OnPingReceived;
+            s_discoveryService.NetworkEventInvoker.StoreReceived += OnStoreReceived;
+            s_discoveryService.NetworkEventInvoker.FindNodeReceived += OnFindNodeReceived;
+            s_discoveryService.NetworkEventInvoker.FindValueReceived += OnFindValueReceived;
 
-            discoveryService.NetworkEventInvoker.NetworkInterfaceDiscovered += (s, e) =>
+            s_discoveryService.NetworkEventInvoker.NetworkInterfaceDiscovered += ( s, e ) =>
             {
-                foreach (var nic in e.NetworkInterfaces)
+                foreach ( System.Net.NetworkInformation.NetworkInterface nic in e.NetworkInterfaces )
                 {
-                    Console.WriteLine($"discovered NIC '{nic.Name}'");
+                    Console.WriteLine( $"discovered NIC '{nic.Name}'" );
                 };
             };
 
-            
+            Boolean isCountConnectionsAvailableTest = NormalResposeFromUserAtClosedQuestion( "Do you want to test count available connections?" );
 
-            while (true)
-            {
-                Boolean isTesterOnlyInNetwork = IsTesterOnlyInNetwork();
-
-                ShowAvailableUserOptions();
-
-                var pressedKey = Console.ReadKey().Key;
-                Console.WriteLine();
-
+            Contact contact = null;
+            Boolean isFirstTest = true;
+            while ( true )
+            {                
                 try
                 {
-                    Contact contact = null;
-                    if ((!isTesterOnlyInNetwork) && (((ConsoleKey.D1 <= pressedKey) && (pressedKey <= ConsoleKey.D6)) ||
-                        ((ConsoleKey.NumPad1 <= pressedKey) && (pressedKey <= ConsoleKey.NumPad6))))
+                    ConsoleKey pressedKey;
+
+                    if ( ( isCountConnectionsAvailableTest ) && ( isFirstTest ) )
                     {
-                        GetRemoteContact(discoveryService, ref contact);
+                        pressedKey = ConsoleKey.D7;
                     }
-                    else if (isTesterOnlyInNetwork)
+                    else
                     {
-                        contact = discoveryService.NetworkEventInvoker.OurContact;
+                        Boolean isTesterOnlyInNetwork = NormalResposeFromUserAtClosedQuestion( closedQuestion: "Are you only on the local network?" );
+                        if ( ( contact == null ) || ( !isTesterOnlyInNetwork ) )
+                        {
+                            //because GetRemoteContact will not send multicats
+                            contact = null;
+
+                            GetRemoteContact( s_discoveryService, isTesterOnlyInNetwork, ref contact );
+                        }
+
+                        ShowAvailableUserOptions();
+                        pressedKey = Console.ReadKey().Key;
                     }
 
-                    await TryExecuteSelectedOperationAsync(contact, apiClient, settingsService.CurrentUserProvider, pressedKey)
-                        .ConfigureAwait(continueOnCapturedContext: false);
+                    Console.WriteLine();
+
+                    await TryExecuteSelectedOperationAsync( contact, apiClient, s_settingsService.CurrentUserProvider, pressedKey )
+                        .ConfigureAwait( continueOnCapturedContext: false );
                 }
-                catch (Exception ex)
+                catch ( Exception ex )
                 {
-                    Console.WriteLine(ex.ToString());
+                    Console.WriteLine( ex.ToString() );
                 }
+
+                isFirstTest = false;
             }
         }
 
-        private static void OnGoodTcpMessage(Object sender, TcpMessageEventArgs e)
+        private static void OnGoodTcpMessage( Object sender, TcpMessageEventArgs e )
         {
-            lock (ttyLock)
+            lock ( s_ttyLock )
             {
-                Console.WriteLine("=== TCP {0:O} ===", DateTime.Now);
-                var tcpMessage = e.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
-                Console.WriteLine(tcpMessage.ToString());
+                Console.WriteLine( "=== TCP {0:O} ===", DateTime.Now );
+                AcknowledgeTcpMessage tcpMessage = e.Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
+                Console.WriteLine( tcpMessage.ToString() );
 
-                if ((tcpMessage != null) && (e.SendingEndPoint is IPEndPoint endPoint))
+                if ( ( tcpMessage != null ) && ( e.RemoteEndPoint is IPEndPoint endPoint ) )
                 {
-                    var realEndPoint = $"{endPoint.Address}:{tcpMessage.TcpPort}";
+                    String realEndPoint = $"{endPoint.Address}:{tcpMessage.TcpPort}";
 
-                    foreach (var group in tcpMessage.GroupIds)
+                    foreach ( String group in tcpMessage.GroupIds )
                     {
-                        if (!GroupsDiscovered.TryAdd(realEndPoint, group))
+                        if ( !GroupsDiscovered.TryAdd( realEndPoint, group ) )
                         {
-                            GroupsDiscovered.TryRemove(realEndPoint, out _);
-                            GroupsDiscovered.TryAdd(realEndPoint, group);
+                            GroupsDiscovered.TryRemove( realEndPoint, out _ );
+                            GroupsDiscovered.TryAdd( realEndPoint, group );
                         }
                     }
                 }
             }
         }
 
-        private static void OnGoodUdpMessage(Object sender, UdpMessageEventArgs e)
+        private static void OnGoodUdpMessage( Object sender, UdpMessageEventArgs e )
         {
-            lock (ttyLock)
+            lock ( s_ttyLock )
             {
-                Console.WriteLine("=== UDP {0:O} ===", DateTime.Now);
+                Console.WriteLine( "=== UDP {0:O} ===", DateTime.Now );
 
-                var message = e.Message<UdpMessage>(whetherReadMessage: false);
-                Console.WriteLine(message.ToString());
+                UdpMessage message = e.Message<UdpMessage>( whetherReadMessage: false );
+                Console.WriteLine( message.ToString() );
                 // do nothing, this is for debugging only
             }
         }
 
-        private static void OnPingReceived(Object sender, TcpMessageEventArgs e)
+        private static void OnPingReceived( Object sender, TcpMessageEventArgs e )
         {
-            lock (ttyLock)
+            lock ( s_ttyLock )
             {
-                Console.WriteLine("=== Kad PING received {0:O} ===", DateTime.Now);
+                Console.WriteLine( "=== Kad PING received {0:O} ===", DateTime.Now );
 
-                var message = e.Message<PingRequest>(whetherReadMessage: false);
-                Console.WriteLine(message.ToString());
+                PingRequest message = e.Message<PingRequest>( whetherReadMessage: false );
+                Console.WriteLine( message.ToString() );
             }
         }
 
-        private static void OnStoreReceived(Object sender, TcpMessageEventArgs e)
+        private static void OnStoreReceived( Object sender, TcpMessageEventArgs e )
         {
-            lock (ttyLock)
+            lock ( s_ttyLock )
             {
-                Console.WriteLine("=== Kad STORE received {0:O} ===", DateTime.Now);
+                Console.WriteLine( "=== Kad STORE received {0:O} ===", DateTime.Now );
 
-                var message = e.Message<StoreRequest>(whetherReadMessage: false);
-                Console.WriteLine(message.ToString());
+                StoreRequest message = e.Message<StoreRequest>( whetherReadMessage: false );
+                Console.WriteLine( message.ToString() );
             }
         }
 
-        private static void OnFindNodeReceived(Object sender, TcpMessageEventArgs e)
+        private static void OnFindNodeReceived( Object sender, TcpMessageEventArgs e )
         {
-            lock (ttyLock)
+            lock ( s_ttyLock )
             {
-                Console.WriteLine("=== Kad FindNode received {0:O} ===", DateTime.Now);
+                Console.WriteLine( "=== Kad FindNode received {0:O} ===", DateTime.Now );
 
-                var message = e.Message<FindNodeRequest>(whetherReadMessage: false);
-                Console.WriteLine(message.ToString());
+                FindNodeRequest message = e.Message<FindNodeRequest>( whetherReadMessage: false );
+                Console.WriteLine( message.ToString() );
             }
         }
 
-        private static void OnFindValueReceived(Object sender, TcpMessageEventArgs e)
+        private static void OnFindValueReceived( Object sender, TcpMessageEventArgs e )
         {
-            lock (ttyLock)
+            lock ( s_ttyLock )
             {
-                Console.WriteLine("=== Kad FindValue received {0:O} ===", DateTime.Now);
+                Console.WriteLine( "=== Kad FindValue received {0:O} ===", DateTime.Now );
 
-                var message = e.Message<FindValueRequest>(whetherReadMessage: false);
-                Console.WriteLine(message.ToString());
+                FindValueRequest message = e.Message<FindValueRequest>( whetherReadMessage: false );
+                Console.WriteLine( message.ToString() );
             }
         }
 
-        private static Boolean IsTesterOnlyInNetwork()
+        private static Boolean NormalResposeFromUserAtClosedQuestion(String closedQuestion)
         {
-            Boolean isTesterOnlyInNetwork = false;
-            String readLine = null;
+            Boolean userResponse = false;
+            String readLine;
             String isTrue = "1";
             String isFalse = "2";
 
             do
             {
-                Console.WriteLine("Are you only in network?\n" +
+                Console.WriteLine( $"{closedQuestion}\n" +
                 "1 - yes\n" +
-                "2 - no");
+                "2 - no" );
                 readLine = Console.ReadLine().Trim();
 
-                if (readLine == isTrue)
+                if ( readLine == isTrue )
                 {
-                    isTesterOnlyInNetwork = true;
+                    userResponse = true;
                 }
-                else if (readLine == isFalse)
+                else if ( readLine == isFalse )
                 {
-                    isTesterOnlyInNetwork = false;
+                    userResponse = false;
                 }
             }
-            while ((readLine != isTrue) && (readLine != isFalse));
+            while ( ( readLine != isTrue ) && ( readLine != isFalse ) );
 
-            return isTesterOnlyInNetwork;
+            return userResponse;
         }
 
-        private static void ShowAvailableUserOptions()
-        {
-            Console.WriteLine($"Select an operation:\n" +
-                              $"1 - send multicast\n" +
-                              $"2 - send {typeof(PingRequest).Name}\n" +
-                              $"3 - send {typeof(StoreRequest).Name}\n" +
-                              $"4 - send {typeof(FindNodeRequest).Name}\n" +
-                              $"5 - send {typeof(FindValueRequest).Name}\n" +
-                              $"6 - send {typeof(AcknowledgeTcpMessage).Name}\n" +
-                              $"7 - test count available connections\n" +
-                              $"8 - download random file from another contact(-s)");
-        }
+        private static void ShowAvailableUserOptions() =>
+            Console.WriteLine( $"Select an operation:\n" +
+                               $"1 - send multicast\n" +
+                               $"2 - send {typeof( PingRequest ).Name}\n" +
+                               $"3 - send {typeof( StoreRequest ).Name}\n" +
+                               $"4 - send {typeof( FindNodeRequest ).Name}\n" +
+                               $"5 - send {typeof( FindValueRequest ).Name}\n" +
+                               $"6 - send {typeof( AcknowledgeTcpMessage ).Name}\n" +
+                               $"7 - test count available connections\n" +
+                               $"8 - download random file from another contact(-s)" );
 
-        private static void GetRemoteContact(DiscoveryService discoveryService, ref Contact remoteContact)
+        private static void GetRemoteContact( DiscoveryService discoveryService, Boolean isOnlyInNetwork, ref Contact remoteContact )
         {
-            while (remoteContact == null)
+            while ( remoteContact == null )
             {
                 discoveryService.QueryAllServices();//to get any contacts
+                AutoResetEvent receivedFindNodeRequest = new AutoResetEvent( initialState: false );
 
+                discoveryService.NetworkEventInvoker.FindNodeReceived += ( sender, eventArgs ) => receivedFindNodeRequest.Set();
+
+                receivedFindNodeRequest.WaitOne();
+                Thread.Sleep( TimeSpan.FromSeconds( value: 2 ) );
                 try
                 {
-                    remoteContact = RandomContact(discoveryService);
+                    remoteContact = RandomContact( discoveryService, isOnlyInNetwork );
                 }
-                catch (IndexOutOfRangeException) //if knowContacts.Count == 0
+                catch ( IndexOutOfRangeException ) //if knowContacts.Count == 0
                 {
                     ;//do nothing
                 }
-
-                Thread.Sleep(TimeSpan.FromSeconds(value: 3));
             }
         }
 
-        private static Contact RandomContact(DiscoveryService discoveryService)
+        private static Contact RandomContact( DiscoveryService discoveryService, Boolean isOnlyInNetwork )
         {
-            var contacts = discoveryService.OnlineContacts.Where(c => (c.ID != discoveryService.NetworkEventInvoker.OurContact.ID) &&
-                (c.LastActiveIpAddress != null)).ToArray();
+            Func<Contact, Boolean> predicateToSelectContacts;
+            if(isOnlyInNetwork)
+            {
+                predicateToSelectContacts = c => c.LastActiveIpAddress != null;
+            }
+            else
+            {
+                predicateToSelectContacts = c => ( c.LastActiveIpAddress != null ) && ( c.ID == discoveryService.NetworkEventInvoker.OurContact.ID );
+            }
+
+            Contact[] contacts = discoveryService.OnlineContacts.Where( predicateToSelectContacts ).ToArray();
 
             Random random = new Random();
-            var randomContact = contacts[random.Next(contacts.Length)];
+            Contact randomContact = contacts[ random.Next( contacts.Length ) ];
 
             return randomContact;
         }
@@ -329,150 +348,155 @@ namespace LUC.DiscoveryService.Test
         /// <param name="currentUserProvider"></param>
         /// <param name="pressedKey"></param>
         /// <returns></returns>
-        private static async Task TryExecuteSelectedOperationAsync(Contact remoteContact, IApiClient apiClient, ICurrentUserProvider currentUserProvider, ConsoleKey pressedKey)
+        private static async Task TryExecuteSelectedOperationAsync( Contact remoteContact, IApiClient apiClient, ICurrentUserProvider currentUserProvider, ConsoleKey pressedKey )
         {
-            while (true)
+            while ( true )
             {
-                ClientKadOperation kadOperation = new ClientKadOperation(discoveryService.ProtocolVersion);
+                ClientKadOperation kadOperation = new ClientKadOperation( s_discoveryService.ProtocolVersion );
 
-                switch (pressedKey)
+                switch ( pressedKey )
                 {
                     case ConsoleKey.NumPad1:
                     case ConsoleKey.D1:
-                        {
-                            discoveryService.QueryAllServices();
+                    {
+                        s_discoveryService.QueryAllServices();
 
-                            //We need to wait, because Bootstrap method executes in other threads. 
-                            //When we send UDP messages, we will receive TCP messages and 
-                            //call NetworkEventHandler.DistributedHashTable.Bootstrap-s
-                            await Task.Delay(TimeSpan.FromSeconds(value: 2)).ConfigureAwait(continueOnCapturedContext: false);
+                        AutoResetEvent receivedFindNodeRequest = new AutoResetEvent( initialState: false );
+                        //because we listen TCP messages in other threads.
+                        s_discoveryService.NetworkEventInvoker.FindNodeReceived += ( sender, eventArgs ) => receivedFindNodeRequest.Set();
+                        receivedFindNodeRequest.WaitOne();
 
-                            return;
-                        }
+                        Thread.Sleep( TimeSpan.FromSeconds( value: 2 ) );
+
+                        return;
+                    }
 
                     case ConsoleKey.NumPad2:
                     case ConsoleKey.D2:
-                        {
-                            kadOperation.Ping(discoveryService.NetworkEventInvoker.OurContact, remoteContact);
-                            return;
-                        }
+                    {
+                        kadOperation.Ping( s_discoveryService.NetworkEventInvoker.OurContact, remoteContact );
+                        return;
+                    }
 
                     case ConsoleKey.NumPad3:
                     case ConsoleKey.D3:
-                        {
-                            kadOperation.Store(discoveryService.NetworkEventInvoker.OurContact, discoveryService.NetworkEventInvoker.OurContact.ID,
-                                discoveryService.MachineId, remoteContact);
-                            return;
-                        }
+                    {
+                        kadOperation.Store( s_discoveryService.NetworkEventInvoker.OurContact, s_discoveryService.NetworkEventInvoker.OurContact.ID,
+                            s_discoveryService.MachineId, remoteContact );
+                        return;
+                    }
 
                     case ConsoleKey.NumPad4:
                     case ConsoleKey.D4:
-                        {
-                            kadOperation.FindNode(discoveryService.NetworkEventInvoker.OurContact, remoteContact.ID, remoteContact);
-                            return;
-                        }
+                    {
+                        kadOperation.FindNode( s_discoveryService.NetworkEventInvoker.OurContact, remoteContact.ID, remoteContact );
+                        return;
+                    }
 
                     case ConsoleKey.NumPad5:
                     case ConsoleKey.D5:
-                        {
-                            kadOperation.FindValue(discoveryService.NetworkEventInvoker.OurContact, discoveryService.NetworkEventInvoker.OurContact.ID, remoteContact);
-                            return;
-                        }
+                    {
+                        kadOperation.FindValue( s_discoveryService.NetworkEventInvoker.OurContact, s_discoveryService.NetworkEventInvoker.OurContact.ID, remoteContact );
+                        return;
+                    }
 
                     case ConsoleKey.NumPad6:
                     case ConsoleKey.D6:
-                        {
-                            SendTcpMessage(remoteContact);
+                    {
+                        SendTcpMessage( remoteContact );
 
-                            //because we listen TCP messages in other threads
-                            await Task.Delay(TimeSpan.FromSeconds(value: 2)).ConfigureAwait(continueOnCapturedContext: false);
+                        AutoResetEvent receivedTcpMess = new AutoResetEvent( initialState: false );
 
-                            return;
-                        }
+                        //because we listen TCP messages in other threads
+                        s_discoveryService.NetworkEventInvoker.AnswerReceived += ( sender, eventArgs ) => receivedTcpMess.Set();
+                        receivedTcpMess.WaitOne();
+
+                        return;
+                    }
 
                     case ConsoleKey.NumPad7:
                     case ConsoleKey.D7:
+                    {
+                        try
                         {
-                            try
-                            {
-                                CountAvailableConnectionsTest();
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine(ex.ToString());
-                            }
-
-                            return;
+                            CountAvailableConnectionsTest();
                         }
+                        catch ( Exception ex )
+                        {
+                            Console.WriteLine( ex.ToString() );
+                        }
+
+                        return;
+                    }
 
                     case ConsoleKey.NumPad8:
                     case ConsoleKey.D8:
-                        {
-                            await DownloadRandomFile(apiClient, currentUserProvider, remoteContact).ConfigureAwait(false);
+                    {
+                        await DownloadRandomFile( apiClient, currentUserProvider, remoteContact ).ConfigureAwait( false );
 
-                            return;
-                        }
+                        return;
+                    }
 
                     default:
-                        {
-                            continue;
-                        }
+                    {
+                        continue;
+                    }
                 }
             }
         }
 
-        private static void SendTcpMessage(Contact remoteContact)
+        private static void SendTcpMessage( Contact remoteContact )
         {
-            var remoteEndPoint = new IPEndPoint(remoteContact.LastActiveIpAddress, remoteContact.TcpPort);
-            var eventArgs = new UdpMessageEventArgs
+            IPEndPoint remoteEndPoint = new IPEndPoint( remoteContact.LastActiveIpAddress, remoteContact.TcpPort );
+            UdpMessageEventArgs eventArgs = new UdpMessageEventArgs
             {
                 RemoteEndPoint = remoteEndPoint
             };
 
             Random random = new Random();
-            UInt32 messageId = (UInt32)random.Next(maxValue: Int32.MaxValue);
+            UInt32 messageId = (UInt32)random.Next( maxValue: Int32.MaxValue );
 
-            eventArgs.SetMessage(new UdpMessage(messageId, discoveryService.ProtocolVersion,
-                remoteContact.TcpPort, machineId: discoveryService.MachineId));
-            discoveryService.SendTcpMessageAsync(discoveryService, eventArgs).GetAwaiter().GetResult();
+            eventArgs.SetMessage( new UdpMessage( messageId, s_discoveryService.ProtocolVersion,
+                remoteContact.TcpPort, machineId: s_discoveryService.MachineId ) );
+            s_discoveryService.SendTcpMessageAsync( s_discoveryService, eventArgs ).GetAwaiter().GetResult();
         }
 
         private static void CountAvailableConnectionsTest()
         {
-            using (var powerShell = PowerShell.Create())
+            using ( PowerShell powerShell = PowerShell.Create() )
             {
-                var webClient = new WebClient();
-                var pathToPowercatScript = "https://raw.githubusercontent.com/besimorhino/powercat/master/powercat.ps1";
-                var script = webClient.DownloadString(pathToPowercatScript);
+                WebClient webClient = new WebClient();
+                String pathToPowercatScript = "https://raw.githubusercontent.com/besimorhino/powercat/master/powercat.ps1";
+                String script = webClient.DownloadString( pathToPowercatScript );
 
                 try
                 {
-                    powerShell.AddScript(script).AddScript("Invoke-Method").Invoke();
+                    powerShell.AddScript( script ).AddScript( "Invoke-Method" ).Invoke();
                 }
-                catch (ParseException)
+                catch ( ParseException )
                 {
                     throw;
                 }
-                powerShell.AddCommand(cmdlet: "powercat");
+                powerShell.AddCommand( cmdlet: "powercat" );
 
-                var parameters = PowercatParameters();
-                powerShell.AddParameters(parameters);
+                Dictionary<String, Object> parameters = PowercatParameters();
+                powerShell.AddParameters( parameters );
 
                 Int32 countConnection;
                 do
                 {
-                    Console.Write($"Input count times you want to send the file: ");
+                    Console.Write( $"Input count times you want to send the file: " );
                 }
-                while (!Int32.TryParse(Console.ReadLine(), out countConnection));
+                while ( !Int32.TryParse( Console.ReadLine(), out countConnection ) );
 
-                for (Int32 numConnection = 1; numConnection <= countConnection; numConnection++)
+                for ( Int32 numConnection = 1; numConnection <= countConnection; numConnection++ )
                 {
-                    Console.WriteLine($"{nameof(numConnection)} = {numConnection}");
+                    Console.WriteLine( $"{nameof( numConnection )} = {numConnection}" );
 
                     powerShell.BeginInvoke();
 
-                    var waitToServerRead = TimeSpan.FromSeconds(0.5);
-                    Thread.Sleep(waitToServerRead);
+                    TimeSpan waitToServerRead = TimeSpan.FromSeconds( 0.5 );
+                    Thread.Sleep( waitToServerRead );
 
                     powerShell.Stop();
                 }
@@ -486,31 +510,31 @@ namespace LUC.DiscoveryService.Test
             IPAddress serverIpAddress = null;
             do
             {
-                Console.Write("Input IP-address of a server to connect: ");
+                Console.Write( "Input IP-address of a server to connect: " );
 
                 try
                 {
-                    serverIpAddress = IPAddress.Parse(Console.ReadLine());
+                    serverIpAddress = IPAddress.Parse( Console.ReadLine() );
                 }
-                catch (FormatException ex)
+                catch ( FormatException ex )
                 {
-                    Console.WriteLine(ex.Message);
+                    Console.WriteLine( ex.Message );
                 }
             }
-            while (serverIpAddress == null);
+            while ( serverIpAddress == null );
 
-            parameters.Add(key: "c", value: serverIpAddress.ToString());
-            parameters.Add("p", discoveryService.RunningTcpPort.ToString());
+            parameters.Add( key: "c", value: serverIpAddress.ToString() );
+            parameters.Add( "p", s_discoveryService.RunningTcpPort.ToString() );
 
             String pathToFileToSend;
             do
             {
-                Console.Write($"Input full path to file which you want to send to server: ");
+                Console.Write( $"Input full path to file which you want to send to server: " );
                 pathToFileToSend = Console.ReadLine();
             }
-            while (!File.Exists(pathToFileToSend));
+            while ( !File.Exists( pathToFileToSend ) );
 
-            parameters.Add("i", pathToFileToSend);
+            parameters.Add( "i", pathToFileToSend );
 
             return parameters;
         }
@@ -519,73 +543,75 @@ namespace LUC.DiscoveryService.Test
         /// Will download random file which isn't in current PC if you aren't only in network. Otherwise it will download file which is
         /// </summary>
         /// <returns></returns>
-        private async static Task DownloadRandomFile(IApiClient apiClient, 
-            ICurrentUserProvider currentUserProvider, Contact remoteContact)
+        private async static Task DownloadRandomFile( IApiClient apiClient,
+            ICurrentUserProvider currentUserProvider, Contact remoteContact )
         {
-            var download = new Download(discoveryService, IOBehavior.Asynchronous);
-            var localFolderPath = settingsService.ReadUserRootFolderPath();
+            Download download = new Download( s_discoveryService, IOBehavior.Asynchronous );
 
             String filePrefix = String.Empty;
-            (ObjectDescriptionModel fileDescription, String bucketName) = await RandomFileToDownloadAsync(apiClient, currentUserProvider, remoteContact, localFolderPath, filePrefix).ConfigureAwait(false);
+            (ObjectDescriptionModel fileDescription, String bucketName, String localFolderPath) = await RandomFileToDownloadAsync( apiClient, currentUserProvider, remoteContact, filePrefix ).ConfigureAwait( false );
 
-            await download.DownloadFileAsync(localFolderPath, bucketName,
-                filePrefix, fileDescription.OriginalName, fileDescription.Bytes, 
-                fileDescription.Version, cancellationTokenSource.Token)
-                .ConfigureAwait(false);
+            await download.DownloadFileAsync( localFolderPath, bucketName,
+                filePrefix, fileDescription.OriginalName, fileDescription.Bytes,
+                fileDescription.Version, s_cancellationTokenSource.Token )
+                .ConfigureAwait( false );
         }
 
-        private async static Task<(ObjectDescriptionModel, String)> RandomFileToDownloadAsync(IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String localFolderPath, String filePrefix)
+        private async static Task<(ObjectDescriptionModel randomFileToDownload, String serverBucketName, String localFolderPath)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String filePrefix )
         {
-            var bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
+            IList<String> bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
 
-            var random = new Random();
-            var rndBcktDrctrPth = bucketDirectoryPathes[random.Next(bucketDirectoryPathes.Count)];
-            var serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath(rndBcktDrctrPth).ServerName;
+            Random random = new Random();
+            String rndBcktDrctrPth = bucketDirectoryPathes[ random.Next( bucketDirectoryPathes.Count ) ];
+            String serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath( rndBcktDrctrPth ).ServerName;
 
-            var objectsListResponse = await apiClient.ListAsync(serverBucketName, filePrefix).ConfigureAwait(continueOnCapturedContext: false);
-            var objectsListModel = objectsListResponse.ToObjectsListModel();
+            ObjectsListResponse objectsListResponse = await apiClient.ListAsync( serverBucketName, filePrefix ).ConfigureAwait( continueOnCapturedContext: false );
+            ObjectsListModel objectsListModel = objectsListResponse.ToObjectsListModel();
+            ObjectDescriptionModel[] undeletedObjectsListModel = objectsListModel.ObjectDescriptions.Where( c => !c.IsDeleted ).ToArray();
 
-            Boolean isOnlyInNetwork = discoveryService.ContactId == remoteContact.ID;
+            Boolean isOnlyInNetwork = s_discoveryService.ContactId == remoteContact.ID;
 
-            //select from objectsListModel files which exist in current PC if tester is only in network. 
+            //select from undeletedObjectsListModel files which exist in current PC if tester is only in network. 
             //If the last one is not, select files which don't exist in current PC
-            var bjctDscrptnsFrDwnld = objectsListModel.ObjectDescriptions.Where(cachedFileInServer =>
-            {
-                var fullPathToFile = Path.Combine(localFolderPath, rndBcktDrctrPth, filePrefix, cachedFileInServer.OriginalName);
-                var isFileInCurrentPc = File.Exists(fullPathToFile);
+            List<ObjectDescriptionModel> bjctDscrptnsFrDwnld = undeletedObjectsListModel.Where( cachedFileInServer =>
+             {
+                 String fullPathToFile = Path.Combine( rndBcktDrctrPth, filePrefix, cachedFileInServer.OriginalName );
+                 Boolean isFileInCurrentPc = File.Exists( fullPathToFile );
 
-                Boolean shouldBeDownloaded;
-                if(isOnlyInNetwork)
-                {
-                    shouldBeDownloaded = isFileInCurrentPc;
-                }
-                else
-                {
-                    shouldBeDownloaded = !isFileInCurrentPc;
-                }
-                shouldBeDownloaded &= !cachedFileInServer.IsDeleted;
+                 Boolean shouldBeDownloaded;
+                 if ( isOnlyInNetwork )
+                 {
+                     shouldBeDownloaded = isFileInCurrentPc;
+                 }
+                 else
+                 {
+                     shouldBeDownloaded = !isFileInCurrentPc;
+                 }
 
-                return shouldBeDownloaded;
-            }).ToList();
+                 return shouldBeDownloaded;
+             } ).ToList();
 
             ObjectDescriptionModel randomFileToDownload;
-            if (bjctDscrptnsFrDwnld.Count == 0 && isOnlyInNetwork)
+
+            //It will download random file at local PC if you don't have any file to download, 
+            //server has any file which isn't deleted and you are only in network
+            Boolean canWeDownloadAnything = undeletedObjectsListModel.Length > 0;
+            if ( ( bjctDscrptnsFrDwnld.Count == 0 ) && ( canWeDownloadAnything ) && ( isOnlyInNetwork ) )
             {
-                randomFileToDownload = objectsListModel.ObjectDescriptions[random.Next(objectsListModel.ObjectDescriptions.Count)];
-                await apiClient.DownloadFileAsync(serverBucketName, filePrefix, localFolderPath, randomFileToDownload.OriginalName, randomFileToDownload).ConfigureAwait(false);
+                randomFileToDownload = undeletedObjectsListModel[ random.Next( undeletedObjectsListModel.Length ) ];
+                await apiClient.DownloadFileAsync( serverBucketName, filePrefix, rndBcktDrctrPth, randomFileToDownload.OriginalName, randomFileToDownload ).ConfigureAwait( false );
             }
-            else if(bjctDscrptnsFrDwnld.Count > 0)
+            else if ( bjctDscrptnsFrDwnld.Count > 0 )
             {
-                randomFileToDownload = bjctDscrptnsFrDwnld[random.Next(bjctDscrptnsFrDwnld.Count)];
+                randomFileToDownload = bjctDscrptnsFrDwnld[ random.Next( bjctDscrptnsFrDwnld.Count ) ];
             }
             else
             {
-                Console.WriteLine($"You should put few file in {localFolderPath} and using WpfClient, upload it");
+                Console.WriteLine( $"You should put few files in {rndBcktDrctrPth} and using WpfClient, upload it" );
                 throw new InvalidOperationException();
             }
 
-            String bucketName = Path.GetFileName(rndBcktDrctrPth);
-            return (randomFileToDownload, bucketName);
+            return (randomFileToDownload, serverBucketName, rndBcktDrctrPth);
         }
     }
 }

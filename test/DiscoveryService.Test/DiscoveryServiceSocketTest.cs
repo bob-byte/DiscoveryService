@@ -3,7 +3,9 @@ using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.DiscoveryService.Messages.KademliaResponses;
+
 using NUnit.Framework;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,72 +24,89 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Connect_RemoteEndPointIsNull_GetException()
         {
-            var dsSocket = InitializedTcpSocket();
+            DiscoveryServiceSocket dsSocket = InitializedTcpSocket();
 
-            Assert.That(() => 
-                    dsSocket.Connect(remoteEndPoint: null, TimeSpan.FromSeconds(1)), 
-                    Throws.TypeOf(typeof(ArgumentNullException)));
+            Assert.That( () =>
+                     dsSocket.DsConnect( remoteEndPoint: null, TimeSpan.FromSeconds( 1 ) ),
+                    Throws.TypeOf( typeof( ArgumentNullException ) ) );
         }
 
         [Test]
         public void ConnectAsync_RemoteEndPointIsNull_GetException()
         {
-            var dsSocket = InitializedTcpSocket();
+            DiscoveryServiceSocket dsSocket = InitializedTcpSocket();
 
-            Assert.That(async () =>
-                    await dsSocket.ConnectAsync(remoteEndPoint: null, TimeSpan.FromSeconds(1)),
-                    Throws.TypeOf(typeof(ArgumentNullException)));
+            Assert.That( async () =>
+                     await dsSocket.DsConnectAsync( remoteEndPoint: null, TimeSpan.FromSeconds( 1 ) ),
+                    Throws.TypeOf( typeof( ArgumentNullException ) ) );
         }
 
         [Test]
         public void Receive_SendPingRequestAndReceiveResponse_NotFailed()
         {
-            DiscoveryService discoveryService = new DiscoveryService(new ServiceProfile(useIpv4: true, useIpv6: true, protocolVersion: 1));
+            DiscoveryService discoveryService = new DiscoveryService( new ServiceProfile( useIpv4: true, useIpv6: true, protocolVersion: 1 ) );
             discoveryService.Start();
 
-            var client = InitializedTcpSocket();
+            DiscoveryServiceSocket client = InitializedTcpSocket();
 
-            var endPoint = AvailableIpAddress(discoveryService, client.AddressFamily);
-            client.Connect(endPoint, Constants.ConnectTimeout);
+            IPEndPoint endPoint = AvailableIpAddress( discoveryService, client.AddressFamily );
+            client.DsConnect( endPoint, Constants.ConnectTimeout );
 
-            var pingRequest = new PingRequest
+            PingRequest pingRequest = new PingRequest( KademliaId.RandomIDInKeySpace.Value );
+
+            client.DsSend( pingRequest.ToByteArray(), Constants.SendTimeout );
+
+            Thread.Sleep( TimeSpan.FromSeconds( value: 5 ) );
+            if ( client.Available > 0 )
             {
-                Sender = ID.RandomIDInKeySpace.Value
-            };
+                Byte[] receivedBytes = client.DsReceive( timeout: default );
 
-            client.Send(pingRequest.ToByteArray(), Constants.SendTimeout);
-
-            Thread.Sleep(TimeSpan.FromSeconds(value: 5));
-            if(client.Available > 0)
-            {
-                var receivedBytes = client.Receive(timeout: default);
-
-                Assert.IsTrue(receivedBytes.Length > 0);
+                Assert.IsTrue( receivedBytes.Length > 0 );
             }
             else
             {
-                throw new TimeoutException($"Timeout to receive {typeof(PingResponse).Name} data");
+                throw new TimeoutException( $"Timeout to receive {typeof( PingResponse ).Name} data" );
             }
         }
 
         private DiscoveryServiceSocket InitializedTcpSocket() =>
             new DiscoveryServiceSocket(
-                AddressFamily.InterNetwork, 
-                SocketType.Stream, 
-                ProtocolType.Tcp, 
+                AddressFamily.InterNetwork,
+                SocketType.Stream,
+                ProtocolType.Tcp,
                 SetUpTests.LoggingService
             );
 
-        private IPEndPoint AvailableIpAddress(DiscoveryService discoveryService, AddressFamily addressFamily)
+        private IPEndPoint AvailableIpAddress( DiscoveryService discoveryService, AddressFamily addressFamily )
         {
-            var allPossibleIpAddresses = discoveryService.NetworkEventInvoker.RunningIpAddresses.Where(c => c.AddressFamily == addressFamily).ToArray();
+            IPAddress[] allPossibleIpAddresses = discoveryService.NetworkEventInvoker.RunningIpAddresses.Where( c => c.AddressFamily == addressFamily ).ToArray();
 
             Random random = new Random();
-            var ipAddress = allPossibleIpAddresses[1/*random.Next(allPossibleIpAddresses.Count())*/];
+            IPAddress ipAddress = allPossibleIpAddresses[ 1/*random.Next(allPossibleIpAddresses.Count())*/];
 
-            var endPoint = new IPEndPoint(ipAddress, discoveryService.RunningTcpPort);
+            IPEndPoint endPoint = new IPEndPoint( ipAddress, discoveryService.RunningTcpPort );
 
             return endPoint;
+        }
+
+        [Test]
+        public void SendAsync_WithoutSettingConnection_ThrowSocketException()
+        {
+            DiscoveryServiceSocket socket = InitializedTcpSocket();
+
+            Byte[] bytesToSend = new Byte[ 20 ];
+            Random random = new Random();
+            random.NextBytes( bytesToSend );
+
+            TimeSpan waitIndefinitely = TimeSpan.FromMilliseconds( value: -1 );
+            Assert.That(
+                async () =>
+                {
+                    await socket.DsSendAsync( bytesToSend, waitIndefinitely ).ConfigureAwait( continueOnCapturedContext: false );
+                    return Task.CompletedTask;
+                },
+                Throws.TypeOf( typeof( SocketException ) )
+            );
         }
 
         //private EndPoint EndPointConnectedToInternet()

@@ -1,24 +1,26 @@
 ﻿using LUC.DiscoveryService.Kademlia;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Messages.KademliaRequests
+namespace LUC.DiscoveryService.Messages
 {
-    class Range : ICloneable
+    class ChunkRange : ICloneable
     {
-        public Range()
-        {
-            NumsUndownloadedChunk = new List<Int32>();
-        }
-
-        public Range(UInt64 start, UInt64 end, UInt64 total)
+        public ChunkRange( UInt64 start, UInt64 end, UInt64 total )
+            : this()
         {
             Start = start;
             End = end;
             Total = total;
+        }
+
+        public ChunkRange()
+        {
+            NumsUndownloadedChunk = new List<Int32>();
         }
 
         public UInt64 Start { get; set; }
@@ -40,13 +42,13 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public override String ToString() =>
             $"{Start}-{End}/{Total}";
 
-        public override Boolean Equals(Object obj)
+        public override Boolean Equals( Object obj )
         {
             Boolean isEqual;
-            if(obj is Range range)
+            if ( obj is ChunkRange range )
             {
-                isEqual = (range.Start == Start) && (range.End == End) && 
-                    (range.TotalPerContact == TotalPerContact) && (range.Total == Total);
+                isEqual = ( range.Start == Start ) && ( range.End == End ) &&
+                    ( range.TotalPerContact == TotalPerContact ) && ( range.Total == Total );
             }
             else
             {
@@ -58,17 +60,9 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
         public override Int32 GetHashCode()
         {
-            Int32 hash = 13;
-
-            hash = PartialHash(hash, Start);
-            hash = PartialHash(hash, End);
-            hash = PartialHash(hash, TotalPerContact);
-            hash = PartialHash(hash, Total);
+            Int32 hash = HashCode.Combine( Start, End, TotalPerContact, Total );
 
             return hash;
         }
-
-        private Int32 PartialHash<T>(Int32 hash, T property) =>
-            (hash * 7) + property.GetHashCode();
     }
 }

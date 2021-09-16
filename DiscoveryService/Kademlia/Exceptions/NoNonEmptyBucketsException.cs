@@ -4,7 +4,16 @@ namespace LUC.DiscoveryService.Kademlia.Exceptions
 {
     public class NoNonEmptyBucketsException : Exception
     {
-        public NoNonEmptyBucketsException() { }
-        public NoNonEmptyBucketsException(string msg) : base(msg) { }
+        public NoNonEmptyBucketsException()
+            : base()
+        {
+            ;//do nothing
+        }
+
+        public NoNonEmptyBucketsException( String messageException )
+            : base( messageException )
+        {
+            ;//do nothing
+        }
     }
 }

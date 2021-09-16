@@ -19,9 +19,10 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;RECEIVE_TCP_FROM_OURSELF</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -30,6 +31,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Common.Logging, Version=3.4.1.0, Culture=neutral, PublicKeyToken=af08829b84f0328e, processorArchitecture=MSIL">
@@ -126,15 +128,16 @@
     <Compile Include="CodingData\Buffer.cs" />
     <Compile Include="Common\Display.cs" />
     <Compile Include="Common\IpAddressFilter.cs" />
+    <Compile Include="Common\IpAddressFilter.SockAddrIn6.cs" />
+    <Compile Include="UdpSenders.cs" />
     <Compile Include="Download.CheckFileExists.cs" />
-    <Compile Include="Download.ContactComparer.cs" />
     <Compile Include="Download.cs" />
     <Compile Include="Common\DiscoveryServiceSocket.cs" />
     <Compile Include="Download.DownloadProcess.cs" />
     <Compile Include="Download.DownloadedFile.cs" />
     <Compile Include="Extensions\DeviceIdBuilderExtension.cs" />
-    <Compile Include="Extensions\StringExtension.cs" />
     <Compile Include="Interfaces\INetworkEventHandler.cs" />
+    <Compile Include="Interfaces\IWireSerialiser.cs" />
     <Compile Include="Kademlia\AbstractKademlia.cs" />
     <Compile Include="Kademlia\ClientPool\BackgroundConnectionResetHelper.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.cs" />
@@ -156,18 +159,22 @@
     <Compile Include="Kademlia\Exceptions\SendingQueryToSelfException.cs" />
     <Compile Include="Kademlia\Exceptions\TooManyContactsException.cs" />
     <Compile Include="Kademlia\Exceptions\ValueCannotBeNullException.cs" />
+    <Compile Include="Kademlia\Interfaces\IBucketList.cs" />
+    <Compile Include="Kademlia\Interfaces\IDht.cs" />
+    <Compile Include="Kademlia\Interfaces\INode.cs" />
+    <Compile Include="Messages\KademliaRequests\AbstractFileRequest.cs" />
     <Compile Include="Messages\KademliaRequests\CheckFileExistsRequest.cs" />
-    <Compile Include="Messages\KademliaRequests\FileRequest.cs" />
-    <Compile Include="Messages\KademliaRequests\Range.cs" />
+    <Compile Include="Messages\ChunkRange.cs" />
     <Compile Include="Messages\KademliaRequests\DownloadFileRequest.cs" />
+    <Compile Include="Messages\KademliaResponses\AbstactFileResponse.cs" />
     <Compile Include="Messages\KademliaResponses\CheckFileExistsResponse.cs" />
     <Compile Include="Messages\KademliaResponses\DownloadFileResponse.cs" />
     <Compile Include="Messages\KademliaResponses\ErrorResponse.cs" />
-    <Compile Include="Messages\KademliaResponses\FileResponse.cs" />
     <Compile Include="NetworkEventHandlers\CheckFileExistsHandler.cs" />
     <Compile Include="NetworkEventHandlers\DownloadFileHandler.cs" />
+    <Compile Include="NetworkEventHandlers\KadRequestHandler.cs" />
+    <Compile Include="NetworkEventHandlers\KadRequestHandler.PriorityHandleKadRequest.cs" />
     <Compile Include="NetworkEventHandlers\NetworkEventHandler.cs" />
-    <Compile Include="Common\FunctionTestType.cs" />
     <Compile Include="Common\SemaphoreLocker.cs" />
     <Compile Include="Common\SocketState.cs" />
     <Compile Include="Messages\DiscoveryServiceMessage.cs" />
@@ -185,20 +192,19 @@
     <Compile Include="Messages\UdpMessageEventArgs.cs" />
     <Compile Include="Messages\UdpMessage.cs" />
     <Compile Include="Messages\AcknowledgeTcpMessage.cs" />
-    <Compile Include="CodingData\IWireSerialiser.cs" />
     <Compile Include="CodingData\WireReader.cs" />
     <Compile Include="CodingData\WireWriter.cs" />
     <Compile Include="Kademlia\Routers\BaseRouter.cs" />
     <Compile Include="Kademlia\BucketList.cs" />
-    <Compile Include="Kademlia\Constants.cs" />
+    <Compile Include="Common\Constants.cs" />
     <Compile Include="Kademlia\Contact.cs" />
     <Compile Include="Kademlia\ContactQueueItem.cs" />
     <Compile Include="Kademlia\Dht.cs" />
     <Compile Include="Kademlia\Exceptions\BucketDoesNotContainContactToEvict.cs" />
     <Compile Include="Kademlia\ExtensionMethods.cs" />
     <Compile Include="Kademlia\FindResult.cs" />
-    <Compile Include="Kademlia\ID.cs" />
-    <Compile Include="Kademlia\Interfaces.cs" />
+    <Compile Include="Kademlia\KademliaId.cs" />
+    <Compile Include="Kademlia\Interfaces\IStorage.cs" />
     <Compile Include="Kademlia\KBucket.cs" />
     <Compile Include="Kademlia\Node.cs" />
     <Compile Include="Kademlia\Routers\ParallelRouter.cs" />
@@ -209,11 +215,10 @@
     <Compile Include="Messages\TcpMessageEventArgs.cs" />
     <Compile Include="Messages\Message.cs" />
     <Compile Include="Messages\MessageOperation.cs" />
-    <Compile Include="Client.cs" />
+    <Compile Include="Listeners.cs" />
     <Compile Include="Messages\RecentMessages.cs" />
     <Compile Include="NetworkInterfaceEventArgs.cs" />
     <Compile Include="NetworkEventInvoker.cs" />
-    <Compile Include="Common\Lock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DiscoveryService.cs" />
     <Compile Include="ServiceProfile.cs" />
@@ -225,8 +230,6 @@
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Kademlia\Interfaces\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

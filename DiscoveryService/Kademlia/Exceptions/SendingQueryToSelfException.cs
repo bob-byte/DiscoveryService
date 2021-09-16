@@ -5,6 +5,6 @@ namespace LUC.DiscoveryService.Kademlia.Exceptions
     public class SendingQueryToSelfException : Exception
     {
         public SendingQueryToSelfException() { }
-        public SendingQueryToSelfException(string msg) : base(msg) { }
+        public SendingQueryToSelfException( String msg ) : base( msg ) { }
     }
 }

@@ -2,171 +2,172 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+
 using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Kademlia.Exceptions;
+using LUC.DiscoveryService.Kademlia.Interfaces;
+
 using Newtonsoft.Json;
 
 namespace LUC.DiscoveryService.Kademlia
 {
     class BucketList : AbstractKademlia, IBucketList
     {
-        public List<KBucket> Buckets { get { return buckets; } set { buckets = value; } }
+        public List<KBucket> Buckets { get; set; }
 
         [JsonIgnore]
-        public ID OurID { get { return ourID; } set { ourID = value; } }
+        public KademliaId OurID { get; set; }
 
         [JsonIgnore]
-        public Contact OurContact { get { return ourContact; } set { ourContact = value; } }
+        public Contact OurContact { get; set; }
 
         [JsonIgnore]
-        public IDht Dht { get { return dht; } set { dht = value; } }
+        public IDht Dht { get; set; }
 
-        protected List<KBucket> buckets;
-        protected ID ourID;
-        protected Contact ourContact;
-        protected IDht dht;
+#if DEBUG       // For unit testing
+        public BucketList( KademliaId id, Contact dummyContact, UInt16 protocolVersion )
+            : base( protocolVersion )
+        {
+            OurID = id;
+            OurContact = dummyContact;
+            Buckets = new List<KBucket>();
 
-//#if DEBUG       // For unit testing
-//        public BucketList(ID id, Contact dummyContact)
-//        {
-//            ourID = id;
-//            ourContact = dummyContact;
-//            buckets = new List<KBucket>();
+            // First kbucket has max range.
+            Buckets.Add( new KBucket() );
+        }
+#endif
 
-//            // First kbucket has max range.
-//            buckets.Add(new KBucket());
-//        }
-//#endif
-
-//        /// <summary>
-//        /// For serialization.
-//        /// </summary>
-//        public BucketList()
-//        {
-//        }
+        /// <summary>
+        /// For serialization.
+        /// </summary>
+        public BucketList()
+            : base( protocolVersion: 1 )
+        {
+            ;// do nothing
+        }
 
         /// <summary>
         /// Initialize the bucket list with our host ID and create a single bucket for the full ID range.
         /// </summary>
-        public BucketList(Contact ourContact, UInt16 protocolVersion)
-            : base(protocolVersion)
+        public BucketList( Contact ourContact, UInt16 protocolVersion )
+            : base( protocolVersion )
         {
-            this.ourContact = ourContact;
-            ourID = ourContact.ID;
-            buckets = new List<KBucket>();
+            this.OurContact = ourContact;
+            OurID = ourContact.ID;
+            Buckets = new List<KBucket>();
 
             // First kbucket has max range.
-            buckets.Add(new KBucket());
+            Buckets.Add( new KBucket() );
         }
 
         /// <summary>
         /// Add a contact if possible, based on the algorithm described
         /// in sections 2.2, 2.4 and 4.2
         /// </summary>
-        public void AddContact(ref Contact contact)
+        public void AddContact( ref Contact contact )
         {
-            if(!FunctionTestType.CanCurrentPcToReceiveTcpMessFromItself(ourContact.ID, contact.ID))
-            {
-                Validate.IsFalse<OurNodeCannotBeAContactException>(ourContact.MachineId == contact.MachineId, "Cannot add ourselves as a contact!");
-            }
+#if !RECEIVE_TCP_FROM_OURSELF
+            Validate.IsFalse<OurNodeCannotBeAContactException>(ourContact.MachineId == contact.MachineId, "Cannot add ourselves as a contact!");
+#endif
 
             // Update the LastSeen to now.
             contact.Touch();
 
-            lock (this)
+            lock ( this )
             {
-                KBucket kbucket = GetKBucket(contact.ID);
+                KBucket kbucket = GetKBucket( contact.ID );
 
-                if (kbucket.Contains(contact.MachineId))
+                if ( kbucket.Contains( contact.MachineId ) )
                 {
                     // Replace the existing contact, updating the network info and LastSeen timestamp.
-                    kbucket.ReplaceContact(ref contact);
+                    kbucket.ReplaceContact( ref contact );
                 }
-                else if (kbucket.IsBucketFull)
+                else if ( kbucket.IsBucketFull )
                 {
-                    if (CanSplit(kbucket))
+                    if ( CanSplit( kbucket ) )
                     {
                         // Split the bucket and try again.
                         (KBucket k1, KBucket k2) = kbucket.Split();
-                        int idx = GetKBucketIndex(contact.ID);
-                        buckets[idx] = k1;
-                        buckets.Insert(idx + 1, k2);
-                        buckets[idx].Touch();
-                        buckets[idx + 1].Touch();
-                        AddContact(ref contact);
+                        Int32 idx = GetKBucketIndex( contact.ID );
+                        Buckets[ idx ] = k1;
+                        Buckets.Insert( idx + 1, k2 );
+                        Buckets[ idx ].Touch();
+                        Buckets[ idx + 1 ].Touch();
+                        AddContact( ref contact );
                     }
                     else
                     {
-                        Contact lastSeenContact = kbucket.Contacts.OrderBy(c => c.LastSeen).First();
-                        RpcError error = clientKadOperation.Ping(ourContact, lastSeenContact);
+                        Contact lastSeenContact = kbucket.Contacts.OrderBy( c => c.LastSeen ).First();
+                        RpcError error = m_clientKadOperation.Ping( OurContact, lastSeenContact );
 
-                        if (error.HasError)
+                        if ( error.HasError )
                         {
                             // Null continuation is used because unit tests may not initialize a DHT.
-                            dht?.DelayEviction(lastSeenContact, contact);
+                            Dht?.DelayEviction( lastSeenContact, contact );
                         }
                         else
                         {
                             // Still can't add the contact, so put it into the pending list.
-                            dht?.AddToPending(contact);
+                            Dht?.AddToPending( contact );
                         }
                     }
                 }
                 else
                 {
                     // Bucket isn't full, so just add the contact.
-                    kbucket.AddContact(contact);
+                    kbucket.AddContact( contact );
                 }
             }
         }
 
-        public KBucket GetKBucket(ID otherID)
+        public KBucket GetKBucket( KademliaId otherID )
         {
-            lock (this)
+            lock ( this )
             {
-                return buckets[GetKBucketIndex(otherID)];
+                return Buckets[ GetKBucketIndex( otherID ) ];
             }
-		}
+        }
 
-        public KBucket GetKBucket(BigInteger otherID)
+        public KBucket GetKBucket( BigInteger otherID )
         {
-            lock (this)
+            lock ( this )
             {
-                return buckets[GetKBucketIndex(otherID)];
+                return Buckets[ GetKBucketIndex( otherID ) ];
             }
         }
 
         /// <summary>
         /// Returns true if the contact, by ID, exists in our bucket list.
         /// </summary>
-        public bool ContactExists(Contact sender)
+        public Boolean ContactExists( Contact sender )
         {
-            lock (this)
+            lock ( this )
             {
-                return Buckets.SelectMany(b => b.Contacts).Any(c => c.ID == sender.ID);
+                return Buckets.SelectMany( b => b.Contacts ).Any( c => c.ID == sender.ID );
             }
         }
 
-        protected virtual bool CanSplit(KBucket kbucket)
+        protected virtual Boolean CanSplit( KBucket kbucket )
         {
-            lock (this)
+            lock ( this )
             {
-                return kbucket.HasInRange(ourID) || ((kbucket.Depth() % Constants.B) != 0);
+                return kbucket.HasInRange( OurID ) || ( ( kbucket.Depth() % Constants.B ) != 0 );
             }
         }
 
-        protected int GetKBucketIndex(ID otherID)
-		{
-            lock (this)
-            {
-                return buckets.FindIndex(b => b.HasInRange(otherID));
-            }
-		}
-
-        protected int GetKBucketIndex(BigInteger otherID)
+        protected Int32 GetKBucketIndex( KademliaId otherID )
         {
-            lock (this)
+            lock ( this )
             {
-                return buckets.FindIndex(b => b.HasInRange(otherID));
+                return Buckets.FindIndex( b => b.HasInRange( otherID ) );
+            }
+        }
+
+        protected Int32 GetKBucketIndex( BigInteger otherID )
+        {
+            lock ( this )
+            {
+                return Buckets.FindIndex( b => b.HasInRange( otherID ) );
             }
         }
 
@@ -175,18 +176,18 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         /// <param name="toFind">The ID for which we want to find close contacts.</param>
         /// <param name="exclude">The ID to exclude (the requestor's ID)</param>
-        public List<Contact> GetCloseContacts(ID key, ID exclude)
+        public List<Contact> GetCloseContacts( KademliaId key, KademliaId exclude )
         {
-            lock (this)
+            lock ( this )
             {
-                var contacts = buckets.
-                    SelectMany(b => b.Contacts).
-                    Where(c => c.ID != exclude).
-                    Select(c => new { contact = c, distance = c.ID ^ key }).
-                    OrderBy(d => d.distance).
-                    Take(Constants.K);
+                var contacts = Buckets.
+                    SelectMany( b => b.Contacts ).
+                    Where( c => c.ID != exclude ).
+                    Select( c => new { contact = c, distance = c.ID ^ key } ).
+                    OrderBy( d => d.distance ).
+                    Take( Constants.K );
 
-                return contacts.Select(c => c.contact).ToList();
+                return contacts.Select( c => c.contact ).ToList();
             }
         }
     }

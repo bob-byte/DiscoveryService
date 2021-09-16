@@ -1,4 +1,5 @@
 ﻿using DeviceId;
+
 using System;
 
 namespace LUC.DiscoveryService.Extensions
@@ -11,16 +12,16 @@ namespace LUC.DiscoveryService.Extensions
         /// <returns>
         /// Unique machine identifier
         /// </returns>
-        public static String MachineId(this DeviceIdBuilder idBuilder)
+        public static String MachineId( this DeviceIdBuilder idBuilder )
         {
-            if(idBuilder != null)
+            if ( idBuilder != null )
             {
-                var motherboard = idBuilder.AddMotherboardSerialNumber();
+                DeviceIdBuilder motherboard = idBuilder.AddMotherboardSerialNumber();
                 return $"{motherboard}-{Guid.NewGuid()}";
             }
             else
             {
-                throw new NullReferenceException(nameof(idBuilder));
+                throw new NullReferenceException( nameof( idBuilder ) );
             }
         }
     }

@@ -3,6 +3,7 @@ using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
+
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -16,119 +17,139 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Common
 {
+    /// <summary>
+    /// New socket methods are marked <a href="Ds"/> in the front of the name, so only there <see cref="State"/> will be changed, except <see cref="Dispose"/> (there also will be changed) in order to you can easily use this object in <a href="using"/> statement
+    /// </summary>
     public class DiscoveryServiceSocket : Socket
     {
-        private readonly Object m_lock = new Object();
-        //private Exception innerException;
+        private readonly TimeSpan m_howOftenCheckAcceptedClient;
+        private readonly ConcurrentQueue<Socket> m_acceptedSockets;
 
-        private readonly TimeSpan howOftenCheckAcceptedClient = TimeSpan.FromSeconds(value: 0.5);
-
-        private AutoResetEvent acceptDone;
-        private AutoResetEvent connectDone;
-        private AutoResetEvent receiveDone;
-        private AutoResetEvent sendDone;
-        private AutoResetEvent disconnectDone;
-
-        [Import(typeof(ILoggingService))]
+        [Import( typeof( ILoggingService ) )]
         internal static ILoggingService Log { get; private set; }
 
-        public DiscoveryServiceSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, ILoggingService loggingService)
-            : base(addressFamily, socketType, protocolType)
-        {
-            State = SocketState.Created;
-            Log = loggingService;
-        }
-
         /// <inheritdoc/>
-        public DiscoveryServiceSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, BigInteger contactId, ILoggingService loggingService)
-            : base(addressFamily, socketType, protocolType)
+        public DiscoveryServiceSocket( AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, BigInteger contactId, ILoggingService loggingService )
+            : this( addressFamily, socketType, protocolType, loggingService )
         {
             ContactId = contactId;
-            State = SocketState.Created;
+        }
+
+        public DiscoveryServiceSocket( AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, ILoggingService loggingService )
+            : base( addressFamily, socketType, protocolType )
+        {
+            State = SocketState.Creating;
             Log = loggingService;
+
+            m_howOftenCheckAcceptedClient = TimeSpan.FromSeconds( value: 0.5 );
+            m_acceptedSockets = new ConcurrentQueue<Socket>();
+
+            State = SocketState.Created;
         }
 
         public BigInteger ContactId { get; set; }
 
         public SocketState State { get; protected set; }
 
-        private readonly ConcurrentQueue<Socket> acceptedSockets = new ConcurrentQueue<Socket>();
-
-        public void Accept(TimeSpan timeout, out Socket acceptedSocket)
+        public void DsAccept( TimeSpan timeout, out Socket acceptedSocket )
         {
             VerifyWorkState();
 
-            StateObjectForAccept stateAccept = new StateObjectForAccept(this);
-            var asyncResult = BeginAccept(new AsyncCallback(AcceptCallback), stateAccept);
+            AutoResetEvent acceptDone = new AutoResetEvent( initialState: false );
+            StateObjectForAccept stateAccept = new StateObjectForAccept( this, acceptDone );
+            State = SocketState.Accepting;
 
-            if (!asyncResult.IsCompleted)
+            BeginAccept( new AsyncCallback( AcceptCallback ), stateAccept );
+            Boolean isAccepted = acceptDone.WaitOne( timeout );
+
+            if ( isAccepted )
             {
-                asyncResult.AsyncWaitHandle.WaitOne(timeout);
+                acceptedSocket = stateAccept.AcceptedSocket;
+            }
+            else
+            {
+                throw new TimeoutException();
             }
 
-            acceptedSocket = stateAccept.AcceptedSocket;
+            stateAccept.Dispose();
         }
 
-        private void AcceptCallback(IAsyncResult asyncResult)
+        private void AcceptCallback( IAsyncResult asyncResult )
         {
             //Get the socket that handles the client request
             StateObjectForAccept stateAccept = (StateObjectForAccept)asyncResult.AsyncState;
-            stateAccept.AcceptedSocket = stateAccept.Listener.EndAccept(asyncResult);
+            stateAccept.AcceptedSocket = stateAccept.Listener.EndAccept( asyncResult );
+            State = SocketState.Accepted;
 
-            acceptDone.Set();
+            //another thread can receive timeout and it will close stateAccept.AcceptDone
+            if ( !stateAccept.AcceptDone.SafeWaitHandle.IsClosed )
+            {
+                //Signal that the connection has been made
+                stateAccept.AcceptDone.Set();
+            }
         }
 
-        private async Task<Socket> AcceptedSocketAsync(Int32 lengthStorageOfAcceptedSockets, TimeSpan howOftenCheckAcceptedClient)
+        private async Task<Socket> SocketWithNewDataAsync( Int32 lengthStorageOfAcceptedSockets, TimeSpan howOftenCheckAcceptedClient )
         {
-            if (acceptDone == null)
-            {
-                acceptDone = new AutoResetEvent(initialState: false);
-            }
+            AutoResetEvent firstAcceptDone = new AutoResetEvent( initialState: false );
 
-            Task.Run(async () =>
-            {
-                if(acceptedSockets.Count >= lengthStorageOfAcceptedSockets)
-                {
-                    acceptedSockets.TryDequeue(out _);
-                }
-
-                acceptedSockets.Enqueue(await this.AcceptAsync());
-                if(acceptedSockets.Count == 1)
-                {
-                    acceptDone.Set();
-                }
-            }).ConfigureAwait(continueOnCapturedContext: false).GetAwaiter();
+            Task.Run( async () =>
+             {
+                 await AcceptNewSockets( lengthStorageOfAcceptedSockets, firstAcceptDone )
+                     .ConfigureAwait( continueOnCapturedContext: false );
+             } ).ConfigureAwait( false ).GetAwaiter();
 
             Socket acceptedSocket = null;
-            await Task.Run(async () =>
+
+            if ( m_acceptedSockets.Count == 0 )
             {
-                if (acceptedSockets.Count == 0)
-                {
-                    acceptDone.WaitOne();
-                }
+                //wait indefinitely
+                firstAcceptDone.WaitOne();
+                firstAcceptDone.Close();
+            }
 
-                while (acceptedSocket == null)
+            while ( acceptedSocket == null )
+            {
+                foreach ( Socket socket in m_acceptedSockets )
                 {
-                    foreach (var socket in acceptedSockets)
+                    if ( socket.Available > 0 )
                     {
-                        if (socket.Available > 0)
-                        {
-                            acceptedSocket = socket;
-                            break;
-                        }
-                    }
-
-                    if(acceptedSocket == null)
-                    {
-                        await Task.Delay(howOftenCheckAcceptedClient);
+                        acceptedSocket = socket;
+                        break;
                     }
                 }
-            }).ConfigureAwait(false);
-            
+
+                if ( acceptedSocket == null )
+                {
+                    await Task.Delay( howOftenCheckAcceptedClient ).ConfigureAwait( false );
+                }
+            }
+
             return acceptedSocket;
         }
 
-        public async Task<TcpMessageEventArgs> ReceiveAsync(TimeSpan timeoutToRead, Int32 lengthStorageOfAcceptedSockets)
+        private async Task AcceptNewSockets( Int32 lengthStorageOfAcceptedSockets, EventWaitHandle acceptDone )
+        {
+            if ( m_acceptedSockets.Count >= lengthStorageOfAcceptedSockets )
+            {
+                m_acceptedSockets.TryDequeue( out _ );
+            }
+
+            State = SocketState.Accepting;
+            //AcceptAsync() is extension method, so we can't use it without "this."
+            Socket newSocket = await this.AcceptAsync().ConfigureAwait( continueOnCapturedContext: false );
+            State = SocketState.Accepted;
+
+            m_acceptedSockets.Enqueue( newSocket );
+
+            //another thread can receive timeout and it will close acceptDone
+            if ( ( m_acceptedSockets.Count == 1 ) && ( !acceptDone.SafeWaitHandle.IsClosed ) )
+            {
+                acceptDone.Set();
+            }
+        }
+
+        public async Task<TcpMessageEventArgs> DsReceiveAsync( TimeSpan timeoutToRead, Int32 lengthStorageOfAcceptedSockets )
         {
             IPEndPoint ipEndPoint;
             Socket clientToReadMessage;
@@ -136,33 +157,37 @@ namespace LUC.DiscoveryService.Common
 
             try
             {
-                clientToReadMessage = await AcceptedSocketAsync(lengthStorageOfAcceptedSockets, howOftenCheckAcceptedClient);
-                if (receiveDone == null)
-                {
-                    receiveDone = new AutoResetEvent(initialState: false);
-                }
-                var taskReadBytes = ReadBytesAsync(clientToReadMessage);
+                clientToReadMessage = await SocketWithNewDataAsync( lengthStorageOfAcceptedSockets, m_howOftenCheckAcceptedClient ).
+                    ConfigureAwait( continueOnCapturedContext: false );
 
-                var isReceivedInTime = receiveDone.WaitOne(timeoutToRead);
-                if(isReceivedInTime)
+                AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
+
+                Task<Byte[]> taskReadBytes = ReadBytesAsync( clientToReadMessage, receiveDone );
+
+                //just configure context without waiting
+                taskReadBytes.ConfigureAwait( false ).GetAwaiter();
+
+                //wait until timeoutToRead
+                Boolean isReceivedInTime = receiveDone.WaitOne( timeoutToRead );
+                if ( isReceivedInTime )
                 {
-                    readBytes = taskReadBytes.Result;
+                    readBytes = await taskReadBytes;
                     ipEndPoint = clientToReadMessage.RemoteEndPoint as IPEndPoint;
                 }
                 else
                 {
-                    throw new TimeoutException($"Timeout to read data from {clientToReadMessage.RemoteEndPoint}");
+                    throw new TimeoutException( $"Timeout to read data from {clientToReadMessage.RemoteEndPoint}" );
                 }
             }
-            catch (ObjectDisposedException)
+            catch ( ObjectDisposedException )
             {
                 throw;
             }
-            catch(SocketException)
+            catch ( SocketException )
             {
-                if(State == SocketState.Closed)
+                if ( State >= SocketState.Closing )
                 {
-                    throw new ObjectDisposedException($"Socket {LocalEndPoint} is disposed");
+                    throw new ObjectDisposedException( $"Socket {LocalEndPoint} is disposed" );
                 }
                 else
                 {
@@ -171,17 +196,17 @@ namespace LUC.DiscoveryService.Common
             }
 
             TcpMessageEventArgs receiveResult = new TcpMessageEventArgs();
-            if (ipEndPoint != null)
+            if ( ipEndPoint != null )
             {
                 receiveResult.Buffer = readBytes;
-                receiveResult.SendingEndPoint = ipEndPoint;
+                receiveResult.RemoteEndPoint = ipEndPoint;
                 receiveResult.AcceptedSocket = clientToReadMessage;
                 receiveResult.LocalContactId = ContactId;
                 receiveResult.LocalEndPoint = LocalEndPoint;
             }
             else
             {
-                throw new InvalidOperationException("Cannot convert remote end point to IPEndPoint");
+                throw new InvalidOperationException( $"Cannot convert remote end point to {nameof( IPEndPoint )}" );
             }
 
             return receiveResult;
@@ -190,359 +215,322 @@ namespace LUC.DiscoveryService.Common
         /// <summary>
         ///   Reads all available data
         /// </summary>
-        private async Task<Byte[]> ReadBytesAsync(Socket socketToRead)
+        private async Task<Byte[]> ReadBytesAsync( Socket socketToRead, EventWaitHandle receiveDone )
         {
             List<Byte> allMessage = new List<Byte>();
-            var availableDataToRead = socketToRead.Available;
-            for (Int32 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0; )
-            {
-                var buffer = new ArraySegment<Byte>(new Byte[availableDataToRead]);
-                countReadBytes = await socketToRead.ReceiveAsync(buffer, SocketFlags.None);
-                allMessage.AddRange(buffer);
+            Int32 availableDataToRead = socketToRead.Available;
+            State = SocketState.Reading;
 
-                availableDataToRead = socketToRead.Available;
+            for ( Int32 countReadBytes = 1; ( countReadBytes > 0 ) && ( availableDataToRead > 0 ); availableDataToRead = socketToRead.Available )
+            {
+                ArraySegment<Byte> buffer = new ArraySegment<Byte>( new Byte[ availableDataToRead ] );
+                countReadBytes = await socketToRead.ReceiveAsync( buffer, SocketFlags.None ).
+                    ConfigureAwait( continueOnCapturedContext: false );
+                allMessage.AddRange( buffer );
             }
-            
-            receiveDone?.Set();
+
+            State = SocketState.AlreadyRead;
+
+            //another thread can receive timeout and it will close receiveDone
+            if ( !receiveDone.SafeWaitHandle.IsClosed )
+            {
+                //Signal that the connection has been made
+                receiveDone.Set();
+            }
 
             return allMessage.ToArray();
         }
 
-        public async Task ConnectAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
+        public async Task DsConnectAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior )
         {
-            if (ioBehavior == IOBehavior.Asynchronous)
+            if ( ioBehavior == IOBehavior.Asynchronous )
             {
-                await ConnectAsync(remoteEndPoint, timeoutToConnect);
+                await DsConnectAsync( remoteEndPoint, timeoutToConnect ).ConfigureAwait( continueOnCapturedContext: false );
             }
-            else if (ioBehavior == IOBehavior.Synchronous)
+            else if ( ioBehavior == IOBehavior.Synchronous )
             {
-                Connect(remoteEndPoint, timeoutToConnect);
-            }
-        }
-
-        public async Task ConnectAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect)
-        {
-            var taskConnection = Task.Run(() =>
-            {
-                try
-                {
-                    Connect(remoteEndPoint, timeoutToConnect);
-                }
-                catch (SocketException ex)
-                {
-                    Log.LogError(ex.ToString());
-                }
-                catch (TimeoutException ex)
-                {
-                    Log.LogError(ex.ToString());
-                }
-            });
-            await taskConnection.ConfigureAwait(continueOnCapturedContext: false);
-
-            if (taskConnection.Exception != null)
-            {
-                throw taskConnection.Exception;
-            }
-        }
-
-        public void Connect(EndPoint remoteEndPoint, TimeSpan timeout)
-        {
-            if(connectDone == null)
-            {
-                connectDone = new AutoResetEvent(initialState: false);
-            }
-
-            VerifyWorkState();
-
-            BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), state: this);
-            var isConnected = connectDone.WaitOne(timeout);
-            
-            if (isConnected)
-            {
-                State = SocketState.Connected;
+                DsConnect( remoteEndPoint, timeoutToConnect );
             }
             else
+            {
+                throw new ArgumentException( $"{nameof( ioBehavior )} has incorrect value" );
+            }
+        }
+
+        public async Task DsConnectAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect ) =>
+            await Task.Run( () => DsConnect( remoteEndPoint, timeoutToConnect ) ).ConfigureAwait( continueOnCapturedContext: false );
+
+        public void DsConnect( EndPoint remoteEndPoint, TimeSpan timeout )
+        {
+            VerifyWorkState();
+
+            State = SocketState.Connecting;
+
+            AutoResetEvent connectDone = new AutoResetEvent( initialState: false );
+            BeginConnect( remoteEndPoint, ( asyncResult ) => ConnectCallback( asyncResult, connectDone ), state: this );
+
+            Boolean isConnected = connectDone.WaitOne( timeout );
+            connectDone.Close();
+            if ( !isConnected )
             {
                 throw new TimeoutException();
             }
         }
 
-        private void VerifyWorkState()
+        protected void VerifyWorkState()
         {
-            if((SocketState.Closing <= State) && (State <= SocketState.Failed))
+            if ( ( SocketState.Failed <= State ) && ( State <= SocketState.Closed ) )
             {
-                String messageError = "Wanted to use idle socket";
-
-                //loggingService.LogError(messageError);
-                throw new InvalidOperationException(messageError);
+                //Wanted to use idle socket
+                throw new SocketException( (Int32)SocketError.SocketError );
             }
         }
 
-        private void ConnectCallback(IAsyncResult asyncResult)
+        private void ConnectCallback( IAsyncResult asyncResult, EventWaitHandle connectDone )
         {
             //Retrieve the socket from the state object
             try
             {
-                var client = (Socket)asyncResult.AsyncState;
+                Socket client = (Socket)asyncResult.AsyncState;
 
                 //Complete the connection
-                client.EndConnect(asyncResult);
-                Log.LogInfo($"Socket connected to {client.RemoteEndPoint}");
+                client.EndConnect( asyncResult );
+                State = SocketState.Connected;
+                Log.LogInfo( $"Socket connected to {client.RemoteEndPoint}" );
 
-                //Signal that the connection has been made
-                connectDone.Set();
+                //another thread can receive timeout and it will close connectDone
+                if ( !connectDone.SafeWaitHandle.IsClosed )
+                {
+                    //Signal that the connection has been made
+                    connectDone.Set();
+                }
             }
-            catch(SocketException ex)
+            catch ( SocketException ex )
             {
-                Log.LogError(ex.ToString());
+                Log.LogError( ex.ToString() );
             }
-            catch(InvalidCastException ex)
+            catch ( InvalidCastException ex )
             {
-                Log.LogError(ex.ToString());
+                Log.LogError( ex.ToString() );
             }
         }
 
-        public async Task<Byte[]> ReceiveAsync(IOBehavior ioBehavior, TimeSpan timeout)
+        public async Task<Byte[]> DsReceiveAsync( IOBehavior ioBehavior, TimeSpan timeout )
         {
             Byte[] bytesOfResponse;
-            if (ioBehavior == IOBehavior.Asynchronous)
+            if ( ioBehavior == IOBehavior.Asynchronous )
             {
-                bytesOfResponse = await ReceiveAsync(timeout).ConfigureAwait(continueOnCapturedContext: false);
+                bytesOfResponse = await DsReceiveAsync( timeout ).ConfigureAwait( continueOnCapturedContext: false );
             }
-            else if (ioBehavior == IOBehavior.Synchronous)
+            else if ( ioBehavior == IOBehavior.Synchronous )
             {
-                bytesOfResponse = Receive(timeout);
+                bytesOfResponse = DsReceive( timeout );
             }
             else
             {
-                throw new ArgumentException($"{nameof(ioBehavior)} = {default(IOBehavior)}");
+                throw new ArgumentException( $"{nameof( ioBehavior )} has incorrect value" );
             }
 
             return bytesOfResponse;
         }
 
         //TODO: optimize it
-        public async Task<Byte[]> ReceiveAsync(TimeSpan timeout) =>
-            await Task.Run(() => Receive(timeout)).ConfigureAwait(continueOnCapturedContext: false);
+        public async Task<Byte[]> DsReceiveAsync( TimeSpan timeout ) =>
+            await Task.Run( () => DsReceive( timeout ) ).ConfigureAwait( continueOnCapturedContext: false );
 
-        public Byte[] Receive(TimeSpan timeout)
+        public Byte[] DsReceive( TimeSpan timeout )
         {
-            if (receiveDone == null)
-            {
-                receiveDone = new AutoResetEvent(initialState: false);
-            }
-
             Boolean isReceived;
             Task<Byte[]> taskReadBytes;
+
             try
             {
-                taskReadBytes = ReadBytesAsync(this);
+                AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
 
-                if(timeout != default)
-                {
-                    isReceived = receiveDone.WaitOne(timeout);
-                }
-                else
-                {
-                    isReceived = receiveDone.WaitOne();
-                }
+                taskReadBytes = ReadBytesAsync( socketToRead: this, receiveDone );
+                taskReadBytes.ConfigureAwait( continueOnCapturedContext: false );
+
+                isReceived = receiveDone.WaitOne( timeout );
+
+                receiveDone.Close();
             }
-            catch (SocketException)
+            catch ( SocketException )
             {
-                State = SocketState.Disconnected;
+                State = SocketState.Failed;
+
                 throw;
             }
 
-            if(isReceived)
-            {
-                State = SocketState.Connected;
-
-                return taskReadBytes.Result;
-            }
-            else
-            {
-                throw new TimeoutException();
-            }
+            return isReceived ? taskReadBytes.GetAwaiter().GetResult() : throw new TimeoutException();
         }
 
-        public async Task SendAsync(Byte[] bytesToSend, TimeSpan timeoutToSend, IOBehavior ioBehavior)
+        public async Task DsSendAsync( Byte[] bytesToSend, TimeSpan timeoutToSend, IOBehavior ioBehavior )
         {
-            if (ioBehavior == IOBehavior.Asynchronous)
+            if ( ioBehavior == IOBehavior.Asynchronous )
             {
-                await SendAsync(bytesToSend, timeoutToSend);
+                await DsSendAsync( bytesToSend, timeoutToSend ).ConfigureAwait( continueOnCapturedContext: false );
             }
-            else if (ioBehavior == IOBehavior.Synchronous)
+            else if ( ioBehavior == IOBehavior.Synchronous )
             {
-                Send(bytesToSend, timeoutToSend);
+                DsSend( bytesToSend, timeoutToSend );
             }
             else
             {
-                throw new ArgumentException($"{nameof(ioBehavior)} is default");
+                throw new ArgumentException( $"{nameof( ioBehavior )} has incorrect value" );
             }
         }
 
         //TODO: optimize it
-        public async Task SendAsync(Byte[] bytesToSend, TimeSpan timeout) =>
-            await Task.Run(() => Send(bytesToSend, timeout)).ConfigureAwait(continueOnCapturedContext: false);
+        public async Task DsSendAsync( Byte[] bytesToSend, TimeSpan timeout ) =>
+            await Task.Run( () => DsSend( bytesToSend, timeout ) ).ConfigureAwait( continueOnCapturedContext: false );
 
-        //Maybe we should use lock to avoid sending several packages
-        public void Send(Byte[] bytesToSend, TimeSpan timeout)
+        public void DsSend( Byte[] bytesToSend, TimeSpan timeout )
         {
-            //lock(sendDone)
-            //{
-                VerifyConnected();
-
-                if (sendDone == null)
-                {
-                    sendDone = new AutoResetEvent(initialState: false);
-                }
-
-                //Begin sending the data to the remote device
-                BeginSend(bytesToSend, offset: 0, bytesToSend.Length, SocketFlags.None, new AsyncCallback(SendCallback), this);
-                var isSent = sendDone.WaitOne(timeout);
-
-                if (isSent)
-                {
-                    State = SocketState.Connected;
-                }
-                else
-                {
-                    throw new TimeoutException();
-                }
-            //}
-        }
-
-        public void VerifyConnected()
-        {
-            lock (m_lock)
-            {
-                if (State == SocketState.Closed)
-                {
-                    throw new ObjectDisposedException(nameof(DiscoveryServiceSocket));
-                }
-                else if (!Connected || ((SocketState.Disconnected <= State) && (State <= SocketState.Failed)))
-                {
-                    throw new InvalidOperationException("ServerSession is not connected.");
-                }
-            }
-        }
-
-        private void SendCallback(IAsyncResult asyncResult)
-        {
-                //Retrieve the socket from the state object
-                Socket client = (Socket)asyncResult.AsyncState;
-
-                //Complete sending the data to the remote device
-                var bytesSent = client.EndSend(asyncResult);
-                Log.LogInfo($"Sent {bytesSent} bytes to {client.RemoteEndPoint}");
-
-                sendDone.Set();
-        }
-
-        public async Task DisconnectAsync(IOBehavior ioBehavior, Boolean reuseSocket)
-        {
-            if (ioBehavior == IOBehavior.Asynchronous)
-            {
-                await DisconnectAsync(reuseSocket, Constants.DisconnectTimeout).ConfigureAwait(continueOnCapturedContext: false);
-            }
-            else if (ioBehavior == IOBehavior.Synchronous)
-            {
-                Disconnect(reuseSocket, Constants.DisconnectTimeout);
-            }
-            else
-            {
-                throw new ArgumentException($"{nameof(ioBehavior)} = {default(IOBehavior)}");
-            }
-        }
-
-        public void Disconnect(Boolean reuseSocket, TimeSpan timeout)
-        {
-            if (disconnectDone == null)
-            {
-                disconnectDone = new AutoResetEvent(initialState: false);
-            }
-
             VerifyConnected();
 
-            BeginDisconnect(reuseSocket, new AsyncCallback(DisconnectCallback), this);
-            var isDisconnected = disconnectDone.WaitOne(timeout);
-            if(isDisconnected)
-            {
-                State = SocketState.Disconnected;
-            }
-            else
+            AutoResetEvent sendDone = new AutoResetEvent( initialState: false );
+
+            State = SocketState.SendingBytes;
+
+            //Begin sending the data to the remote device
+            BeginSend(
+                bytesToSend,
+                offset: 0,
+                bytesToSend.Length,
+                SocketFlags.None,
+                ( asyncResult ) => SendCallback( asyncResult, sendDone ),
+                state: this
+            );
+
+            Boolean isSent = sendDone.WaitOne( timeout );
+            sendDone.Close();
+            if ( !isSent )
             {
                 throw new TimeoutException();
             }
         }
 
-        private void DisconnectCallback(IAsyncResult asyncResult)
+        public void VerifyConnected()
         {
-            var socket = (Socket)asyncResult.AsyncState;
-            socket.EndDisconnect(asyncResult);
-
-            disconnectDone.Set();
+            if ( State == SocketState.Closed )
+            {
+                throw new ObjectDisposedException( nameof( DiscoveryServiceSocket ) );
+            }
+            else if ( !Connected || ( ( SocketState.Disconnected <= State ) && ( State <= SocketState.Closed ) ) )
+            {
+                throw new SocketException( (Int32)SocketError.NotConnected );
+            }
         }
 
-        public async Task<Boolean> DisconnectAsync(Boolean reuseSocket, TimeSpan timeout)
+        private void SendCallback( IAsyncResult asyncResult, EventWaitHandle sendDone )
         {
-            var disconnectTask = Task.Run(() =>
-            {
-                 Disconnect(reuseSocket, timeout);
-            });
-            await disconnectTask;
+            //Retrieve the socket from the state object
+            Socket client = (Socket)asyncResult.AsyncState;
 
-            Boolean isDisconnected;
-            if(disconnectTask.Exception == null)
+            //Complete sending the data to the remote device
+            Int32 bytesSent = client.EndSend( asyncResult );
+
+            State = SocketState.SentBytes;
+            Log.LogInfo( $"Sent {bytesSent} bytes to {client.RemoteEndPoint}" );
+
+            //another thread can receive timoeut and it will close sendDone
+            if ( !sendDone.SafeWaitHandle.IsClosed )
             {
-                isDisconnected = true;
+                //Signal that the connection has been made
+                sendDone.Set();
+            }
+        }
+
+        public async Task DsDisconnectAsync( IOBehavior ioBehavior, Boolean reuseSocket, TimeSpan timeout )
+        {
+            if ( ioBehavior == IOBehavior.Asynchronous )
+            {
+                await DsDisconnectAsync( reuseSocket, timeout ).ConfigureAwait( continueOnCapturedContext: false );
+            }
+            else if ( ioBehavior == IOBehavior.Synchronous )
+            {
+                DsDisconnect( reuseSocket, timeout );
             }
             else
             {
-                isDisconnected = false;
+                throw new ArgumentException( $"{nameof( ioBehavior )} = {default( IOBehavior )}" );
             }
-
-            return isDisconnected;
         }
 
-        private void VerifyState(SocketState state)
+        public void DsDisconnect( Boolean reuseSocket, TimeSpan timeout )
         {
-            if (State != state)
+            VerifyConnected();
+
+            AutoResetEvent disconnectDone = new AutoResetEvent( initialState: false );
+
+            State = SocketState.Disconnecting;
+            BeginDisconnect(
+                reuseSocket,
+                ( asyncResult ) => DisconnectCallback( asyncResult, disconnectDone ),
+                state: this
+            );
+
+            Boolean isDisconnected = disconnectDone.WaitOne( timeout );
+            disconnectDone.Close();
+            if ( !isDisconnected )
             {
-                Log.LogError($"Session {RemoteEndPoint} should have SessionStateExpected {state} but was SessionState {State}");
-                throw new InvalidOperationException($"Expected state to be {state} but was {State}."/*.FormatInvariant(state, State)*/);
+                throw new TimeoutException();
+            }
+        }
+
+        private void DisconnectCallback( IAsyncResult asyncResult, EventWaitHandle disconnectDone )
+        {
+            Socket socket = (Socket)asyncResult.AsyncState;
+            socket.EndDisconnect( asyncResult );
+
+            State = SocketState.Disconnected;
+
+            //another thread can receive timoeut and it will close disconnectDone
+            if ( !disconnectDone.SafeWaitHandle.IsClosed )
+            {
+                //Signal that the connection has been made
+                disconnectDone.Set();
+            }
+        }
+
+        public async Task DsDisconnectAsync( Boolean reuseSocket, TimeSpan timeout ) =>
+            await Task.Run( () => DsDisconnect( reuseSocket, timeout ) ).ConfigureAwait( continueOnCapturedContext: false );
+
+        private void VerifyState( SocketState state )
+        {
+            if ( State != state )
+            {
+                Log.LogError( $"Session {RemoteEndPoint} should have SessionStateExpected {state} but was SessionState {State}" );
+                throw new InvalidOperationException( $"Expected state to be {state} but was {State}." );
             }
         }
 
         public new void Dispose()
         {
-            State = SocketState.Closing;
-
-            foreach (var acceptedSocket in acceptedSockets)
+            if ( ( SocketState.Created <= State ) && ( State <= SocketState.Disconnected ) )
             {
-                try
+                State = SocketState.Closing;
+
+                foreach ( Socket acceptedSocket in m_acceptedSockets )
                 {
-                    acceptedSocket.Dispose();
+                    try
+                    {
+                        acceptedSocket.Dispose();
+                    }
+                    catch
+                    {
+                        //eat it
+                    }
                 }
-                catch
-                {
-                    //eat it
-                }
+
+                base.Dispose();
+
+                State = SocketState.Closed;
             }
-            DisposeAllResetEvent();
-
-            base.Dispose();
-
-            State = SocketState.Closed;
-        }
-
-        private void DisposeAllResetEvent()
-        {
-            acceptDone?.Dispose();
-            connectDone?.Dispose();
-            sendDone?.Dispose();
-            receiveDone?.Dispose();
-            disconnectDone?.Dispose();
+            else
+            {
+                throw new ObjectDisposedException( "Try to dispose already closed socket" );
+            }
         }
     }
 }

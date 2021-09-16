@@ -1,5 +1,7 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Kademlia;
+
 using System;
 using System.IO;
 using System.Numerics;
@@ -17,14 +19,14 @@ namespace LUC.DiscoveryService.Messages
         /// <remarks>
         /// In reality the max length is dictated by the network MTU.
         /// </remarks>
-        public const Int32 MaxLength = 10240;
+        public const Int32 MAX_LENGTH = 10240;
 
         /// <summary>
         /// Create a new instance of the <see cref="UdpMessage"/> class. This constructor is often used to read message
         /// </summary>
         public UdpMessage()
         {
-            ;//do nothing
+            DefaultInit();
         }
 
         /// <summary>
@@ -39,59 +41,68 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="machineId">
         /// Id of machine which is sending this messege
         /// </param>
-        public UdpMessage(UInt32 messageId, UInt16 protocolVersion, UInt16 tcpPort, String machineId)
-            : base(messageId, machineId, protocolVersion)
+        public UdpMessage( UInt32 messageId, UInt16 protocolVersion, UInt16 tcpPort, String machineId )
+            : base( messageId, machineId, protocolVersion )
         {
+            DefaultInit();
             TcpPort = tcpPort;
         }
 
         /// <inheritdoc/>
-        public override IWireSerialiser Read(WireReader reader)
+        public override IWireSerialiser Read( WireReader reader )
         {
-            if (reader != null)
+            if ( reader != null )
             {
+                base.Read( reader );
+
                 MessageId = reader.ReadUInt32();
                 MachineId = reader.ReadAsciiString();
 
                 ProtocolVersion = reader.ReadUInt16();
-                TcpPort = (UInt16)reader.ReadUInt32();                
+                TcpPort = reader.ReadUInt16();
 
                 return this;
             }
             else
             {
-                throw new ArgumentNullException("ReaderNullException");
+                throw new ArgumentNullException( "ReaderNullException" );
             }
         }
 
         /// <inheritdoc/>
-        public override void Write(WireWriter writer)
+        public override void Write( WireWriter writer )
         {
-            if(writer != null)
+            if ( writer != null )
             {
-                writer.Write(MessageId);
-                writer.WriteAsciiString(MachineId);
-                writer.Write(ProtocolVersion);
-                writer.Write((UInt32)TcpPort);
+                base.Write( writer );
+
+                writer.Write( MessageId );
+                writer.WriteAsciiString( MachineId );
+
+                writer.Write( ProtocolVersion );
+                writer.Write( TcpPort );
             }
             else
             {
-                throw new ArgumentNullException("WriterNullException");
+                throw new ArgumentNullException( "WriterNullException" );
             }
         }
 
         /// <inheritdoc/>
         public override String ToString()
         {
-            using(var writer = new StringWriter())
+            using ( StringWriter writer = new StringWriter() )
             {
-                writer.WriteLine("Multicast message:");
-                writer.WriteLine($"{base.ToString()};");
-                writer.WriteLine($"TCP port = {TcpPort};\n" +
-                                 $"MachineId = {MachineId}");
+                writer.WriteLine( "Multicast message:" );
+                writer.WriteLine( $"{base.ToString()};" );
+                writer.WriteLine( $"TCP port = {TcpPort};\n" +
+                                 $"MachineId = {MachineId}" );
 
                 return writer.ToString();
             }
         }
+
+        protected override void DefaultInit( params Object[] args ) => 
+            MessageOperation = MessageOperation.Multicast;
     }
 }

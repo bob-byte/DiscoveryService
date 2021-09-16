@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
@@ -8,6 +9,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Threading.Tasks;
+
 using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
@@ -95,25 +97,27 @@ namespace LUC.DiscoveryService
 
         public event EventHandler<TcpMessageEventArgs> DownloadFileReceived;
 
-        private const Int32 MaxDatagramSize = UdpMessage.MaxLength;
+        private const Int32 MAX_DATAGRAM_SIZE = UdpMessage.MAX_LENGTH;
 
-        private static readonly Dictionary<UInt16, Dht> dhts;
+        private static readonly ConcurrentDictionary<UInt16, Dht> s_dhts;
 
         /// <summary>
         ///   Recently received messages.
         /// </summary>
-        private readonly RecentMessages receivedMessages;
+        private readonly RecentMessages m_receivedMessages;
 
         /// <summary>
         ///   Function used for listening filtered network interfaces.
         /// </summary>
-        private readonly Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> networkInterfacesFilter;
+        private readonly Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> m_networkInterfacesFilter;
 
-        private Client client;
+        private Listeners m_listeners;
+
+        private UdpSenders m_udpSenders;
 
         static NetworkEventInvoker()
         {
-            dhts = new Dictionary<UInt16, Dht>();
+            s_dhts = new ConcurrentDictionary<UInt16, Dht>();
         }
 
         /// <summary>
@@ -122,22 +126,22 @@ namespace LUC.DiscoveryService
         /// <param name="filter">
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
-        internal NetworkEventInvoker(String machineId, Boolean useIpv4, Boolean useIpv6, 
-            UInt16 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null)
+        internal NetworkEventInvoker( String machineId, Boolean useIpv4, Boolean useIpv6,
+            UInt16 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null )
         {
-            receivedMessages = new RecentMessages();
+            m_receivedMessages = new RecentMessages();
 
             MachineId = machineId;
             UseIpv4 = useIpv4;
             UseIpv6 = useIpv6;
             ProtocolVersion = protocolVersion;
 
-            OurContact = new Contact(MachineId, ID.RandomIDInKeySpace, RunningTcpPort);
-            var distributedHashTable = new Dht(OurContact, ProtocolVersion, 
-                storageFactory: () => new VirtualStorage(), new ParallelRouter(ProtocolVersion));
-            dhts.Add(protocolVersion, distributedHashTable);
+            OurContact = new Contact( MachineId, KademliaId.RandomIDInKeySpace, RunningTcpPort );
+            Dht distributedHashTable = new Dht( OurContact, ProtocolVersion,
+                storageFactory: () => new VirtualStorage(), new ParallelRouter( ProtocolVersion ) );
+            s_dhts.TryAdd( protocolVersion, distributedHashTable );
 
-            networkInterfacesFilter = filter;
+            m_networkInterfacesFilter = filter;
 
             IgnoreDuplicateMessages = false;
         }
@@ -147,7 +151,7 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Known network interfaces
         /// </summary>
-        internal static List<NetworkInterface> KnownNics { get; private set; } = new List<NetworkInterface>();
+        internal static List<NetworkInterface> KnownNetworks { get; private set; } = new List<NetworkInterface>();
 
         /// <summary>
         ///   Determines if received messages are checked for duplicates.
@@ -161,15 +165,15 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public Boolean IgnoreDuplicateMessages { get; set; }
 
-        internal static Dht DistributedHashTable(UInt16 protocolVersion)
+        internal static Dht DistributedHashTable( UInt16 protocolVersion )
         {
-            if(dhts.ContainsKey(protocolVersion))
+            if ( s_dhts.ContainsKey( protocolVersion ) )
             {
-                return dhts[protocolVersion];
+                return s_dhts[ protocolVersion ];
             }
             else
             {
-                throw new ArgumentException($"DHT with {protocolVersion} isn\'t created");
+                throw new ArgumentException( $"DHT with {protocolVersion} isn\'t created" );
             }
         }
 
@@ -192,16 +196,17 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public static IEnumerable<NetworkInterface> NetworkInterfaces()
         {
-            var nics = NetworkInterface.GetAllNetworkInterfaces()
-                .Where(nic => nic.OperationalStatus == OperationalStatus.Up)
-                .Where(nic => nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                .ToArray();
-            if (nics.Length > 0)
-                return nics;
+            IEnumerable<NetworkInterface> nics = NetworkInterface.GetAllNetworkInterfaces().
+                Where( nic => nic.OperationalStatus == OperationalStatus.Up ).
+                Where( nic => nic.NetworkInterfaceType != NetworkInterfaceType.Loopback );
 
             // Special case: no operational NIC, then use loopbacks.
-            return NetworkInterface.GetAllNetworkInterfaces()
-                .Where(nic => nic.OperationalStatus == OperationalStatus.Up);
+            if ( nics.Count() == 0 )
+            {
+                nics = NetworkInterface.GetAllNetworkInterfaces().Where( nic => nic.OperationalStatus == OperationalStatus.Up );
+            }
+
+            return nics;
         }
 
         /// <summary>
@@ -214,18 +219,15 @@ namespace LUC.DiscoveryService
         ///   The loopback addresses (127.0.0.1 and ::1) are NOT included in the
         ///   returned sequences.
         /// </remarks>
-        public static IEnumerable<IPAddress> IPAddresses()
-        {
-            return NetworkInterfaces()
-                .SelectMany(nic => nic.GetIPProperties().UnicastAddresses)
-                .Select(u => u.Address);
-        }
+        public static IEnumerable<IPAddress> IPAddresses() => NetworkInterfaces()
+                .SelectMany( nic => nic.GetIPProperties().UnicastAddresses )
+                .Select( u => u.Address );
 
         /// <summary>
         /// IP-addresses which <seealso cref="DiscoveryService"/> uses to exchange messages
         /// </summary>
         public List<IPAddress> RunningIpAddresses =>
-            Client.IpAddressesOfInterfaces(networkInterfacesFilter?.Invoke(KnownNics) ?? KnownNics, UseIpv4, UseIpv6);
+            Listeners.IpAddressesOfInterfaces( m_networkInterfacesFilter?.Invoke( KnownNetworks ) ?? KnownNetworks, UseIpv4, UseIpv6 );
 
         /// <summary>
         ///   Get the link local IP addresses of the local machine.
@@ -237,61 +239,61 @@ namespace LUC.DiscoveryService
         ///   All IPv4 addresses are considered link local.
         /// </remarks>
         /// <seealso href="https://en.wikipedia.org/wiki/Link-local_address"/>
-        public static IEnumerable<IPAddress> LinkLocalAddresses()
-        {
-            return IPAddresses()
-                .Where(a => a.AddressFamily == AddressFamily.InterNetwork ||
-                    (a.AddressFamily == AddressFamily.InterNetworkV6 && a.IsIPv6LinkLocal));
-        }
+        public static IEnumerable<IPAddress> LinkLocalAddresses() => IPAddresses()
+                .Where( a => a.AddressFamily == AddressFamily.InterNetwork ||
+                     ( a.AddressFamily == AddressFamily.InterNetworkV6 && a.IsIPv6LinkLocal ) );
 
-        private void OnNetworkAddressChanged(Object sender, EventArgs e) => FindNetworkInterfaces();
+        private void OnNetworkAddressChanged( Object sender, EventArgs e ) => FindNetworkInterfaces();
 
         private void FindNetworkInterfaces()
         {
-            LoggingService.LogInfo("Finding network interfaces");
+            LoggingService.LogInfo( "Finding network interfaces" );
 
             try
             {
-                var currentNics = NetworkInterfaces().ToList();
+                List<NetworkInterface> currentNics = NetworkInterfaces().ToList();
 
-                var newNics = new List<NetworkInterface>();
-                var oldNics = new List<NetworkInterface>();
+                List<NetworkInterface> newNics = new List<NetworkInterface>();
+                List<NetworkInterface> oldNics = new List<NetworkInterface>();
 
-                foreach (var nic in KnownNics.Where(k => !currentNics.Any(n => k.Id == n.Id)))
+                foreach ( NetworkInterface nic in KnownNetworks.Where( k => !currentNics.Any( n => k.Id == n.Id ) ) )
                 {
-                    oldNics.Add(nic);
+                    oldNics.Add( nic );
 
 #if DEBUG
-                    LoggingService.LogInfo($"Removed nic \'{nic.Name}\'.");
+                    LoggingService.LogInfo( $"Removed nic \'{nic.Name}\'." );
 #endif
                 }
 
-                foreach (var nic in currentNics.Where(nic => !KnownNics.Any(k => k.Id == nic.Id)))
+                foreach ( NetworkInterface nic in currentNics.Where( nic => !KnownNetworks.Any( k => k.Id == nic.Id ) ) )
                 {
-                    newNics.Add(nic);
+                    newNics.Add( nic );
 
 #if DEBUG
-                    LoggingService.LogInfo($"Found nic '{nic.Name}'.");
+                    LoggingService.LogInfo( $"Found nic '{nic.Name}'." );
 #endif
                 }
 
-                KnownNics = currentNics;
+                KnownNetworks = currentNics;
 
                 // Only create client if something has change.
-                if (newNics.Any() || oldNics.Any())
+                if ( newNics.Any() || oldNics.Any() )
                 {
                     //InitKademliaProtocol();
 
-                    client?.Dispose();
-                    InitClient();
+                    m_udpSenders?.Dispose();
+                    m_udpSenders = new UdpSenders( RunningIpAddresses );
+
+                    m_listeners?.Dispose();
+                    InitListeners();
                 }
 
-                if (newNics.Any())
+                if ( newNics.Any() )
                 {
-                    NetworkInterfaceDiscovered?.Invoke(this, new NetworkInterfaceEventArgs
+                    NetworkInterfaceDiscovered?.Invoke( this, new NetworkInterfaceEventArgs
                     {
                         NetworkInterfaces = newNics
-                    });
+                    } );
                 }
 
                 //
@@ -302,24 +304,24 @@ namespace LUC.DiscoveryService
                 NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
                 NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
             }
-            catch (Exception e)
+            catch ( Exception e )
             {
-                LoggingService.LogError(e, "FindNics failed");
+                LoggingService.LogError( e, "FindNics failed" );
             }
         }
 
-        private void InitClient()
+        private void InitListeners()
         {
-            client = new Client(UseIpv4, UseIpv6, RunningIpAddresses);
-            client.UdpMessageReceived += OnUdpMessage;
-            client.TcpMessageReceived += RaiseAnswerReceived;
+            m_listeners = new Listeners( UseIpv4, UseIpv6, RunningIpAddresses );
+            m_listeners.UdpMessageReceived += OnUdpMessage;
+            m_listeners.TcpMessageReceived += RaiseAnswerReceived;
         }
 
         /// <summary>
         ///   Called by the MulticastClient when a UDP message is received.
         /// </summary>
         /// <param name="sender">
-        ///   The <see cref="Client"/> that got the message.
+        ///   The <see cref="Listeners"/> that got the message.
         /// </param>
         /// <param name="result">
         ///   The received message <see cref="UdpReceiveResult"/>.
@@ -336,54 +338,60 @@ namespace LUC.DiscoveryService
         ///   event is raised.
         ///   </para>
         /// </remarks>
-        private void OnUdpMessage(Object sender, UdpMessageEventArgs result)
+        private void OnUdpMessage( Object sender, UdpMessageEventArgs result )
         {
-            if (result?.Buffer?.Length <= MaxDatagramSize)
+            if ( result?.Buffer?.Length <= MAX_DATAGRAM_SIZE )
             {
                 UdpMessage message = new UdpMessage();
                 try
                 {
-                    message.Read(result.Buffer);
+                    message.Read( result.Buffer );
                 }
-                catch (ArgumentNullException)
+                catch ( ArgumentNullException )
                 {
                     // ignore malformed message
                     return;
                 }
-                catch (EndOfStreamException)
+                catch ( EndOfStreamException )
                 {
                     // ignore malformed message
                     return;
                 }
 
                 // If recently received, then ignore.
-                var isRecentlyReceived = /*!*/receivedMessages.TryAdd(message.MessageId);
+                Boolean isRecentlyReceived = /*!*/m_receivedMessages.TryAdd( message.MessageId );
 
-                Boolean isDsMessage = IsMessageFromDs(message.TcpPort);
+                Boolean isDsMessage = IsMessageFromDs( message.TcpPort );
 
-                if ((!IgnoreDuplicateMessages || !isRecentlyReceived) && (isDsMessage) &&
-                ((message.ProtocolVersion == ProtocolVersion) ||
-                (message.MachineId != MachineId)))
+#if RECEIVE_TCP_FROM_OURSELF
+                Boolean isOwnMessage = ( message.ProtocolVersion == ProtocolVersion ) ||
+                    ( message.MachineId != MachineId );
+#else
+                Boolean isOwnMessage = (message.ProtocolVersion == ProtocolVersion) &&
+                    (message.MachineId != MachineId);
+#endif
+
+                if ( ( !IgnoreDuplicateMessages || !isRecentlyReceived ) && ( isDsMessage ) && ( isOwnMessage ) )
                 {
-                    result.SetMessage(message);
+                    result.SetMessage( message );
 
                     try
                     {
-                        QueryReceived?.Invoke(sender, result);
+                        QueryReceived?.Invoke( sender, result );
                     }
-                    catch (TimeoutException e)
+                    catch ( TimeoutException e )
                     {
-                        LoggingService.LogError($"Receive handler failed: {e.Message}");
+                        LoggingService.LogError( $"Receive handler failed: {e.Message}" );
                         // eat the exception
                     }
-                    catch (SocketException e)
+                    catch ( SocketException e )
                     {
-                        LoggingService.LogError($"Receive handler failed: {e.Message}");
+                        LoggingService.LogError( $"Receive handler failed: {e.Message}" );
                         // eat the exception
                     }
-                    catch (EndOfStreamException e)
+                    catch ( EndOfStreamException e )
                     {
-                        LoggingService.LogError($"Receive handler failed: {e.Message}");
+                        LoggingService.LogError( $"Receive handler failed: {e.Message}" );
                         // eat the exception
                     }
                 }
@@ -393,123 +401,114 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   TCP message received.
         ///
-        ///   Called by <see cref="Client.TcpMessageReceived"/> in method <see cref="Client.ListenTcp(TcpListener)"/>
+        ///   Called by <see cref="Listeners.TcpMessageReceived"/> in method <see cref="Listeners.ListenTcp(TcpListener)"/>
         /// </summary>
         /// <param name="message">
         ///   Received message is then processed by corresponding event handler, depending on type of message
         /// </param>
-        private void RaiseAnswerReceived(Object sender, TcpMessageEventArgs receiveResult)
+        private void RaiseAnswerReceived( Object sender, TcpMessageEventArgs receiveResult )
         {
             //lock (this)
             //{
             try
             {
-                var lastActiveAddress = (receiveResult.LocalEndPoint as IPEndPoint).Address;
+                IPAddress lastActiveAddress = ( receiveResult.LocalEndPoint as IPEndPoint ).Address;
                 OurContact.LastActiveIpAddress = lastActiveAddress;
-                dhts[ProtocolVersion].OurContact.LastActiveIpAddress = lastActiveAddress;
+                s_dhts[ ProtocolVersion ].OurContact.LastActiveIpAddress = lastActiveAddress;
 
                 Message message = receiveResult.Message<Message>();
-                var ipEndPoint = receiveResult.AcceptedSocket.LocalEndPoint as IPEndPoint;
-                Boolean isMessageFromDs = IsMessageFromDs(ipEndPoint?.Port);
+                IPEndPoint ipEndPoint = receiveResult.AcceptedSocket.LocalEndPoint as IPEndPoint;
+                Boolean isMessageFromDs = IsMessageFromDs( ipEndPoint?.Port );
 
-                if(isMessageFromDs)
+                if ( isMessageFromDs )
                 {
-                    switch (message.MessageOperation)
+                    switch ( message.MessageOperation )
                     {
                         case MessageOperation.Acknowledge:
-                            {
-                                HandleReceivedTcpMessage<AcknowledgeTcpMessage>(sender, receiveResult, AnswerReceived);
-                                break;
-                            }
+                        {
+                            HandleReceivedTcpMessage<AcknowledgeTcpMessage>( sender, receiveResult, AnswerReceived );
+                            break;
+                        }
 
                         case MessageOperation.Ping:
-                            {
-                                /// Someone is pinging us.  Register the contact and respond.
-                                HandleReceivedTcpMessage<PingRequest>(sender, receiveResult, PingReceived);
-                                break;
-                            }
+                        {
+                            /// Someone is pinging us.  Register the contact and respond.
+                            HandleReceivedTcpMessage<PingRequest>( sender, receiveResult, PingReceived );
+                            break;
+                        }
 
                         case MessageOperation.Store:
-                            {
-                                HandleReceivedTcpMessage<StoreRequest>(sender, receiveResult, StoreReceived);
-                                break;
-                            }
+                        {
+                            HandleReceivedTcpMessage<StoreRequest>( sender, receiveResult, StoreReceived );
+                            break;
+                        }
 
                         case MessageOperation.FindNode:
-                            {
-                                HandleReceivedTcpMessage<FindNodeRequest>(sender, receiveResult, FindNodeReceived);
-                                break;
-                            }
+                        {
+                            HandleReceivedTcpMessage<FindNodeRequest>( sender, receiveResult, FindNodeReceived );
+                            break;
+                        }
 
                         case MessageOperation.FindValue:
-                            {
-                                HandleReceivedTcpMessage<FindValueRequest>(sender, receiveResult, FindValueReceived);
-                                break;
-                            }
+                        {
+                            HandleReceivedTcpMessage<FindValueRequest>( sender, receiveResult, FindValueReceived );
+                            break;
+                        }
 
                         case MessageOperation.CheckFileExists:
-                            {
-                                HandleReceivedTcpMessage<CheckFileExistsRequest>(sender, receiveResult, CheckFileExistsReceived);
-                                break;
-                            }
+                        {
+                            HandleReceivedTcpMessage<CheckFileExistsRequest>( sender, receiveResult, CheckFileExistsReceived );
+                            break;
+                        }
 
                         case MessageOperation.DownloadFile:
-                            {
-                                HandleReceivedTcpMessage<DownloadFileRequest>(sender, receiveResult, DownloadFileReceived);
-                                break;
-                            }
+                        {
+                            HandleReceivedTcpMessage<DownloadFileRequest>( sender, receiveResult, DownloadFileReceived );
+                            break;
+                        }
                     }
                 }
             }
-            catch (EndOfStreamException ex)
+            catch ( EndOfStreamException ex )
             {
-                LoggingService.LogError($"Received malformed message: {ex}");
+                LoggingService.LogError( $"Received malformed message: {ex}" );
             }
-            catch (InvalidDataException ex)
+            catch ( InvalidDataException ex )
             {
-                LoggingService.LogError($"Received malformed message: {ex}");
+                LoggingService.LogError( $"Received malformed message: {ex}" );
             }
-            catch (SocketException ex)
+            catch ( Exception ex )
             {
-                LoggingService.LogError($"Cannot to handle TCP message: {ex}");
+                LoggingService.LogError( $"Cannot to handle TCP message: {ex}" );
             }
-            catch (Exception ex)
-            {
-                LoggingService.LogError($"Cannot to handle TCP message: {ex}");
-            }
-
-            //}
         }
 
-        private void HandleReceivedTcpMessage<T>(Object sender, TcpMessageEventArgs receiveResult, EventHandler<TcpMessageEventArgs> receiveEvent)
-            where T: Message, new()
+        private void HandleReceivedTcpMessage<T>( Object sender, TcpMessageEventArgs receiveResult, EventHandler<TcpMessageEventArgs> receiveEvent )
+            where T : Message, new()
         {
             T request = new T();
-            request.Read(receiveResult.Buffer);
-            receiveResult.SetMessage(request);
+            request.Read( receiveResult.Buffer );
+            receiveResult.SetMessage( request );
 
-            receiveEvent?.Invoke(sender, receiveResult);
+            receiveEvent?.Invoke( sender, receiveResult );
         }
 
-        public void Bootstrap(Object sender, TcpMessageEventArgs receiveResult)
+        public void Bootstrap( Object sender, TcpMessageEventArgs receiveResult )
         {
-            lock (Lock.LockService)
+            AcknowledgeTcpMessage tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
+            try
             {
-                var tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>(whetherReadMessage: false);
-                try
+                if ( ( tcpMessage != null ) && ( receiveResult.RemoteEndPoint is IPEndPoint ipEndPoint ) )
                 {
-                    if ((tcpMessage != null) && (receiveResult.SendingEndPoint is IPEndPoint ipEndPoint))
-                    {
-                        var knownContact = new Contact(tcpMessage.MachineId, new ID(tcpMessage.IdOfSendingContact), tcpMessage.TcpPort, ipEndPoint.Address);
+                    Contact knownContact = new Contact( tcpMessage.MachineId, new KademliaId( tcpMessage.IdOfSendingContact ), tcpMessage.TcpPort, ipEndPoint.Address );
 
-                        dhts[ProtocolVersion].Bootstrap(knownContact);
-                    }
+                    s_dhts[ ProtocolVersion ].Bootstrap( knownContact );
                 }
-                catch (Exception e)
-                {
-                    LoggingService.LogError($"Kademlia operation failed: {e}");
-                    // eat the exception
-                }
+            }
+            catch ( Exception e )
+            {
+                LoggingService.LogError( $"Kademlia operation failed: {e}" );
+                // eat the exception
             }
         }
         /// <summary>
@@ -517,7 +516,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         internal void Start()
         {
-            KnownNics.Clear();
+            KnownNetworks.Clear();
 
             FindNetworkInterfaces();
         }
@@ -541,8 +540,8 @@ namespace LUC.DiscoveryService
             NetworkInterfaceDiscovered = null;
 
             // Stop current UDP and TCP listeners and senders
-            client?.Dispose();
-            client = null;
+            m_listeners?.Dispose();
+            m_listeners = null;
         }
 
         /// <summary>
@@ -551,11 +550,11 @@ namespace LUC.DiscoveryService
         internal void SendQuery()
         {
             Random random = new Random();
-            var msg = new UdpMessage(messageId: (UInt32)random.Next(0, Int32.MaxValue), ProtocolVersion,
-                RunningTcpPort, MachineId);
-            var packet = msg.ToByteArray();
+            UdpMessage msg = new UdpMessage( messageId: (UInt32)random.Next( 0, Int32.MaxValue ), ProtocolVersion,
+                RunningTcpPort, MachineId );
+            Byte[] packet = msg.ToByteArray();
 
-            client?.SendUdpAsync(packet).GetAwaiter().GetResult();
+            m_udpSenders?.SendUdpAsync( packet ).GetAwaiter().GetResult();
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
+using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,9 +25,9 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="stream">
         ///   The source for data items.
         /// </param>
-        public WireReader(Stream stream)
+        public WireReader( Stream stream )
         {
-            this.stream = stream;
+            m_stream = stream;
         }
 
         /// <summary>
@@ -44,8 +46,8 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public Byte ReadByte()
         {
-            Int32 value = stream.ReadByte();
-            if(value < 0)
+            Int32 value = m_stream.ReadByte();
+            if ( value < 0 )
             {
                 throw new EndOfStreamException();
             }
@@ -62,9 +64,7 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public UInt16 ReadUInt16()
         {
-            UInt16 value = ReadByte();
-
-            value = (UInt16)ReadRestNumValue(value, countBytes: 2);
+            UInt16 value = (UInt16)ReadNumValue( countBytes: 2 );
             return value;
         }
 
@@ -76,9 +76,7 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public UInt32 ReadUInt32()
         {
-            UInt32 value = ReadByte();
-
-            value = (UInt32)ReadRestNumValue(value, countBytes: 4);
+            UInt32 value = (UInt32)ReadNumValue( countBytes: 4 );
             return value;
         }
 
@@ -90,9 +88,7 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public UInt64 ReadUInt64()
         {
-            UInt64 value = ReadByte();
-
-            value = ReadRestNumValue(value, countBytes: 8);
+            UInt64 value = ReadNumValue( countBytes: 8 );
             return value;
         }
 
@@ -106,13 +102,13 @@ namespace LUC.DiscoveryService.CodingData
         {
             UInt32 countOfBytes = ReadUInt32();
 
-            Byte[] bytes = new Byte[countOfBytes];
-            for (Int32 numByte = 0; numByte < countOfBytes; numByte++)
+            Byte[] bytes = new Byte[ countOfBytes ];
+            for ( Int32 numByte = 0; numByte < countOfBytes; numByte++ )
             {
-                bytes[numByte] = ReadByte();
+                bytes[ numByte ] = ReadByte();
             }
 
-            var bigInt = new BigInteger(bytes);
+            BigInteger bigInt = new BigInteger( bytes );
             return bigInt;
         }
 
@@ -123,7 +119,7 @@ namespace LUC.DiscoveryService.CodingData
         ///   When no more data is available.
         /// </exception>
         public Boolean ReadBoolean() =>
-            Convert.ToBoolean(ReadByte());
+            Convert.ToBoolean( ReadByte() );
 
         /// <summary>
         ///   Read the specified number of bytes.
@@ -137,16 +133,16 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EndOfStreamException">
         ///   When no more data is available.
         /// </exception>
-        public Byte[] ReadBytes(Int32 length)
+        public Byte[] ReadBytes( Int32 length )
         {
-            var buffer = new Byte[length];
+            Byte[] buffer = new Byte[ length ];
             Int32 countReadBytes;
-            for (Int32 offset = 0; length > 0; offset += countReadBytes, 
-                                               length -= countReadBytes, 
-                                               Position += countReadBytes)
+            for ( Int32 offset = 0; length > 0; offset += countReadBytes,
+                                               length -= countReadBytes,
+                                               Position += countReadBytes )
             {
-                countReadBytes = stream.Read(buffer, offset, length);
-                if (countReadBytes == 0)
+                countReadBytes = m_stream.Read( buffer, offset, length );
+                if ( countReadBytes == 0 )
                 {
                     throw new EndOfStreamException();
                 }
@@ -167,7 +163,7 @@ namespace LUC.DiscoveryService.CodingData
         public Byte[] ReadByteLengthPrefixedBytes()
         {
             Int32 length = ReadByte();
-            return ReadBytes(length);
+            return ReadBytes( length );
         }
 
         /// <summary>
@@ -187,22 +183,22 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public String ReadAsciiString()
         {
-            var bytes = ReadByteLengthPrefixedBytes();
-            if(!bytes.Any(c => c > MaxValueCharInAscii))
+            Byte[] bytes = ReadByteLengthPrefixedBytes();
+            if ( !bytes.Any( c => c > MAX_VALUE_CHAR_IN_ASCII ) )
             {
-                return Encoding.ASCII.GetString(bytes);
+                return Encoding.ASCII.GetString( bytes );
             }
             else
             {
-                throw new InvalidDataException("Only ASCII characters are allowed");
+                throw new InvalidDataException( "Only ASCII characters are allowed" );
             }
         }
 
         public String ReadUtf32String()
         {
             Byte[] bytes = ReadByteLengthPrefixedBytes();
-            
-            return Encoding.UTF32.GetString(bytes);
+
+            return Encoding.UTF32.GetString( bytes );
         }
 
         /// <summary>
@@ -215,12 +211,12 @@ namespace LUC.DiscoveryService.CodingData
         public List<String> ReadListOfStrings()
         {
             List<String> list = new List<String>();
-            var length = ReadUInt32();
-            if (length > 0)
+            UInt32 length = ReadUInt32();
+            if ( length > 0 )
             {
-                for (Int32 i = 0; i < length; i++)
+                for ( Int32 numString = 0; numString < length; numString++ )
                 {
-                    list.Add(ReadAsciiString());
+                    list.Add( ReadAsciiString() );
                 }
             }
 
@@ -234,76 +230,73 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EndOfStreamException">
         ///   When no more data is available.
         /// </exception>
-        public List<Contact> ReadListOfContacts(String lastSeenFormat)
+        public List<Contact> ReadListOfContacts( String lastSeenFormat )
         {
             List<Contact> list = new List<Contact>();
-            var length = ReadUInt32();
-            if (length > 0)
+            UInt32 length = ReadUInt32();
+            if ( length > 0 )
             {
-                for (Int32 i = 0; i < length; i++)
+                for ( Int32 numContact = 0; numContact < length; numContact++ )
                 {
-                    list.Add(ReadContact(lastSeenFormat));
+                    list.Add( ReadContact( lastSeenFormat ) );
                 }
             }
 
             return list;
         }
 
-        //class DateTimeFormat : IFormatProvider
-        //{
-        //    public Object GetFormat(Type type)
-        //    {
-
-        //    }
-        //}
-
-        public Contact ReadContact(String lastSeenFormat)
+        public Contact ReadContact( String lastSeenFormat )
         {
-            var machineId = ReadAsciiString();
-            var idAsBigInt = ReadBigInteger();
-            var tcpPort = ReadUInt16();
-            var lastSeen = DateTime.ParseExact(ReadAsciiString(), lastSeenFormat, provider: null);
-            
-            var addressesCount = ReadUInt32();
-            ICollection<IPAddress> addresses = new List<IPAddress>((Int32)addressesCount);
-            for (Int32 numAddress = 0; numAddress < addressesCount; numAddress++)
+            String machineId = ReadAsciiString();
+            BigInteger idAsBigInt = ReadBigInteger();
+            UInt16 tcpPort = ReadUInt16();
+
+            String lastSeenAsStr = ReadAsciiString();
+            DateTime lastSeen = DateTime.ParseExact( lastSeenAsStr, lastSeenFormat, provider: null );
+
+            UInt32 addressesCount = ReadUInt32();
+            ICollection<IPAddress> addresses = new List<IPAddress>( (Int32)addressesCount );
+            for ( Int32 numAddress = 0; numAddress < addressesCount; numAddress++ )
             {
-                addresses.Add(IPAddress.Parse(ReadAsciiString()));
+                String addressAsStr = ReadAsciiString();
+                addresses.Add( IPAddress.Parse( addressAsStr ) );
             }
 
-            Contact contact = new Contact(machineId, new ID(idAsBigInt), tcpPort, addresses, lastSeen);
+            Contact contact = new Contact( machineId, new KademliaId( idAsBigInt ), tcpPort, addresses, lastSeen );
             return contact;
         }
 
-        public Range ReadRange()
+        public ChunkRange ReadRange()
         {
-            var start = ReadUInt64();
-            var end = ReadUInt64();
-            var total = ReadUInt64();
+            UInt64 start = ReadUInt64();
+            UInt64 end = ReadUInt64();
+            UInt64 total = ReadUInt64();
 
-            var readRange = new Range(start, end, total);
+            ChunkRange readRange = new ChunkRange( start, end, total );
             return readRange;
         }
 
         public void Dispose() =>
-            stream.Close();
+            m_stream.Close();
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="readValue">
+        /// <param name="value">
         /// Already read value
         /// </param>
         /// <returns></returns>
-        private UInt64 ReadRestNumValue(UInt64 readValue, Int32 countBytes)
+        private UInt64 ReadNumValue( Int32 countBytes )
         {
-            //numByte starts from 1 because one byte should be already read
-            for (Int32 numByte = 1; numByte < countBytes; numByte++)
+            UInt64 value = ReadByte();
+
+            //numByte starts from 1 because one byte has been already read
+            for ( Int32 numByte = 1; numByte < countBytes; numByte++ )
             {
-                readValue = readValue << BitsInOneByte | ReadByte();
+                value = ( value << BITS_IN_ONE_BYTE ) | ReadByte();
             }
 
-            return readValue;
+            return value;
         }
     }
 }

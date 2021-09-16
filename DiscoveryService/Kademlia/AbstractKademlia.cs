@@ -8,11 +8,11 @@ namespace LUC.DiscoveryService.Kademlia
 {
     abstract class AbstractKademlia
     {
-        protected readonly ClientKadOperation clientKadOperation;
+        protected readonly ClientKadOperation m_clientKadOperation;
 
-        public AbstractKademlia(UInt16 protocolVersion)
+        public AbstractKademlia( UInt16 protocolVersion )
         {
-            clientKadOperation = new ClientKadOperation(protocolVersion);
+            m_clientKadOperation = new ClientKadOperation( protocolVersion );
         }
     }
 }

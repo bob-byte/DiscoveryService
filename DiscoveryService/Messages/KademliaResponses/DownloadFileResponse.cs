@@ -1,43 +1,50 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages.KademliaRequests;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages.KademliaResponses
 {
-    class DownloadFileResponse : FileResponse
+    class DownloadFileResponse : AbstactFileResponse
     {
-        public DownloadFileResponse()
+        public DownloadFileResponse( BigInteger requestRandomId )
+            : base( requestRandomId )
         {
-            MessageOperation = MessageOperation.DownloadFileResponse;
+            DefaultInit();
         }
 
         public Byte[] Chunk { get; set; }
 
-        public override void Write(WireWriter writer)
+        public override void Write( WireWriter writer )
         {
-            if(writer != null)
+            if ( writer != null )
             {
-                base.Write(writer);
+                base.Write( writer );
 
-                writer.Write((UInt32)Chunk.Length);
-                writer.WriteBytes(Chunk);
+                writer.Write( (UInt32)Chunk.Length );
+                writer.WriteBytes( Chunk );
             }
         }
 
-        public override IWireSerialiser Read(WireReader reader)
+        public override IWireSerialiser Read( WireReader reader )
         {
-            base.Read(reader);
+            base.Read( reader );
 
-            var bytesCount = reader.ReadUInt32();
-            Chunk = reader.ReadBytes((Int32)bytesCount);
+            UInt32 bytesCount = reader.ReadUInt32();
+            Chunk = reader.ReadBytes( (Int32)bytesCount );
 
             return this;
         }
+
+        protected override void DefaultInit( params Object[] args ) => 
+            MessageOperation = MessageOperation.DownloadFileResponse;
     }
 }

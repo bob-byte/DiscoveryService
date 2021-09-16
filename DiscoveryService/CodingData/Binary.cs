@@ -12,10 +12,10 @@ namespace LUC.DiscoveryService.CodingData
         /// <summary>
         /// 0x7F = 127
         /// </summary>
-        protected const Byte MaxValueCharInAscii = 0x7F;
+        protected const Byte MAX_VALUE_CHAR_IN_ASCII = 0x7F;
 
-        protected const Int32 BitsInOneByte = 8;
+        protected const Int32 BITS_IN_ONE_BYTE = 8;
 
-        protected Stream stream;
+        protected Stream m_stream;
     }
 }

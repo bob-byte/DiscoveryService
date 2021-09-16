@@ -22,7 +22,7 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="protocolVersion">
         ///   Supported version of protocol
         /// </param>
-        public DiscoveryServiceMessage(UInt32 messageId, String machineId, UInt16 protocolVersion)
+        public DiscoveryServiceMessage( UInt32 messageId, String machineId, UInt16 protocolVersion )
         {
             MessageId = messageId;
             MachineId = machineId;
@@ -50,13 +50,13 @@ namespace LUC.DiscoveryService.Messages
         /// </summary>
         public UInt16 ProtocolVersion { get; set; }
 
-        public override string ToString()
+        public override String ToString()
         {
-            using (var writer = new StringWriter())
+            using ( StringWriter writer = new StringWriter() )
             {
-                writer.Write($"MessageId = {MessageId};\n" +
+                writer.Write( $"MessageId = {MessageId};\n" +
                              $"MachineId = {MachineId}\n" +
-                             $"Protocol version = {ProtocolVersion}");
+                             $"Protocol version = {ProtocolVersion}" );
 
                 return writer.ToString();
             }

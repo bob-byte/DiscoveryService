@@ -1,6 +1,7 @@
 ﻿using LUC.DiscoveryService.Kademlia;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -17,30 +18,40 @@ namespace LUC.DiscoveryService.Common
     /// </summary>
     public abstract class AbstractService
     {
+        protected UInt16 m_runningTcpPort;
+
         /// <summary>
         /// Default port which is used in LAN
         /// </summary>
-        public const UInt16 DefaultPort = 17500;
+        public const UInt16 DEFAULT_PORT = 17500;
 
         /// <summary>
         /// Count available ports which the LAN supports
         /// </summary>
-        public const UInt16 CountAvailablePorts = 10;
+        public const UInt16 COUNT_AVAILABLE_PORTS = 10;
 
-        protected UInt16 runningTcpPort;
-
-        [Import(typeof(ILoggingService))]
-        public static readonly LoggingService LoggingService = new LoggingService();
+        static AbstractService()
+        {
+            SettingsService = new SettingsService();
+            LoggingService = new LoggingService
+            {
+                SettingsService = SettingsService
+            };
+        }
 
         public AbstractService()
         {
-            LoggingService.SettingsService = new SettingsService();
-
-            runningTcpPort = DefaultPort;
-            MinValueTcpPort = DefaultPort;
-            MaxValueTcpPort = DefaultPort + CountAvailablePorts;
-            RunningUdpPort = DefaultPort;
+            m_runningTcpPort = DEFAULT_PORT;
+            MinValueTcpPort = DEFAULT_PORT;
+            MaxValueTcpPort = DEFAULT_PORT + COUNT_AVAILABLE_PORTS;
+            RunningUdpPort = DEFAULT_PORT;
         }
+
+        [Import( typeof( ILoggingService ) )]
+        public static ILoggingService LoggingService { get; set; } = new LoggingService();
+
+        [Import( typeof( ILoggingService ) )]
+        public static ISettingsService SettingsService { get; set; } = new SettingsService();
 
         /// <summary>
         /// Flag indicating whether Discovery Service should use IPv4 protocol.
@@ -78,10 +89,10 @@ namespace LUC.DiscoveryService.Common
         /// </summary>
         public UInt16 RunningTcpPort
         {
-            get => runningTcpPort;
+            get => m_runningTcpPort;
             protected set
             {
-                runningTcpPort = IsMessageFromDs(tcpPort: value) ?
+                m_runningTcpPort = IsMessageFromDs( tcpPort: value ) ?
                     value : MinValueTcpPort;
             }
         }
@@ -99,7 +110,7 @@ namespace LUC.DiscoveryService.Common
         /// </value>
         public UInt16 ProtocolVersion { get; protected set; }
 
-        protected Boolean IsMessageFromDs(Int32? tcpPort) =>
-            (MinValueTcpPort <= tcpPort) && (tcpPort <= MaxValueTcpPort);
+        protected Boolean IsMessageFromDs( Int32? tcpPort ) =>
+            ( MinValueTcpPort <= tcpPort ) && ( tcpPort <= MaxValueTcpPort );
     }
 }

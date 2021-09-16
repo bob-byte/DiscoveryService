@@ -1,11 +1,14 @@
-﻿using LUC.DiscoveryService.Interfaces;
+﻿using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.DiscoveryService.Messages.KademliaResponses;
 using LUC.Interfaces;
+using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Helpers;
 using LUC.Services.Implementation;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,84 +20,80 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
 {
     class DownloadFileHandler : CheckFileExistsHandler
     {
-        private static ISettingsService settingsService;
-        private static ILoggingService loggingService;
-        private static readonly Object lockReadFile = new Object();
+        private readonly ILoggingService m_loggingService;
 
+        private readonly Object m_lockReadFile = new Object();
 
-        public DownloadFileHandler(ICurrentUserProvider currentUserProvider, DiscoveryService discoveryService)
-            : base(currentUserProvider, discoveryService)
+        public DownloadFileHandler( ICurrentUserProvider currentUserProvider, DiscoveryService discoveryService )
+            : base( currentUserProvider, discoveryService )
         {
-            settingsService = new SettingsService
+            m_loggingService = new LoggingService
             {
-                CurrentUserProvider = currentUserProvider
-            };
-
-            loggingService = new LoggingService
-            {
-                SettingsService = settingsService
+                SettingsService = m_settingsService
             };
         }
 
-        public override void SendResponse(Object sender, TcpMessageEventArgs eventArgs)
+        public override void SendResponse( Object sender, TcpMessageEventArgs eventArgs )
         {
-            DownloadFileRequest request = eventArgs.Message<DownloadFileRequest>(whetherReadMessage: false);
+            DownloadFileRequest request = eventArgs.Message<DownloadFileRequest>( whetherReadMessage: false );
 
-            if(request != null)
+            if ( request != null )
             {
                 try
                 {
-                    var checkFileResponse = FileResponse(request);
-                    var downloadFileResponse = new DownloadFileResponse
+                    AbstactFileResponse checkFileResponse = FileResponse( request );
+                    DownloadFileResponse downloadFileResponse = new DownloadFileResponse( request.RandomID )
                     {
                         FileExists = checkFileResponse.FileExists,
                         FileSize = checkFileResponse.FileSize,
                         FileVersion = checkFileResponse.FileVersion,
-                        IsRightBucket = checkFileResponse.IsRightBucket,
-                        RandomID = request.RandomID
+                        IsRightBucket = checkFileResponse.IsRightBucket
                     };
 
-                    if (downloadFileResponse.FileExists)
+                    if ( downloadFileResponse.FileExists )
                     {
                         Byte[] fileBytes;
 
-                        String rootFolderPath = settingsService.ReadUserRootFolderPath();
-                        String fullPathToFile = Path.Combine(rootFolderPath, request.BucketName, request.FilePrefix, request.FileOriginalName);
-                        if (request.Range.Total <= Constants.MaxChunkSize)
+                        String fullFileName = FullFileName( request );
+                        if ( request.ChunkRange.Total <= Constants.MAX_CHUNK_SIZE )
                         {
-                            fileBytes = File.ReadAllBytes(fullPathToFile);
+                            fileBytes = File.ReadAllBytes( fullFileName );
                         }
                         else
                         {
-                            var countBytesToRead = (Int32)((request.Range.End + 1) - request.Range.Start);
-                            fileBytes = new Byte[countBytesToRead];
+                            Int32 countBytesToRead = (Int32)( ( request.ChunkRange.End + 1 ) - request.ChunkRange.Start );
+                            fileBytes = new Byte[ countBytesToRead ];
 
                             //it is needed to use lock in case several contacts want to download the same file
-                            lock (lockReadFile)
+                            lock ( m_lockReadFile )
                             {
-                                using (var stream = new FileStream(fullPathToFile, FileMode.Open, FileAccess.Read))
+                                using ( FileStream stream = new FileStream( fullFileName, FileMode.Open, FileAccess.Read ) )
                                 {
-                                    stream./*BaseStream.*/Seek((Int64)request.Range.Start, origin: SeekOrigin.Begin);
-                                    stream./*BaseStream.*/Read(fileBytes, offset: 0, countBytesToRead);
+                                    if ( ( stream.CanSeek ) && ( (Int64)request.ChunkRange.Start != stream.Position ) )
+                                    {
+                                        stream.Seek( (Int64)request.ChunkRange.Start, origin: SeekOrigin.Begin );
+                                    }
+
+                                    stream.Read( fileBytes, offset: 0, countBytesToRead );
                                 }
-                            }                                
+                            }
                         }
 
                         downloadFileResponse.Chunk = fileBytes;
-                        downloadFileResponse.Send(request, eventArgs.AcceptedSocket);
+                        downloadFileResponse.Send( eventArgs.AcceptedSocket );
                     }
                 }
-                catch(ArgumentNullException ex)
+                catch ( ArgumentNullException ex )
                 {
-                    loggingService.LogInfo(ex.ToString());
+                    m_loggingService.LogInfo( ex.ToString() );
                 }
-                catch(IOException ex)
+                catch ( IOException ex )
                 {
-                    loggingService.LogInfo(ex.ToString());
+                    m_loggingService.LogInfo( ex.ToString() );
                 }
-                catch(Exception ex)
+                catch ( Exception ex )
                 {
-                    loggingService.LogInfo(ex.ToString());
+                    m_loggingService.LogInfo( ex.ToString() );
                 }
             }
         }

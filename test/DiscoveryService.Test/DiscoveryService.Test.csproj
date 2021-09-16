@@ -53,6 +53,10 @@
     <Reference Include="Common.Logging.Core, Version=3.4.1.0, Culture=neutral, PublicKeyToken=af08829b84f0328e, processorArchitecture=MSIL">
       <HintPath>..\packages\Common.Logging.Core.3.4.1\lib\net40\Common.Logging.Core.dll</HintPath>
     </Reference>
+    <Reference Include="LUC.ApiClient, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\LUC.ApiClient.dll</HintPath>
+    </Reference>
     <Reference Include="LUC.Interfaces, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\DiscoveryService\bin\Debug\LUC.Interfaces.dll</HintPath>
@@ -98,10 +102,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\LucWithNewUpload\dubstack-win-UploadAsync\WpfClient\LUC.ApiClient\LUC.ApiClient.csproj">
-      <Project>{f071e944-a1ee-4aee-b74a-36fd5b246ba5}</Project>
-      <Name>LUC.ApiClient</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\DiscoveryService\DiscoveryService.csproj">
       <Project>{9daf9ac8-c899-4d34-a5f8-8850fa45f26e}</Project>
       <Name>DiscoveryService</Name>

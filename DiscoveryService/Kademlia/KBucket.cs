@@ -3,166 +3,162 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
+using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Kademlia.Exceptions;
+
 using Newtonsoft.Json;
 
 namespace LUC.DiscoveryService.Kademlia
 {
-    public class KBucket 
+    public class KBucket
     {
         public DateTime TimeStamp { get; set; }
-        public List<Contact> Contacts { get { return contacts; } set { contacts = value; } }
-        public BigInteger Low { get { return low; } set { low = value; } }
-        public BigInteger High { get { return high; } set { high = value; } }
+
+        public List<Contact> Contacts { get; set; }
+
+        public BigInteger Low { get; set; }
+
+        public BigInteger High { get; set; }
 
         /// <summary>
         /// We are going to assume that the "key" for this bucket is it's high range.
         /// </summary>
         [JsonIgnore]
-        public BigInteger Key { get { return high; } }
+        public BigInteger Key => High;
 
         [JsonIgnore]
-        public bool IsBucketFull { get { return contacts.Count == Constants.K; } }
-
-        protected List<Contact> contacts;
-        protected BigInteger low;
-        protected BigInteger high;
+        public Boolean IsBucketFull => 
+            Contacts.Count == Constants.K;
 
         /// <summary>
         /// Initializes a k-bucket with the default range of 0 - 2^160
         /// </summary>
         public KBucket()
         {
-            contacts = new List<Contact>();
-            low = 0;
-            high = BigInteger.Pow(new BigInteger(2), 160);
+            Contacts = new List<Contact>();
+            Low = 0;
+            High = BigInteger.Pow( new BigInteger( 2 ), 160 );
         }
 
         /// <summary>
         /// Initializes a k-bucket with a specific ID range.
         /// </summary>
-        public KBucket(BigInteger low, BigInteger high)
+        public KBucket( BigInteger low, BigInteger high )
         {
-            contacts = new List<Contact>();
-            this.low = low;
-            this.high = high;
+            Contacts = new List<Contact>();
+            Low = low;
+            High = high;
         }
 
-        public void Touch()
-        {
+        public void Touch() => 
             TimeStamp = DateTime.UtcNow;
-        }
 
-		/// <summary>
-		/// True if ID is in range of this bucket.
-		/// </summary>
-		public bool HasInRange(ID id)
-		{
-			return Low <= id && id < High;
-		}
+        /// <summary>
+        /// True if ID is in range of this bucket.
+        /// </summary>
+        public Boolean HasInRange( KademliaId id ) =>
+            ( Low <= id ) && ( id < High );
 
-        public bool HasInRange(BigInteger id)
-        {
-            return Low <= id && id < High;
-        }
+        public Boolean HasInRange( BigInteger id ) =>
+            ( Low <= id ) && ( id < High );
 
         /// <summary>
         /// True if a contact matches this ID.
         /// </summary>
-        public bool Contains(String machineId)
-		{
-			return contacts.Any(c => c.MachineId == machineId);
-		}
+        public Boolean Contains( String machineId ) => 
+            Contacts.Any( c => c.MachineId == machineId );
 
-		/// <summary>
-		/// Add a contact to the bucket, at the end, as this is the most recently seen contact.
-		/// A full bucket throws an exception.
-		/// </summary>
-		public void AddContact(Contact contact)
+        /// <summary>
+        /// Add a contact to the bucket, at the end, as this is the most recently seen contact.
+        /// A full bucket throws an exception.
+        /// </summary>
+        public void AddContact( Contact contact )
         {
-            Validate.IsTrue<TooManyContactsException>(contacts.Count < Constants.K, "Bucket is full");
-            contacts.Add(contact);
+            Validate.IsTrue<TooManyContactsException>( Contacts.Count < Constants.K, "Bucket is full" );
+            Contacts.Add( contact );
         }
 
-        public void EvictContact(Contact contact)
+        public void EvictContact( Contact contact ) => 
+            Contacts.Remove( contact );
+
+        /// <summary>
+        /// Replaces the contact with the new contact, thus updating the LastSeen and network addressinfo. 
+        /// </summary>
+        public void ReplaceContact( ref Contact contact )
         {
-            contacts.Remove(contact);
+            String machineId = contact.MachineId;
+            Contact contactInBucket = Contacts.Single( c => c.MachineId == machineId );
+
+            contactInBucket.LastActiveIpAddress = contact.LastActiveIpAddress;
+
+            //contact can to restart program and it will have new ID, so we need to update it in bucket
+            contactInBucket.ID = contact.ID;
+
+            //to get all older IP-addresses
+            contact = contactInBucket;
         }
 
-		/// <summary>
-		/// Replaces the contact with the new contact, thus updating the LastSeen and network addressinfo. 
-		/// </summary>
-		public void ReplaceContact(ref Contact contact)
-		{
-			var machineId = contact.MachineId;
-			var contactInBucket = contacts.Single(c => c.MachineId == machineId);
+        /// <summary>
+        /// Splits the kbucket into returning two new kbuckets filled with contacts separated by the new midpoint
+        /// </summary>
+        public (KBucket, KBucket) Split()
+        {
+            BigInteger midpoint = ( Low + High ) / 2;
+            KBucket k1 = new KBucket( Low, midpoint );
+            KBucket k2 = new KBucket( midpoint, High );
 
-			contactInBucket.LastActiveIpAddress = contact.LastActiveIpAddress;
-			contact = contactInBucket;
+            Contacts.ForEach( c =>
+             {
+                 // <, because the High value is exclusive in the HasInRange test.
+                 KBucket k = c.ID < midpoint ? k1 : k2;
+                 k.AddContact( c );
+             } );
 
-			//contacts.Add(contact);
-		}
+            return (k1, k2);
+        }
 
-		/// <summary>
-		/// Splits the kbucket into returning two new kbuckets filled with contacts separated by the new midpoint
-		/// </summary>
-		public (KBucket, KBucket) Split()
-		{
-			BigInteger midpoint = (Low + High) / 2;
-			KBucket k1 = new KBucket(Low, midpoint);
-			KBucket k2 = new KBucket(midpoint, High);
+        /// <summary>
+        /// Returns number of bits that are in common across all contacts.
+        /// If there are no contacts, or no shared bits, the return is 0.
+        /// </summary>
+        public Int32 Depth()
+        {
+            Boolean[] bits = new Boolean[ 0 ];
 
-			Contacts.ForEach(c =>
-			{
-				// <, because the High value is exclusive in the HasInRange test.
-				KBucket k = c.ID < midpoint ? k1 : k2;
-				k.AddContact(c);
-			});
+            if ( Contacts.Count > 0 )
+            {
+                // Start with the first contact.
+                bits = Contacts[ 0 ].ID.Bytes.Bits().ToArray();
 
-			return (k1, k2);
-		}
+                Contacts.Skip( count: 1 ).ForEach( c => bits = SharedBits( bits, c.ID ) );
+            }
 
-		/// <summary>
-		/// Returns number of bits that are in common across all contacts.
-		/// If there are no contacts, or no shared bits, the return is 0.
-		/// </summary>
-		public int Depth()
-		{
-			bool[] bits = new bool[0];
+            return bits.Length;
+        }
 
-			if (contacts.Count > 0)
-			{
-				// Start with the first contact.
-				bits = contacts[0].ID.Bytes.Bits().ToArray();
+        /// <summary>
+        /// Returns a new bit array of just the shared bits.
+        /// </summary>
+        protected Boolean[] SharedBits( Boolean[] bits, KademliaId id )
+        {
+            Boolean[] idbits = id.Bytes.Bits().ToArray();
 
-				contacts.Skip(count: 1).ForEach(c => bits = SharedBits(bits, c.ID));
-			}
+            // Useful for viewing the bit arrays.
+            //string sbits1 = System.String.Join("", bits.Select(b => b ? "1" : "0"));
+            //string sbits2 = System.String.Join("", idbits.Select(b => b ? "1" : "0"));
 
-			return bits.Length;
-		}
+            Int32 q = Constants.ID_LENGTH_BITS - 1;
+            Int32 n = bits.Length - 1;
+            List<Boolean> sharedBits = new List<Boolean>();
 
-		/// <summary>
-		/// Returns a new bit array of just the shared bits.
-		/// </summary>
-		protected bool[] SharedBits(bool[] bits, ID id)
-		{
-			bool[] idbits = id.Bytes.Bits().ToArray();
+            while ( n >= 0 && bits[ n ] == idbits[ q ] )
+            {
+                sharedBits.Insert( 0, ( bits[ n ] ) );
+                --n;
+                --q;
+            }
 
-			// Useful for viewing the bit arrays.
-			//string sbits1 = System.String.Join("", bits.Select(b => b ? "1" : "0"));
-			//string sbits2 = System.String.Join("", idbits.Select(b => b ? "1" : "0"));
-
-			int q = Constants.ID_LENGTH_BITS - 1;
-			int n = bits.Length - 1;
-			List<bool> sharedBits = new List<bool>();
-
-			while (n >= 0 && bits[n] == idbits[q])
-			{
-				sharedBits.Insert(0, (bits[n]));
-				--n;
-				--q;
-			}
-
-			return sharedBits.ToArray();
-		}
-	}
+            return sharedBits.ToArray();
+        }
+    }
 }

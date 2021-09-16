@@ -2,6 +2,7 @@
 using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,14 +21,14 @@ using System.Threading.Tasks;
 //
 namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
+    ///<inheritdoc/>
     class ConnectionPoolSocket : DiscoveryServiceSocket
     {
-        private readonly Object m_lock = new Object();
-        private Boolean isInPool = false;
+        private Boolean m_isInPool = false;
 
         /// <inheritdoc/>
-        public ConnectionPoolSocket(AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log)
-            : base(addressFamily, socketType, protocolType, log)
+        public ConnectionPoolSocket( SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log )
+            : base( remoteEndPoint.AddressFamily, socketType, protocolType, log )
         {
             Id = remoteEndPoint;
             Pool = belongPool;
@@ -44,25 +45,26 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         /// <returns>
         /// If <paramref name="bytesToSend"/> is immediately sent, method will return <paramref name="client"/>, else it will return new created <see cref="ConnectionPoolSocket"/>
         /// </returns>
-        public async Task<ConnectionPoolSocket> SendWithAvoidErrorsInNetworkAsync(Byte[] bytesToSend, 
-            TimeSpan timeoutToSend, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
+        public async Task<ConnectionPoolSocket> DsSendWithAvoidErrorsInNetworkAsync( Byte[] bytesToSend,
+            TimeSpan timeoutToSend, TimeSpan timeoutToConnect, IOBehavior ioBehavior )
         {
+            ConnectionPoolSocket sendingBytesSocket;
             try
             {
-                await SendAsync(bytesToSend, timeoutToSend, ioBehavior).ConfigureAwait(continueOnCapturedContext: false);
-                return this;
+                await DsSendAsync( bytesToSend, timeoutToSend, ioBehavior ).ConfigureAwait( continueOnCapturedContext: false );
+                sendingBytesSocket = this;
             }
-            catch (SocketException e)
+            catch ( SocketException e )
             {
-                Log.LogError($"Receive handler failed: {e.Message}");
+                Log.LogError( $"Failed to send message, try only one more: {e}" );
 
-                var newSocket = new ConnectionPoolSocket(Id.AddressFamily, SocketType, ProtocolType, Id, Pool, Log);
-                await ConnectAsync(remoteEndPoint: newSocket.Id, timeoutToConnect, ioBehavior).ConfigureAwait(false);
+                sendingBytesSocket = new ConnectionPoolSocket( SocketType, ProtocolType, Id, Pool, Log );
+                await sendingBytesSocket.DsConnectAsync( remoteEndPoint: sendingBytesSocket.Id, timeoutToConnect, ioBehavior ).ConfigureAwait( false );
 
-                await SendAsync(bytesToSend, timeoutToSend, ioBehavior).ConfigureAwait(false);
-
-                return newSocket;
+                await sendingBytesSocket.DsSendAsync( bytesToSend, timeoutToSend, ioBehavior ).ConfigureAwait( false );
             }
+
+            return sendingBytesSocket;
         }
 
         public UInt32 CreatedTicks { get; } = unchecked((UInt32)Environment.TickCount);
@@ -73,26 +75,26 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         public ConnectionPool Pool { get; }
 
-        public Boolean IsInPool 
+        public Boolean IsInPool
         {
-            get => isInPool;
+            get => m_isInPool;
             //maybe body of set method should be placed in a lock
             set
             {
-                isInPool = value;
+                m_isInPool = value;
 
-                if((!isInPool) && (ReturnedInPool.CurrentCount == 1))
+                if ( ( !m_isInPool ) && ( ReturnedInPool.CurrentCount == 1 ) )
                 {
-                    ReturnedInPool.Wait(millisecondsTimeout: 0);
+                    ReturnedInPool.Wait( millisecondsTimeout: 0 );
                 }
-                else if((isInPool) && (ReturnedInPool.CurrentCount == 0))
+                else if ( ( m_isInPool ) && ( ReturnedInPool.CurrentCount == 0 ) )
                 {
                     ReturnedInPool.Release();
                 }
             }
         }
 
-        public SemaphoreSlim ReturnedInPool { get; } = new SemaphoreSlim(initialCount: 0, maxCount: 1);
+        public SemaphoreSlim ReturnedInPool { get; } = new SemaphoreSlim( initialCount: 0, maxCount: 1 );
 
         //public async Task ConnectAsync()
         //{
@@ -105,101 +107,85 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         //    //change state to connected if it is, otherwise to failed
         //}
 
-        public async ValueTask<Boolean> ReturnToPoolAsync(IOBehavior ioBehavior)
+        public SocketHealth SocketHealth( ConnectionSettings connectionSettings )
         {
-#if DEBUG
-            {
-                Log.LogInfo($"Socket with id \"{Id}\" returning to Pool");
-            }
-#endif
-            LastReturnedTicks = unchecked((uint)Environment.TickCount);
+            SocketHealth socketHealth;
 
-            if(Pool == null)
+            try
             {
-                return false;
+                VerifyConnected();
             }
-            else if (!Pool.ConnectionSettings.ConnectionReset || Pool.ConnectionSettings.DeferConnectionReset)
+            catch ( SocketException )
             {
-                return await Pool.ReturnToPoolAsync(ioBehavior, Id).ConfigureAwait(continueOnCapturedContext: false);
+                socketHealth = ClientPool.SocketHealth.IsNotConnected;
+                return socketHealth;
+            }
+
+            if ( ( connectionSettings.ConnectionLifeTime > 0 ) &&
+               ( unchecked((UInt32)Environment.TickCount) - CreatedTicks >= connectionSettings.ConnectionLifeTime ) )
+            {
+                socketHealth = ClientPool.SocketHealth.Expired;
             }
             else
             {
-                BackgroundConnectionResetHelper.AddSocket(this, Log);
+                socketHealth = ClientPool.SocketHealth.Healthy;
+            }
+
+            return socketHealth;
+        }
+
+        public Boolean ReturnedToPool()
+        {
+#if DEBUG
+            {
+                Log.LogInfo( $"Socket with id \"{Id}\" returning to Pool" );
+            }
+#endif
+            LastReturnedTicks = unchecked((UInt32)Environment.TickCount);
+
+            if ( Pool == null )
+            {
+                return false;
+            }
+            //we shouldn't check IsInPool because ConnectionPool.semaphoreSocket.Release needed to be called, 
+            //because after long time ConnectionPool.semaphoreSocket.CurrentCount can be 0 without this, that will cause the recovering sockets without necessity
+            else if ( ( !Pool.ConnectionSettings.ConnectionReset ) || ( Pool.ConnectionSettings.DeferConnectionReset ) )
+            {
+                Boolean isReturned = Pool.ReturnedToPool( Id );
+                IsInPool = isReturned;
+                return isReturned;
+            }
+            else
+            {
+                BackgroundConnectionResetHelper.AddSocket( this );
                 return false;
             }
         }
 
-        /// <summary>
-        /// TODO: optimize it
-        /// </summary>
-        public new void Dispose()
+        public async Task<Boolean> TryResetConnectionAsync( Boolean returnToPool, Boolean reuseSocket, IOBehavior ioBehavior )
         {
-            // attempt to gracefully close the connection, ignoring any errors (it may have been closed already by the server, etc.)
-            if((base.State != SocketState.Closing) && (base.State != SocketState.Closed))
-            {
-                lock (m_lock)
-                {
-                    State = SocketState.Closing;
-                }
+            VerifyWorkState();
 
-                ShutdownSocket();
-                lock (m_lock)
-                {
-                    State = SocketState.Closed;
-                }
-            }
-            
-        }
-
-        public async Task<Boolean> TryResetConnectionAsync(Boolean returnToPool, Boolean reuseSocket, IOBehavior ioBehavior)
-        {
-            if (returnToPool && Pool != null)
-            {
-                await Pool.ReturnToPoolAsync(ioBehavior, RemoteEndPoint).ConfigureAwait(continueOnCapturedContext: false);
-            }
-
-            var waitIndefinitely = TimeSpan.FromMilliseconds(value: -1);
-            var success = await DisconnectAsync(reuseSocket, waitIndefinitely).ConfigureAwait(continueOnCapturedContext: false);
-
-            return success;
-        }
-
-        private void ShutdownSocket()
-        {
-            Log.LogInfo($"Closing socket with id \"{Id}\"");
             try
             {
-                Shutdown(SocketShutdown.Both);
+                await DsDisconnectAsync( ioBehavior, reuseSocket, Constants.DisconnectTimeout ).
+                        ConfigureAwait( continueOnCapturedContext: false );
             }
-            finally
+            catch(SocketException)
             {
-                Dispose();
+                ;//do nothing
             }
-        }
 
-        /// <summary>
-	/// Disposes and sets <paramref name="disposable"/> to <c>null</c>, ignoring any
-	/// <see cref="IOException"/> or <see cref="SocketException"/> that is thrown.
-	/// </summary>
-	/// <typeparam name="T">An <see cref="IDisposable"/> type.</typeparam>
-	/// <param name="disposable">The object to dispose.</param>
-	private static void SafeDispose<T>(ref T disposable)
-            where T : class, IDisposable
-        {
-            if (disposable != null)
+            await DsConnectAsync( Id, Constants.ConnectTimeout, ioBehavior ).ConfigureAwait( continueOnCapturedContext: false );
+
+            if ( ( returnToPool ) && ( Pool != null ) )
             {
-                try
-                {
-                    disposable.Dispose();
-                }
-                catch (IOException)
-                {
-                }
-                catch (SocketException)
-                {
-                }
-                disposable = null;
+                Pool.ReturnedToPool( RemoteEndPoint );
             }
+
+            //because if we cannot to disconnect? it will occur exception in DiscoveryServiceSocket.DsDisconnectAsync
+            Boolean isResetConnection = true;
+            return isResetConnection;
         }
     }
 }

@@ -7,63 +7,61 @@ using LUC.Interfaces;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.Services.Implementation;
 using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Kademlia.Exceptions;
+using LUC.DiscoveryService.Kademlia.Interfaces;
 
 namespace LUC.DiscoveryService.Kademlia
 {
     class Node : AbstractKademlia, INode
     {
-        public Contact OurContact { get { return ourContact; } set { ourContact = value; } }
-        public IBucketList BucketList { get { return bucketList; } set { bucketList = value; } }
-        public IStorage Storage { get { return storage; } set { storage = value; } }
-        public IStorage CacheStorage { get { return cacheStorage; } set { cacheStorage = value; } }
+        public Contact OurContact { get; set; }
+
+        public IBucketList BucketList { get; set; }
+
+        public IStorage Storage { get; set; }
+
+        public IStorage CacheStorage { get; set; }
 
         [JsonIgnore]
-        public Dht Dht { get { return dht; } set { dht = value; } }
+        public Dht Dht { get; set; }
 
-        protected Contact ourContact;
-        protected IBucketList bucketList;
-        protected IStorage storage;
-        protected IStorage cacheStorage;
-        protected Dht dht;
-
-        ///// <summary>
-        ///// For serialization.
-        ///// </summary>
-        //public Node()
-        //{
-        //}
+        /// <summary>
+        /// For serialization.
+        /// </summary>
+        public Node()
+            : base(protocolVersion: 1)
+        {
+            ;//do nothing
+        }
 
         /// <summary>
         /// If cache storage is not explicity provided, we use an in-memory virtual storage.
         /// </summary>
-        public Node(Contact contact, UInt16 protocolVersion,
-            IStorage storage, IStorage cacheStorage = null)
-            : base(protocolVersion)
+        public Node( Contact contact, UInt16 protocolVersion, IStorage storage, IStorage cacheStorage = null )
+            : base( protocolVersion )
         {
-            ourContact = contact;
-            bucketList = new BucketList(contact, protocolVersion);
-            this.storage = storage;
-            this.cacheStorage = cacheStorage;
+            OurContact = contact;
+            BucketList = new BucketList( contact, protocolVersion );
+            Storage = storage;
+            CacheStorage = cacheStorage;
 
-            if (cacheStorage == null)
+            if ( cacheStorage == null )
             {
-                this.cacheStorage = new VirtualStorage();
+                CacheStorage = new VirtualStorage();
             }
         }
 
         /// <summary>
         /// Someone is pinging us.  Register the contact and respond.
         /// </summary>
-        /// <returns>
-        /// Current peer
-        /// </returns>
-        public Contact Ping(Contact sender)
+        public void Ping( Contact sender )
         {
+#if !RECEIVE_TCP_FROM_OURSELF
             Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
-            bucketList.AddContact(ref sender);
+#endif
 
-            return ourContact;
+            BucketList.AddContact( ref sender );
         }
 
         /// <summary>
@@ -76,7 +74,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// Current peer
         /// </param>
         /// <param name="key">
-        /// 160-bit <seealso cref="ID"/> which we want to store
+        /// 160-bit <seealso cref="KademliaId"/> which we want to store
         /// </param>
         /// <param name="val">
         /// Value of the peer which we want to store
@@ -90,19 +88,25 @@ namespace LUC.DiscoveryService.Kademlia
         /// <returns>
         /// Information about the errors which maybe happened
         /// </returns>
-        public void Store(Contact sender, ID key, string val, bool isCached = false, int expirationTimeSec = 0)
+        public void Store( Contact sender, KademliaId key, String val, Boolean isCached = false, Int32 expirationTimeSec = 0 )
         {
+#if !RECEIVE_TCP_FROM_OURSELF
             Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
-            bucketList.AddContact(ref sender);
-
-            if (isCached)
+            if(!isCached)
             {
-                cacheStorage.Set(key, val, expirationTimeSec);
+                SendKeyValuesIfNewContact(sender);
+            }
+#endif
+
+            BucketList.AddContact( ref sender );
+
+            if ( isCached )
+            {
+                CacheStorage.Set( key, val, expirationTimeSec );
             }
             else
             {
-                SendKeyValuesIfNewContact(sender);
-                storage.Set(key, val, Constants.EXPIRATION_TIME_SECONDS);
+                Storage.Set( key, val, Constants.EXPIRATION_TIME_SECONDS );
             }
         }
 
@@ -131,18 +135,16 @@ namespace LUC.DiscoveryService.Kademlia
         /// Also this operation returns <seealso cref="RpcError"/> to inform about the errors which maybe happened
         /// </returns>
         //TODO it shouldn't return val
-        public void FindNode(Contact sender, ID key, out List<Contact> contacts)
+        public void FindNode( Contact sender, KademliaId key, out List<Contact> contacts )
         {
-            Boolean isOnlyInNetwork = FunctionTestType.CanCurrentPcToReceiveTcpMessFromItself(ourContact.ID, sender.ID);
-            if (!isOnlyInNetwork)
-            {
-                Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
-                SendKeyValuesIfNewContact(sender);
-            }
+#if !RECEIVE_TCP_FROM_OURSELF
+            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
+            SendKeyValuesIfNewContact(sender);
+#endif
 
-            bucketList.AddContact(ref sender);
+            BucketList.AddContact( ref sender );
 
-            contacts = bucketList.GetCloseContacts(key, exclude: sender.ID);
+            contacts = BucketList.GetCloseContacts( key, exclude: sender.ID );
         }
 
         /// <summary>
@@ -163,68 +165,69 @@ namespace LUC.DiscoveryService.Kademlia
         /// 160-bit ID near which you want to get list of contacts
         /// </param>
         /// <returns>
-        /// Returns either the value if <paramref name="key"/> was storaged using <seealso cref="Store(Contact, ID, string, bool, int)"/> (first purpose) or a list of close contacts if it wasn't (second purpose)
+        /// Returns either the value if <paramref name="key"/> was storaged using <seealso cref="Store(Contact, KademliaId, String, Boolean, Int32)"/> (first purpose) or a list of close contacts if it wasn't (second purpose)
         /// </returns>
-        public void FindValue(Contact sender, ID key, out List<Contact> contacts, out String nodeValue)
+        public void FindValue( Contact sender, KademliaId key, out List<Contact> contacts, out String nodeValue )
         {
+#if !RECEIVE_TCP_FROM_OURSELF
             Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
-            bucketList.AddContact(ref sender);
+#endif
 
-            if (storage.Contains(key))
+            BucketList.AddContact( ref sender );
+
+            if ( Storage.Contains( key ) )
             {
                 contacts = null;
-                nodeValue = storage.Get(key);
+                nodeValue = Storage.Get( key );
             }
-            else if (CacheStorage.Contains(key))
+            else if ( CacheStorage.Contains( key ) )
             {
                 contacts = null;
-                nodeValue = CacheStorage.Get(key);
+                nodeValue = CacheStorage.Get( key );
             }
             else
             {
-                contacts = bucketList.GetCloseContacts(key, exclude: sender.ID);
+                contacts = BucketList.GetCloseContacts( key, exclude: sender.ID );
                 nodeValue = null;
             }
         }
 
 #if DEBUG           // For unit testing
-        public void SimpleStore(ID key, string val)
-        {
-            storage.Set(key, val);
-        }
+        public void SimpleStore( KademliaId key, String val ) => 
+            Storage.Set( key, val );
 #endif
 
         /// <summary>
         /// For a new contact, we store values to that contact whose keys ^ ourContact are less than stored keys ^ [otherContacts].
         /// </summary>
-        protected void SendKeyValuesIfNewContact(Contact sender)
+        protected void SendKeyValuesIfNewContact( Contact sender )
         {
             List<Contact> contacts = new List<Contact>();
 
-            if (IsNewContact(sender))
+            if ( IsNewContact( sender ) )
             {
-                lock (bucketList)
+                lock ( BucketList )
                 {
                     // Clone so we can release the lock.
-                    contacts = new List<Contact>(bucketList.Buckets.SelectMany(b => b.Contacts));
+                    contacts = new List<Contact>( BucketList.Buckets.SelectMany( b => b.Contacts ) );
                 }
 
-                if (contacts.Count() > 0)
+                if ( contacts.Count() > 0 )
                 {
                     // and our distance to the key < any other contact's distance to the key...
-                    storage.Keys.AsParallel().ForEach(k =>
-                    {
-                    // our min distance to the contact.
-                    var distance = contacts.Min(c => k ^ c.ID);
+                    Storage.Keys.AsParallel().ForEach( (Action<System.Numerics.BigInteger>)(k =>
+                     {
+                         // our min distance to the contact.
+                         KademliaId distance = contacts.Min( c => k ^ c.ID );
 
-                    // If our contact is closer, store the contact on its node.
-                    if ((k ^ ourContact.ID) < distance)
-                        {
-                            var error = clientKadOperation.Store(ourContact, new ID(k), storage.Get(k), sender);
-                            dht?.HandleError(error, sender);
-                        }
-                    });
+                         // If our contact is closer, store the contact on its node.
+                         if ( ( k ^ this.OurContact.ID ) < distance )
+                         {
+                             RpcError error = m_clientKadOperation.Store( (Contact)this.OurContact, new KademliaId( k ), Storage.Get( k ), sender );
+                             Dht?.HandleError( error, sender );
+                         }
+                     }) );
                 }
             }
         }
@@ -232,21 +235,21 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Returns true if the contact isn't in the bucket list or the pending contacts list.
         /// </summary>
-        protected bool IsNewContact(Contact sender)
+        protected Boolean IsNewContact( Contact sender )
         {
-            bool ret;
+            Boolean ret;
 
-            lock (bucketList)
+            lock ( BucketList )
             {
                 // If we have a new contact...
-                ret = bucketList.ContactExists(sender);
+                ret = BucketList.ContactExists( sender );
             }
 
-            if (dht != null)            // for unit testing, dht may be null
+            if ( Dht != null )            // for unit testing, dht may be null
             {
-                lock (dht.PendingContacts)
+                lock ( Dht.PendingContacts )
                 {
-                    ret |= dht.PendingContacts.ContainsBy(sender, c => c.ID);
+                    ret |= Dht.PendingContacts.ContainsBy( sender, c => c.ID );
                 }
             }
 

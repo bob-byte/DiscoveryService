@@ -8,24 +8,24 @@ namespace LUC.DiscoveryService.Kademlia
 {
     public static class ExtensionMethods
     {
-        public static void ForEach<T>(this IEnumerable<T> collection, Action<T> action)
+        public static void ForEach<T>( this IEnumerable<T> collection, Action<T> action )
         {
-            foreach (var item in collection)
+            foreach ( T item in collection )
             {
-                action(item);
+                action( item );
             }
         }
 
         /// <summary>
         /// ForEach with an index.
         /// </summary>
-        public static void ForEachWithIndex<T>(this IEnumerable<T> collection, Action<T, int> action)
+        public static void ForEachWithIndex<T>( this IEnumerable<T> collection, Action<T, Int32> action )
         {
-            int n = 0;
+            Int32 n = 0;
 
-            foreach (var item in collection)
+            foreach ( T item in collection )
             {
-                action(item, n++);
+                action( item, n++ );
             }
         }
 
@@ -33,102 +33,100 @@ namespace LUC.DiscoveryService.Kademlia
         /// Implements ForEach for non-generic enumerators.
         /// </summary>
         // Usage: Controls.ForEach<Control>(t=>t.DoSomething());
-        public static void ForEach<T>(this IEnumerable collection, Action<T> action)
+        public static void ForEach<T>( this IEnumerable collection, Action<T> action )
         {
-            foreach (T item in collection)
+            foreach ( T item in collection )
             {
-                action(item);
+                action( item );
             }
         }
 
-        public static void ForEach(this int n, Action action)
+        public static void ForEach( this Int32 n, Action action )
         {
-            for (int i = 0; i < n; i++)
+            for ( Int32 i = 0; i < n; i++ )
             {
                 action();
             }
         }
 
-        public static void ForEach(this int n, Action<int> action)
+        public static void ForEach( this Int32 n, Action<Int32> action )
         {
-            for (int i = 0; i < n; i++)
+            for ( Int32 i = 0; i < n; i++ )
             {
-                action(i);
+                action( i );
             }
         }
 
-        public static IEnumerable<int> Range(this int n)
+        public static IEnumerable<Int32> Range( this Int32 n ) => 
+            Enumerable.Range( 0, n );
+
+        public static void MoveToTail<T>( this List<T> list, T item, Predicate<T> pred )
         {
-            return Enumerable.Range(0, n);
+            Int32 idx = list.FindIndex( pred );
+            list.RemoveAt( idx );
+            list.Add( item );
         }
 
-        public static void MoveToTail<T>(this List<T> list, T item, Predicate<T> pred)
+        public static void AddMaximum<T>( this List<T> list, T item, Int32 max )
         {
-            int idx = list.FindIndex(pred);
-            list.RemoveAt(idx);
-            list.Add(item);
-        }
+            list.Add( item );
 
-        public static void AddMaximum<T>(this List<T> list, T item, int max)
-        {
-            list.Add(item);
-
-            if (list.Count > max)
+            if ( list.Count > max )
             {
-                list.RemoveAt(0);
+                list.RemoveAt( 0 );
             }
         }
 
-        public static void AddDistinct<T>(this List<T> list, T item)
+        public static void AddDistinct<T>( this List<T> list, T item )
         {
-            if (!list.Contains(item))
+            if ( !list.Contains( item ) )
             {
-                list.Add(item);
+                list.Add( item );
             }
         }
 
-        public static bool ContainsBy<T, TKey>(this List<T> list, T item, Func<T, TKey> keySelector)
+        public static Boolean ContainsBy<T, TKey>( this List<T> list, T item, Func<T, TKey> keySelector )
         {
-            TKey itemKey = keySelector(item);
+            TKey itemKey = keySelector( item );
 
-            return list.Any(n => keySelector(n).Equals(itemKey));
+            return list.Any( n => keySelector( n ).Equals( itemKey ) );
         }
 
-        public static void AddDistinctBy<T, TKey>(this List<T> list, T item, Func<T, TKey> keySelector)
+        public static void AddDistinctBy<T, TKey>( this List<T> list, T item, Func<T, TKey> keySelector )
         {
-            TKey itemKey = keySelector(item);
+            TKey itemKey = keySelector( item );
 
             // no items in the list must match the item.
-            if (list.None(q => keySelector(q).Equals(itemKey)))
+            if ( list.None( q => keySelector( q ).Equals( itemKey ) ) )
             {
-                list.Add(item);
+                list.Add( item );
             }
         }
 
         // TODO: Change the equalityComparer to a KeySelector for the these extension methods:
-        public static void AddRangeDistinctBy<T>(this List<T> target, IEnumerable<T> src, Func<T, T, bool> equalityComparer)
+        public static void AddRangeDistinctBy<T>( this List<T> target, IEnumerable<T> src, Func<T, T, Boolean> equalityComparer )
         {
-            src.ForEach(item =>
+            src.ForEach( item =>
             {
                 // no items in the list must match the item.
-                if (target.None(q => equalityComparer(q, item)))
+                if ( target.None( q => equalityComparer( q, item ) ) )
                 {
-                    target.Add(item);
+                    target.Add( item );
                 }
-            });
+            } );
         }
-
-        public static IEnumerable<T> ExceptBy<T, TKey>(this IEnumerable<T> src, T item, Func<T, TKey> keySelector)
+            
+        public static IEnumerable<T> ExceptBy<T, TKey>( this IEnumerable<T> src, T item, Func<T, TKey> keySelector )
         {
-            TKey itemKey = keySelector(item);
+            TKey itemKey = keySelector( item );
 
-            using (var enumerator = src.GetEnumerator())
+            using ( IEnumerator<T> enumerator = src.GetEnumerator() )
             {
-                while (enumerator.MoveNext())
+                while ( enumerator.MoveNext() )
                 {
                     T current = enumerator.Current;
 
-                    if (!keySelector(current).Equals(itemKey))
+                    if ( !keySelector( current ).Equals( itemKey ) )
                     {
                         yield return current;
                     }
@@ -136,15 +134,15 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
-        public static IEnumerable<T> ExceptBy<T, TKey>(this IEnumerable<T> src, IEnumerable<T> items, Func<T, TKey> keySelector)
+        public static IEnumerable<T> ExceptBy<T, TKey>( this IEnumerable<T> src, IEnumerable<T> items, Func<T, TKey> keySelector )
         {
-            using (var enumerator = src.GetEnumerator())
+            using ( IEnumerator<T> enumerator = src.GetEnumerator() )
             {
-                while (enumerator.MoveNext())
+                while ( enumerator.MoveNext() )
                 {
                     T current = enumerator.Current;
 
-                    if (items.None(i => keySelector(current).Equals(keySelector(i))))
+                    if ( items.None( i => keySelector( current ).Equals( keySelector( i ) ) ) )
                     {
                         yield return current;
                     }
@@ -152,82 +150,67 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
-        public static bool None<TSource>(this IEnumerable<TSource> source)
-        {
-            return !source.Any();
-        }
+        public static Boolean None<TSource>( this IEnumerable<TSource> source ) => 
+            !source.Any();
 
-        public static bool None<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> predicate)
-        {
-            return !source.Any(predicate);
-        }
+        public static Boolean None<TSource>( this IEnumerable<TSource> source, Func<TSource, Boolean> predicate ) => 
+            !source.Any( predicate );
 
-        public static void RemoveRange<T>(this ICollection<T> target, ICollection<T> src)
-        {
-            src.ForEach(s => target.Remove(s));
-        }
+        public static void RemoveRange<T>( this ICollection<T> target, ICollection<T> src ) => 
+            src.ForEach( s => target.Remove( s ) );
 
-        public static void RemoveRange<T>(this List<T> target, List<T> src, Func<T, T, bool> equalityComparer)
+        public static void RemoveRange<T>( this List<T> target, List<T> src, Func<T, T, Boolean> equalityComparer )
         {
-            src.ForEach(s =>
+            src.ForEach( s =>
             {
-                int idx = target.FindIndex(t => equalityComparer(t, s));
-
-                if (idx != -1)
+                Int32 idx = target.FindIndex( t => equalityComparer( t, s ) );
+                if ( idx != -1 )
                 {
-                    target.RemoveAt(idx);
+                    target.RemoveAt( idx );
                 }
-            });
+            } );
         }
 
-        public static int Mod(this int a, int b)
-        {
-            return (a % b + b) % b;
-        }
+        public static Int32 Mod( this Int32 a, Int32 b ) => 
+            ( ( a % b ) + b ) % b;
 
-        public static T Second<T>(this List<T> items)
-        {
-            return items[1];
-        }
+        public static T Second<T>( this List<T> items ) => 
+            items[ 1 ];
 
         /// <summary>
         /// Little endian conversion of bytes to bits.
         /// </summary>
-		public static IEnumerable<bool> Bits(this byte[] bytes)
+		public static IEnumerable<Boolean> Bits( this Byte[] bytes )
         {
-            IEnumerable<bool> GetBits(byte b)
+            IEnumerable<Boolean> Bits( Byte b )
             {
-                byte shifter = 0x01;
+                Byte shifter = 0x01;
 
-                for (int i = 0; i < 8; i++)
+                for ( Int32 i = 0; i < 8; i++ )
                 {
-                    yield return (b & shifter) != 0;
+                    yield return ( b & shifter ) != 0;
                     shifter <<= 1;
                 }
             }
 
-            return bytes.SelectMany(GetBits);
+            return bytes.SelectMany( Bits );
         }
 
         /// <summary>
         /// Value cannot exceed max.
         /// </summary>
-        public static int Min(this int a, int max)
-        {
-            return (a > max) ? max : a;
-        }
+        public static Int32 Min( this Int32 a, Int32 max ) => 
+            ( a > max ) ? max : a;
 
         /// <summary>
         /// Value cannot be less than min.
         /// </summary>
-        public static int Max(this int a, int min)
-        {
-            return (a < min) ? min : a;
-        }
+        public static Int32 Max( this Int32 a, Int32 min ) => 
+            ( a < min ) ? min : a;
 
-        public static T Next<T>(this IEnumerable<T> source)
+        public static T Next<T>( this IEnumerable<T> source )
         {
-            using (var enumerator = source.GetEnumerator())
+            using ( IEnumerator<T> enumerator = source.GetEnumerator() )
             {
                 enumerator.MoveNext();
 
@@ -235,75 +218,72 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
-        public static bool IsNext<T>(this IEnumerable<T> source, Func<T, bool> predicate)
+        public static Boolean IsNext<T>( this IEnumerable<T> source, Func<T, Boolean> predicate )
         {
-            using (var enumerator = source.GetEnumerator())
+            using ( IEnumerator<T> enumerator = source.GetEnumerator() )
             {
                 enumerator.MoveNext();
-                return predicate(enumerator.Current);
+                return predicate( enumerator.Current );
             }
         }
 
         /// <summary>
         /// Append a 0 to the byte array so that when converting to a BigInteger, the value remains positive.
         /// </summary>
-        public static byte[] Append0(this byte[] b)
-        {
-            return b.Concat(new byte[] { 0 }).ToArray();
-        }
+        public static Byte[] Append0( this Byte[] b ) => 
+            b.Concat( new Byte[] { 0 } ).ToArray();
 
-        public static bool ApproximatelyEquals(this double d, double val, double range)
-        {
-            return d >= val - range && d <= val + range;
-        }
+        public static Boolean ApproximatelyEquals( this Double d, Double val, Double range ) =>
+            ( d >= val - range ) && ( d <= val + range );
 
         // Welford's method: https://mathoverflow.net/questions/70345/numerically-most-robust-way-to-compute-sum-of-products-standard-deviation-in-f
         // From: https://stackoverflow.com/questions/2253874/standard-deviation-in-linq
-        public static double StdDev(this IEnumerable<double> values)
+        public static Double StdDev( this IEnumerable<Double> values )
         {
-            double mean = 0.0;
-            double sum = 0.0;
-            double stdDev = 0.0;
-            int n = 0;
-            foreach (double val in values)
+            Double mean = 0.0;
+            Double sum = 0.0;
+            Double stdDev = 0.0;
+            Int32 n = 0;
+
+            foreach ( Double val in values )
             {
                 n++;
-                double delta = val - mean;
+
+                Double delta = val - mean;
                 mean += delta / n;
-                sum += delta * (val - mean);
+
+                sum += delta * ( val - mean );
             }
-            if (1 < n)
-                stdDev = Math.Sqrt(sum / (n - 1));
+
+            if ( 1 < n )
+            {
+                stdDev = Math.Sqrt( sum / ( n - 1 ) );
+            }
 
             return stdDev;
         }
 
-        public static byte[] to_Utf8(this string str)
-        {
-            return Encoding.UTF8.GetBytes(str);
-        }
+        public static Byte[] ToUtf8( this String str ) => 
+            Encoding.UTF8.GetBytes( str );
 
-        public static int to_i(this string str)
-        {
-            return Convert.ToInt32(str);
-        }
+        public static Int32 ToInt32( this String str ) => 
+            Convert.ToInt32( str );
 
-        /*
-        public static IEnumerable<T> WhereAll<T>(this IEnumerable<T> a, IEnumerable<T> b, Func<T, T, bool> comparator)
+
+        public static IEnumerable<T> WhereAll<T>( this IEnumerable<T> a, IEnumerable<T> b, Func<T, T, Boolean> comparator )
         {
-            using (var aenum = a.GetEnumerator())
+            using ( IEnumerator<T> aenum = a.GetEnumerator() )
             {
-                while (aenum.MoveNext())
+                while ( aenum.MoveNext() )
                 {
                     T aa = aenum.Current;
 
-                    if (b.All(bb => comparator(aa, bb)))
+                    if ( b.All( bb => comparator( aa, bb ) ) )
                     {
                         yield return aa;
                     }
                 }
             }
         }
-        */
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,14 +10,22 @@ namespace LUC.DiscoveryService.Messages
 {
     public class MessageEventArgs : EventArgs
     {
-        private Message message;
+        private Message m_message;
 
         public Byte[] Buffer { get; set; }
 
+        /// <summary>
+        ///   Message sender endpoint. It is used to store source IP address.
+        /// </summary>
+        /// <value>
+        ///   The endpoint from the message was received.
+        /// </value>
+        public EndPoint RemoteEndPoint { get; set; }
+
         internal Boolean IsReadMessage<T>()
-            where T: Message, new()
+            where T : Message, new()
         {
-            return message as T != null;
+            return (m_message as T) != null;
         }
 
         public BigInteger LocalContactId { get; set; }
@@ -30,22 +39,22 @@ namespace LUC.DiscoveryService.Messages
         /// <value>
         ///   The received message.
         /// </value>
-        internal T Message<T>(Boolean whetherReadMessage = true)
-            where T: Message, new()
-        {
-            if (whetherReadMessage && !IsReadMessage<T>())
-            {
-                message = new T();
-                message.Read(Buffer);
-            }
-
-            return message as T;
-        }
-
-        internal void SetMessage<T>(T message)
+        internal T Message<T>( Boolean whetherReadMessage = true )
             where T : Message, new()
         {
-            this.message = message;
+            if ( whetherReadMessage && !IsReadMessage<T>() )
+            {
+                m_message = new T();
+                m_message.Read( Buffer );
+            }
+
+            return m_message as T;
+        }
+
+        internal void SetMessage<T>( T message )
+            where T : Message, new()
+        {
+            this.m_message = message;
         }
     }
 }

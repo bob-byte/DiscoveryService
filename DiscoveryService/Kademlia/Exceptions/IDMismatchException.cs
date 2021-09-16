@@ -4,7 +4,16 @@ namespace LUC.DiscoveryService.Kademlia.Exceptions
 {
     public class IDMismatchException : Exception
     {
-        public IDMismatchException() { }
-        public IDMismatchException(string msg) : base(msg) { }
+        public IDMismatchException()
+            : base()
+        {
+            ;//do nothing
+        }
+
+        public IDMismatchException( String messageException )
+            : base( messageException )
+        {
+            ;//do nothing
+        }
     }
 }

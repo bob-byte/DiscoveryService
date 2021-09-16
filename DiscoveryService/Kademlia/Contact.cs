@@ -6,26 +6,28 @@ using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Collections;
 using System.IO;
+using LUC.DiscoveryService.Kademlia.Exceptions;
+using LUC.DiscoveryService.Common;
 
 namespace LUC.DiscoveryService.Kademlia
 {
     public class Contact : IComparable
     {
-        private readonly Object lockIpAddresses;
-        private readonly List<IPAddress> ipAddresses;
-        private IPAddress lastActiveIpAddress;
+        private readonly Object m_lockIpAddresses;
+        private readonly List<IPAddress> m_ipAddresses;
+        private IPAddress m_lastActiveIpAddress;
 
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(String machineId, ID contactID, UInt16 tcpPort)
+        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort )
         {
             MachineId = machineId;
             ID = contactID;
 
             TcpPort = tcpPort;
-            ipAddresses = new List<IPAddress>();
-            lockIpAddresses = new Object();
+            m_ipAddresses = new List<IPAddress>();
+            m_lockIpAddresses = new Object();
 
             Touch();
         }
@@ -33,8 +35,8 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(String machineId, ID contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress)
-            : this(machineId, contactID, tcpPort)
+        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress )
+            : this( machineId, contactID, tcpPort )
         {
             LastActiveIpAddress = lastActiveIpAddress;
         }
@@ -42,20 +44,20 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(String machineId, ID contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen)
+        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen )
         {
             MachineId = machineId;
             ID = contactID;
 
             TcpPort = tcpPort;
-            lockIpAddresses = new Object();
+            m_lockIpAddresses = new Object();
 
-            this.ipAddresses = new List<IPAddress>();
-            if(ipAddresses != null)
+            this.m_ipAddresses = new List<IPAddress>();
+            if ( ipAddresses != null )
             {
-                foreach (var address in ipAddresses)
+                foreach ( IPAddress address in ipAddresses )
                 {
-                    TryAddIpAddress(address, isAdded: out _);
+                    TryAddIpAddress( address, isAdded: out _ );
                 }
             }
 
@@ -66,51 +68,45 @@ namespace LUC.DiscoveryService.Kademlia
 
         public String MachineId { get; set; }
 
-        public ID ID { get; set; }
+        public KademliaId ID { get; set; }
 
         public UInt16 TcpPort { get; set; }
 
-        public IPAddress LastActiveIpAddress 
+        public IPAddress LastActiveIpAddress
         {
-            get => lastActiveIpAddress;
+            get => m_lastActiveIpAddress;
             set
             {
-                lastActiveIpAddress = value;
-                TryAddIpAddress(lastActiveIpAddress, out _);
+                m_lastActiveIpAddress = value;
+                TryAddIpAddress( m_lastActiveIpAddress, out _ );
             }
         }
 
-        public Int32 IpAddressesCount => ipAddresses.Count;
+        public Int32 IpAddressesCount => m_ipAddresses.Count;
 
         /// <summary>
         /// Update the fact that we've just seen this contact.
         /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Touch()
-        {
-            LastSeen = DateTime.UtcNow;
-        }
+        [MethodImpl( MethodImplOptions.AggressiveInlining )]
+        public void Touch() => LastSeen = DateTime.UtcNow;
 
         public List<IPAddress> IpAddresses() =>
-            ipAddresses.ToList();
+            m_ipAddresses.ToList();
 
-        public void TryAddIpAddress(IPAddress address, out Boolean isAdded)
+        public void TryAddIpAddress( IPAddress address, out Boolean isAdded )
         {
-            if (address != null)
+            if ( address != null )
             {
-                lock (lockIpAddresses)
+                lock ( m_lockIpAddresses )
                 {
-                    if (!ipAddresses.Contains(address))
+                    //to put in the end last active IP address
+                    if ( m_ipAddresses.Contains( address ) )
                     {
-                        ipAddresses.Add(address);
-                        isAdded = true;
+                        m_ipAddresses.Remove( address );
+                    }
 
-                        lastActiveIpAddress = address;
-                    }
-                    else
-                    {
-                        isAdded = false;
-                    }
+                    AddNewIpAddresss( address );
+                    isAdded = true;
                 }
             }
             else
@@ -119,21 +115,21 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
-        public void TryRemoveIpAddress(IPAddress address, out Boolean isRemoved)
+        public void TryRemoveIpAddress( IPAddress address, out Boolean isRemoved )
         {
-            lock(lockIpAddresses)
+            lock ( m_lockIpAddresses )
             {
-                if(ipAddresses.Contains(address))
+                if ( m_ipAddresses.Contains( address ) )
                 {
-                    isRemoved = ipAddresses.Remove(address);
+                    isRemoved = m_ipAddresses.Remove( address );
 
-                    if(ipAddresses.Count > 0)
+                    if ( m_ipAddresses.Count > 0 )
                     {
-                        lastActiveIpAddress = ipAddresses[IpAddressesCount - 1];
+                        m_lastActiveIpAddress = m_ipAddresses[ IpAddressesCount - 1 ];
                     }
-                    else if(ipAddresses.Count == 0)
+                    else if ( m_ipAddresses.Count == 0 )
                     {
-                        lastActiveIpAddress = null;
+                        m_lastActiveIpAddress = null;
                     }
                 }
                 else
@@ -147,32 +143,32 @@ namespace LUC.DiscoveryService.Kademlia
         // are all unique but we need to be able to compare our DHT's contacts, so without worrying about
         // whether we're comparing Contact references or their ID's, we're doing it correctly here.
 
-        public int CompareTo(object obj)
+        public Int32 CompareTo( Object obj )
         {
-            Validate.IsTrue<NotContactException>(obj is Contact, "Cannot compare non-Contact objects to a Contact");
+            Validate.IsTrue<NotContactException>( obj is Contact, "Cannot compare non-Contact objects to a Contact" );
 
             Contact c = (Contact)obj;
 
-            return ID.CompareTo(c.ID);
+            return ID.CompareTo( c.ID );
         }
 
         public override String ToString()
         {
-            using(StringWriter writer = new StringWriter())
+            using ( StringWriter writer = new StringWriter() )
             {
-                writer.WriteLine($"{PropertyWithValue(nameof(ID), ID)};\n" +
-                                 $"{PropertyWithValue(nameof(LastSeen), LastSeen)};");
+                writer.WriteLine( $"{Display.PropertyWithValue( nameof( ID ), ID )};\n" +
+                                 $"{Display.PropertyWithValue( nameof( LastSeen ), LastSeen )};" );
 
-                writer.WriteLine($"{nameof(ipAddresses)}:");
-                for (Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++)
+                writer.WriteLine( $"{nameof( m_ipAddresses )}:" );
+                for ( Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++ )
                 {
-                    if (numAddress == IpAddressesCount - 1)
+                    if ( numAddress == IpAddressesCount - 1 )
                     {
-                        writer.Write($"{ipAddresses[numAddress]}");
+                        writer.Write( $"{m_ipAddresses[ numAddress ]}" );
                     }
                     else
                     {
-                        writer.WriteLine($"{ipAddresses[numAddress]};");
+                        writer.WriteLine( $"{m_ipAddresses[ numAddress ]};" );
                     }
                 }
 
@@ -180,38 +176,51 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected String PropertyWithValue<T>(String nameProp, T value) =>
-            $"{nameProp} = {value}";
-
-        public static bool operator ==(Contact a, Contact b)
+        public static Boolean operator ==( Contact a, Contact b )
         {
-            if ((((object)a) == null) && (((object)b) != null)) return false;
-            if ((((object)a) != null) && (((object)b) == null)) return false;
-            if ((((object)a) == null) && (((object)b) == null)) return true;
+            if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) != null ) )
+                return false;
+            if ( ( ( (Object)a ) != null ) && ( ( (Object)b ) == null ) )
+                return false;
+            if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) == null ) )
+                return true;
 
             return a.ID == b.ID;
         }
 
-        public static bool operator !=(Contact a, Contact b)
+        public static Boolean operator !=( Contact a, Contact b )
         {
-            if ((((object)a) == null) && (((object)b) != null)) return true;
-            if ((((object)a) != null) && (((object)b) == null)) return true;
-            if ((((object)a) == null) && (((object)b) == null)) return false;
+            if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) != null ) )
+                return true;
+            if ( ( ( (Object)a ) != null ) && ( ( (Object)b ) == null ) )
+                return true;
+            if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) == null ) )
+                return false;
 
-            return !(a.ID == b.ID);
+            return !( a.ID == b.ID );
         }
 
-        public override bool Equals(object obj)
+        public override Boolean Equals( Object obj )
         {
-            if (obj == null || !(obj is Contact)) return false;
+            if ( obj == null || !( obj is Contact ) )
+                return false;
 
             return this == (Contact)obj;
         }
 
-        public override int GetHashCode()
+        public override Int32 GetHashCode() => base.GetHashCode();
+
+        private void AddNewIpAddresss( IPAddress address )
         {
-            return base.GetHashCode();
+            m_ipAddresses.Add( address );
+
+            m_lastActiveIpAddress = address;
+
+            if ( m_ipAddresses.Count > Constants.MAX_AVAILABLE_IP_ADDRESSES_IN_CONTACT )
+            {
+                //remove the oldest IP-address
+                m_ipAddresses.RemoveAt( index: 0 );
+            }
         }
     }
 }

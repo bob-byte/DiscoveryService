@@ -1,7 +1,9 @@
 ﻿using DeviceId;
+
 using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Kademlia;
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,7 +20,7 @@ namespace LUC.DiscoveryService
         static ServiceProfile()
         {
             // Make sure Service is inited.
-            NetworkEventInvoker.ReferenceEquals(null, null);
+            NetworkEventInvoker.ReferenceEquals( null, null );
         }
 
         /// <summary>
@@ -27,14 +29,13 @@ namespace LUC.DiscoveryService
         /// <param name="addresses">
         /// <see cref="IPAddress"/> of network interfaces of current machine 
         /// </param>
-        public ServiceProfile(Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion, 
-            ConcurrentDictionary<String, String> groupsSupported = null, 
-            IEnumerable<IPAddress> addresses = null)
+        public ServiceProfile( Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion,
+            ConcurrentDictionary<String, String> groupsSupported = null )
         {
             DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
             MachineId = deviceIdBuilder.MachineId();
 
-            if(groupsSupported != null)
+            if ( groupsSupported != null )
             {
                 GroupsSupported = groupsSupported;
             }
@@ -54,6 +55,6 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Known network interfaces
         /// </summary>
-        public IList<NetworkInterface> NetworkInterfaces => NetworkEventInvoker.KnownNics;
+        public IList<NetworkInterface> NetworkInterfaces => NetworkEventInvoker.KnownNetworks;
     }
 }

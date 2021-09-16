@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.Messages;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,6 @@ namespace LUC.DiscoveryService.Interfaces
 {
     interface INetworkEventHandler
     {
-        void SendResponse(Object sender, TcpMessageEventArgs eventArgs);
+        void SendResponse( Object sender, TcpMessageEventArgs eventArgs );
     }
 }

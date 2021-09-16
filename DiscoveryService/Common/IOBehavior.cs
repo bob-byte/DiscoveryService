@@ -1,18 +1,18 @@
 namespace LUC.DiscoveryService.Common
 {
-	/// <summary>
-	/// Specifies whether to perform synchronous or asynchronous I/O.
-	/// </summary>
+    /// <summary>
+    /// Specifies whether to perform synchronous or asynchronous I/O.
+    /// </summary>
     public enum IOBehavior
-	{
-		/// <summary>
-		/// Use synchronous I/O.
-		/// </summary>
-		Synchronous,
+    {
+        /// <summary>
+        /// Use synchronous I/O.
+        /// </summary>
+        Synchronous,
 
-		/// <summary>
-		/// Use asynchronous I/O.
-		/// </summary>
-		Asynchronous,
-	}
+        /// <summary>
+        /// Use asynchronous I/O.
+        /// </summary>
+        Asynchronous,
+    }
 }

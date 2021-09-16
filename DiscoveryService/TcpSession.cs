@@ -1,10 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
 using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Kademlia;
 
 namespace LUC.DiscoveryService
@@ -15,11 +17,13 @@ namespace LUC.DiscoveryService
     /// <remarks>Thread-safe</remarks>
     class TcpSession : IDisposable
     {
+        private const Int32 MaxAvailableReadBytes = (Int32)( Constants.MAX_CHUNK_SIZE * 1.5 );
+
         /// <summary>
         /// Initialize the session with a given server
         /// </summary>
         /// <param name="server">TCP server</param>
-        public TcpSession(TcpServer server)
+        public TcpSession( TcpServer server )
         {
             Id = Guid.NewGuid();
             Server = server;
@@ -44,49 +48,49 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Number of bytes pending sent by the session
         /// </summary>
-        public long BytesPending { get; private set; }
+        public Int64 BytesPending { get; private set; }
         /// <summary>
         /// Number of bytes sending by the session
         /// </summary>
-        public long BytesSending { get; private set; }
+        public Int64 BytesSending { get; private set; }
         /// <summary>
         /// Number of bytes sent by the session
         /// </summary>
-        public long BytesSent { get; private set; }
+        public Int64 BytesSent { get; private set; }
         /// <summary>
         /// Number of bytes received by the session
         /// </summary>
-        public long BytesReceived { get; private set; }
+        public Int64 BytesReceived { get; private set; }
 
         /// <summary>
         /// Option: receive buffer limit
         /// </summary>
-        public int OptionReceiveBufferLimit { get; set; } = 0;
+        public Int32 OptionReceiveBufferLimit { get; set; } = 0;
         /// <summary>
         /// Option: receive buffer size
         /// </summary>
-        public int OptionReceiveBufferSize { get; set; } = 8192;
+        public Int32 OptionReceiveBufferSize { get; set; } = 8192;
         /// <summary>
         /// Option: send buffer limit
         /// </summary>
-        public int OptionSendBufferLimit { get; set; } = 0;
+        public Int32 OptionSendBufferLimit { get; set; } = 0;
         /// <summary>
         /// Option: send buffer size
         /// </summary>
-        public int OptionSendBufferSize { get; set; } = 8192;
+        public Int32 OptionSendBufferSize { get; set; } = 8192;
 
         #region Connect/Disconnect session
 
         /// <summary>
         /// Is the session connected?
         /// </summary>
-        public bool IsConnected { get; private set; }
+        public Boolean IsConnected { get; private set; }
 
         /// <summary>
         /// Connect the session
         /// </summary>
         /// <param name="socket">Session socket</param>
-        internal void Connect(Socket socket)
+        internal void Connect( Socket socket )
         {
             Socket = socket;
 
@@ -105,16 +109,16 @@ namespace LUC.DiscoveryService
             _sendEventArg.Completed += OnAsyncCompleted;
 
             // Apply the option: keep alive
-            if (Server.OptionKeepAlive)
-                Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+            if ( Server.OptionKeepAlive )
+                Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true );
             // Apply the option: no delay
-            if (Server.OptionNoDelay)
-                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
+            if ( Server.OptionNoDelay )
+                Socket.SetSocketOption( SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true );
 
             // Prepare receive & send buffers
-            _receiveBuffer.Reserve(OptionReceiveBufferSize);
-            _sendBufferMain.Reserve(OptionSendBufferSize);
-            _sendBufferFlush.Reserve(OptionSendBufferSize);
+            _receiveBuffer.Reserve( OptionReceiveBufferSize );
+            _sendBufferMain.Reserve( OptionSendBufferSize );
+            _sendBufferFlush.Reserve( OptionSendBufferSize );
 
             // Reset statistic
             BytesPending = 0;
@@ -126,7 +130,7 @@ namespace LUC.DiscoveryService
             OnConnecting();
 
             // Call the session connecting handler in the server
-            Server.OnConnectingInternal(this);
+            Server.OnConnectingInternal( this );
 
             // Update the connected flag
             IsConnected = true;
@@ -135,17 +139,17 @@ namespace LUC.DiscoveryService
             //TryReceive();
 
             // Check the socket disposed state: in some rare cases it might be disconnected while receiving!
-            if (IsSocketDisposed)
+            if ( IsSocketDisposed )
                 return;
 
             // Call the session connected handler
             OnConnected();
 
             // Call the session connected handler in the server
-            Server.OnConnectedInternal(this);
+            Server.OnConnectedInternal( this );
 
             // Call the empty send buffer handler
-            if (_sendBufferMain.IsEmpty)
+            if ( _sendBufferMain.IsEmpty )
                 OnEmpty();
         }
 
@@ -153,9 +157,9 @@ namespace LUC.DiscoveryService
         /// Disconnect the session
         /// </summary>
         /// <returns>'true' if the section was successfully disconnected, 'false' if the section is already disconnected</returns>
-        public virtual bool Disconnect()
+        public virtual Boolean Disconnect()
         {
-            if (!IsConnected)
+            if ( !IsConnected )
                 return false;
 
             // Reset event args
@@ -166,16 +170,16 @@ namespace LUC.DiscoveryService
             OnDisconnecting();
 
             // Call the session disconnecting handler in the server
-            Server.OnDisconnectingInternal(this);
+            Server.OnDisconnectingInternal( this );
 
             try
             {
                 try
                 {
                     // Shutdown the socket associated with the client
-                    Socket.Shutdown(SocketShutdown.Both);
+                    Socket.Shutdown( SocketShutdown.Both );
                 }
-                catch (SocketException) {}
+                catch ( SocketException ) { }
 
                 // Close the session socket
                 Socket.Close();
@@ -190,7 +194,7 @@ namespace LUC.DiscoveryService
                 // Update the session socket disposed flag
                 IsSocketDisposed = true;
             }
-            catch (ObjectDisposedException) {}
+            catch ( ObjectDisposedException ) { }
 
             // Update the connected flag
             IsConnected = false;
@@ -206,10 +210,10 @@ namespace LUC.DiscoveryService
             OnDisconnected();
 
             // Call the session disconnected handler in the server
-            Server.OnDisconnectedInternal(this);
+            Server.OnDisconnectedInternal( this );
 
             // Unregister session
-            Server.UnregisterSession(Id);
+            Server.UnregisterSession( Id );
 
             return true;
         }
@@ -219,23 +223,23 @@ namespace LUC.DiscoveryService
         #region Send/Recieve data
 
         // Receive buffer
-        private bool _receiving;
+        private Boolean _receiving;
         private CodingData.Buffer _receiveBuffer;
         private SocketAsyncEventArgs _receiveEventArg;
         // Send buffer
-        private readonly object _sendLock = new object();
-        private bool _sending;
+        private readonly Object _sendLock = new Object();
+        private Boolean _sending;
         private CodingData.Buffer _sendBufferMain;
         private CodingData.Buffer _sendBufferFlush;
         private SocketAsyncEventArgs _sendEventArg;
-        private long _sendBufferFlushOffset;
+        private Int64 _sendBufferFlushOffset;
 
         /// <summary>
         /// Send data to the client (synchronous)
         /// </summary>
         /// <param name="buffer">Buffer to send</param>
         /// <returns>Size of sent data</returns>
-        public virtual long Send(byte[] buffer) { return Send(buffer, 0, buffer.Length); }
+        public virtual Int64 Send( Byte[] buffer ) => Send( buffer, 0, buffer.Length );
 
         /// <summary>
         /// Send data to the client (synchronous)
@@ -244,30 +248,30 @@ namespace LUC.DiscoveryService
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>Size of sent data</returns>
-        public virtual long Send(byte[] buffer, long offset, long size)
+        public virtual Int64 Send( Byte[] buffer, Int64 offset, Int64 size )
         {
-            if (!IsConnected)
+            if ( !IsConnected )
                 return 0;
 
-            if (size == 0)
+            if ( size == 0 )
                 return 0;
 
             // Sent data to the client
-            long sent = Socket.Send(buffer, (int)offset, (int)size, SocketFlags.None, out SocketError ec);
-            if (sent > 0)
+            Int64 sent = Socket.Send( buffer, (Int32)offset, (Int32)size, SocketFlags.None, out SocketError ec );
+            if ( sent > 0 )
             {
                 // Update statistic
                 BytesSent += sent;
-                Interlocked.Add(ref Server._bytesSent, size);
+                Interlocked.Add( ref Server._bytesSent, size );
 
                 // Call the buffer sent handler
-                OnSent(sent, BytesPending + BytesSending);
+                OnSent( sent, BytesPending + BytesSending );
             }
 
             // Check for socket error
-            if (ec != SocketError.Success)
+            if ( ec != SocketError.Success )
             {
-                SendError(ec);
+                SendError( ec );
                 Disconnect();
             }
 
@@ -279,14 +283,14 @@ namespace LUC.DiscoveryService
         /// </summary>
         /// <param name="text">Text string to send</param>
         /// <returns>Size of sent data</returns>
-        public virtual long Send(string text) { return Send(Encoding.UTF8.GetBytes(text)); }
+        public virtual Int64 Send( String text ) => Send( Encoding.UTF8.GetBytes( text ) );
 
         /// <summary>
         /// Send data to the client (asynchronous)
         /// </summary>
         /// <param name="buffer">Buffer to send</param>
         /// <returns>'true' if the data was successfully sent, 'false' if the session is not connected</returns>
-        public virtual bool SendAsync(byte[] buffer) { return SendAsync(buffer, 0, buffer.Length); }
+        public virtual Boolean SendAsync( Byte[] buffer ) => SendAsync( buffer, 0, buffer.Length );
 
         /// <summary>
         /// Send data to the client (asynchronous)
@@ -295,31 +299,31 @@ namespace LUC.DiscoveryService
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>'true' if the data was successfully sent, 'false' if the session is not connected</returns>
-        public virtual bool SendAsync(byte[] buffer, long offset, long size)
+        public virtual Boolean SendAsync( Byte[] buffer, Int64 offset, Int64 size )
         {
-            if (!IsConnected)
+            if ( !IsConnected )
                 return false;
 
-            if (size == 0)
+            if ( size == 0 )
                 return true;
 
-            lock (_sendLock)
+            lock ( _sendLock )
             {
                 // Check the send buffer limit
-                if (((_sendBufferMain.Size + size) > OptionSendBufferLimit) && (OptionSendBufferLimit > 0))
+                if ( ( ( _sendBufferMain.Size + size ) > OptionSendBufferLimit ) && ( OptionSendBufferLimit > 0 ) )
                 {
-                    SendError(SocketError.NoBufferSpaceAvailable);
+                    SendError( SocketError.NoBufferSpaceAvailable );
                     return false;
                 }
 
                 // Fill the main send buffer
-                _sendBufferMain.Append(buffer, offset, size);
+                _sendBufferMain.Append( buffer, offset, size );
 
                 // Update statistic
                 BytesPending = _sendBufferMain.Size;
 
                 // Avoid multiple send handlers
-                if (_sending)
+                if ( _sending )
                     return true;
                 else
                     _sending = true;
@@ -336,14 +340,14 @@ namespace LUC.DiscoveryService
         /// </summary>
         /// <param name="text">Text string to send</param>
         /// <returns>'true' if the text was successfully sent, 'false' if the session is not connected</returns>
-        public virtual bool SendAsync(string text) { return SendAsync(Encoding.UTF8.GetBytes(text)); }
+        public virtual Boolean SendAsync( String text ) => SendAsync( Encoding.UTF8.GetBytes( text ) );
 
         /// <summary>
         /// Receive data from the client (synchronous)
         /// </summary>
         /// <param name="buffer">Buffer to receive</param>
         /// <returns>Size of received data</returns>
-        public virtual long Receive(byte[] buffer) { return Receive(buffer, 0, buffer.Length); }
+        public virtual Int64 Receive( Byte[] buffer ) => Receive( buffer, 0, buffer.Length );
 
         /// <summary>
         /// Receive data from the client (synchronous)
@@ -352,30 +356,30 @@ namespace LUC.DiscoveryService
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
         /// <returns>Size of received data</returns>
-        public virtual long Receive(byte[] buffer, long offset, long size)
+        public virtual Int64 Receive( Byte[] buffer, Int64 offset, Int64 size )
         {
-            if (!IsConnected)
+            if ( !IsConnected )
                 return 0;
 
-            if (size == 0)
+            if ( size == 0 )
                 return 0;
 
             // Receive data from the client
-            long received = Socket.Receive(buffer, (int)offset, (int)size, SocketFlags.None, out SocketError ec);
-            if (received > 0)
+            Int64 received = Socket.Receive( buffer, (Int32)offset, (Int32)size, SocketFlags.None, out SocketError ec );
+            if ( received > 0 )
             {
                 // Update statistic
                 BytesReceived += received;
-                Interlocked.Add(ref Server._bytesReceived, received);
+                Interlocked.Add( ref Server._bytesReceived, received );
 
                 // Call the buffer received handler
-                OnReceived(buffer, 0, received);
+                OnReceived( buffer, 0, received );
             }
 
             // Check for socket error
-            if (ec != SocketError.Success)
+            if ( ec != SocketError.Success )
             {
-                SendError(ec);
+                SendError( ec );
                 Disconnect();
             }
 
@@ -387,51 +391,53 @@ namespace LUC.DiscoveryService
         /// </summary>
         /// <param name="size">Text size to receive</param>
         /// <returns>Received text</returns>
-        public virtual string Receive(long size)
+        public virtual String Receive( Int64 size )
         {
-            var buffer = new byte[size];
-            var length = Receive(buffer);
-            return Encoding.UTF8.GetString(buffer, 0, (int)length);
+            Byte[] buffer = new Byte[ size ];
+            Int64 length = Receive( buffer );
+            return Encoding.UTF8.GetString( buffer, 0, (Int32)length );
         }
 
         /// <summary>
         ///   Reads all available data
         /// </summary>
-        public async Task<Byte[]> ReadBytesAsync(AutoResetEvent receiveDone)
+        public async Task<Byte[]> ReadBytesAsync( AutoResetEvent receiveDone )
         {
             List<Byte> allMessage = new List<Byte>();
             Int32 availableDataToRead = Socket.Available;
 
             Int32 chunkSize;
             Int32 countReadBytes;
+            Boolean couldBeMessageFromDs;
             do
             {
-                chunkSize = ChunkSize(availableDataToRead);
+                chunkSize = ChunkSize( availableDataToRead );
 
-                var buffer = new ArraySegment<Byte>(new Byte[chunkSize]);
-                countReadBytes = await Socket.ReceiveAsync(buffer, SocketFlags.None);
-                allMessage.AddRange(buffer);
+                ArraySegment<Byte> buffer = new ArraySegment<Byte>( new Byte[ chunkSize ] );
+                countReadBytes = await Socket.ReceiveAsync( buffer, SocketFlags.None );
+                allMessage.AddRange( buffer );
 
                 availableDataToRead = Socket.Available;
+                couldBeMessageFromDs = allMessage.Count + Socket.Available <= MaxAvailableReadBytes;
             }
-            while ((countReadBytes > 0) && (availableDataToRead > 0));
+            while ( ( countReadBytes > 0 ) && ( availableDataToRead > 0 ) && ( couldBeMessageFromDs ) );
 
             receiveDone.Set();
 
             return allMessage.ToArray();
         }
 
-        private Int32 ChunkSize(Int32 availableDataToRead)
+        private Int32 ChunkSize( Int32 availableDataToRead )
         {
             Int32 chunkSize;
 
-            if (availableDataToRead < Constants.MaxChunkSize)
+            if ( availableDataToRead < Constants.MAX_CHUNK_SIZE )
             {
                 chunkSize = availableDataToRead;
             }
-            else if (Constants.MaxChunkSize <= availableDataToRead)
+            else if ( Constants.MAX_CHUNK_SIZE <= availableDataToRead )
             {
-                chunkSize = Constants.MaxChunkSize;
+                chunkSize = Constants.MAX_CHUNK_SIZE;
             }
             else
             {
@@ -447,13 +453,13 @@ namespace LUC.DiscoveryService
         public Byte[] ReadAllAvailableBytes()
         {
             List<Byte> allMessage = new List<Byte>();
-            var availableDataToRead = Socket.Available;
+            Int32 availableDataToRead = Socket.Available;
 
-            for (Int64 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0; )
+            for ( Int64 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0; )
             {
-                var buffer = new Byte[availableDataToRead];
-                countReadBytes = Receive(buffer, offset: 0, availableDataToRead);
-                allMessage.AddRange(buffer);
+                Byte[] buffer = new Byte[ availableDataToRead ];
+                countReadBytes = Receive( buffer, offset: 0, availableDataToRead );
+                allMessage.AddRange( buffer );
 
                 availableDataToRead = Socket.Available;
             }
@@ -464,26 +470,24 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Receive data from the client (asynchronous)
         /// </summary>
-        public virtual void ReceiveAsync()
-        {
+        public virtual void ReceiveAsync() =>
             // Try to receive data from the client
             TryReceive();
-        }
 
         /// <summary>
         /// Try to receive new data
         /// </summary>
         private void TryReceive()
         {
-            if (_receiving)
+            if ( _receiving )
                 return;
 
-            if (!IsConnected)
+            if ( !IsConnected )
                 return;
 
-            bool process = true;
+            Boolean process = true;
 
-            while (process)
+            while ( process )
             {
                 process = false;
 
@@ -491,11 +495,11 @@ namespace LUC.DiscoveryService
                 {
                     // Async receive with the receive handler
                     _receiving = true;
-                    _receiveEventArg.SetBuffer(_receiveBuffer.Data, 0, (int)_receiveBuffer.Capacity);
-                    if (!Socket.ReceiveAsync(_receiveEventArg))
-                        process = ProcessReceive(_receiveEventArg);
+                    _receiveEventArg.SetBuffer( _receiveBuffer.Data, 0, (Int32)_receiveBuffer.Capacity );
+                    if ( !Socket.ReceiveAsync( _receiveEventArg ) )
+                        process = ProcessReceive( _receiveEventArg );
                 }
-                catch (ObjectDisposedException) {}
+                catch ( ObjectDisposedException ) { }
             }
         }
 
@@ -504,23 +508,23 @@ namespace LUC.DiscoveryService
         /// </summary>
         private void TrySend()
         {
-            if (!IsConnected)
+            if ( !IsConnected )
                 return;
 
-            bool empty = false;
-            bool process = true;
+            Boolean empty = false;
+            Boolean process = true;
 
-            while (process)
+            while ( process )
             {
                 process = false;
 
-                lock (_sendLock)
+                lock ( _sendLock )
                 {
                     // Is previous socket send in progress?
-                    if (_sendBufferFlush.IsEmpty)
+                    if ( _sendBufferFlush.IsEmpty )
                     {
                         // Swap flush and main buffers
-                        _sendBufferFlush = Interlocked.Exchange(ref _sendBufferMain, _sendBufferFlush);
+                        _sendBufferFlush = Interlocked.Exchange( ref _sendBufferMain, _sendBufferFlush );
                         _sendBufferFlushOffset = 0;
 
                         // Update statistic
@@ -528,7 +532,7 @@ namespace LUC.DiscoveryService
                         BytesSending += _sendBufferFlush.Size;
 
                         // Check if the flush buffer is empty
-                        if (_sendBufferFlush.IsEmpty)
+                        if ( _sendBufferFlush.IsEmpty )
                         {
                             // Need to call empty send buffer handler
                             empty = true;
@@ -542,7 +546,7 @@ namespace LUC.DiscoveryService
                 }
 
                 // Call the empty send buffer handler
-                if (empty)
+                if ( empty )
                 {
                     OnEmpty();
                     return;
@@ -551,11 +555,11 @@ namespace LUC.DiscoveryService
                 try
                 {
                     // Async write with the write handler
-                    _sendEventArg.SetBuffer(_sendBufferFlush.Data, (int)_sendBufferFlushOffset, (int)(_sendBufferFlush.Size - _sendBufferFlushOffset));
-                    if (!Socket.SendAsync(_sendEventArg))
-                        process = ProcessSend(_sendEventArg);
+                    _sendEventArg.SetBuffer( _sendBufferFlush.Data, (Int32)_sendBufferFlushOffset, (Int32)( _sendBufferFlush.Size - _sendBufferFlushOffset ) );
+                    if ( !Socket.SendAsync( _sendEventArg ) )
+                        process = ProcessSend( _sendEventArg );
                 }
-                catch (ObjectDisposedException) {}
+                catch ( ObjectDisposedException ) { }
             }
         }
 
@@ -564,12 +568,12 @@ namespace LUC.DiscoveryService
         /// </summary>
         private void ClearBuffers()
         {
-            lock (_sendLock)
+            lock ( _sendLock )
             {
                 // Clear send buffers
                 _sendBufferMain.Clear();
                 _sendBufferFlush.Clear();
-                _sendBufferFlushOffset= 0;
+                _sendBufferFlushOffset = 0;
 
                 // Update statistic
                 BytesPending = 0;
@@ -584,24 +588,24 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// This method is called whenever a receive or send operation is completed on a socket
         /// </summary>
-        private void OnAsyncCompleted(object sender, SocketAsyncEventArgs e)
+        private void OnAsyncCompleted( Object sender, SocketAsyncEventArgs e )
         {
-            if (IsSocketDisposed)
+            if ( IsSocketDisposed )
                 return;
 
             // Determine which type of operation just completed and call the associated handler
-            switch (e.LastOperation)
+            switch ( e.LastOperation )
             {
                 case SocketAsyncOperation.Receive:
-                    if (ProcessReceive(e))
+                    if ( ProcessReceive( e ) )
                         TryReceive();
                     break;
                 case SocketAsyncOperation.Send:
-                    if (ProcessSend(e))
+                    if ( ProcessSend( e ) )
                         TrySend();
                     break;
                 default:
-                    throw new ArgumentException("The last operation completed on the socket was not a receive or send");
+                    throw new ArgumentException( "The last operation completed on the socket was not a receive or send" );
             }
 
         }
@@ -609,52 +613,52 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// This method is invoked when an asynchronous receive operation completes
         /// </summary>
-        private bool ProcessReceive(SocketAsyncEventArgs e)
+        private Boolean ProcessReceive( SocketAsyncEventArgs e )
         {
-            if (!IsConnected)
+            if ( !IsConnected )
                 return false;
 
-            long size = e.BytesTransferred;
+            Int64 size = e.BytesTransferred;
 
             // Received some data from the client
-            if (size > 0)
+            if ( size > 0 )
             {
                 // Update statistic
                 BytesReceived += size;
-                Interlocked.Add(ref Server._bytesReceived, size);
+                Interlocked.Add( ref Server._bytesReceived, size );
 
                 // Call the buffer received handler
-                OnReceived(_receiveBuffer.Data, 0, size);
+                OnReceived( _receiveBuffer.Data, 0, size );
 
                 // If the receive buffer is full increase its size
-                if (_receiveBuffer.Capacity == size)
+                if ( _receiveBuffer.Capacity == size )
                 {
                     // Check the receive buffer limit
-                    if (((2 * size) > OptionReceiveBufferLimit) && (OptionReceiveBufferLimit > 0))
+                    if ( ( ( 2 * size ) > OptionReceiveBufferLimit ) && ( OptionReceiveBufferLimit > 0 ) )
                     {
-                        SendError(SocketError.NoBufferSpaceAvailable);
+                        SendError( SocketError.NoBufferSpaceAvailable );
                         Disconnect();
                         return false;
                     }
 
-                    _receiveBuffer.Reserve(2 * size);
+                    _receiveBuffer.Reserve( 2 * size );
                 }
             }
 
             _receiving = false;
 
             // Try to receive again if the session is valid
-            if (e.SocketError == SocketError.Success)
+            if ( e.SocketError == SocketError.Success )
             {
                 // If zero is returned from a read operation, the remote end has closed the connection
-                if (size > 0)
+                if ( size > 0 )
                     return true;
                 else
                     Disconnect();
             }
             else
             {
-                SendError(e.SocketError);
+                SendError( e.SocketError );
                 Disconnect();
             }
 
@@ -664,26 +668,26 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// This method is invoked when an asynchronous send operation completes
         /// </summary>
-        private bool ProcessSend(SocketAsyncEventArgs e)
+        private Boolean ProcessSend( SocketAsyncEventArgs e )
         {
-            if (!IsConnected)
+            if ( !IsConnected )
                 return false;
 
-            long size = e.BytesTransferred;
+            Int64 size = e.BytesTransferred;
 
             // Send some data to the client
-            if (size > 0)
+            if ( size > 0 )
             {
                 // Update statistic
                 BytesSending -= size;
                 BytesSent += size;
-                Interlocked.Add(ref Server._bytesSent, size);
+                Interlocked.Add( ref Server._bytesSent, size );
 
                 // Increase the flush buffer offset
                 _sendBufferFlushOffset += size;
 
                 // Successfully send the whole flush buffer
-                if (_sendBufferFlushOffset == _sendBufferFlush.Size)
+                if ( _sendBufferFlushOffset == _sendBufferFlush.Size )
                 {
                     // Clear the flush buffer
                     _sendBufferFlush.Clear();
@@ -691,15 +695,15 @@ namespace LUC.DiscoveryService
                 }
 
                 // Call the buffer sent handler
-                OnSent(size, BytesPending + BytesSending);
+                OnSent( size, BytesPending + BytesSending );
             }
 
             // Try to send again if the session is valid
-            if (e.SocketError == SocketError.Success)
+            if ( e.SocketError == SocketError.Success )
                 return true;
             else
             {
-                SendError(e.SocketError);
+                SendError( e.SocketError );
                 Disconnect();
                 return false;
             }
@@ -712,19 +716,19 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Handle client connecting notification
         /// </summary>
-        protected virtual void OnConnecting() {}
+        protected virtual void OnConnecting() { }
         /// <summary>
         /// Handle client connected notification
         /// </summary>
-        protected virtual void OnConnected() {}
+        protected virtual void OnConnected() { }
         /// <summary>
         /// Handle client disconnecting notification
         /// </summary>
-        protected virtual void OnDisconnecting() {}
+        protected virtual void OnDisconnecting() { }
         /// <summary>
         /// Handle client disconnected notification
         /// </summary>
-        protected virtual void OnDisconnected() {}
+        protected virtual void OnDisconnected() { }
 
         /// <summary>
         /// Handle buffer received notification
@@ -735,7 +739,7 @@ namespace LUC.DiscoveryService
         /// <remarks>
         /// Notification is called when another chunk of buffer was received from the client
         /// </remarks>
-        protected virtual void OnReceived(byte[] buffer, long offset, long size) {}
+        protected virtual void OnReceived( Byte[] buffer, Int64 offset, Int64 size ) { }
         /// <summary>
         /// Handle buffer sent notification
         /// </summary>
@@ -745,7 +749,7 @@ namespace LUC.DiscoveryService
         /// Notification is called when another chunk of buffer was sent to the client.
         /// This handler could be used to send another buffer to the client for instance when the pending size is zero.
         /// </remarks>
-        protected virtual void OnSent(long sent, long pending) {}
+        protected virtual void OnSent( Int64 sent, Int64 pending ) { }
 
         /// <summary>
         /// Handle empty send buffer notification
@@ -754,13 +758,13 @@ namespace LUC.DiscoveryService
         /// Notification is called when the send buffer is empty and ready for a new data to send.
         /// This handler could be used to send another buffer to the client.
         /// </remarks>
-        protected virtual void OnEmpty() {}
+        protected virtual void OnEmpty() { }
 
         /// <summary>
         /// Handle error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        protected virtual void OnError(SocketError error) {}
+        protected virtual void OnError( SocketError error ) { }
 
         #endregion
 
@@ -770,17 +774,17 @@ namespace LUC.DiscoveryService
         /// Send error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        private void SendError(SocketError error)
+        private void SendError( SocketError error )
         {
             // Skip disconnect errors
-            if ((error == SocketError.ConnectionAborted) ||
-                (error == SocketError.ConnectionRefused) ||
-                (error == SocketError.ConnectionReset) ||
-                (error == SocketError.OperationAborted) ||
-                (error == SocketError.Shutdown))
+            if ( ( error == SocketError.ConnectionAborted ) ||
+                ( error == SocketError.ConnectionRefused ) ||
+                ( error == SocketError.ConnectionReset ) ||
+                ( error == SocketError.OperationAborted ) ||
+                ( error == SocketError.Shutdown ) )
                 return;
 
-            OnError(error);
+            OnError( error );
         }
 
         #endregion
@@ -790,21 +794,21 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Disposed flag
         /// </summary>
-        public bool IsDisposed { get; private set; }
+        public Boolean IsDisposed { get; private set; }
 
         /// <summary>
         /// Session socket disposed flag
         /// </summary>
-        public bool IsSocketDisposed { get; private set; } = true;
+        public Boolean IsSocketDisposed { get; private set; } = true;
 
         // Implement IDisposable.
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            Dispose( true );
+            GC.SuppressFinalize( this );
         }
 
-        protected virtual void Dispose(bool disposingManagedResources)
+        protected virtual void Dispose( Boolean disposingManagedResources )
         {
             // The idea here is that Dispose(Boolean) knows whether it is
             // being called to do explicit cleanup (the Boolean is true)
@@ -818,9 +822,9 @@ namespace LUC.DiscoveryService
             // refer to reference type fields because those objects may
             // have already been finalized."
 
-            if (!IsDisposed)
+            if ( !IsDisposed )
             {
-                if (disposingManagedResources)
+                if ( disposingManagedResources )
                 {
                     // Dispose managed resources here...
                     Disconnect();
@@ -839,7 +843,7 @@ namespace LUC.DiscoveryService
         ~TcpSession()
         {
             // Simply call Dispose(false).
-            Dispose(false);
+            Dispose( false );
         }
 
         #endregion

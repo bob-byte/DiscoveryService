@@ -1,6 +1,8 @@
 ﻿using LUC.DiscoveryService.Kademlia;
 using LUC.DVVSet;
+
 using Microsoft.Win32.SafeHandles;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,7 +17,7 @@ namespace LUC.DiscoveryService
     public partial class Download
     {
         /// <summary>
-        /// It is thread safety class. That is the reason why it is not static and has only methods
+        /// It is thread safe class. That is the reason why it has only methods
         /// </summary>
         private class DownloadedFile
         {
@@ -23,68 +25,78 @@ namespace LUC.DiscoveryService
             /// Full file name involves path to <paramref name="localOriginalName"/> and <paramref name="localOriginalName"/>
             /// If it is Functional test where is in use only current PC, return will be <paramref name="localFolderPath"/> + <paramref name="filePrefix"/> + <paramref name="localOriginalName"/>, else <paramref name="bucketName"/> also will be used
             /// </returns>
-            public String FullFileName(ICollection<Contact> onlineContacts, String ourMachineId, String localFolderPath,
-                String bucketName, String localOriginalName, String filePrefix)
+            public String FullFileName( ICollection<Contact> onlineContacts, String ourMachineId, String localFolderPath,
+                String localOriginalName )
             {
                 String fullPathToFile;
-                Boolean canReceivedAnswerFromYourself = onlineContacts.Any(c => (ourMachineId == onlineContacts.First().MachineId));
-                if (canReceivedAnswerFromYourself)
+                Boolean canReceivedAnswerFromYourself = onlineContacts.Any( c => ( ourMachineId == onlineContacts.First().MachineId ) );
+
+                if ( canReceivedAnswerFromYourself )
                 {
-                    fullPathToFile = Path.Combine(localFolderPath, filePrefix, localOriginalName);
+                    //download in root directory, because you cannot create file with the same path and name
+                    String rootFolder = Path.GetDirectoryName( localFolderPath );
+                    fullPathToFile = Path.Combine( rootFolder, localOriginalName );
                 }
                 else
                 {
-                    fullPathToFile = Path.Combine(localFolderPath, bucketName, filePrefix, localOriginalName);
+                    fullPathToFile = Path.Combine( localFolderPath, localOriginalName );
                 }
 
                 return fullPathToFile;
             }
 
-            public void SetTempFileAttributes(String fullPathToTempFile, SafeFileHandle fileHandle)
+            public void SetTempFileAttributes( String fullPathToTempFile, SafeFileHandle fileHandle )
             {
                 FileAttributes tempFileAttributes = FileAttributes.Hidden | FileAttributes.ReadOnly;
-                File.SetAttributes(fullPathToTempFile, tempFileAttributes);
+                File.SetAttributes( fullPathToTempFile, tempFileAttributes );
 
-                MarkAsSparseFile(fileHandle);
+                try
+                {
+                    MarkAsSparseFile( fileHandle );
+                }
+                catch ( InvalidOperationException )
+                {
+                    InvalidOperationException exWithMessage = new InvalidOperationException( $"Cannot to mark downloaded file with temp name {fullPathToTempFile} as sparse" );
+                    throw exWithMessage;
+                }
             }
 
-            public String UniqueTempFullFileName(String tempFullPath)
+            public String UniqueTempFullFileName( String tempFullPath )
             {
-                String pathToTempFile = Path.GetDirectoryName(tempFullPath);
-                String tempFileName = Path.GetFileName(tempFullPath);
+                String pathToTempFile = Path.GetDirectoryName( tempFullPath );
+                String tempFileName = Path.GetFileName( tempFullPath );
 
                 String uniqueTempFileName = (String)tempFileName.Clone();
-                while (File.Exists(tempFullPath))
+                String fullUniqueTempFileName = $"{pathToTempFile}\\{uniqueTempFileName}";
+                while ( File.Exists( fullUniqueTempFileName ) )
                 {
-                    uniqueTempFileName.Insert(startIndex: 2, value: "_");
+                    uniqueTempFileName = uniqueTempFileName.Insert( startIndex: 2, value: "_" );
+                    fullUniqueTempFileName = $"{pathToTempFile}\\{uniqueTempFileName}";
                 }
 
-                return $"{pathToTempFile}\\{uniqueTempFileName}";
+                return fullUniqueTempFileName;
             }
 
-            public void RenameFile(String sourceFileName, String destFileName)
-            {
-                File.Move(sourceFileName, destFileName);
-            }
+            public void RenameFile( String sourceFileName, String destFileName ) => File.Move( sourceFileName, destFileName );
 
-            public void TryDeleteFile(String fullPathToFile)
+            public void TryDeleteFile( String fullPathToFile )
             {
-                if (File.Exists(fullPathToFile))
+                if ( File.Exists( fullPathToFile ) )
                 {
-                    File.Delete(fullPathToFile);
+                    File.Delete( fullPathToFile );
                 }
             }
 
-            public String TempFullFileName(String fullBigFileName)
+            public String TempFullFileName( String fullBigFileName )
             {
-                String pathToBigFile = Path.GetDirectoryName(fullBigFileName);
-                String nameBigFile = Path.GetFileName(fullBigFileName);
+                String pathToBigFile = Path.GetDirectoryName( fullBigFileName );
+                String nameBigFile = Path.GetFileName( fullBigFileName );
 
                 String tempFullFileName = $"{pathToBigFile}\\~.{nameBigFile}";
                 return tempFullFileName;
             }
 
-            [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+            [DllImport( "Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto )]
             private static extern Boolean DeviceIoControl(
                 SafeFileHandle handleDevice,
                 Int32 dwIoControlCode,
@@ -96,13 +108,13 @@ namespace LUC.DiscoveryService
                 [In] ref NativeOverlapped lpOverlapped
             );
 
-            private static void MarkAsSparseFile(SafeFileHandle fileHandle)
+            private static void MarkAsSparseFile( SafeFileHandle fileHandle )
             {
                 Int32 bytesReturned = 0;
-                var lpOverlapped = new NativeOverlapped();
+                NativeOverlapped lpOverlapped = new NativeOverlapped();
                 Int32 fsctlSetSparse = 590020;
 
-                Boolean result = DeviceIoControl(
+                Boolean isFileMarkedAsSparse = DeviceIoControl(
                     fileHandle,
                     fsctlSetSparse,
                     inBuffer: IntPtr.Zero,
@@ -110,9 +122,10 @@ namespace LUC.DiscoveryService
                     outBuffer: IntPtr.Zero,
                     nOutBufferSize: 0,
                     ref bytesReturned,
-                    ref lpOverlapped);
+                    ref lpOverlapped
+                );
 
-                if (!result)
+                if ( !isFileMarkedAsSparse )
                 {
                     throw new InvalidOperationException();
                 }

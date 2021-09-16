@@ -2,12 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 
+using LUC.DiscoveryService.Kademlia.Exceptions;
+
 using Newtonsoft.Json;
 
 namespace LUC.DiscoveryService.Kademlia.Routers
 {
     abstract class BaseRouter : AbstractKademlia
     {
+        protected Object m_locker = new Object();
+
 #if DEBUG       // for unit testing
         [JsonIgnore]
         public List<Contact> CloserContacts { get; protected set; }
@@ -16,38 +20,34 @@ namespace LUC.DiscoveryService.Kademlia.Routers
         public List<Contact> FartherContacts { get; protected set; }
 #endif
 
-        public Node Node { get { return node; } set { node = value; } }
+        public Node Node { get; set; }
 
         [JsonIgnore]
-        public Dht Dht { get { return dht; } set { dht = value; } }
+        public Dht Dht { get; set; }
 
-        protected Dht dht;
-        protected Node node;
-        protected object locker = new object();
-
-        public BaseRouter(UInt16 protocolVersion)
-            : base(protocolVersion)
+        public BaseRouter( UInt16 protocolVersion )
+            : base( protocolVersion )
         {
             ;//do nothing
         }
 
-        public abstract (bool found, List<Contact> contacts, Contact foundBy, string val) Lookup(
-            ID key,
-            Func<ID, Contact, (List<Contact> contacts, Contact foundBy, string val)> rpcCall,
-            bool giveMeAll = false);
+        public abstract (Boolean found, List<Contact> contacts, Contact foundBy, String val) Lookup(
+            KademliaId key,
+            Func<KademliaId, Contact, (List<Contact> contacts, Contact foundBy, String val)> rpcCall,
+            Boolean giveMeAll = false );
 
         /// <summary>
         /// Using the k-bucket's key (it's high value), find the closest 
         /// k-bucket the given key that isn't empty.
         /// </summary>
 #if DEBUG           // For unit testing.
-        public virtual KBucket FindClosestNonEmptyKBucket(ID key)
+        public virtual KBucket FindClosestNonEmptyKBucket( KademliaId key )
 #else
         protected virtual KBucket FindClosestNonEmptyKBucket(ID key)
 #endif
         {
-            KBucket closest = node.BucketList.Buckets.Where(b => b.Contacts.Count > 0).OrderBy(b => b.Key ^ key).FirstOrDefault();
-            Validate.IsTrue<NoNonEmptyBucketsException>(closest != null, "No non-empty buckets exist.  You must first register a peer and add that peer to your bucketlist.");
+            KBucket closest = Node.BucketList.Buckets.Where( b => b.Contacts.Count > 0 ).OrderBy( b => b.Key ^ key ).FirstOrDefault();
+            Validate.IsTrue<NoNonEmptyBucketsException>( closest != null, "No non-empty buckets exist.  You must first register a peer and add that peer to your bucketlist." );
 
             return closest;
         }
@@ -56,63 +56,63 @@ namespace LUC.DiscoveryService.Kademlia.Routers
         /// Get sorted list of closest nodes to the given key.
         /// </summary>
 #if DEBUG           // For unit testing.
-        public List<Contact> GetClosestNodes(ID key, KBucket bucket)
+        public List<Contact> GetClosestNodes( KademliaId key, KBucket bucket )
 #else
         protected List<Contact> GetClosestNodes(ID key, KBucket bucket)
 #endif
         {
-            return bucket.Contacts.OrderBy(c => c.ID ^ key).ToList();
+            return bucket.Contacts.OrderBy( c => c.ID ^ key ).ToList();
         }
 
-        public bool GetCloserNodes(
-            ID key,
+        public Boolean GetCloserNodes(
+            KademliaId key,
             Contact nodeToQuery,
-            Func<ID, Contact, (List<Contact> contacts, Contact foundBy, string val)> rpcCall,
+            Func<KademliaId, Contact, (List<Contact> contacts, Contact foundBy, String val)> rpcCall,
             List<Contact> closerContacts,
             List<Contact> fartherContacts,
-            out string val,
-            out Contact foundBy)
+            out String val,
+            out Contact foundBy )
         {
             // As in, peer's nodes:
             // Exclude ourselves and the peers we're contacting (closerContacts and fartherContacts) to a get unique list of new peers.
-            var (contacts, cFoundBy, foundVal) = rpcCall(key, nodeToQuery);
+            (List<Contact> contacts, Contact cFoundBy, String foundVal) = rpcCall( key, nodeToQuery );
             val = foundVal;
             foundBy = cFoundBy;
             List<Contact> peersNodes = contacts.
-                ExceptBy(node.OurContact, c => c.ID).
-                ExceptBy(nodeToQuery, c => c.ID).
-                Except(closerContacts).
-                Except(fartherContacts).ToList();
+                ExceptBy( Node.OurContact, c => c.ID ).
+                ExceptBy( nodeToQuery, c => c.ID ).
+                Except( closerContacts ).
+                Except( fartherContacts ).ToList();
 
             // Null continuation is a special case primarily for unit testing when we have no nodes in any buckets.
-            var nearestNodeDistance = nodeToQuery.ID ^ key;
+            KademliaId nearestNodeDistance = nodeToQuery.ID ^ key;
 
-            lock (locker)
+            lock ( m_locker )
             {
                 closerContacts.
-                    AddRangeDistinctBy(peersNodes.
-                        Where(p => (p.ID ^ key) < nearestNodeDistance),
-                        (a, b) => a.ID == b.ID);
+                    AddRangeDistinctBy( peersNodes.
+                        Where( p => ( p.ID ^ key ) < nearestNodeDistance ),
+                        ( a, b ) => a.ID == b.ID );
             }
 
-            lock (locker)
+            lock ( m_locker )
             {
                 fartherContacts.
-                    AddRangeDistinctBy(peersNodes.
-                        Where(p => (p.ID ^ key) >= nearestNodeDistance),
-                        (a, b) => a.ID == b.ID);
+                    AddRangeDistinctBy( peersNodes.
+                        Where( p => ( p.ID ^ key ) >= nearestNodeDistance ),
+                        ( a, b ) => a.ID == b.ID );
             }
 
             return val != null;
         }
 
-        public (List<Contact> contacts, Contact foundBy, string val) RpcFindNodes(ID key, Contact contact)
+        public (List<Contact> contacts, Contact foundBy, String val) RpcFindNodes( KademliaId key, Contact contact )
         {
-            var (newContacts, timeoutError) = clientKadOperation.FindNode(node.OurContact, key, contact);
+            (List<Contact> newContacts, RpcError timeoutError) = m_clientKadOperation.FindNode( Node.OurContact, key, contact );
 
             // Null continuation here to support unit tests where a DHT hasn't been set up.
-            dht?.HandleError(timeoutError, contact);
-            
+            Dht?.HandleError( timeoutError, contact );
+
             return (newContacts, null, null);
         }
 
@@ -120,25 +120,25 @@ namespace LUC.DiscoveryService.Kademlia.Routers
         /// For each contact, call the FindNode and return all the nodes whose contacts responded
         /// within a "reasonable" period of time, unless a value is returned, at which point we stop.
         /// </summary>
-        public (List<Contact> contacts, Contact foundBy, string val) RpcFindValue(ID key, Contact contact)
+        public (List<Contact> contacts, Contact foundBy, String val) RpcFindValue( KademliaId key, Contact contact )
         {
             List<Contact> nodes = new List<Contact>();
-            string retval = null;
+            String retval = null;
             Contact foundBy = null;
 
-            var (otherContacts, val, error) = clientKadOperation.FindValue(node.OurContact, key, contact);
-            dht.HandleError(error, contact);
+            (List<Contact> otherContacts, String val, RpcError error) = m_clientKadOperation.FindValue( Node.OurContact, key, contact );
+            Dht.HandleError( error, contact );
 
-            if (!error.HasError)
+            if ( !error.HasError )
             {
-                if (otherContacts != null)
+                if ( otherContacts != null )
                 {
-                    nodes.AddRange(otherContacts);
+                    nodes.AddRange( otherContacts );
                 }
                 else
                 {
-                    Validate.IsTrue<ValueCannotBeNullException>(val != null, "Null values are not supported nor expected.");
-                    nodes.Add(contact);           // The node we just contacted found the value.
+                    Validate.IsTrue<ValueCannotBeNullException>( val != null, "Null values are not supported nor expected." );
+                    nodes.Add( contact );           // The node we just contacted found the value.
                     foundBy = contact;
                     retval = val;
                 }
@@ -147,15 +147,15 @@ namespace LUC.DiscoveryService.Kademlia.Routers
             return (nodes, foundBy, retval);
         }
 
-        protected (bool found, List<Contact> closerContacts, Contact foundBy, string val) Query(ID key, List<Contact> nodesToQuery, Func<ID, Contact, (List<Contact> contacts, Contact foundBy, string val)> rpcCall, List<Contact> closerContacts, List<Contact> fartherContacts)
+        protected (Boolean found, List<Contact> closerContacts, Contact foundBy, String val) Query( KademliaId key, List<Contact> nodesToQuery, Func<KademliaId, Contact, (List<Contact> contacts, Contact foundBy, String val)> rpcCall, List<Contact> closerContacts, List<Contact> fartherContacts )
         {
-            bool found = false;
+            Boolean found = false;
             Contact foundBy = null;
-            string val = String.Empty;
+            String val = String.Empty;
 
-            foreach (var n in nodesToQuery)
+            foreach ( Contact n in nodesToQuery )
             {
-                if (GetCloserNodes(key, n, rpcCall, closerContacts, fartherContacts, out val, out foundBy))
+                if ( GetCloserNodes( key, n, rpcCall, closerContacts, fartherContacts, out val, out foundBy ) )
                 {
                     found = true;
                     break;

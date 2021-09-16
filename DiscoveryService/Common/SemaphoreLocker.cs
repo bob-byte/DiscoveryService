@@ -9,31 +9,63 @@ namespace LUC.DiscoveryService.Common
 {
     public class SemaphoreLocker
     {
-        private readonly SemaphoreSlim semaphoreSlim = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+        private readonly SemaphoreSlim m_semaphoreSlim = new SemaphoreSlim( initialCount: 1, maxCount: 1 );
 
-        public async Task LockAsync(Func<Task> func)
+        public void Lock( Action procedure )
         {
-            await semaphoreSlim.WaitAsync();
+            m_semaphoreSlim.Wait();
+
             try
             {
-                await func();
+                procedure();
             }
             finally
             {
-                semaphoreSlim.Release();
+                m_semaphoreSlim.Release();
             }
         }
 
-        public async Task<T> LockAsync<T>(Func<Task<T>> func)
+        public T Lock<T>( Func<T> func )
         {
-            await semaphoreSlim.WaitAsync();
+            m_semaphoreSlim.Wait();
+
             try
             {
-                return await func();
+                T result = func();
+                return result;
             }
             finally
             {
-                semaphoreSlim.Release();
+                m_semaphoreSlim.Release();
+            }
+        }
+
+        public async Task LockAsync( Func<Task> procedure )
+        {
+            await m_semaphoreSlim.WaitAsync();
+
+            try
+            {
+                await procedure();
+            }
+            finally
+            {
+                m_semaphoreSlim.Release();
+            }
+        }
+
+        public async Task<T> LockAsync<T>( Func<Task<T>> func )
+        {
+            await m_semaphoreSlim.WaitAsync();
+
+            try
+            {
+                T result = await func();
+                return result;
+            }
+            finally
+            {
+                m_semaphoreSlim.Release();
             }
         }
     }

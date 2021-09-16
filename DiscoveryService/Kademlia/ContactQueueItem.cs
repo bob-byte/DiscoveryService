@@ -5,9 +5,9 @@ namespace LUC.DiscoveryService.Kademlia
 {
     public class ContactQueueItem
     {
-        public ID Key { get; set; }
+        public KademliaId Key { get; set; }
         public Contact Contact { get; set; }
-        public Func<ID, Contact, (List<Contact> contacts, Contact foundBy, string val)> RpcCall { get; set; }
+        public Func<KademliaId, Contact, (List<Contact> contacts, Contact foundBy, String val)> RpcCall { get; set; }
         public List<Contact> CloserContacts { get; set; }
         public List<Contact> FartherContacts { get; set; }
         public FindResult FindResult { get; set; }

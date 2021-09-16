@@ -21,12 +21,12 @@ namespace LUC.DiscoveryService.Messages
         ///   The key is the Base64 encoding of the MD5 hash of 
         ///   a message and the value is when the message was seen.
         /// </value>
-        public ConcurrentDictionary<UInt32, DateTime> Messages = new ConcurrentDictionary<UInt32, DateTime>();
+        public ConcurrentDictionary<UInt32, DateTime> Messages { get; set; } = new ConcurrentDictionary<UInt32, DateTime>();
 
         /// <summary>
         ///   The time interval used to determine if a message is recent.
         /// </summary>
-        public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(5);
+        public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds( value: 5 );
 
         /// <summary>
         ///   Try adding a message to the recent message list.
@@ -38,10 +38,10 @@ namespace LUC.DiscoveryService.Messages
         ///   <b>true</b> if the message, did not already exist; otherwise,
         ///   <b>false</b> the message exists within the <see cref="Interval"/>.
         /// </returns>
-        public bool TryAdd(UInt32 messageId)
+        public Boolean TryAdd( UInt32 messageId )
         {
             Prune();
-            return Messages.TryAdd(messageId, DateTime.UtcNow);
+            return Messages.TryAdd( messageId, DateTime.UtcNow );
         }
 
         /// <summary>
@@ -53,18 +53,19 @@ namespace LUC.DiscoveryService.Messages
         /// <remarks>
         ///   Anything older than an <see cref="Interval"/> ago is removed.
         /// </remarks>
-        public int Prune()
+        public Int32 Prune()
         {
-            var dead = DateTime.UtcNow - Interval;
-            var count = 0;
+            DateTime dead = DateTime.UtcNow - Interval;
+            Int32 count = 0;
 
-            foreach (var stale in Messages.Where(x => x.Value < dead))
+            foreach ( System.Collections.Generic.KeyValuePair<UInt32, DateTime> stale in Messages.Where( x => x.Value < dead ) )
             {
-                if (Messages.TryRemove(stale.Key, out _))
+                if ( Messages.TryRemove( stale.Key, out _ ) )
                 {
                     ++count;
                 }
             }
+
             return count;
         }
     }

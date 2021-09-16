@@ -9,8 +9,8 @@ namespace LUC.DiscoveryService.Common
 {
     static class Display
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static String PropertyWithValue<T>(String nameProp, T value) =>
+        [MethodImpl( MethodImplOptions.AggressiveInlining )]
+        internal static String PropertyWithValue<T>( String nameProp, T value ) =>
             $"{nameProp} = {value}";
     }
 }

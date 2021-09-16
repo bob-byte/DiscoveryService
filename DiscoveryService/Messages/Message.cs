@@ -1,4 +1,6 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Interfaces;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,7 +19,7 @@ namespace LUC.DiscoveryService.Messages
         /// <summary>
         ///   The kind of message. This value always is first byte in it
         /// </summary>
-        public virtual MessageOperation MessageOperation { get; protected set; }
+        public MessageOperation MessageOperation { get; protected set; }
 
         /// <summary>
         ///   Length in bytes of the object when serialised.
@@ -27,8 +29,8 @@ namespace LUC.DiscoveryService.Messages
         /// </returns>
         public Int32 Length()
         {
-            var writer = new WireWriter(Stream.Null);
-            Write(writer);
+            WireWriter writer = new WireWriter( Stream.Null );
+            Write( writer );
 
             return writer.Position;
         }
@@ -42,8 +44,8 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="buffer"/> is equal to null
         /// </exception>
-        public IWireSerialiser Read(Byte[] buffer) =>
-            Read(buffer, offset: 0, buffer.Length);
+        public IWireSerialiser Read( Byte[] buffer ) =>
+            Read( buffer, offset: 0, buffer.Length );
 
         /// <summary>
         ///   Reads the DNS object from a byte array.
@@ -60,11 +62,11 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="buffer"/> is equal to null
         /// </exception>
-        public IWireSerialiser Read(Byte[] buffer, Int32 offset, Int32 count)
+        public IWireSerialiser Read( Byte[] buffer, Int32 offset, Int32 count )
         {
-            using (var stream = new MemoryStream(buffer, offset, count))
+            using ( MemoryStream stream = new MemoryStream( buffer, offset, count ) )
             {
-                return Read(new CodingData.WireReader(stream));
+                return Read( new CodingData.WireReader( stream ) );
             }
         }
 
@@ -81,16 +83,16 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="IOException">
         /// 
         /// </exception>
-        public virtual IWireSerialiser Read(CodingData.WireReader reader)
+        public virtual IWireSerialiser Read( CodingData.WireReader reader )
         {
-            if(reader != null)
+            if ( reader != null )
             {
                 MessageOperation = (MessageOperation)reader.ReadByte();
                 return this;
             }
             else
             {
-                throw new ArgumentNullException("ReaderNullException");
+                throw new ArgumentNullException( "ReaderNullException" );
             }
         }
 
@@ -102,9 +104,9 @@ namespace LUC.DiscoveryService.Messages
         /// </returns>
         public Byte[] ToByteArray()
         {
-            using (var stream = new MemoryStream())
+            using ( MemoryStream stream = new MemoryStream() )
             {
-                Write(stream);
+                Write( stream );
                 return stream.ToArray();
             }
         }
@@ -124,8 +126,8 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
-        public void Write(Stream stream) =>
-            Write(new WireWriter(stream));
+        public void Write( Stream stream ) =>
+            Write( new WireWriter( stream ) );
 
         /// <inheritdoc/>
         /// <exception cref="ArgumentNullException">
@@ -137,20 +139,25 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
-        public virtual void Write(WireWriter writer)
+        public virtual void Write( WireWriter writer )
         {
-            if(writer != null)
+            if ( writer != null )
             {
-                writer.WriteByte((Byte)MessageOperation);
+                writer.WriteByte( (Byte)MessageOperation );
             }
             else
             {
-                throw new ArgumentNullException("WriterNullException");
+                throw new ArgumentNullException( "WriterNullException" );
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected String PropertyWithValue<T>(String nameProp, T value) =>
+        protected virtual void DefaultInit( params Object[] args )
+        {
+            ;//do nothing
+        }
+
+        [MethodImpl( MethodImplOptions.AggressiveInlining )]
+        protected String PropertyWithValue<T>( String nameProp, T value ) =>
             $"{nameProp} = {value}";
     }
 }

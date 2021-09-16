@@ -1,6 +1,7 @@
 ﻿using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.DiscoveryService.Messages.KademliaResponses;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,61 +14,53 @@ namespace LUC.DiscoveryService
 {
     public partial class Download
     {
-        private async Task<List<Contact>> ContactsWithFileAsync(IList<Contact> onlineContacts, DownloadFileRequest sampleRequest, CancellationToken cancellationToken)
+        private async Task<List<Contact>> ContactsWithFileAsync( IList<Contact> onlineContacts, DownloadFileRequest sampleRequest, CancellationToken cancellationToken )
         {
-            var contactsWithFile = new List<Contact>();
+            List<Contact> contactsWithFile = new List<Contact>();
 
-            var checkFileExistsInContact = new ActionBlock<Contact>(async (contact) =>
+            ActionBlock<Contact> checkFileExistsInContact = new ActionBlock<Contact>( async ( contact ) =>
+             {
+                 Boolean isExistInContact = await IsFileExistsInContactAsync( sampleRequest, contact ).ConfigureAwait( continueOnCapturedContext: false );
+
+                 cancellationToken.ThrowIfCancellationRequested();
+
+                 if ( isExistInContact )
+                 {
+                     contactsWithFile.Add( contact );
+                 }
+             } );
+
+            for ( Int32 numContact = 0; numContact < onlineContacts.Count; numContact++ )
             {
-                var isExistInContact = await IsFileExistsInContactAsync(sampleRequest, contact).ConfigureAwait(continueOnCapturedContext: false);
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (isExistInContact)
-                {
-                    contactsWithFile.Add(contact);
-                }
-            });
-
-            for (Int32 numContact = 0; numContact < onlineContacts.Count; numContact++)
-            {
-                checkFileExistsInContact.Post(onlineContacts[numContact]);
+                checkFileExistsInContact.Post( onlineContacts[ numContact ] );
             }
 
             //Signals that we will not post more Contact
             checkFileExistsInContact.Complete();
 
             //await getting all contactsWithFile
-            await checkFileExistsInContact.Completion.ConfigureAwait(false);
+            await checkFileExistsInContact.Completion.ConfigureAwait( false );
 
             return contactsWithFile;
         }
 
-        private async Task<Boolean> IsFileExistsInContactAsync(DownloadFileRequest sampleRequest, Contact contact)
+        private async Task<Boolean> IsFileExistsInContactAsync( DownloadFileRequest sampleRequest, Contact contact )
         {
-            CheckFileExistsRequest request = new CheckFileExistsRequest
+            CheckFileExistsRequest request = new CheckFileExistsRequest( m_ourContact.ID.Value )
             {
                 BucketName = sampleRequest.BucketName,
                 FileOriginalName = sampleRequest.FileOriginalName,
-                FilePrefix = sampleRequest.FilePrefix,
-                Sender = discoveryService.NetworkEventInvoker.OurContact.ID.Value
+                HexPrefix = sampleRequest.HexPrefix,
             };
-            (CheckFileExistsResponse response, RpcError rpcError) = await request.ResultAsync<CheckFileExistsResponse>(contact,
-                IOBehavior, discoveryService.ProtocolVersion).ConfigureAwait(continueOnCapturedContext: false);
+            (CheckFileExistsResponse response, RpcError rpcError) = await request.ResultAsync<CheckFileExistsResponse>( contact,
+                IOBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
             Boolean existRequiredFile;
-            if (!rpcError.HasError)
+            if ( !rpcError.HasError )
             {
-                Boolean isTheSameRequiredFile = (response.FileSize == sampleRequest.Range.Total) && (response.FileVersion == sampleRequest.FileVersion);
+                Boolean isTheSameRequiredFile = ( response.FileSize == sampleRequest.ChunkRange.Total ) && ( response.FileVersion == sampleRequest.FileVersion );
 
-                if ((response.FileExists) && (isTheSameRequiredFile))
-                {
-                    existRequiredFile = true;
-                }
-                else
-                {
-                    existRequiredFile = false;
-                }
+                existRequiredFile = isTheSameRequiredFile;
             }
             else
             {

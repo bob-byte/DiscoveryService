@@ -1,6 +1,7 @@
 ﻿using LUC.DiscoveryService.Common;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
+
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -18,46 +19,39 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
     sealed class ConnectionPool
     {
-        private const UInt32 PoolRecoveryFrequencyInMs = 1000;
+        private const UInt32 POOL_RECOVERY_FREQUENCY_IN_MS = 1000;
 
-        private static ConnectionPool instance;
-        private readonly ILoggingService log;
+        private static ConnectionPool s_instance;
+        private readonly ILoggingService m_log;
 
-        private readonly SemaphoreSlim cleanSemaphore;
-        private readonly SemaphoreSlim socketSemaphore;
-        private readonly SemaphoreLocker lockLeasedSockets;
+        private readonly SemaphoreSlim m_cleanSemaphore;
+        private readonly SemaphoreSlim m_socketSemaphore;
+        private readonly Object m_lockLastRecoveryTime;
 
-        private readonly Dictionary<EndPoint, ConnectionPoolSocket> sockets;
-        private readonly Dictionary<EndPoint, ConnectionPoolSocket> leasedSockets;
+        private readonly ConcurrentDictionary<EndPoint, ConnectionPoolSocket> m_sockets;
+        private readonly ConcurrentDictionary<EndPoint, ConnectionPoolSocket> m_leasedSockets;
 
-        private UInt32 lastRecoveryTime;
+        private UInt32 m_lastRecoveryTime;
 
-        static ConnectionPool()
+        private ConnectionPool( ConnectionSettings connectionSettings )
         {
-            AppDomain.CurrentDomain.DomainUnload += CleanPool;
-            AppDomain.CurrentDomain.ProcessExit += CleanPool;
-        }
-
-        private static void CleanPool(Object sender, EventArgs e)
-        {
-            instance?.ClearPoolAsync(IOBehavior.Synchronous, respectMinPoolSize: false, CancellationToken.None).GetAwaiter().GetResult();
-            //BackgroundConnectionResetHelper.Stop();
-        }
-
-        private ConnectionPool(ConnectionSettings connectionSettings)
-        {
-            log = new LoggingService
+            m_log = new LoggingService
             {
                 SettingsService = new SettingsService()
             };
+
             ConnectionSettings = connectionSettings;
+            if(ConnectionSettings.ConnectionReset)
+            {
+                BackgroundConnectionResetHelper.Start();
+            }
 
-            cleanSemaphore = new SemaphoreSlim(initialCount: 1);
-            socketSemaphore = new SemaphoreSlim(connectionSettings.MaximumPoolSize);
+            m_cleanSemaphore = new SemaphoreSlim( initialCount: 1 );
+            m_socketSemaphore = new SemaphoreSlim( connectionSettings.MaximumPoolSize );
+            m_lockLastRecoveryTime = new Object();
 
-            sockets = new Dictionary<EndPoint, ConnectionPoolSocket>();
-            leasedSockets = new Dictionary<EndPoint, ConnectionPoolSocket>();
-            lockLeasedSockets = new SemaphoreLocker();
+            m_sockets = new ConcurrentDictionary<EndPoint, ConnectionPoolSocket>();
+            m_leasedSockets = new ConcurrentDictionary<EndPoint, ConnectionPoolSocket>();
         }
 
         public ConnectionSettings ConnectionSettings { get; }
@@ -66,249 +60,231 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 		/// Returns <c>true</c> if the connection pool is empty, i.e., all connections are in use. Note that in a highly-multithreaded
 		/// environment, the value of this property may be stale by the time it's returned.
 		/// </summary>
-		internal Boolean IsEmpty => socketSemaphore.CurrentCount == 0;
+		internal Boolean IsEmpty => m_socketSemaphore.CurrentCount == 0;
 
         public static ConnectionPool Instance()
         {
-            if(instance == null)
+            if ( s_instance == null )
             {
-                instance = new ConnectionPool(new ConnectionSettings());
+                s_instance = new ConnectionPool( new ConnectionSettings() );
             }
 
-            return instance;
+            return s_instance;
         }
 
-        public async ValueTask<ConnectionPoolSocket> SocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool)
+        public async ValueTask<ConnectionPoolSocket> SocketAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool )
         {
-            //cancellationToken.ThrowIfCancellationRequested();
-
-            if (IsEmpty && (unchecked(((UInt32)Environment.TickCount) - lastRecoveryTime) >= PoolRecoveryFrequencyInMs))
+            if ( IsEmpty && ( unchecked(( (UInt32)Environment.TickCount ) - m_lastRecoveryTime) >= POOL_RECOVERY_FREQUENCY_IN_MS ) )
             {
-                log.LogInfo("Pool is empty; recovering leaked sessions");
+                m_log.LogInfo( "Pool is empty; recovering leaked sockets" );
 
-                await RecoverLeakedSocketsAsync(ioBehavior, timeoutToConnect).ConfigureAwait(continueOnCapturedContext: false);
+                await RecoverLeakedSocketsAsync( ioBehavior, timeoutToConnect ).ConfigureAwait( continueOnCapturedContext: false );
             }
 
-            // wait for an open slot (until the cancellationToken is cancelled, which is typically due to timeout)
+            // wait for an open slot (until timeout return to pool is raised)
 #if DEBUG
-            log.LogInfo("Pool waiting for a taking from the pool");
+            m_log.LogInfo( "Pool waiting for a taking from the pool" );
 #endif
-            if (ioBehavior == IOBehavior.Asynchronous)
-            {
-                await socketSemaphore.WaitAsync(timeWaitToReturnToPool).ConfigureAwait(false);
-            }
-            else
-            {
-                socketSemaphore.Wait(timeWaitToReturnToPool);
-            }
+            //"_", because no matter whether socket is returned to the pool by the another thread
+            _ = await IsSocketReturnedToPoolAsync( ioBehavior, m_socketSemaphore, timeWaitToReturnToPool );
 
             ConnectionPoolSocket desiredSocket = null;
-            //if IOBehavior.Synchronous then use simple lock without await desiredSocket.ReturnedInPool.WaitAsync 
-            await lockLeasedSockets.LockAsync(async () =>
+            if ( m_leasedSockets.ContainsKey( remoteEndPoint ) )
             {
-                if (leasedSockets.ContainsKey(remoteEndPoint))
-                {
-                    desiredSocket = leasedSockets[remoteEndPoint];
-
-                    Boolean isReturned = false;
-                    //wait in different way
-                    if (ioBehavior == IOBehavior.Asynchronous)
-                    {
-                        isReturned = await desiredSocket.ReturnedInPool.WaitAsync(timeWaitToReturnToPool);
-                    }
-                    else if (ioBehavior == IOBehavior.Synchronous)
-                    {
-                        isReturned = desiredSocket.ReturnedInPool.Wait(timeWaitToReturnToPool);
-                    }
-
-                    if(!isReturned)
-                    {
-                        desiredSocket = null;
-                    }
-                    
-                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);
-                }
-            });
+                desiredSocket = await TakeLeasedSocket( remoteEndPoint, ioBehavior, timeWaitToReturnToPool, timeoutToConnect ).ConfigureAwait( false );
+            }
 
             Boolean takenFromPool = desiredSocket != null;
-            if (!takenFromPool)
+            if ( !takenFromPool )
             {
-                Boolean isInPool;
-                
-                lock (sockets)
-                {
-                    isInPool = sockets.ContainsKey(remoteEndPoint);
+                m_sockets.TryRemove( remoteEndPoint, out desiredSocket );
 
-                    if(isInPool)
-                    {
-                        desiredSocket = sockets[remoteEndPoint];
-                        sockets.Remove(remoteEndPoint);
-                    }
-                }
+                desiredSocket = await ConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket ).ConfigureAwait( false );
 
-                if (isInPool)
-                {
-                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).ConfigureAwait(false);
-                }
-                else
-                {
-                    desiredSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, 
-                        ProtocolType.Tcp, remoteEndPoint, instance, log);
-                    await ConnectInDifferentWayAsync(desiredSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
-                }
-
-                lock (leasedSockets)
-                {
-                    if(!leasedSockets.ContainsKey(remoteEndPoint))
-                    {
-                        leasedSockets.Add(remoteEndPoint, desiredSocket);
-                    }
-
-                    desiredSocket.IsInPool = false;
-                }
+                m_leasedSockets.TryAdd( remoteEndPoint, desiredSocket );
+                desiredSocket.IsInPool = false;
             }
 
             return desiredSocket;
         }
 
-        private async ValueTask<ConnectionPoolSocket> ConnectedSocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, ConnectionPoolSocket socket)
+        private async ValueTask<ConnectionPoolSocket> TakeLeasedSocket( EndPoint remoteEndPoint, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool, TimeSpan timeoutToConnect )
         {
-            var connectedSocket = socket;
-            if (socket != null)
+            ConnectionPoolSocket desiredSocket = null;
+            try
+            {
+                desiredSocket = m_leasedSockets[ remoteEndPoint ];
+            }
+            //case when another thread remove socket with desiredSocket.Id from leasedSockets
+            catch ( KeyNotFoundException )
+            {
+                ;//do nothing, because desiredSocket will be created in method ConnectedSocketAsync even the first one is null
+            }
+
+            if(desiredSocket != null)
+            {
+                Boolean isSocketReturned = await IsSocketReturnedToPoolAsync( ioBehavior, desiredSocket.ReturnedInPool, timeWaitToReturnToPool ).ConfigureAwait( false );
+
+                if(!isSocketReturned)
+                {
+                    desiredSocket = null;
+                }
+            }
+
+            desiredSocket = await ConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket ).ConfigureAwait( false );
+
+            return desiredSocket;
+        }
+
+        private async ValueTask<ConnectionPoolSocket> ConnectedSocketAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, ConnectionPoolSocket socket )
+        {
+            ConnectionPoolSocket connectedSocket = socket;
+            if ( socket != null )
             {
                 try
                 {
                     connectedSocket.VerifyConnected();
                 }
-                catch
+                catch ( SocketException )
                 {
                     try
                     {
-                        await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(continueOnCapturedContext: false);
+                        await connectedSocket.DsConnectAsync( remoteEndPoint, timeoutToConnect, ioBehavior ).ConfigureAwait( continueOnCapturedContext: false );
                     }
-                    catch
+                    catch ( SocketException )
                     {
-                        connectedSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream,ProtocolType.Tcp, remoteEndPoint, instance, log);
-                        await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(false);
+                        connectedSocket = new ConnectionPoolSocket( SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, s_instance, m_log );
+                        await connectedSocket.DsConnectAsync( remoteEndPoint, timeoutToConnect, ioBehavior ).ConfigureAwait( false );
                     }
                 }
             }
             else
             {
-                connectedSocket = new ConnectionPoolSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, instance, log);
-                await ConnectInDifferentWayAsync(connectedSocket, remoteEndPoint, timeoutToConnect, ioBehavior);
+                connectedSocket = new ConnectionPoolSocket( SocketType.Stream, ProtocolType.Tcp, remoteEndPoint, s_instance, m_log );
+                await connectedSocket.DsConnectAsync( remoteEndPoint, timeoutToConnect, ioBehavior ).ConfigureAwait( false );
             }
 
             return connectedSocket;
         }
 
-        private async ValueTask ConnectInDifferentWayAsync(ConnectionPoolSocket socket, EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ioBehavior"></param>
+        /// <param name="semaphoreSlim"></param>
+        /// <param name="waitTimeout"></param>
+        /// <returns>
+        /// It will return <a href="true"/> if socket is returned by another thread during <paramref name="waitTimeout"/>.
+        /// It will return <a href="false"/> if socket isn't returned
+        /// </returns>
+        private async ValueTask<Boolean> IsSocketReturnedToPoolAsync( IOBehavior ioBehavior, SemaphoreSlim semaphoreSlim, TimeSpan waitTimeout )
         {
-            if (ioBehavior == IOBehavior.Asynchronous)
+            Boolean successWait;
+            if ( ioBehavior == IOBehavior.Asynchronous )
             {
-                await socket.ConnectAsync(remoteEndPoint, timeoutToConnect).ConfigureAwait(continueOnCapturedContext: false);
+                successWait = await semaphoreSlim.WaitAsync( waitTimeout ).ConfigureAwait( continueOnCapturedContext: false );
             }
-            else if (ioBehavior == IOBehavior.Synchronous)
+            else if ( ioBehavior == IOBehavior.Synchronous )
             {
-                socket.Connect(remoteEndPoint, timeoutToConnect);
+                successWait = semaphoreSlim.Wait( waitTimeout );
             }
             else
             {
-                throw new ArgumentException($"{ioBehavior} has incorrect value");
+                throw new ArgumentException( $"{nameof( ioBehavior )} has incorrect value" );
             }
+
+            return successWait;
         }
 
         /// <summary>
-		/// Examines all the <see cref="ServerSession"/> objects in <see cref="leasedSockets"/> to determine if any
+		/// Examines all the <see cref="ServerSession"/> objects in <see cref="m_leasedSockets"/> to determine if any
 		/// have an owning <see cref="MySqlConnection"/> that has been garbage-collected. If so, assumes that the connection
 		/// was not properly disposed and returns the session to the pool.
 		/// </summary>
-		private async ValueTask RecoverLeakedSocketsAsync(IOBehavior ioBehavior, TimeSpan timeoutToConnect)
+		private async ValueTask RecoverLeakedSocketsAsync( IOBehavior ioBehavior, TimeSpan timeoutToConnect )
         {
-            var recoveredSockets = new List<ConnectionPoolSocket>();
-            await lockLeasedSockets.LockAsync(async () =>
+            List<ConnectionPoolSocket> recoveredSockets = new List<ConnectionPoolSocket>();
+
+            lock ( m_lockLastRecoveryTime )
             {
-                lastRecoveryTime = unchecked((UInt32)Environment.TickCount);
+                m_lastRecoveryTime = unchecked((UInt32)Environment.TickCount);
+            }
 
-                foreach (var socket in leasedSockets.Values)
+            foreach ( ConnectionPoolSocket socket in m_leasedSockets.Values )
+            {
+                try
                 {
-                    var recoveredSocket = await ConnectedSocketAsync(socket.Id, timeoutToConnect, ioBehavior, socket).ConfigureAwait(continueOnCapturedContext: false);
-                    try
-                    {
-                        recoveredSocket.VerifyConnected();
-                    }
-                    catch
-                    {
-                        recoveredSockets.Add(socket);
-                    }
-                }
-            });
+                    ConnectionPoolSocket restoredSocket = await ConnectedSocketAsync(
+                        socket.Id,
+                        timeoutToConnect,
+                        ioBehavior,
+                        socket
+                    ).ConfigureAwait( continueOnCapturedContext: false );
+                    restoredSocket.VerifyConnected();
 
-            if(recoveredSockets.Count == 0)
+                    recoveredSockets.Add( restoredSocket );
+                }
+                //if recoveredSocket is not connected, SocketException will occur
+                catch ( SocketException )
+                {
+                    ;//do nothing
+                }
+                catch ( TimeoutException )
+                {
+                    ;//do nothing
+                }
+            }
+
+            if ( recoveredSockets.Count == 0 )
             {
 #if DEBUG
-                log.LogInfo($"Pool recovered no sockets");
+                m_log.LogInfo( $"Pool recovered no sockets" );
 #endif
             }
             else
             {
-                log.LogInfo($"Pool{0}: RecoveredSessionCount = {recoveredSockets.Count}");
+                m_log.LogInfo( $"Pool now recovers socket count = {recoveredSockets.Count}" );
             }
 
-            foreach (var socket in recoveredSockets)
+            foreach ( ConnectionPoolSocket socket in recoveredSockets )
             {
-                await socket.ReturnToPoolAsync(IOBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false);
+                socket.ReturnedToPool();
             }
         }
 
-        public async ValueTask<Boolean> ReturnToPoolAsync(IOBehavior ioBehavior, EndPoint remoteEndPoint)
+        public Boolean ReturnedToPool( EndPoint remoteEndPoint )
         {
 #if DEBUG
-            log.LogInfo($"Pool receiving Session with id {remoteEndPoint} back");
+            m_log.LogInfo( $"Pool receiving Session with id {remoteEndPoint} back" );
 #endif
 
             Boolean isReturned = false;
             try
             {
-                Boolean wasInPool = false;
-                ConnectionPoolSocket socketInPool = null;
-                await lockLeasedSockets.LockAsync(() =>
+                Boolean wasInPool = m_leasedSockets.TryRemove( remoteEndPoint, out ConnectionPoolSocket socketInPool );
+
+                if ( wasInPool )
                 {
-                    wasInPool = leasedSockets.ContainsKey(remoteEndPoint);
-
-                    if (wasInPool)
+                    SocketHealth socketHealth = socketInPool.SocketHealth( ConnectionSettings );
+                    if ( socketHealth == SocketHealth.Healthy )
                     {
-                        socketInPool = leasedSockets[remoteEndPoint];
-                        leasedSockets.Remove(remoteEndPoint);
-                    }
+                        m_sockets.TryAdd( remoteEndPoint, socketInPool );
 
-                    return Task.CompletedTask;
-                });
-
-                if(wasInPool)
-                {                 
-                    var socketHealth = SocketHealth(socketInPool);
-                    if (socketHealth == ClientPool.SocketHealth.Healthy)
-                    {
-                        lock(sockets)
-                        {
-                            sockets.Add(remoteEndPoint, socketInPool);
-                            socketInPool.IsInPool = true;
-                            isReturned = true;
-                        }
+                        socketInPool.IsInPool = true;
+                        isReturned = true;
                     }
                     else
                     {
-                        if (socketHealth == ClientPool.SocketHealth.IsNotConnected)
+                        if ( socketHealth == SocketHealth.IsNotConnected )
                         {
-                            log.LogInfo($"Pool received invalid Socket {socketInPool.Id}; destroying it");
+                            m_log.LogInfo( $"Pool received invalid Socket {socketInPool.Id}; destroying it" );
                         }
-                        else if(socketHealth == ClientPool.SocketHealth.Expired)
+                        else if ( socketHealth == SocketHealth.Expired )
                         {
-                            log.LogInfo($"Pool received expired Socket {socketInPool.Id}; destroying it");
+                            m_log.LogInfo( $"Pool received expired Socket {socketInPool.Id}; destroying it" );
                         }
 
-                        if(socketInPool.State != SocketState.Closed)
+                        if ( socketInPool.State < SocketState.Closing )
                         {
                             socketInPool.Dispose();
                         }
@@ -321,88 +297,53 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     isReturned = false;
                 }
             }
-            catch(Exception ex)
-            {
-                isReturned = false;
-                log.LogError(ex, ex.Message);
-            }
             finally
             {
-                socketSemaphore.Release();
+                m_socketSemaphore.Release();
             }
 
             return isReturned;
         }
 
-        private SocketHealth SocketHealth(ConnectionPoolSocket socket)
+        public async Task ClearPoolAsync( IOBehavior ioBehavior, Boolean respectMinPoolSize, CancellationToken cancellationToken )
         {
-            SocketHealth socketHealth;
-
-            try
-            {
-                socket.VerifyConnected();
-            }
-            catch
-            {
-                socketHealth = ClientPool.SocketHealth.IsNotConnected;
-                return socketHealth;
-            }
-
-            if((ConnectionSettings.ConnectionLifeTime > 0) && 
-               (unchecked((UInt32)Environment.TickCount) - socket.CreatedTicks >= ConnectionSettings.ConnectionLifeTime))
-            {
-                socketHealth = ClientPool.SocketHealth.Expired;
-            }
-            else
-            {
-                socketHealth = ClientPool.SocketHealth.Healthy;
-            }
-
-            return socketHealth;
-        }
-
-        public async Task ClearPoolAsync(IOBehavior ioBehavior, bool respectMinPoolSize, CancellationToken cancellationToken)
-        {
-            log.LogInfo($"Pool clearing connection pool");
+            m_log.LogInfo( $"Pool clearing connection pool" );
 
             // synchronize access to this method as only one clean routine should be run at a time
-            if (ioBehavior == IOBehavior.Asynchronous)
+            if ( ioBehavior == IOBehavior.Asynchronous )
             {
-                await cleanSemaphore.WaitAsync(cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+                await m_cleanSemaphore.WaitAsync( cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
             }
             else
             {
-                cleanSemaphore.Wait(cancellationToken);
+                m_cleanSemaphore.Wait( cancellationToken );
             }
 
             try
             {
-                var waitTimeout = TimeSpan.FromMilliseconds(value: 10);
-                while (true)
+                TimeSpan waitTimeout = TimeSpan.FromMilliseconds( value: 10 );
+                while ( true )
                 {
                     // if respectMinPoolSize is true, return if (leased sessions + waiting sessions <= minPoolSize)
-                    if (respectMinPoolSize)
+                    if ( respectMinPoolSize )
                     {
-                        lock (sockets)
+                        if ( ConnectionSettings.MaximumPoolSize - m_socketSemaphore.CurrentCount + m_sockets.Count <= ConnectionSettings.MinimumPoolSize )
                         {
-                            if (ConnectionSettings.MaximumPoolSize - socketSemaphore.CurrentCount + sockets.Count <= ConnectionSettings.MinimumPoolSize)
-                            {
-                                return;
-                            }
+                            return;
                         }
                     }
 
                     // try to get an open slot; if this fails, connection pool is full and sessions will be disposed when returned to pool
-                    if (ioBehavior == IOBehavior.Asynchronous)
+                    if ( ioBehavior == IOBehavior.Asynchronous )
                     {
-                        if (!await socketSemaphore.WaitAsync(waitTimeout, cancellationToken).ConfigureAwait(false))
+                        if ( !await m_socketSemaphore.WaitAsync( waitTimeout, cancellationToken ).ConfigureAwait( false ) )
                         {
                             return;
                         }
                     }
                     else
                     {
-                        if (!socketSemaphore.Wait(waitTimeout, cancellationToken))
+                        if ( !m_socketSemaphore.Wait( waitTimeout, cancellationToken ) )
                         {
                             return;
                         }
@@ -411,28 +352,26 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     try
                     {
                         // check for a waiting session
-                        lock (sockets)
+                        KeyValuePair<EndPoint, ConnectionPoolSocket> waitingSocket = m_sockets.FirstOrDefault();
+                        if ( !waitingSocket.Equals( default( KeyValuePair<EndPoint, ConnectionPoolSocket> ) ) )
                         {
-                            var waitingSocket = sockets.FirstOrDefault();
-                            if(!waitingSocket.Equals(default(KeyValuePair<EndPoint, ConnectionPoolSocket>)))
-                            {
-                                waitingSocket.Value.Dispose();
-                            }
-                            else
-                            {
-                                return;
-                            }
+                            waitingSocket.Value.Dispose();
+                        }
+                        else
+                        {
+                            return;
                         }
                     }
                     finally
                     {
-                        socketSemaphore.Release();
+                        m_socketSemaphore.Release();
                     }
                 }
             }
             finally
             {
-                cleanSemaphore.Release();
+                m_cleanSemaphore.Release();
+                BackgroundConnectionResetHelper.Stop();
             }
         }
     }

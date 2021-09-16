@@ -1,4 +1,6 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Interfaces;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,9 +13,15 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     class StoreRequest : Request
     {
+        public StoreRequest( BigInteger sender )
+            : base( sender )
+        {
+            DefaultInit();
+        }
+
         public StoreRequest()
         {
-            MessageOperation = MessageOperation.Store;
+            DefaultInit();
         }
 
         public BigInteger KeyToStore { get; set; }
@@ -22,11 +30,11 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public Int32 ExpirationTimeSec { get; set; }
 
         /// <inheritdoc/>
-        public override IWireSerialiser Read(WireReader reader)
+        public override IWireSerialiser Read( WireReader reader )
         {
-            if (reader != null)
+            if ( reader != null )
             {
-                base.Read(reader);
+                base.Read( reader );
 
                 KeyToStore = reader.ReadBigInteger();
                 Value = reader.ReadAsciiString();
@@ -37,42 +45,45 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
             else
             {
-                throw new ArgumentNullException("ReaderNullException");
+                throw new ArgumentNullException( "ReaderNullException" );
             }
         }
 
         /// <inheritdoc/>
-        public override void Write(WireWriter writer)
+        public override void Write( WireWriter writer )
         {
-            if (writer != null)
+            if ( writer != null )
             {
-                base.Write(writer);
+                base.Write( writer );
 
-                writer.Write(KeyToStore);
-                writer.WriteAsciiString(Value);
-                writer.Write(IsCached);
-                writer.Write((UInt32)ExpirationTimeSec);
+                writer.Write( KeyToStore );
+                writer.WriteAsciiString( Value );
+                writer.Write( IsCached );
+                writer.Write( (UInt32)ExpirationTimeSec );
             }
             else
             {
-                throw new ArgumentNullException("WriterNullException");
+                throw new ArgumentNullException( "WriterNullException" );
             }
         }
 
         public override String ToString()
         {
-            using (var writer = new StringWriter())
+            using ( StringWriter writer = new StringWriter() )
             {
-                writer.WriteLine($"{GetType().Name}:\n" +
-                                 $"{PropertyWithValue(nameof(RandomID), RandomID)};\n" +
-                                 $"{PropertyWithValue(nameof(Sender), Sender)};\n" +
-                                 $"{PropertyWithValue(nameof(KeyToStore), KeyToStore)};\n" +
-                                 $"{PropertyWithValue(nameof(Value), Value)};\n" +
-                                 $"{PropertyWithValue(nameof(IsCached), IsCached)};\n" +
-                                 $"{PropertyWithValue(nameof(ExpirationTimeSec), ExpirationTimeSec)}");
+                writer.WriteLine( $"{GetType().Name}:\n" +
+                                 $"{PropertyWithValue( nameof( RandomID ), RandomID )};\n" +
+                                 $"{PropertyWithValue( nameof( Sender ), Sender )};\n" +
+                                 $"{PropertyWithValue( nameof( KeyToStore ), KeyToStore )};\n" +
+                                 $"{PropertyWithValue( nameof( Value ), Value )};\n" +
+                                 $"{PropertyWithValue( nameof( IsCached ), IsCached )};\n" +
+                                 $"{PropertyWithValue( nameof( ExpirationTimeSec ), ExpirationTimeSec )}" );
 
                 return writer.ToString();
             }
         }
+
+        protected override void DefaultInit( params Object[] args ) => 
+            MessageOperation = MessageOperation.Store;
     }
 }

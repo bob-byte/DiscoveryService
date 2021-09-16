@@ -4,8 +4,10 @@ namespace LUC.DiscoveryService.Kademlia
 {
     public class StoreValue
     {
-        public string Value { get; set; }
+        public String Value { get; set; }
+
         public DateTime RepublishTimeStamp { get; set; }
-        public int ExpirationTime { get; set; }
+
+        public Int32 ExpirationTime { get; set; }
     }
 }
