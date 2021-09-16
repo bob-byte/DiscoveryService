@@ -12,6 +12,12 @@ namespace LUC.DiscoveryService.Kademlia.Routers
     {
         protected Object m_locker = new Object();
 
+        public BaseRouter( UInt16 protocolVersion )
+            : base( protocolVersion )
+        {
+            ;//do nothing
+        }
+
 #if DEBUG       // for unit testing
         [JsonIgnore]
         public List<Contact> CloserContacts { get; protected set; }
@@ -24,12 +30,6 @@ namespace LUC.DiscoveryService.Kademlia.Routers
 
         [JsonIgnore]
         public Dht Dht { get; set; }
-
-        public BaseRouter( UInt16 protocolVersion )
-            : base( protocolVersion )
-        {
-            ;//do nothing
-        }
 
         public abstract (Boolean found, List<Contact> contacts, Contact foundBy, String val) Lookup(
             KademliaId key,

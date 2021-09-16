@@ -20,6 +20,49 @@ namespace LUC.DiscoveryService.Kademlia
     /// </summary>
     class Dht : AbstractKademlia, IDht
     {
+        protected List<Contact> m_pendingContacts;
+
+        protected Timer m_bucketRefreshTimer;
+        protected Timer m_keyValueRepublishTimer;
+        protected Timer m_originatorRepublishTimer;
+        protected Timer m_expireKeysTimer;
+
+        protected UInt16 m_protocolVersion;
+
+        //// For serializer, empty constructor needed.
+        public Dht()
+            : base( protocolVersion: 1 )
+        {
+            ;//do nothing
+        }
+
+        /// <summary>
+        /// Use this constructor to initialize the stores to the same instance.
+        /// </summary>
+        public Dht( Contact contact, UInt16 protocolVersion, Func<IStorage> storageFactory, BaseRouter router )
+            : this( contact, router, protocolVersion, storageFactory(), storageFactory(), storageFactory() )
+        {
+            ;//do nothing
+        }
+
+        /// <summary>
+        /// Supports different concrete storage types.  For example, you may want the cacheStorage
+        /// to be an in memory store, the originatorStorage to be a SQL database, and the republish store
+        /// to be a key-value database.
+        /// </summary>
+        public Dht( Contact contact, BaseRouter router, UInt16 protocolVersion, IStorage originatorStorage, IStorage republishStorage, IStorage cacheStorage )
+            : base( protocolVersion )
+        {
+            OriginatorStorage = originatorStorage;
+            RepublishStorage = republishStorage;
+            CacheStorage = cacheStorage;
+            m_protocolVersion = protocolVersion;
+
+            FinishInitialization( contact, router );
+            SetupTimers();
+        }
+
+
         public BaseRouter Router { get; set; }
 
         [JsonIgnore]
@@ -53,46 +96,6 @@ namespace LUC.DiscoveryService.Kademlia
         /// IP-address TCP port and ID where we listen and send messages 
         /// </summary>
         public Contact OurContact { get; set; }
-
-        protected List<Contact> m_pendingContacts;
-
-        protected Timer m_bucketRefreshTimer;
-        protected Timer m_keyValueRepublishTimer;
-        protected Timer m_originatorRepublishTimer;
-        protected Timer m_expireKeysTimer;
-
-        protected UInt16 m_protocolVersion;
-
-        //// For serializer, empty constructor needed.
-        //public Dht()
-        //{
-        //}
-
-        /// <summary>
-        /// Use this constructor to initialize the stores to the same instance.
-        /// </summary>
-        public Dht( Contact contact, UInt16 protocolVersion, Func<IStorage> storageFactory, BaseRouter router )
-            : this( contact, router, protocolVersion, storageFactory(), storageFactory(), storageFactory() )
-        {
-            ;//do nothing
-        }
-
-        /// <summary>
-        /// Supports different concrete storage types.  For example, you may want the cacheStorage
-        /// to be an in memory store, the originatorStorage to be a SQL database, and the republish store
-        /// to be a key-value database.
-        /// </summary>
-        public Dht( Contact contact, BaseRouter router, UInt16 protocolVersion, IStorage originatorStorage, IStorage republishStorage, IStorage cacheStorage )
-            : base( protocolVersion )
-        {
-            this.OriginatorStorage = originatorStorage;
-            this.RepublishStorage = republishStorage;
-            this.CacheStorage = cacheStorage;
-            this.m_protocolVersion = protocolVersion;
-
-            FinishInitialization( contact, router );
-            SetupTimers();
-        }
 
         public List<Contact> OnlineContacts => Node.BucketList.Buckets.SelectMany( c => c.Contacts ).ToList();
 

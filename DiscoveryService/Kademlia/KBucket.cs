@@ -12,24 +12,6 @@ namespace LUC.DiscoveryService.Kademlia
 {
     public class KBucket
     {
-        public DateTime TimeStamp { get; set; }
-
-        public List<Contact> Contacts { get; set; }
-
-        public BigInteger Low { get; set; }
-
-        public BigInteger High { get; set; }
-
-        /// <summary>
-        /// We are going to assume that the "key" for this bucket is it's high range.
-        /// </summary>
-        [JsonIgnore]
-        public BigInteger Key => High;
-
-        [JsonIgnore]
-        public Boolean IsBucketFull => 
-            Contacts.Count == Constants.K;
-
         /// <summary>
         /// Initializes a k-bucket with the default range of 0 - 2^160
         /// </summary>
@@ -49,6 +31,24 @@ namespace LUC.DiscoveryService.Kademlia
             Low = low;
             High = high;
         }
+
+        public DateTime TimeStamp { get; set; }
+
+        public List<Contact> Contacts { get; set; }
+
+        public BigInteger Low { get; set; }
+
+        public BigInteger High { get; set; }
+
+        /// <summary>
+        /// We are going to assume that the "key" for this bucket is it's high range.
+        /// </summary>
+        [JsonIgnore]
+        public BigInteger Key => High;
+
+        [JsonIgnore]
+        public Boolean IsBucketFull => 
+            Contacts.Count == Constants.K;
 
         public void Touch() => 
             TimeStamp = DateTime.UtcNow;

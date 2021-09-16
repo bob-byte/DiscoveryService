@@ -15,16 +15,16 @@ namespace LUC.DiscoveryService.Kademlia
     /// </summary>
     public class VirtualStorage : IStorage
     {
-        [JsonIgnore]
-        public List<BigInteger> Keys => 
-            new List<BigInteger>( m_store.Keys );
-
         protected ConcurrentDictionary<BigInteger, StoreValue> m_store;
 
         public VirtualStorage()
         {
             m_store = new ConcurrentDictionary<BigInteger, StoreValue>();
         }
+
+        [JsonIgnore]
+        public List<BigInteger> Keys =>
+            new List<BigInteger>( m_store.Keys );
 
         public Boolean TryGetValue( KademliaId key, out String val )
         {

@@ -14,17 +14,6 @@ namespace LUC.DiscoveryService.Kademlia
 {
     class Node : AbstractKademlia, INode
     {
-        public Contact OurContact { get; set; }
-
-        public IBucketList BucketList { get; set; }
-
-        public IStorage Storage { get; set; }
-
-        public IStorage CacheStorage { get; set; }
-
-        [JsonIgnore]
-        public Dht Dht { get; set; }
-
         /// <summary>
         /// For serialization.
         /// </summary>
@@ -50,6 +39,17 @@ namespace LUC.DiscoveryService.Kademlia
                 CacheStorage = new VirtualStorage();
             }
         }
+
+        public Contact OurContact { get; set; }
+
+        public IBucketList BucketList { get; set; }
+
+        public IStorage Storage { get; set; }
+
+        public IStorage CacheStorage { get; set; }
+
+        [JsonIgnore]
+        public Dht Dht { get; set; }
 
         /// <summary>
         /// Someone is pinging us.  Register the contact and respond.
