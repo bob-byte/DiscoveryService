@@ -102,7 +102,7 @@ namespace LUC.DiscoveryService
             {
                 if ( m_isDiscoveryServiceStarted )
                 {
-                    return NetworkEventInvoker.OurContact.ID;
+                    return NetworkEventInvoker.OurContact.KadId;
                 }
                 else
                 {
@@ -176,7 +176,7 @@ namespace LUC.DiscoveryService
                     AcknowledgeTcpMessage tcpMessage = new AcknowledgeTcpMessage(
                         messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
                         MachineId,
-                        sendingContact.ID.Value,
+                        sendingContact.KadId.Value,
                         RunningTcpPort,
                         ProtocolVersion,
                         groupsIds: GroupsSupported?.Keys?.ToList() 

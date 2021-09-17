@@ -125,7 +125,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         protected void DeserializationFixups()
         {
-            ID = OurContact.ID;
+            ID = OurContact.KadId;
             Node = Router.Node;
             Node.OurContact = OurContact;
             Node.BucketList.OurID = ID;
@@ -142,13 +142,13 @@ namespace LUC.DiscoveryService.Kademlia
         public RpcError Bootstrap( Contact knownPeer )
         {
             Node.BucketList.AddContact( ref knownPeer );
-            (List<Contact> contacts, RpcError error) = m_clientKadOperation.FindNode( OurContact, OurContact.ID, knownPeer );
+            (List<Contact> contacts, RpcError error) = m_clientKadOperation.FindNode( OurContact, OurContact.KadId, knownPeer );
 
             if ( !error.HasError )
             {
                 contacts.ForEach( c => Node.BucketList.AddContact( ref c ) );
 
-                KBucket knownPeerBucket = Node.BucketList.GetKBucket( knownPeer.ID );
+                KBucket knownPeerBucket = Node.BucketList.GetKBucket( knownPeer.KadId );
                 // Resolve the list now, so we don't include additional contacts as we add to our bucket additional contacts.
                 List<KBucket> otherBuckets = Node.BucketList.Buckets.Where( b => b != knownPeerBucket ).ToList();
                 otherBuckets.ForEach( b => RefreshBucket( b ) );
@@ -195,7 +195,7 @@ namespace LUC.DiscoveryService.Kademlia
                     nodeValue = lookup.val;
                     closeContacts = lookup.contacts;
                     // Find the first close contact (other than the one the value was found by) in which to *cache* the key-value.
-                    Contact storeTo = lookup.contacts.Where( c => c != lookup.foundBy ).OrderBy( c => c.ID ^ key ).FirstOrDefault();
+                    Contact storeTo = lookup.contacts.Where( c => c != lookup.foundBy ).OrderBy( c => c.KadId ^ key ).FirstOrDefault();
 
                     if ( storeTo != null )
                     {
@@ -217,12 +217,15 @@ namespace LUC.DiscoveryService.Kademlia
             currentBuckets.ForEach( b => RefreshBucket( b ) );
         }
 
-        public void PerformStoreRepublish() => RepublishStorage.Keys.ForEach( k =>
-                                              {
-                                                  KademliaId key = new KademliaId( k );
-                                                  StoreOnCloserContacts( key, RepublishStorage.Get( key ) );
-                                                  RepublishStorage.Touch( k );
-                                              } );
+        public void PerformStoreRepublish()
+        {
+            RepublishStorage.Keys.ForEach( k =>
+            {
+                KademliaId key = new KademliaId( k );
+                StoreOnCloserContacts( key, RepublishStorage.Get( key ) );
+                RepublishStorage.Touch( k );
+            } );
+        }
 #endif
 
         /// <summary>
@@ -233,7 +236,7 @@ namespace LUC.DiscoveryService.Kademlia
         public void HandleError( RpcError error, Contact contact )
         {
             // For all errors:
-            Int32 count = AddContactToEvict( contact.ID.Value );
+            Int32 count = AddContactToEvict( contact.KadId.Value );
 
             if ( count == Constants.EVICTION_LIMIT )
             {
@@ -245,7 +248,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             lock ( m_pendingContacts )
             {
-                m_pendingContacts.AddDistinctBy( pending, c => c.ID );
+                m_pendingContacts.AddDistinctBy( pending, c => c.KadId );
             }
         }
 
@@ -263,11 +266,11 @@ namespace LUC.DiscoveryService.Kademlia
                 lock ( m_pendingContacts )
                 {
                     // Add only if it's a new pending contact.
-                    m_pendingContacts.AddDistinctBy( toReplace, c => c.ID );
+                    m_pendingContacts.AddDistinctBy( toReplace, c => c.KadId );
                 }
             }
 
-            BigInteger key = toEvict.ID.Value;
+            BigInteger key = toEvict.KadId.Value;
             Int32 count = AddContactToEvict( key );
 
             if ( count == Constants.EVICTION_LIMIT )
@@ -291,7 +294,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         protected void ReplaceContact( Contact toEvict )
         {
-            KBucket bucket = Node.BucketList.GetKBucket( toEvict.ID );
+            KBucket bucket = Node.BucketList.GetKBucket( toEvict.KadId );
 
             // Prevent other threads from manipulating the bucket list or buckets.
             lock ( Node.BucketList )
@@ -303,7 +306,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         protected void EvictContact( KBucket bucket, Contact toEvict )
         {
-            _ = EvictionCount.TryRemove( toEvict.ID.Value, out _ );
+            _ = EvictionCount.TryRemove( toEvict.KadId.Value, out _ );
             Validate.IsTrue<BucketDoesNotContainContactToEvict>( bucket.Contains( toEvict.MachineId ), "Bucket doesn't contain the contact to be evicted." );
             bucket.EvictContact( toEvict );
         }
@@ -318,7 +321,7 @@ namespace LUC.DiscoveryService.Kademlia
             // Non-concurrent list needs locking while we query it.
             lock ( m_pendingContacts )
             {
-                contact = m_pendingContacts.Where( c => Node.BucketList.GetKBucket( c.ID ) == bucket ).OrderBy( c => c.LastSeen ).LastOrDefault();
+                contact = m_pendingContacts.Where( c => Node.BucketList.GetKBucket( c.KadId ) == bucket ).OrderBy( c => c.LastSeen ).LastOrDefault();
 
                 if ( contact != null )
                 {
@@ -335,7 +338,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             // Sort of brutish way to do this.
             // Get all the contacts, ordered by their ID.
-            List<Contact> allContacts = Node.BucketList.Buckets.SelectMany( c => c.Contacts ).OrderBy( c => c.ID.Value ).ToList();
+            List<Contact> allContacts = Node.BucketList.Buckets.SelectMany( c => c.Contacts ).OrderBy( c => c.KadId.Value ).ToList();
 
             Int32 idxa = allContacts.IndexOf( a );
             Int32 idxb = allContacts.IndexOf( b );
@@ -360,16 +363,16 @@ namespace LUC.DiscoveryService.Kademlia
         {
             EvictionCount = new ConcurrentDictionary<BigInteger, Int32>();
             m_pendingContacts = new List<Contact>();
-            ID = contact.ID;
+            ID = contact.KadId;
             OurContact = contact;
             Node = new Node( OurContact, m_protocolVersion, RepublishStorage, CacheStorage )
             {
                 Dht = this
             };
             Node.BucketList.Dht = this;
-            this.Router = router;
-            this.Router.Node = Node;
-            this.Router.Dht = this;
+            Router = router;
+            Router.Node = Node;
+            Router.Dht = this;
         }
 
         protected void SetupTimers()
@@ -445,20 +448,22 @@ namespace LUC.DiscoveryService.Kademlia
         {
             DateTime now = DateTime.UtcNow;
 
-            OriginatorStorage.Keys.Where( k => ( now - OriginatorStorage.GetTimeStamp( k ) ).TotalMilliseconds >= Constants.ORIGINATOR_REPUBLISH_INTERVAL ).ForEach( k =>
-                   {
-                       KademliaId key = new KademliaId( k );
-                       // Just use close contacts, don't do a lookup.
-                       List<Contact> contacts = Node.BucketList.GetCloseContacts( key, Node.OurContact.ID );
+            OriginatorStorage.Keys.Where( k => ( now - OriginatorStorage.GetTimeStamp( k ) ).
+                TotalMilliseconds >= Constants.ORIGINATOR_REPUBLISH_INTERVAL ).
+                ForEach( k =>
+                {
+                    KademliaId key = new KademliaId( k );
+                    // Just use close contacts, don't do a lookup.
+                    List<Contact> contacts = Node.BucketList.GetCloseContacts( key, Node.OurContact.KadId );
 
-                       contacts.ForEach( c =>
-                 {
-                     RpcError error = m_clientKadOperation.Store( OurContact, key, OriginatorStorage.Get( key ), c );
-                     HandleError( error, c );
-                 } );
+                    contacts.ForEach( c =>
+                    {
+                        RpcError error = m_clientKadOperation.Store( OurContact, key, OriginatorStorage.Get( key ), c );
+                        HandleError( error, c );
+                    } );
 
-                       OriginatorStorage.Touch( k );
-                   } );
+                    OriginatorStorage.Touch( k );
+                } );
         }
 
         /// <summary>
@@ -494,18 +499,18 @@ namespace LUC.DiscoveryService.Kademlia
             if ( ( now - kbucket.TimeStamp ).TotalMilliseconds < Constants.BUCKET_REFRESH_INTERVAL )
             {
                 // Bucket has been refreshed recently, so don't do a lookup as we have the k closes contacts.
-                closerContacts = Node.BucketList.GetCloseContacts( key, Node.OurContact.ID );
+                closerContacts = Node.BucketList.GetCloseContacts( key, Node.OurContact.KadId );
             }
             else
             {
                 closerContacts = Router.Lookup( key, Router.RpcFindNodes ).contacts;
             }
 
-            closerContacts.ForEach( (Action<Contact>)(closerContact =>
+            closerContacts.ForEach( closerContact =>
              {
-                 RpcError error = m_clientKadOperation.Store( (Contact)this.Node.OurContact, key, val, closerContact );
+                 RpcError error = m_clientKadOperation.Store( Node.OurContact, key, val, closerContact );
                  HandleError( error, closerContact );
-             }) );
+             } );
         }
 
         /// <summary>
@@ -522,18 +527,18 @@ namespace LUC.DiscoveryService.Kademlia
             if ( ( now - kbucket.TimeStamp ).TotalMilliseconds < Constants.BUCKET_REFRESH_INTERVAL )
             {
                 // Bucket has been refreshed recently, so don't do a lookup as we have the k closes contacts.
-                closerContacts = Node.BucketList.GetCloseContacts( key, Node.OurContact.ID );
+                closerContacts = Node.BucketList.GetCloseContacts( key, Node.OurContact.KadId );
             }
             else
             {
                 closerContacts = Router.Lookup( key, Router.RpcFindNodes ).contacts;
             }
 
-            closerContacts.ForEach( (Action<Contact>)(closerContact =>
+            closerContacts.ForEach( closerContact =>
              {
-                 RpcError error = m_clientKadOperation.Store( (Contact)this.Node.OurContact, key, val, closerContact );
+                 RpcError error = m_clientKadOperation.Store( Node.OurContact, key, val, closerContact );
                  HandleError( error, closerContact );
-             }) );
+             });
         }
 
         protected void RefreshBucket( KBucket bucket )
@@ -541,20 +546,20 @@ namespace LUC.DiscoveryService.Kademlia
             bucket.Touch();
 
             KademliaId rndId = KademliaId.RandomIDWithinBucket( bucket );
-            Boolean whetherContains = bucket.Contacts.Any( c => c.ID == rndId );
+            Boolean whetherContains = bucket.Contacts.Any( c => c.KadId == rndId );
 
             if ( whetherContains )
             {
                 // Isolate in a separate list as contacts collection for this bucket might change.
                 List<Contact> contacts = bucket.Contacts.ToList();
 
-                contacts.ForEach( (Action<Contact>)(contact =>
+                contacts.ForEach( contact =>
                  {
                      (List<Contact> newContacts, RpcError timeoutError) = m_clientKadOperation.FindNode( OurContact, rndId, contact );
                      HandleError( timeoutError, contact );
 
-                     newContacts?.ForEach( (Action<Contact>)(otherContact => this.Node.BucketList.AddContact( ref otherContact )) );
-                 }) );
+                     newContacts?.ForEach( otherContact => Node.BucketList.AddContact( ref otherContact ) );
+                 });
             }
         }
     }

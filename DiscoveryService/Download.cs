@@ -124,7 +124,7 @@ namespace LUC.DiscoveryService
                 {
                     if ( onlineContacts.Count >= 1 )
                     {
-                        DownloadFileRequest initialRequest = new DownloadFileRequest( sender: m_ourContact.ID.Value )
+                        DownloadFileRequest initialRequest = new DownloadFileRequest( sender: m_ourContact.KadId.Value )
                         {
                             FullPathToFile = fullFileName,
                             FileOriginalName = localOriginalName,

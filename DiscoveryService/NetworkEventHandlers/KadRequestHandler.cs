@@ -141,7 +141,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             try
             {
                 request = eventArgs.Message<T>();
-                sender = m_distributedHashTable.OnlineContacts.Single( c => c.ID == new KademliaId( request.Sender ) );
+                sender = m_distributedHashTable.OnlineContacts.Single( c => c.KadId == new KademliaId( request.Sender ) );
             }
             catch ( InvalidOperationException ex )
             {

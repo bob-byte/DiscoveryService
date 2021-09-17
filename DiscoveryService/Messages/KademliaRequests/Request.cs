@@ -261,7 +261,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         private void ResetEvictionCount( Contact remoteContact, UInt16 protocolVersion )
         {
             Dht dht = NetworkEventInvoker.DistributedHashTable( protocolVersion );
-            dht.EvictionCount[ remoteContact.ID.Value ] = 0;
+            dht.EvictionCount[ remoteContact.KadId.Value ] = 0;
         }
 
         private void TryToEvictContact( Contact remoteContact, UInt16 protocolVersion )

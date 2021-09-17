@@ -24,13 +24,13 @@ namespace LUC.DiscoveryService.Kademlia
 
         public ClientKadOperation( UInt16 protocolVersion )
         {
-            this.m_protocolVersion = protocolVersion;
+            m_protocolVersion = protocolVersion;
         }
 
         /// <inheritdoc/>
         public RpcError Ping( Contact sender, Contact remoteContact )
         {
-            PingRequest request = new PingRequest( sender.ID.Value );
+            PingRequest request = new PingRequest( sender.KadId.Value );
 
             request.GetResult<PingResponse>( remoteContact, m_protocolVersion, response: out _, out RpcError rpcError );
             return rpcError;
@@ -39,7 +39,7 @@ namespace LUC.DiscoveryService.Kademlia
         ///<inheritdoc/>
         public RpcError Store( Contact sender, KademliaId key, String val, Contact remoteContact, Boolean isCached = false, Int32 expirationTimeSec = 0 )
         {
-            StoreRequest request = new StoreRequest( sender.ID.Value )
+            StoreRequest request = new StoreRequest( sender.KadId.Value )
             {
                 KeyToStore = key.Value,
                 Value = val,
@@ -54,13 +54,14 @@ namespace LUC.DiscoveryService.Kademlia
         /// <inheritdoc/>
         public (List<Contact> contacts, RpcError error) FindNode( Contact sender, KademliaId keyToFindContacts, Contact remoteContact )
         {
-            FindNodeRequest request = new FindNodeRequest( sender.ID.Value )
+            FindNodeRequest request = new FindNodeRequest( sender.KadId.Value )
             {
                 KeyToFindCloseContacts = keyToFindContacts.Value,
             };
-            request.GetResult<FindNodeResponse>( remoteContact, m_protocolVersion, out FindNodeResponse response, out RpcError rpcError );
+            request.GetResult( remoteContact, m_protocolVersion, out FindNodeResponse response, out RpcError rpcError );
+            List<Contact> closeContacts = response?.CloseSenderContacts?.ToList() ?? EmptyContactList();
 
-            return (response?.CloseSenderContacts?.ToList() ?? EmptyContactList(), rpcError);
+            return (closeContacts, rpcError);
         }
 
         protected List<Contact> EmptyContactList() => new List<Contact>();
@@ -68,12 +69,12 @@ namespace LUC.DiscoveryService.Kademlia
         /// <inheritdoc/>
         public (List<Contact> contacts, String val, RpcError error) FindValue( Contact sender, KademliaId keyToFindContact, Contact remoteContact )
         {
-            FindValueRequest request = new FindValueRequest( sender.ID.Value )
+            FindValueRequest request = new FindValueRequest( sender.KadId.Value )
             {
                 KeyToFindCloseContacts = keyToFindContact.Value,
             };
 
-            request.GetResult<FindValueResponse>( remoteContact, m_protocolVersion, out FindValueResponse response, out RpcError rpcError );
+            request.GetResult( remoteContact, m_protocolVersion, out FindValueResponse response, out RpcError rpcError );
             List<Contact> closeContacts = response?.CloseContacts?.ToList() ?? EmptyContactList();
 
             return (closeContacts, response?.ValueInResponsingPeer, rpcError);

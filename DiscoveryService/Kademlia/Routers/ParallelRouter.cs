@@ -77,15 +77,15 @@ namespace LUC.DiscoveryService.Kademlia.Routers
             // Also not explicitly in spec:
             // Any closer node in the alpha list is immediately added to our closer contact list, and
             // any farther node in the alpha list is immediately added to our farther contact list.
-            closerContacts.AddRange( nodesToQuery.Where( n => ( n.ID ^ key ) < ( Node.OurContact.ID ^ key ) ) );
-            fartherContacts.AddRange( nodesToQuery.Where( n => ( n.ID ^ key ) >= ( Node.OurContact.ID ^ key ) ) );
+            closerContacts.AddRange( nodesToQuery.Where( n => ( n.KadId ^ key ) < ( Node.OurContact.KadId ^ key ) ) );
+            fartherContacts.AddRange( nodesToQuery.Where( n => ( n.KadId ^ key ) >= ( Node.OurContact.KadId ^ key ) ) );
 
             // The remaining contacts not tested yet can be put here.
             fartherContacts.AddRange( allNodes.Skip( Constants.ALPHA ).Take( Constants.K - Constants.ALPHA ) );
 #endif
 
             // We're about to contact these nodes.
-            contactedNodes.AddRangeDistinctBy( nodesToQuery, ( a, b ) => a.ID == b.ID );
+            contactedNodes.AddRangeDistinctBy( nodesToQuery, ( a, b ) => a.KadId == b.KadId );
 
             // Spec: The initiator then sends parallel, asynchronous FIND_NODE RPCS to the a nodes it has chosen, 
             // a is a system-wide concurrency parameter, such as 3.
@@ -94,7 +94,7 @@ namespace LUC.DiscoveryService.Kademlia.Routers
             SetQueryTime();
 
             // Add any new closer contacts to the list we're going to return.
-            ret.AddRangeDistinctBy( closerContacts, ( a, b ) => a.ID == b.ID );
+            ret.AddRangeDistinctBy( closerContacts, ( a, b ) => a.KadId == b.KadId );
 
             // Spec: The lookup terminates when the initiator has queried and gotten responses from the k closest nodes it has seen.
             while ( ret.Count < Constants.K && haveWork )
@@ -124,7 +124,7 @@ namespace LUC.DiscoveryService.Kademlia.Routers
                 {
                     // We're about to contact these nodes.
                     IEnumerable<Contact> alphaNodes = closerUncontactedNodes.Take( Constants.ALPHA );
-                    contactedNodes.AddRangeDistinctBy( alphaNodes, ( a, b ) => a.ID == b.ID );
+                    contactedNodes.AddRangeDistinctBy( alphaNodes, ( a, b ) => a.KadId == b.KadId );
                     alphaNodes.ForEach( n => QueueWork( key, n, rpcCall, closerContacts, fartherContacts, findResult ) );
                     SetQueryTime();
                 }
@@ -132,7 +132,7 @@ namespace LUC.DiscoveryService.Kademlia.Routers
                 {
                     // We're about to contact these nodes.
                     IEnumerable<Contact> alphaNodes = fartherUncontactedNodes.Take( Constants.ALPHA );
-                    contactedNodes.AddRangeDistinctBy( alphaNodes, ( a, b ) => a.ID == b.ID );
+                    contactedNodes.AddRangeDistinctBy( alphaNodes, ( a, b ) => a.KadId == b.KadId );
                     alphaNodes.ForEach( n => QueueWork( key, n, rpcCall, closerContacts, fartherContacts, findResult ) );
                     SetQueryTime();
                 }
@@ -150,7 +150,7 @@ namespace LUC.DiscoveryService.Kademlia.Routers
             lock ( m_locker )
             {
                 // Clone the returning closer contact list so any threads still to return don't affect the collection at this point.
-                return (false, new List<Contact>( giveMeAll ? ret : ret.Take( Constants.K ).OrderBy( c => c.ID ^ key ).ToList() ), null, null);
+                return (false, new List<Contact>( giveMeAll ? ret : ret.Take( Constants.K ).OrderBy( c => c.KadId ^ key ).ToList() ), null, null);
             }
         }
 

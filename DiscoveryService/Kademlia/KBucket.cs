@@ -92,7 +92,7 @@ namespace LUC.DiscoveryService.Kademlia
             contactInBucket.LastActiveIpAddress = contact.LastActiveIpAddress;
 
             //contact can to restart program and it will have new ID, so we need to update it in bucket
-            contactInBucket.ID = contact.ID;
+            contactInBucket.KadId = contact.KadId;
 
             //to get all older IP-addresses
             contact = contactInBucket;
@@ -110,7 +110,7 @@ namespace LUC.DiscoveryService.Kademlia
             Contacts.ForEach( c =>
              {
                  // <, because the High value is exclusive in the HasInRange test.
-                 KBucket k = c.ID < midpoint ? k1 : k2;
+                 KBucket k = c.KadId < midpoint ? k1 : k2;
                  k.AddContact( c );
              } );
 
@@ -128,9 +128,9 @@ namespace LUC.DiscoveryService.Kademlia
             if ( Contacts.Count > 0 )
             {
                 // Start with the first contact.
-                bits = Contacts[ 0 ].ID.Bytes.Bits().ToArray();
+                bits = Contacts[ 0 ].KadId.Bytes.Bits().ToArray();
 
-                Contacts.Skip( count: 1 ).ForEach( c => bits = SharedBits( bits, c.ID ) );
+                Contacts.Skip( count: 1 ).ForEach( c => bits = SharedBits( bits, c.KadId ) );
             }
 
             return bits.Length;

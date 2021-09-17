@@ -23,7 +23,7 @@ namespace LUC.DiscoveryService.Kademlia
         public Contact( String machineId, KademliaId contactID, UInt16 tcpPort )
         {
             MachineId = machineId;
-            ID = contactID;
+            KadId = contactID;
 
             TcpPort = tcpPort;
             m_ipAddresses = new List<IPAddress>();
@@ -47,12 +47,12 @@ namespace LUC.DiscoveryService.Kademlia
         public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen )
         {
             MachineId = machineId;
-            ID = contactID;
+            KadId = contactID;
 
             TcpPort = tcpPort;
             m_lockIpAddresses = new Object();
 
-            this.m_ipAddresses = new List<IPAddress>();
+            m_ipAddresses = new List<IPAddress>();
             if ( ipAddresses != null )
             {
                 foreach ( IPAddress address in ipAddresses )
@@ -68,7 +68,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         public String MachineId { get; set; }
 
-        public KademliaId ID { get; set; }
+        public KademliaId KadId { get; set; }
 
         public UInt16 TcpPort { get; set; }
 
@@ -88,7 +88,8 @@ namespace LUC.DiscoveryService.Kademlia
         /// Update the fact that we've just seen this contact.
         /// </summary>
         [MethodImpl( MethodImplOptions.AggressiveInlining )]
-        public void Touch() => LastSeen = DateTime.UtcNow;
+        public void Touch() => 
+            LastSeen = DateTime.UtcNow;
 
         public List<IPAddress> IpAddresses() =>
             m_ipAddresses.ToList();
@@ -149,14 +150,14 @@ namespace LUC.DiscoveryService.Kademlia
 
             Contact c = (Contact)obj;
 
-            return ID.CompareTo( c.ID );
+            return KadId.CompareTo( c.KadId );
         }
 
         public override String ToString()
         {
             using ( StringWriter writer = new StringWriter() )
             {
-                writer.WriteLine( $"{Display.PropertyWithValue( nameof( ID ), ID )};\n" +
+                writer.WriteLine( $"{Display.PropertyWithValue( nameof( KadId ), KadId )};\n" +
                                  $"{Display.PropertyWithValue( nameof( LastSeen ), LastSeen )};" );
 
                 writer.WriteLine( $"{nameof( m_ipAddresses )}:" );
@@ -185,7 +186,7 @@ namespace LUC.DiscoveryService.Kademlia
             if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) == null ) )
                 return true;
 
-            return a.ID == b.ID;
+            return a.KadId == b.KadId;
         }
 
         public static Boolean operator !=( Contact a, Contact b )
@@ -197,7 +198,7 @@ namespace LUC.DiscoveryService.Kademlia
             if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) == null ) )
                 return false;
 
-            return !( a.ID == b.ID );
+            return !( a.KadId == b.KadId );
         }
 
         public override Boolean Equals( Object obj )

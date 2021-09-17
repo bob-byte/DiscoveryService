@@ -46,7 +46,7 @@ namespace LUC.DiscoveryService
 
         private async Task<Boolean> IsFileExistsInContactAsync( DownloadFileRequest sampleRequest, Contact contact )
         {
-            CheckFileExistsRequest request = new CheckFileExistsRequest( m_ourContact.ID.Value )
+            CheckFileExistsRequest request = new CheckFileExistsRequest( m_ourContact.KadId.Value )
             {
                 BucketName = sampleRequest.BucketName,
                 FileOriginalName = sampleRequest.FileOriginalName,

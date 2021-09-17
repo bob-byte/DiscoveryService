@@ -61,7 +61,7 @@ namespace LUC.DiscoveryService.Kademlia.Routers
         protected List<Contact> GetClosestNodes(ID key, KBucket bucket)
 #endif
         {
-            return bucket.Contacts.OrderBy( c => c.ID ^ key ).ToList();
+            return bucket.Contacts.OrderBy( c => c.KadId ^ key ).ToList();
         }
 
         public Boolean GetCloserNodes(
@@ -79,28 +79,28 @@ namespace LUC.DiscoveryService.Kademlia.Routers
             val = foundVal;
             foundBy = cFoundBy;
             List<Contact> peersNodes = contacts.
-                ExceptBy( Node.OurContact, c => c.ID ).
-                ExceptBy( nodeToQuery, c => c.ID ).
+                ExceptBy( Node.OurContact, c => c.KadId ).
+                ExceptBy( nodeToQuery, c => c.KadId ).
                 Except( closerContacts ).
                 Except( fartherContacts ).ToList();
 
             // Null continuation is a special case primarily for unit testing when we have no nodes in any buckets.
-            KademliaId nearestNodeDistance = nodeToQuery.ID ^ key;
+            KademliaId nearestNodeDistance = nodeToQuery.KadId ^ key;
 
             lock ( m_locker )
             {
                 closerContacts.
                     AddRangeDistinctBy( peersNodes.
-                        Where( p => ( p.ID ^ key ) < nearestNodeDistance ),
-                        ( a, b ) => a.ID == b.ID );
+                        Where( p => ( p.KadId ^ key ) < nearestNodeDistance ),
+                        ( a, b ) => a.KadId == b.KadId );
             }
 
             lock ( m_locker )
             {
                 fartherContacts.
                     AddRangeDistinctBy( peersNodes.
-                        Where( p => ( p.ID ^ key ) >= nearestNodeDistance ),
-                        ( a, b ) => a.ID == b.ID );
+                        Where( p => ( p.KadId ^ key ) >= nearestNodeDistance ),
+                        ( a, b ) => a.KadId == b.KadId );
             }
 
             return val != null;

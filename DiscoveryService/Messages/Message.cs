@@ -66,7 +66,7 @@ namespace LUC.DiscoveryService.Messages
         {
             using ( MemoryStream stream = new MemoryStream( buffer, offset, count ) )
             {
-                return Read( new CodingData.WireReader( stream ) );
+                return Read( new WireReader( stream ) );
             }
         }
 
@@ -83,7 +83,7 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="IOException">
         /// 
         /// </exception>
-        public virtual IWireSerialiser Read( CodingData.WireReader reader )
+        public virtual IWireSerialiser Read( WireReader reader )
         {
             if ( reader != null )
             {

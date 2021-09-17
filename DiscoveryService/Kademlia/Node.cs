@@ -144,7 +144,7 @@ namespace LUC.DiscoveryService.Kademlia
 
             BucketList.AddContact( ref sender );
 
-            contacts = BucketList.GetCloseContacts( key, exclude: sender.ID );
+            contacts = BucketList.GetCloseContacts( key, exclude: sender.KadId );
         }
 
         /// <summary>
@@ -188,7 +188,7 @@ namespace LUC.DiscoveryService.Kademlia
             }
             else
             {
-                contacts = BucketList.GetCloseContacts( key, exclude: sender.ID );
+                contacts = BucketList.GetCloseContacts( key, exclude: sender.KadId );
                 nodeValue = null;
             }
         }
@@ -219,10 +219,10 @@ namespace LUC.DiscoveryService.Kademlia
                     Storage.Keys.AsParallel().ForEach( (Action<System.Numerics.BigInteger>)(k =>
                      {
                          // our min distance to the contact.
-                         KademliaId distance = contacts.Min( c => k ^ c.ID );
+                         KademliaId distance = contacts.Min( c => k ^ c.KadId );
 
                          // If our contact is closer, store the contact on its node.
-                         if ( ( k ^ this.OurContact.ID ) < distance )
+                         if ( ( k ^ this.OurContact.KadId ) < distance )
                          {
                              RpcError error = m_clientKadOperation.Store( (Contact)this.OurContact, new KademliaId( k ), Storage.Get( k ), sender );
                              Dht?.HandleError( error, sender );
@@ -249,7 +249,7 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 lock ( Dht.PendingContacts )
                 {
-                    ret |= Dht.PendingContacts.ContainsBy( sender, c => c.ID );
+                    ret |= Dht.PendingContacts.ContainsBy( sender, c => c.KadId );
                 }
             }
 

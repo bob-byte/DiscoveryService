@@ -53,7 +53,7 @@ namespace LUC.DiscoveryService.Kademlia
             : base( protocolVersion )
         {
             this.OurContact = ourContact;
-            OurID = ourContact.ID;
+            OurID = ourContact.KadId;
             Buckets = new List<KBucket>();
 
             // First kbucket has max range.
@@ -75,7 +75,7 @@ namespace LUC.DiscoveryService.Kademlia
 
             lock ( this )
             {
-                KBucket kbucket = GetKBucket( contact.ID );
+                KBucket kbucket = GetKBucket( contact.KadId );
 
                 if ( kbucket.Contains( contact.MachineId ) )
                 {
@@ -88,7 +88,7 @@ namespace LUC.DiscoveryService.Kademlia
                     {
                         // Split the bucket and try again.
                         (KBucket k1, KBucket k2) = kbucket.Split();
-                        Int32 idx = GetKBucketIndex( contact.ID );
+                        Int32 idx = GetKBucketIndex( contact.KadId );
                         Buckets[ idx ] = k1;
                         Buckets.Insert( idx + 1, k2 );
                         Buckets[ idx ].Touch();
@@ -143,7 +143,7 @@ namespace LUC.DiscoveryService.Kademlia
         {
             lock ( this )
             {
-                return Buckets.SelectMany( b => b.Contacts ).Any( c => c.ID == sender.ID );
+                return Buckets.SelectMany( b => b.Contacts ).Any( c => c.KadId == sender.KadId );
             }
         }
 
@@ -182,8 +182,8 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 var contacts = Buckets.
                     SelectMany( b => b.Contacts ).
-                    Where( c => c.ID != exclude ).
-                    Select( c => new { contact = c, distance = c.ID ^ key } ).
+                    Where( c => c.KadId != exclude ).
+                    Select( c => new { contact = c, distance = c.KadId ^ key } ).
                     OrderBy( d => d.distance ).
                     Take( Constants.K );
 

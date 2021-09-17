@@ -287,7 +287,7 @@ namespace LUC.DiscoveryService.CodingData
         public void Write( Contact contact, String lastSeenFormat )
         {
             WriteAsciiString( contact.MachineId );
-            Write( contact.ID.Value );
+            Write( contact.KadId.Value );
 
             Write( contact.TcpPort );
             WriteAsciiString( contact.LastSeen.ToString( lastSeenFormat ) );

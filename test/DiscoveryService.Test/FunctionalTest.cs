@@ -329,7 +329,7 @@ namespace LUC.DiscoveryService.Test
             }
             else
             {
-                predicateToSelectContacts = c => ( c.LastActiveIpAddress != null ) && ( c.ID == discoveryService.NetworkEventInvoker.OurContact.ID );
+                predicateToSelectContacts = c => ( c.LastActiveIpAddress != null ) && ( c.KadId == discoveryService.NetworkEventInvoker.OurContact.KadId );
             }
 
             Contact[] contacts = discoveryService.OnlineContacts.Where( predicateToSelectContacts ).ToArray();
@@ -381,7 +381,7 @@ namespace LUC.DiscoveryService.Test
                     case ConsoleKey.NumPad3:
                     case ConsoleKey.D3:
                     {
-                        kadOperation.Store( s_discoveryService.NetworkEventInvoker.OurContact, s_discoveryService.NetworkEventInvoker.OurContact.ID,
+                        kadOperation.Store( s_discoveryService.NetworkEventInvoker.OurContact, s_discoveryService.NetworkEventInvoker.OurContact.KadId,
                             s_discoveryService.MachineId, remoteContact );
                         return;
                     }
@@ -389,14 +389,14 @@ namespace LUC.DiscoveryService.Test
                     case ConsoleKey.NumPad4:
                     case ConsoleKey.D4:
                     {
-                        kadOperation.FindNode( s_discoveryService.NetworkEventInvoker.OurContact, remoteContact.ID, remoteContact );
+                        kadOperation.FindNode( s_discoveryService.NetworkEventInvoker.OurContact, remoteContact.KadId, remoteContact );
                         return;
                     }
 
                     case ConsoleKey.NumPad5:
                     case ConsoleKey.D5:
                     {
-                        kadOperation.FindValue( s_discoveryService.NetworkEventInvoker.OurContact, s_discoveryService.NetworkEventInvoker.OurContact.ID, remoteContact );
+                        kadOperation.FindValue( s_discoveryService.NetworkEventInvoker.OurContact, s_discoveryService.NetworkEventInvoker.OurContact.KadId, remoteContact );
                         return;
                     }
 
@@ -569,7 +569,7 @@ namespace LUC.DiscoveryService.Test
             ObjectsListModel objectsListModel = objectsListResponse.ToObjectsListModel();
             ObjectDescriptionModel[] undeletedObjectsListModel = objectsListModel.ObjectDescriptions.Where( c => !c.IsDeleted ).ToArray();
 
-            Boolean isOnlyInNetwork = s_discoveryService.ContactId == remoteContact.ID;
+            Boolean isOnlyInNetwork = s_discoveryService.ContactId == remoteContact.KadId;
 
             //select from undeletedObjectsListModel files which exist in current PC if tester is only in network. 
             //If the last one is not, select files which don't exist in current PC

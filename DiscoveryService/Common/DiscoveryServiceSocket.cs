@@ -18,12 +18,14 @@ using System.Threading.Tasks;
 namespace LUC.DiscoveryService.Common
 {
     /// <summary>
-    /// New socket methods are marked <a href="Ds"/> in the front of the name, so only there <see cref="State"/> will be changed, except <see cref="Dispose"/> (there also will be changed) in order to you can easily use this object in <a href="using"/> statement
+    /// New socket methods are marked <a href="Ds"/> in the front of the name, so only there <see cref="m_state"/> will be changed, except <see cref="Dispose"/> (there also will be changed) in order to you can easily use this object in <a href="using"/> statement
     /// </summary>
     public class DiscoveryServiceSocket : Socket
     {
         private readonly TimeSpan m_howOftenCheckAcceptedClient;
         private readonly ConcurrentQueue<Socket> m_acceptedSockets;
+
+        private volatile SocketState m_state;
 
         [Import( typeof( ILoggingService ) )]
         internal static ILoggingService Log { get; private set; }
@@ -38,18 +40,18 @@ namespace LUC.DiscoveryService.Common
         public DiscoveryServiceSocket( AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, ILoggingService loggingService )
             : base( addressFamily, socketType, protocolType )
         {
-            State = SocketState.Creating;
+            m_state = SocketState.Creating;
             Log = loggingService;
 
             m_howOftenCheckAcceptedClient = TimeSpan.FromSeconds( value: 0.5 );
             m_acceptedSockets = new ConcurrentQueue<Socket>();
 
-            State = SocketState.Created;
+            m_state = SocketState.Created;
         }
 
         public BigInteger ContactId { get; set; }
 
-        public SocketState State { get; protected set; }
+        public SocketState State => m_state;
 
         public void DsAccept( TimeSpan timeout, out Socket acceptedSocket )
         {
@@ -57,7 +59,7 @@ namespace LUC.DiscoveryService.Common
 
             AutoResetEvent acceptDone = new AutoResetEvent( initialState: false );
             StateObjectForAccept stateAccept = new StateObjectForAccept( this, acceptDone );
-            State = SocketState.Accepting;
+            m_state = SocketState.Accepting;
 
             BeginAccept( new AsyncCallback( AcceptCallback ), stateAccept );
             Boolean isAccepted = acceptDone.WaitOne( timeout );
@@ -79,7 +81,7 @@ namespace LUC.DiscoveryService.Common
             //Get the socket that handles the client request
             StateObjectForAccept stateAccept = (StateObjectForAccept)asyncResult.AsyncState;
             stateAccept.AcceptedSocket = stateAccept.Listener.EndAccept( asyncResult );
-            State = SocketState.Accepted;
+            m_state = SocketState.Accepted;
 
             //another thread can receive timeout and it will close stateAccept.AcceptDone
             if ( !stateAccept.AcceptDone.SafeWaitHandle.IsClosed )
@@ -135,10 +137,10 @@ namespace LUC.DiscoveryService.Common
                 m_acceptedSockets.TryDequeue( out _ );
             }
 
-            State = SocketState.Accepting;
+            m_state = SocketState.Accepting;
             //AcceptAsync() is extension method, so we can't use it without "this."
             Socket newSocket = await this.AcceptAsync().ConfigureAwait( continueOnCapturedContext: false );
-            State = SocketState.Accepted;
+            m_state = SocketState.Accepted;
 
             m_acceptedSockets.Enqueue( newSocket );
 
@@ -185,7 +187,7 @@ namespace LUC.DiscoveryService.Common
             }
             catch ( SocketException )
             {
-                if ( State >= SocketState.Closing )
+                if ( m_state >= SocketState.Closing )
                 {
                     throw new ObjectDisposedException( $"Socket {LocalEndPoint} is disposed" );
                 }
@@ -219,7 +221,7 @@ namespace LUC.DiscoveryService.Common
         {
             List<Byte> allMessage = new List<Byte>();
             Int32 availableDataToRead = socketToRead.Available;
-            State = SocketState.Reading;
+            m_state = SocketState.Reading;
 
             for ( Int32 countReadBytes = 1; ( countReadBytes > 0 ) && ( availableDataToRead > 0 ); availableDataToRead = socketToRead.Available )
             {
@@ -229,7 +231,7 @@ namespace LUC.DiscoveryService.Common
                 allMessage.AddRange( buffer );
             }
 
-            State = SocketState.AlreadyRead;
+            m_state = SocketState.AlreadyRead;
 
             //another thread can receive timeout and it will close receiveDone
             if ( !receiveDone.SafeWaitHandle.IsClosed )
@@ -264,7 +266,7 @@ namespace LUC.DiscoveryService.Common
         {
             VerifyWorkState();
 
-            State = SocketState.Connecting;
+            m_state = SocketState.Connecting;
 
             AutoResetEvent connectDone = new AutoResetEvent( initialState: false );
             BeginConnect( remoteEndPoint, ( asyncResult ) => ConnectCallback( asyncResult, connectDone ), state: this );
@@ -279,7 +281,7 @@ namespace LUC.DiscoveryService.Common
 
         protected void VerifyWorkState()
         {
-            if ( ( SocketState.Failed <= State ) && ( State <= SocketState.Closed ) )
+            if ( ( SocketState.Failed <= m_state ) && ( m_state <= SocketState.Closed ) )
             {
                 //Wanted to use idle socket
                 throw new SocketException( (Int32)SocketError.SocketError );
@@ -295,7 +297,7 @@ namespace LUC.DiscoveryService.Common
 
                 //Complete the connection
                 client.EndConnect( asyncResult );
-                State = SocketState.Connected;
+                m_state = SocketState.Connected;
                 Log.LogInfo( $"Socket connected to {client.RemoteEndPoint}" );
 
                 //another thread can receive timeout and it will close connectDone
@@ -356,7 +358,7 @@ namespace LUC.DiscoveryService.Common
             }
             catch ( SocketException )
             {
-                State = SocketState.Failed;
+                m_state = SocketState.Failed;
 
                 throw;
             }
@@ -390,7 +392,7 @@ namespace LUC.DiscoveryService.Common
 
             AutoResetEvent sendDone = new AutoResetEvent( initialState: false );
 
-            State = SocketState.SendingBytes;
+            m_state = SocketState.SendingBytes;
 
             //Begin sending the data to the remote device
             BeginSend(
@@ -412,11 +414,11 @@ namespace LUC.DiscoveryService.Common
 
         public void VerifyConnected()
         {
-            if ( State == SocketState.Closed )
+            if ( m_state == SocketState.Closed )
             {
                 throw new ObjectDisposedException( nameof( DiscoveryServiceSocket ) );
             }
-            else if ( !Connected || ( ( SocketState.Disconnected <= State ) && ( State <= SocketState.Closed ) ) )
+            else if ( !Connected || ( ( SocketState.Disconnected <= m_state ) && ( m_state <= SocketState.Closed ) ) )
             {
                 throw new SocketException( (Int32)SocketError.NotConnected );
             }
@@ -430,7 +432,7 @@ namespace LUC.DiscoveryService.Common
             //Complete sending the data to the remote device
             Int32 bytesSent = client.EndSend( asyncResult );
 
-            State = SocketState.SentBytes;
+            m_state = SocketState.SentBytes;
             Log.LogInfo( $"Sent {bytesSent} bytes to {client.RemoteEndPoint}" );
 
             //another thread can receive timoeut and it will close sendDone
@@ -463,7 +465,7 @@ namespace LUC.DiscoveryService.Common
 
             AutoResetEvent disconnectDone = new AutoResetEvent( initialState: false );
 
-            State = SocketState.Disconnecting;
+            m_state = SocketState.Disconnecting;
             BeginDisconnect(
                 reuseSocket,
                 ( asyncResult ) => DisconnectCallback( asyncResult, disconnectDone ),
@@ -483,7 +485,7 @@ namespace LUC.DiscoveryService.Common
             Socket socket = (Socket)asyncResult.AsyncState;
             socket.EndDisconnect( asyncResult );
 
-            State = SocketState.Disconnected;
+            m_state = SocketState.Disconnected;
 
             //another thread can receive timoeut and it will close disconnectDone
             if ( !disconnectDone.SafeWaitHandle.IsClosed )
@@ -498,18 +500,18 @@ namespace LUC.DiscoveryService.Common
 
         private void VerifyState( SocketState state )
         {
-            if ( State != state )
+            if ( m_state != state )
             {
-                Log.LogError( $"Session {RemoteEndPoint} should have SessionStateExpected {state} but was SessionState {State}" );
-                throw new InvalidOperationException( $"Expected state to be {state} but was {State}." );
+                Log.LogError( $"Session {RemoteEndPoint} should have SessionStateExpected {state} but was SessionState {m_state}" );
+                throw new InvalidOperationException( $"Expected state to be {state} but was {m_state}." );
             }
         }
 
         public new void Dispose()
         {
-            if ( ( SocketState.Created <= State ) && ( State <= SocketState.Disconnected ) )
+            if ( ( SocketState.Created <= m_state ) && ( m_state <= SocketState.Disconnected ) )
             {
-                State = SocketState.Closing;
+                m_state = SocketState.Closing;
 
                 foreach ( Socket acceptedSocket in m_acceptedSockets )
                 {
@@ -525,7 +527,7 @@ namespace LUC.DiscoveryService.Common
 
                 base.Dispose();
 
-                State = SocketState.Closed;
+                m_state = SocketState.Closed;
             }
             else
             {
