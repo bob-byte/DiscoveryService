@@ -13,14 +13,27 @@ namespace LUC.DiscoveryService.Kademlia
 {
     class BucketList : AbstractKademlia, IBucketList
     {
+        /// <summary>
+        /// <seealso cref="Kademlia.KBucket"/>s of our <seealso cref="Node"/>. First <see cref="Buckets"/> has 1 full bucket then 
+        /// it can be splited into more buckets during <see cref="AddContact(ref Contact)"/> method
+        /// </summary>
         public List<KBucket> Buckets { get; set; }
 
+        /// <summary>
+        /// <see cref="ID"/> of <seealso cref="OurContact"/>
+        /// </summary>
         [JsonIgnore]
         public KademliaId OurID { get; set; }
 
+        /// <summary>
+        /// IP-addresses, TCP port, and ID which we use to listen and send messages 
+        /// </summary>
         [JsonIgnore]
         public Contact OurContact { get; set; }
 
+        /// <summary>
+        /// Allow to delay eviction and add to pending list of distributed hash table (DHT)
+        /// </summary>
         [JsonIgnore]
         public IDht Dht { get; set; }
 
@@ -49,10 +62,13 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize the bucket list with our host ID and create a single bucket for the full ID range.
         /// </summary>
+        /// /// <param name="ourContact">
+        /// Contact of current peer
+        /// </param>
         public BucketList( Contact ourContact, UInt16 protocolVersion )
             : base( protocolVersion )
         {
-            this.OurContact = ourContact;
+            OurContact = ourContact;
             OurID = ourContact.KadId;
             Buckets = new List<KBucket>();
 
