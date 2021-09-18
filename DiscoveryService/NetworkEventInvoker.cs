@@ -99,6 +99,10 @@ namespace LUC.DiscoveryService
 
         private const Int32 MAX_DATAGRAM_SIZE = UdpMessage.MAX_LENGTH;
 
+        /// <summary>
+        /// Distributed hash tables for all version of protocols.
+        /// A key is the protocol version.
+        /// </summary>
         private static readonly ConcurrentDictionary<UInt16, Dht> s_dhts;
 
         /// <summary>

@@ -12,9 +12,9 @@ namespace LUC.DiscoveryService
         public static void Create(out String machineId)
         {
             DeviceIdBuilder machineIdBuilder = new DeviceIdBuilder();
-            DeviceIdBuilder macAddress = machineIdBuilder.AddMacAddress();
+            DeviceIdBuilder motherboard = machineIdBuilder.AddMotherboardSerialNumber();
 
-            machineId = $"{macAddress}-{Guid.NewGuid()}";
+            machineId = $"{motherboard}-{Guid.NewGuid()}";
         }
     }
 }
