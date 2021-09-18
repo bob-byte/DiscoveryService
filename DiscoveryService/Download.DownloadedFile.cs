@@ -1,5 +1,4 @@
 ﻿using LUC.DiscoveryService.Kademlia;
-using LUC.DVVSet;
 
 using Microsoft.Win32.SafeHandles;
 

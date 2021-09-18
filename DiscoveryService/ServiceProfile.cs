@@ -1,7 +1,6 @@
 ﻿using DeviceId;
 
 using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Kademlia;
 
 using System;
@@ -32,17 +31,10 @@ namespace LUC.DiscoveryService
         public ServiceProfile( Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion,
             ConcurrentDictionary<String, String> groupsSupported = null )
         {
-            DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
-            MachineId = deviceIdBuilder.MachineId();
+            LUC.DiscoveryService.MachineId.Create(out String machineId);
+            MachineId = machineId;
 
-            if ( groupsSupported != null )
-            {
-                GroupsSupported = groupsSupported;
-            }
-            else
-            {
-                GroupsSupported = new ConcurrentDictionary<String, String>();
-            }
+            GroupsSupported = groupsSupported ?? new ConcurrentDictionary<String, String>();
 
             ProtocolVersion = protocolVersion;
 

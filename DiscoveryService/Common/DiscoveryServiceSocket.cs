@@ -1,5 +1,4 @@
-﻿using LUC.DiscoveryService.Extensions;
-using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;

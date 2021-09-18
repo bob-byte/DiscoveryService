@@ -145,11 +145,7 @@ namespace LUC.DiscoveryService
                             fileStream.SetLength( bytesStreamCount );
                         }
 
-                        ExecutionDataflowBlockOptions parallelOptions = new ExecutionDataflowBlockOptions
-                        {
-                            MaxDegreeOfParallelism = Constants.MAX_THREADS,
-                            CancellationToken = cancellationToken
-                        };
+                        ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
 
                         //Producer/consumer pattern:
                         //current thread is producer and  produce contact and request to

@@ -5,7 +5,6 @@ using LUC.DiscoveryService.Kademlia.Exceptions;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.DiscoveryService.Messages.KademliaResponses;
-using LUC.DVVSet;
 using LUC.Interfaces;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Models;
@@ -242,5 +241,12 @@ namespace LUC.DiscoveryService
 
             return isRightInputParameters;
         }
+
+        private ExecutionDataflowBlockOptions ParallelOptions(CancellationToken cancellationToken) =>
+            new ExecutionDataflowBlockOptions
+            {
+                MaxDegreeOfParallelism = Constants.MAX_THREADS,
+                CancellationToken = cancellationToken
+            };
     }
 }

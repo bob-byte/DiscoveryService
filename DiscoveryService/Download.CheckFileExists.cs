@@ -18,6 +18,8 @@ namespace LUC.DiscoveryService
         {
             List<Contact> contactsWithFile = new List<Contact>();
 
+            ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
+
             ActionBlock<Contact> checkFileExistsInContact = new ActionBlock<Contact>( async ( contact ) =>
              {
                  Boolean isExistInContact = await IsFileExistsInContactAsync( sampleRequest, contact ).ConfigureAwait( continueOnCapturedContext: false );
@@ -28,7 +30,7 @@ namespace LUC.DiscoveryService
                  {
                      contactsWithFile.Add( contact );
                  }
-             } );
+             }, parallelOptions );
 
             for ( Int32 numContact = 0; numContact < onlineContacts.Count; numContact++ )
             {

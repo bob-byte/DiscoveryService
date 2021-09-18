@@ -1,5 +1,4 @@
 ﻿using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 

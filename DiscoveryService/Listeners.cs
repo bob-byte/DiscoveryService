@@ -9,7 +9,6 @@ using System.Numerics;
 using System.Threading.Tasks;
 
 using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Extensions;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;

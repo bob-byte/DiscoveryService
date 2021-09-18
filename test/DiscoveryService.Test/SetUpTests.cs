@@ -1,8 +1,4 @@
-﻿using Common.Logging;
-using Common.Logging.Configuration;
-using Common.Logging.Simple;
-
-using LUC.Interfaces;
+﻿using LUC.Interfaces;
 using LUC.Services.Implementation;
 
 using NUnit.Framework;
