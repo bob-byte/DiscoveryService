@@ -513,34 +513,6 @@ namespace LUC.DiscoveryService.Kademlia
              } );
         }
 
-        /// <summary>
-        /// Perform a lookup if the bucket containing the key has not been refreshed, 
-        /// otherwise just get the contacts the k closest contacts we know about.
-        /// </summary>
-        protected void StoreOnCloserContacts( KademliaId senderKey, KademliaId key, String val )
-        {
-            DateTime now = DateTime.UtcNow;
-
-            KBucket kbucket = Node.BucketList.GetKBucket( key );
-            List<Contact> closerContacts;
-
-            if ( ( now - kbucket.TimeStamp ).TotalMilliseconds < Constants.BUCKET_REFRESH_INTERVAL )
-            {
-                // Bucket has been refreshed recently, so don't do a lookup as we have the k closes contacts.
-                closerContacts = Node.BucketList.GetCloseContacts( key, Node.OurContact.KadId );
-            }
-            else
-            {
-                closerContacts = Router.Lookup( key, Router.RpcFindNodes ).contacts;
-            }
-
-            closerContacts.ForEach( closerContact =>
-             {
-                 RpcError error = m_clientKadOperation.Store( Node.OurContact, key, val, closerContact );
-                 HandleError( error, closerContact );
-             });
-        }
-
         protected void RefreshBucket( KBucket bucket )
         {
             bucket.Touch();
