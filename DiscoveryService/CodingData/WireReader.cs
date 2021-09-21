@@ -14,7 +14,7 @@ using System.Text;
 namespace LUC.DiscoveryService.CodingData
 {
     /// <summary>
-    /// Methods to read wire formatted data items.
+    /// Methods to read and wire formatted data items.
     /// </summary>
     class WireReader : Binary, IDisposable
     {

@@ -365,7 +365,7 @@ namespace LUC.DiscoveryService
                 // If recently received, then ignore.
                 Boolean isRecentlyReceived = /*!*/m_receivedMessages.TryAdd( message.MessageId );
 
-                Boolean isDsMessage = IsMessageFromDs( message.TcpPort );
+                Boolean isDsMessage = InPortRange( message.TcpPort );
 
 #if RECEIVE_TCP_FROM_OURSELF
                 Boolean isOwnMessage = ( message.ProtocolVersion == ProtocolVersion ) ||
@@ -422,9 +422,9 @@ namespace LUC.DiscoveryService
 
                 Message message = receiveResult.Message<Message>();
                 IPEndPoint ipEndPoint = receiveResult.AcceptedSocket.LocalEndPoint as IPEndPoint;
-                Boolean isMessageFromDs = IsMessageFromDs( ipEndPoint?.Port );
+                Boolean InPortRange = InPortRange( ipEndPoint?.Port );
 
-                if ( isMessageFromDs )
+                if ( InPortRange )
                 {
                     switch ( message.MessageOperation )
                     {

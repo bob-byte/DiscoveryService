@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace LUC.DiscoveryService.Common
 {
     /// <summary>
-    /// Contains basic info about a Service Discovery
+    /// Contains a basic info about a Service Discovery
     /// </summary>
     public abstract class AbstractService
     {
@@ -26,7 +26,7 @@ namespace LUC.DiscoveryService.Common
         public const UInt16 DEFAULT_PORT = 17500;
 
         /// <summary>
-        /// Count available ports which the LAN supports
+        /// The number of available ports on network interfaces
         /// </summary>
         public const UInt16 COUNT_AVAILABLE_PORTS = 10;
 
@@ -92,7 +92,7 @@ namespace LUC.DiscoveryService.Common
             get => m_runningTcpPort;
             protected set
             {
-                m_runningTcpPort = IsMessageFromDs( tcpPort: value ) ?
+                m_runningTcpPort = InPortRange( tcpPort: value ) ?
                     value : MinValueTcpPort;
             }
         }
@@ -110,7 +110,13 @@ namespace LUC.DiscoveryService.Common
         /// </value>
         public UInt16 ProtocolVersion { get; protected set; }
 
-        protected Boolean IsMessageFromDs( Int32? tcpPort ) =>
-            ( MinValueTcpPort <= tcpPort ) && ( tcpPort <= MaxValueTcpPort );
+        /// <summary>
+        ///   Returns true if provided port value is in range between MinValueTcpPort and MaxValueTcpPort.
+        /// </summary>
+        /// <value>
+        ///   Integer.
+        /// </value>
+        protected Boolean InPortRange( Int32? tcpPort ) =>
+            ( MinValueTcpPort >= tcpPort ) && ( tcpPort <= MaxValueTcpPort );
     }
 }
