@@ -1,13 +1,16 @@
-﻿using LUC.Interfaces;
+﻿using LUC.DiscoveryService.Test.Factories;
+using LUC.Interfaces;
 using LUC.Services.Implementation;
 using NUnit.Framework;
 
 namespace LUC.DiscoveryService.Test
 {
     [SetUpFixture]
-    static class SetUpTests
+    static class SetupTests
     {
         internal static ILoggingService LoggingService { get; private set; }
+
+        public static DiscoveryService DiscoveryService { get; private set; }
 
         [OneTimeSetUp]
         public static void AssemblyInitialize()
@@ -17,6 +20,14 @@ namespace LUC.DiscoveryService.Test
             {
                 SettingsService = new SettingsService()
             };
+
+            DiscoveryService = DiscoveryServiceFactory.DefaultInitialized();
+        }
+
+        [OneTimeTearDown]
+        public static void AssemblyCleanup()
+        {
+            DiscoveryService?.Stop();
         }
     }
 }

@@ -81,13 +81,13 @@ namespace LUC.DiscoveryService.Test
             ApiClient.ApiClient apiClient = new ApiClient.ApiClient( s_settingsService.CurrentUserProvider, SetUpTests.LoggingService );
             apiClient.SyncingObjectsList = new SyncingObjectsList();
 
-            String Login = "integration1";
-            String Password = "integration1";
+            String login = "integration1";
+            String password = "integration1";
 
             LoginResponse loginResponse = null;
             do
             {
-                loginResponse = await apiClient.LoginAsync( Login, Password ).ConfigureAwait( continueOnCapturedContext: false );
+                loginResponse = await apiClient.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
 
                 if ( !loginResponse.IsSuccess )
                 {
@@ -155,7 +155,7 @@ namespace LUC.DiscoveryService.Test
                         Boolean isTesterOnlyInNetwork = NormalResposeFromUserAtClosedQuestion( closedQuestion: "Are you only on the local network?" );
                         if ( ( contact == null ) || ( !isTesterOnlyInNetwork ) )
                         {
-                            //because GetRemoteContact will not send multicats
+                            //in order to GetRemoteContact can send multicasts messages
                             contact = null;
 
                             GetRemoteContact( s_discoveryService, isTesterOnlyInNetwork, ref contact );
@@ -510,7 +510,7 @@ namespace LUC.DiscoveryService.Test
             IPAddress serverIpAddress = null;
             do
             {
-                Console.Write( "Input IP-address of a server to connect: " );
+                Console.Write( "Input IP-address of a Discovery Service TCP server to connect: " );
 
                 try
                 {

@@ -1,0 +1,13 @@
+version: '3.4'
+
+services:
+  discoveryservice.test:
+    image: ${DOCKER_REGISTRY-}discoveryservicetest
+    build:
+      context: .\test\DiscoveryService.Test
+      dockerfile: Dockerfile
+
+networks:
+  dsApi:
+    external:
+      name: dsApi
