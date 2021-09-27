@@ -92,8 +92,8 @@ namespace LUC.DiscoveryService.Common
             get => m_runningTcpPort;
             protected set
             {
-                m_runningTcpPort = InPortRange( tcpPort: value ) ?
-                    value : MinValueTcpPort;
+                Boolean isInPortRange = IsInPortRange( tcpPort: value );
+                m_runningTcpPort = isInPortRange ? value : MinValueTcpPort;
             }
         }
 
@@ -116,7 +116,7 @@ namespace LUC.DiscoveryService.Common
         /// <value>
         ///   Integer.
         /// </value>
-        protected Boolean InPortRange( Int32? tcpPort ) =>
-            ( MinValueTcpPort >= tcpPort ) && ( tcpPort <= MaxValueTcpPort );
+        protected Boolean IsInPortRange( Int32? tcpPort ) =>
+            ( MinValueTcpPort <= tcpPort ) && ( tcpPort <= MaxValueTcpPort );
     }
 }
