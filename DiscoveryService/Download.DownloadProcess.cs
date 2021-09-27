@@ -306,7 +306,8 @@ namespace LUC.DiscoveryService
                 request.ChunkRange.TotalPerContact = partBytesOfContact;
                 lastPartBytesOfContact = request.ChunkRange.Start + request.ChunkRange.TotalPerContact;
 
-                request.ChunkRange.NumsUndownloadedChunk.AddRange( NumsChunk( request.ChunkRange.Start, lastPartBytesOfContact, maxChunkSize, ref numChunk ) );
+                List<Int32> numsUndownloadedChunk = NumsChunk( request.ChunkRange.Start, lastPartBytesOfContact, maxChunkSize, ref numChunk );
+                request.ChunkRange.NumsUndownloadedChunk.AddRange( numsUndownloadedChunk );
 
                 contactsAndRequests.TryAdd( contactsWithFile[ (Int32)numContact ], request );
             }
@@ -314,11 +315,11 @@ namespace LUC.DiscoveryService
             return contactsAndRequests;
         }
 
-        private List<Int32> NumsChunk( UInt64 start, UInt64 lastPartBytesOfContact, UInt32 maxChunkSize, ref Int32 lastNumChunk )
+        private List<Int32> NumsChunk( UInt64 start, UInt64 totalBytesPerContact, UInt32 maxChunkSize, ref Int32 lastNumChunk )
         {
             List<Int32> numsChunk = new List<Int32>();
 
-            for ( UInt64 chunk = start; chunk < lastPartBytesOfContact; chunk += maxChunkSize, lastNumChunk++ )
+            for ( UInt64 chunk = start; chunk < totalBytesPerContact; chunk += maxChunkSize, lastNumChunk++ )
             {
                 numsChunk.Add( lastNumChunk );
             }
@@ -388,13 +389,17 @@ namespace LUC.DiscoveryService
                     {
                         request = oldRequests[ numRequest ];
 
+                        //get before update, because TotalPerContact will be decreased
                         wasDownloadedAllBytes = request.WasDownloadedAllBytes;
-                        request.ChunkRange.TotalPerContact -= request.CountDownloadedBytes;
+                        request.Update();
 
                         if ( wasDownloadedAllBytes )
                         {
                             numRequest++;
                             request = oldRequests[ numRequest ];
+
+                            wasDownloadedAllBytes = request.WasDownloadedAllBytes;
+                            request.Update();
                         }
                     }
                     while ( wasDownloadedAllBytes );

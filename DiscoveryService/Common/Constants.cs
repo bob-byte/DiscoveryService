@@ -29,7 +29,7 @@ namespace LUC.DiscoveryService.Common
         public const Int32 EVICTION_LIMIT = 3;
 #else
         public const int ALPHA = 3;
-        public const double BUCKET_REFRESH_INTERVAL = 30 * 60 * 1000;       // every hour.
+        public const double BUCKET_REFRESH_INTERVAL = 30 * 60 * 1000;       // every half-hour.
         public const double KEY_VALUE_REPUBLISH_INTERVAL = 60 * 60 * 1000;       // every hour.
         public const double KEY_VALUE_EXPIRE_INTERVAL = 60 * 60 * 1000;       // every hour.
         public const double ORIGINATOR_REPUBLISH_INTERVAL = 24 * 60 * 60 * 1000;       // every 24 hours in milliseconds.
@@ -49,7 +49,7 @@ namespace LUC.DiscoveryService.Common
         /// <value>
         /// <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ReceiveTimeout"/>
         /// </value>
-        public static readonly TimeSpan TimeWaitReturnToPool = ConnectTimeout + SendTimeout + ConnectTimeout + SendTimeout + ReceiveTimeout;
+        public static readonly TimeSpan TimeWaitReturnToPool = ConnectTimeout + ReceiveTimeout + SendTimeout + ConnectTimeout + SendTimeout + ReceiveTimeout;
 
         public static readonly TimeSpan TimeCheckDataToRead = TimeSpan.FromSeconds( 1 );
 
@@ -58,7 +58,6 @@ namespace LUC.DiscoveryService.Common
 
         public static readonly IPEndPoint MulticastEndpointIp4;
         public static readonly IPEndPoint MulticastEndpointIp6;
-
 
         public const String LAST_SEEN_FORMAT = "yyyy-MM-dd HH:mm:ss";
 

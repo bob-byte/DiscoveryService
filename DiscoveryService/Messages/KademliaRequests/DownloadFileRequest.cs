@@ -6,6 +6,7 @@ using LUC.DiscoveryService.Messages.KademliaResponses;
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -25,6 +26,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             DefaultInit();
         }
+
+        public ConcurrentDictionary<Int32, ChunkRange> DictChunksRange { get; set; }
 
         public ChunkRange ChunkRange { get; set; }
 
@@ -94,13 +97,22 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         /// <summary>
         /// Also it removes first chunk from Range.NumsUndownloadedChunk
         /// </summary>
-        public async Task<(DownloadFileResponse, RpcError)> ResultAsyncWithCountDownloadedBytesUpdate( Contact remoteContact,
+        public async Task<(DownloadFileResponse response, RpcError rpcError)> ResultAsyncWithCountDownloadedBytesUpdate( Contact remoteContact,
             IOBehavior ioBehavior, UInt16 protocolVersion )
         {
-            (DownloadFileResponse downloadResponse, RpcError rpcError) = await ResultAsync<DownloadFileResponse>( remoteContact,
+            Boolean duplicate = DictChunksRange.Any( c => c.Value.Start == ChunkRange.Start || c.Value.End == ChunkRange.End );
+            if ( duplicate )
+            {
+                //range is being downloaded by another thread
+                return (response: null, rpcError: null);
+            }
+
+            DictChunksRange.TryAdd(ChunkRange.NumsUndownloadedChunk.First(), ChunkRange );
+
+            (DownloadFileResponse downloadResponse, RpcError error) = await ResultAsync<DownloadFileResponse>( remoteContact,
             ioBehavior, protocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
-            if ( ( !rpcError.HasError ) &&
+            if ( ( !error.HasError ) &&
                ( downloadResponse?.Chunk?.Length > 0 ) &&
                ( downloadResponse.FileVersion == FileVersion ) )
             {
@@ -113,7 +125,14 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 }
             }
 
-            return (downloadResponse, rpcError);
+            return (downloadResponse, error);
+        }
+
+        public void Update()
+        {
+            DictChunksRange.Clear();
+            
+            ChunkRange.TotalPerContact -= CountDownloadedBytes;
         }
 
         public Object Clone()
@@ -128,6 +147,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         {
             MessageOperation = MessageOperation.DownloadFile;
             CountDownloadedBytes = 0;
+
+            DictChunksRange = new ConcurrentDictionary<Int32, ChunkRange>();
         }
     }
 }

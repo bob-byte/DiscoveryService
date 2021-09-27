@@ -246,7 +246,10 @@ namespace LUC.DiscoveryService
             new ExecutionDataflowBlockOptions
             {
                 MaxDegreeOfParallelism = Constants.MAX_THREADS,
-                CancellationToken = cancellationToken
+                CancellationToken = cancellationToken,
+                BoundedCapacity = DataflowBlockOptions.Unbounded,
+                MaxMessagesPerTask = 1,
+                EnsureOrdered = false
             };
     }
 }
