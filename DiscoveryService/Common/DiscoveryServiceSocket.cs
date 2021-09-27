@@ -17,7 +17,8 @@ using System.Threading.Tasks;
 namespace LUC.DiscoveryService.Common
 {
     /// <summary>
-    /// New socket methods are marked <a href="Ds"/> in the front of the name, so only there <see cref="m_state"/> will be changed, except <see cref="Dispose"/> (there also will be changed) in order to you can easily use this object in <a href="using"/> statement
+    /// New socket methods are marked <a href="Ds"/> in the front of the name, so only there <see cref="m_state"/> will be changed, 
+    /// except <see cref="Dispose"/> (there also will be changed) in order to you can easily use this object in <a href="using"/> statement
     /// </summary>
     public class DiscoveryServiceSocket : Socket
     {

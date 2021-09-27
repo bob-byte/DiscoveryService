@@ -44,7 +44,8 @@ namespace LUC.DiscoveryService.Common
         public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromMinutes( 3 );
 
         /// <summary>
-        /// it's max of execution Kademlia operation (first we connect to new contact, then if it is failed, we will be failed to send, then we will try to connect and send again. If we send actually, we will try to receive 
+        /// it's max of execution Kademlia operation (first we connect to new contact, then if it is failed, we will be failed to send, 
+        /// then we will try to connect and send again. If we send actually, we will try to receive 
         /// </summary>
         /// <value>
         /// <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ReceiveTimeout"/>
