@@ -88,20 +88,6 @@ namespace LUC.DiscoveryService.Messages
             }
         }
 
-        /// <inheritdoc/>
-        public override String ToString()
-        {
-            using ( StringWriter writer = new StringWriter() )
-            {
-                writer.WriteLine( "Multicast message:" );
-                writer.WriteLine( $"{base.ToString()};" );
-                writer.WriteLine( $"TCP port = {TcpPort};\n" +
-                                 $"MachineId = {MachineId}" );
-
-                return writer.ToString();
-            }
-        }
-
         protected override void DefaultInit( params Object[] args ) => 
             MessageOperation = MessageOperation.Multicast;
     }

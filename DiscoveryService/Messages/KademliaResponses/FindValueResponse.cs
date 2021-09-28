@@ -96,27 +96,6 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             }
         }
 
-        public override String ToString()
-        {
-            using ( StringWriter writer = new StringWriter() )
-            {
-                writer.WriteLine( $"{GetType().Name}:\n" +
-                                 $"{PropertyWithValue( nameof( RandomID ), RandomID )};\n" +
-                                 $"{PropertyWithValue( nameof( ValueInResponsingPeer ), ValueInResponsingPeer )};\n" +
-                                 $"{nameof( CloseContacts )}:" );
-
-                if ( CloseContacts != null )
-                {
-                    foreach ( Contact closeContact in CloseContacts )
-                    {
-                        writer.WriteLine( $"Close contact: {closeContact}\n" );
-                    }
-                }
-
-                return writer.ToString();
-            }
-        }
-
         protected override void DefaultInit( params Object[] args )
         {
             ;//without setting MessageOperation, because it is depand on other properties (see method FindValueResponse.Send)

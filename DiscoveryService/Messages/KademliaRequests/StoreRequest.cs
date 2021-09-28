@@ -67,22 +67,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
         }
 
-        public override String ToString()
-        {
-            using ( StringWriter writer = new StringWriter() )
-            {
-                writer.WriteLine( $"{GetType().Name}:\n" +
-                                 $"{PropertyWithValue( nameof( RandomID ), RandomID )};\n" +
-                                 $"{PropertyWithValue( nameof( Sender ), Sender )};\n" +
-                                 $"{PropertyWithValue( nameof( KeyToStore ), KeyToStore )};\n" +
-                                 $"{PropertyWithValue( nameof( Value ), Value )};\n" +
-                                 $"{PropertyWithValue( nameof( IsCached ), IsCached )};\n" +
-                                 $"{PropertyWithValue( nameof( ExpirationTimeSec ), ExpirationTimeSec )}" );
-
-                return writer.ToString();
-            }
-        }
-
         protected override void DefaultInit( params Object[] args ) => 
             MessageOperation = MessageOperation.Store;
     }

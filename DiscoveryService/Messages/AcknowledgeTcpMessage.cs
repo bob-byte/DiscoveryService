@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Kademlia;
 
@@ -49,8 +50,6 @@ namespace LUC.DiscoveryService.Messages
         }
 
         public BigInteger IdOfSendingContact { get; set; }
-
-        public IEnumerable<String> IpAddressesOfSendingContact { get; set; }
 
         /// <summary>
         /// Names of groups
@@ -135,31 +134,8 @@ namespace LUC.DiscoveryService.Messages
             }
         }
 
-        public override String ToString()
-        {
-            using ( StringWriter writer = new StringWriter() )
-            {
-                writer.WriteLine( $"TCP message:" );
-                writer.WriteLine( $"{base.ToString()};" );
-                writer.WriteLine( $"Message operation: {MessageOperation};\n" +
-                                   $"TCP port = {TcpPort};" );
-
-                writer.WriteLine( $"{nameof( GroupIds )}:" );
-                for ( Int32 id = 0; id < GroupIds?.Count; id++ )
-                {
-                    if ( id == GroupIds.Count - 1 )
-                    {
-                        writer.WriteLine( $"{GroupIds[ id ]}" );
-                    }
-                    else
-                    {
-                        writer.WriteLine( $"{GroupIds[ id ]};" );
-                    }
-                }
-
-                return writer.ToString();
-            }
-        }
+        //public override String ToString() =>
+        //    Display.ObjectToString( objectToConvert: this );
 
         protected override void DefaultInit( params Object[] args )
         {

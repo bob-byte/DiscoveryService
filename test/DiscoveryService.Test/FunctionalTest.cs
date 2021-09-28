@@ -72,7 +72,7 @@ namespace LUC.DiscoveryService.Test
         /// </remarks>
         public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
 
-        static async Task Main( String[] args )
+        static async Task Main()
         {
             SetUpTests.AssemblyInitialize();
 

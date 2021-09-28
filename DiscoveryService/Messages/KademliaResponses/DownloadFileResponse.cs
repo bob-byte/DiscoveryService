@@ -22,7 +22,8 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             DefaultInit();
         }
 
-        public Byte[] Chunk { get; set; }
+        //It is internal to not show all bytes in log(see method Display.ObjectToString)
+        internal Byte[] Chunk { get; set; }
 
         public override void Write( WireWriter writer )
         {

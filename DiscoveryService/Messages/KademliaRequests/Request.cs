@@ -43,7 +43,9 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
         public Request()
         {
+            //We don't use DefaultInit, because it can be overridden in child classes
             RandomID = KademliaId.RandomID.Value;
+            IsReceivedLastRightResp = false;
         }
 
         public BigInteger RandomID { get; private set; }
@@ -52,7 +54,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         /// <summary>
         /// Returns whether received right response to <a href="last"/> request
         /// </summary>
-        public Boolean IsReceivedLastRightResp { get; private set; } = false;
+        //It is internal to not show all bytes in log(see method Display.ObjectToString)
+        internal Boolean IsReceivedLastRightResp { get; private set; }
 
         /// <inheritdoc/>
         public override IWireSerialiser Read( WireReader reader )
@@ -214,6 +217,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
             return (isTimeoutSocketOp, nodeError, response);
         }
+
+
 
         private async Task Wait( IOBehavior ioBehavior, TimeSpan timeToWait )
         {

@@ -52,6 +52,7 @@
     <Compile Include="Common\Display.cs" />
     <Compile Include="Common\IpAddressFilter.cs" />
     <Compile Include="Common\IpAddressFilter.SockAddrIn6.cs" />
+    <Compile Include="Common\ForcingConcurrencyError.cs" />
     <Compile Include="UdpSenders.cs" />
     <Compile Include="Download.CheckFileExists.cs" />
     <Compile Include="Download.cs" />

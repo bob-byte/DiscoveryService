@@ -20,17 +20,6 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             DefaultInit();
         }
 
-        public override String ToString()
-        {
-            using ( StringWriter writer = new StringWriter() )
-            {
-                writer.WriteLine( $"{GetType().Name}:\n" +
-                             $"{PropertyWithValue( nameof( RandomID ), RandomID )}" );
-
-                return writer.ToString();
-            }
-        }
-
         protected override void DefaultInit( params Object[] args ) => 
             MessageOperation = MessageOperation.PingResponse;
     }

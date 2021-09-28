@@ -27,8 +27,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             DefaultInit();
         }
 
-        public ConcurrentDictionary<Int32, ChunkRange> DictChunksRange { get; set; }
-
         public ChunkRange ChunkRange { get; set; }
 
         public UInt64 CountDownloadedBytes { get; set; }
@@ -73,42 +71,12 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return this;
         }
 
-        public override String ToString()
-        {
-            StringBuilder stringBuilder = new StringBuilder( base.ToString() );
-
-            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( ChunkRange ), ChunkRange )};\n" );
-            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( FileVersion ), FileVersion )};\n" );
-            stringBuilder.Append( $"{Display.PropertyWithValue( nameof( CountDownloadedBytes ), CountDownloadedBytes )};\n" );
-
-            stringBuilder.Append( $"{nameof( ChunkRange.NumsUndownloadedChunk )}: " );
-
-            foreach ( Int32 numChunk in ChunkRange.NumsUndownloadedChunk )
-            {
-                stringBuilder.Append( $"{numChunk}," );
-            }
-
-            stringBuilder.Remove( startIndex: stringBuilder.Length - 1, length: 1 );
-            stringBuilder.Append( "\n" );
-
-            return stringBuilder.ToString();
-        }
-
         /// <summary>
         /// Also it removes first chunk from Range.NumsUndownloadedChunk
         /// </summary>
         public async Task<(DownloadFileResponse response, RpcError rpcError)> ResultAsyncWithCountDownloadedBytesUpdate( Contact remoteContact,
             IOBehavior ioBehavior, UInt16 protocolVersion )
         {
-            Boolean duplicate = DictChunksRange.Any( c => c.Value.Start == ChunkRange.Start || c.Value.End == ChunkRange.End );
-            if ( duplicate )
-            {
-                //range is being downloaded by another thread
-                return (response: null, rpcError: null);
-            }
-
-            DictChunksRange.TryAdd(ChunkRange.NumsUndownloadedChunk.First(), ChunkRange );
-
             (DownloadFileResponse downloadResponse, RpcError error) = await ResultAsync<DownloadFileResponse>( remoteContact,
             ioBehavior, protocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
@@ -128,12 +96,11 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return (downloadResponse, error);
         }
 
-        public void Update()
-        {
-            DictChunksRange.Clear();
-            
+        /// <summary>
+        /// Use it after downloaded all bytes per <see cref="Contact"/>
+        /// </summary>
+        public void Update() =>
             ChunkRange.TotalPerContact -= CountDownloadedBytes;
-        }
 
         public Object Clone()
         {
@@ -145,10 +112,10 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
         protected override void DefaultInit( params Object[] args )
         {
+            base.DefaultInit();
+
             MessageOperation = MessageOperation.DownloadFile;
             CountDownloadedBytes = 0;
-
-            DictChunksRange = new ConcurrentDictionary<Int32, ChunkRange>();
         }
     }
 }

@@ -49,17 +49,5 @@ namespace LUC.DiscoveryService.Messages
         ///   Supported version of protocol of the remote application.
         /// </summary>
         public UInt16 ProtocolVersion { get; set; }
-
-        public override String ToString()
-        {
-            using ( StringWriter writer = new StringWriter() )
-            {
-                writer.Write( $"MessageId = {MessageId};\n" +
-                             $"MachineId = {MachineId}\n" +
-                             $"Protocol version = {ProtocolVersion}" );
-
-                return writer.ToString();
-            }
-        }
     }
 }

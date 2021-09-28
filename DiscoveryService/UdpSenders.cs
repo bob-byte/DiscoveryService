@@ -118,8 +118,10 @@ namespace LUC.DiscoveryService
                 {
                     IPEndPoint endpoint = sender.Key.AddressFamily == AddressFamily.InterNetwork ?
                         Constants.MulticastEndpointIp4 : Constants.MulticastEndpointIp6;
-                    await sender.Value.SendAsync( message, message.Length, endpoint )
-                        .ConfigureAwait( continueOnCapturedContext: false );
+                    await sender.Value.SendAsync( message, message.Length, endpoint ).
+                        ConfigureAwait( continueOnCapturedContext: false );
+
+                    break;
                 }
                 catch ( SocketException e )
                 {

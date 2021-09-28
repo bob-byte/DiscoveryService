@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -90,7 +91,7 @@ namespace LUC.DiscoveryService.Test
         }
 
         [Test]
-        public void SendTcpMessageAsync_GetTcpMessage_NotFailed()
+        public async Task SendTcpMessageAsync_GetTcpMessage_NotFailed()
         {
             ManualResetEvent done = new ManualResetEvent( false );
             m_discoveryService.Start();
@@ -101,9 +102,10 @@ namespace LUC.DiscoveryService.Test
             {
                 RemoteEndPoint = new IPEndPoint( availableIps[ 1 ], m_discoveryService.RunningTcpPort )
             };
+
             eventArgs.SetMessage( new UdpMessage( messageId: 123, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null ) );
 
-            m_discoveryService.SendTcpMessageAsync( this, eventArgs ).Wait();
+            await m_discoveryService.SendTcpMessageAsync( sender: this, eventArgs ).ConfigureAwait(continueOnCapturedContext: false);
 
             Assert.IsTrue( done.WaitOne( TimeSpan.FromSeconds( value: 10 ) ) );
         }

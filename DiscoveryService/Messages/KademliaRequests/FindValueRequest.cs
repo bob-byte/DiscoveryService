@@ -56,19 +56,6 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
         }
 
-        public override String ToString()
-        {
-            using ( StringWriter writer = new StringWriter() )
-            {
-                writer.WriteLine( $"{GetType().Name}:\n" +
-                                 $"{PropertyWithValue( nameof( RandomID ), RandomID )};\n" +
-                                 $"{PropertyWithValue( nameof( Sender ), Sender )};\n" +
-                                 $"{PropertyWithValue( nameof( KeyToFindCloseContacts ), KeyToFindCloseContacts )}" );
-
-                return writer.ToString();
-            }
-        }
-
         protected override void DefaultInit( params Object[] args ) => 
             MessageOperation = MessageOperation.FindValue;
     }

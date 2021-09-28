@@ -1,4 +1,5 @@
-﻿
+﻿#define TEST_CONCURRENCY
+
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -45,6 +46,8 @@ namespace LUC.DiscoveryService
 
         private readonly Dht m_distributedHashTable;
 
+        private readonly ForcingConcurrencyError m_forceConcurrencyError;
+
         private readonly NetworkEventHandler m_networkEventHandler;
 
         private readonly ConnectionPool m_connectionPool;
@@ -68,6 +71,10 @@ namespace LUC.DiscoveryService
             }
             else
             {
+#if TEST_CONCURRENCY
+                m_forceConcurrencyError = new ForcingConcurrencyError();
+#endif
+
                 GroupsSupported = profile.GroupsSupported;
 
                 UseIpv4 = profile.UseIpv4;
@@ -76,7 +83,9 @@ namespace LUC.DiscoveryService
                 MachineId = profile.MachineId;
                 m_connectionPool = ConnectionPool.Instance();
 
-                InitService();
+                InitNetworkEventInvoker();
+
+                //It should be initialized after previous method
                 m_distributedHashTable = NetworkEventInvoker.DistributedHashTable( ProtocolVersion );
             }
         }
@@ -135,7 +144,7 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public NetworkEventInvoker NetworkEventInvoker { get; private set; }
 
-        private void InitService()
+        private void InitNetworkEventInvoker()
         {
             NetworkEventInvoker = new NetworkEventInvoker( MachineId, UseIpv4, UseIpv6, ProtocolVersion );
 
@@ -162,7 +171,10 @@ namespace LUC.DiscoveryService
 
             if ( ( udpMessage != null ) && ( eventArgs?.RemoteEndPoint is IPEndPoint ipEndPoint ) )
             {
+                //true, because we send AcknowledgeTcpMessage only after receving UdpMessage and we cannot get it from different network
                 Boolean isTheSameNetwork = true;
+
+                ForcingConcurrencyError.TryForce();
 
 #if RECEIVE_TCP_FROM_OURSELF
                 isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( ipEndPoint.Address );
@@ -182,6 +194,7 @@ namespace LUC.DiscoveryService
                         groupsIds: GroupsSupported?.Keys?.ToList() 
                     );
 
+                    ForcingConcurrencyError.TryForce();
                     Byte[] bytesToSend = tcpMessage.ToByteArray();
 
                     IPEndPoint remoteEndPoint = new IPEndPoint( ipEndPoint.Address, (Int32)udpMessage.TcpPort );
@@ -191,8 +204,10 @@ namespace LUC.DiscoveryService
                         client = await m_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
                             IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
 
+                        ForcingConcurrencyError.TryForce();
                         client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,
                             Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
+                        ForcingConcurrencyError.TryForce();
                     }
                     finally
                     {
@@ -235,7 +250,7 @@ namespace LUC.DiscoveryService
             {
                 if ( NetworkEventInvoker == null )
                 {
-                    InitService();
+                    InitNetworkEventInvoker();
                 }
                 NetworkEventInvoker.Start();
 
@@ -274,6 +289,8 @@ namespace LUC.DiscoveryService
 
                 m_isDiscoveryServiceStarted = false;
             }
+
+            m_forceConcurrencyError?.Dispose();
         }
     }
 }

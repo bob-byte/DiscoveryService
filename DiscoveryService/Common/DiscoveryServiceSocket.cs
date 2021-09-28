@@ -363,7 +363,14 @@ namespace LUC.DiscoveryService.Common
                 throw;
             }
 
-            return isReceived ? taskReadBytes.GetAwaiter().GetResult() : throw new TimeoutException();
+            if ( isReceived )
+            {
+                return taskReadBytes.GetAwaiter().GetResult();
+            }
+            else
+            {
+                throw new TimeoutException();
+            }
         }
 
         public async Task DsSendAsync( Byte[] bytesToSend, TimeSpan timeoutToSend, IOBehavior ioBehavior )

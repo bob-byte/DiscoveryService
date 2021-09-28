@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Interfaces;
 
 using System;
@@ -152,7 +153,7 @@ namespace LUC.DiscoveryService.Messages
         }
 
         public override String ToString() =>
-            $"{GetType().Name}:\n";
+            Display.ObjectToString(objectToConvert: this);
 
         protected virtual void DefaultInit( params Object[] args )
         {
