@@ -30,7 +30,7 @@ namespace LUC.DiscoveryService.Common
                 async () =>
                 {
                     Int32 rndSleepTime = RndSleepTime();
-                    await Task.Delay( rndSleepTime );
+                    await Task.Delay( rndSleepTime ).ConfigureAwait(continueOnCapturedContext: false);
                 },
 
                 () => Thread.Yield(),
