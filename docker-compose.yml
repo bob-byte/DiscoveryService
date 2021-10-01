@@ -6,21 +6,21 @@ services:
     build:
       context: .\test\DiscoveryService.Test
       dockerfile: Dockerfile
-      network: dsApi
+    networks: [dsApi]
 
   discoveryservice.test2:
    image: ${DOCKER_REGISTRY-}discoveryservicetest
    build:
      context: .\test\DiscoveryService.Test
      dockerfile: Dockerfile
-     network: dsApi
+   networks: [dsApi]
 
   discoveryservice.test3:
    image: ${DOCKER_REGISTRY-}discoveryservicetest
    build:
      context: .\test\DiscoveryService.Test
      dockerfile: Dockerfile
-     network: dsApi
+   networks: [dsApi]
 
 networks:
   dsApi:

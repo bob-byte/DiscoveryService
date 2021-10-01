@@ -80,15 +80,18 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             //maybe body of set method should be placed in a lock
             set
             {
-                m_isInPool = value;
+                lock(ReturnedInPool)
+                {
+                    m_isInPool = value;
 
-                if ( ( !m_isInPool ) && ( ReturnedInPool.CurrentCount == 1 ) )
-                {
-                    ReturnedInPool.Wait( millisecondsTimeout: 0 );
-                }
-                else if ( ( m_isInPool ) && ( ReturnedInPool.CurrentCount == 0 ) )
-                {
-                    ReturnedInPool.Release();
+                    if ( ( !m_isInPool ) && ( ReturnedInPool.CurrentCount == 1 ) )
+                    {
+                        ReturnedInPool.Wait( millisecondsTimeout: 0 );
+                    }
+                    else if ( ( m_isInPool ) && ( ReturnedInPool.CurrentCount == 0 ) )
+                    {
+                        ReturnedInPool.Release();
+                    }
                 }
             }
         }
@@ -148,20 +151,13 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
             //we shouldn't check IsInPool because ConnectionPool.semaphoreSocket.Release needed to be called, 
             //because after long time ConnectionPool.semaphoreSocket.CurrentCount can be 0 without this, that will cause the recovering sockets without necessity
-            else if ( ( !Pool.ConnectionSettings.ConnectionReset ) || ( Pool.ConnectionSettings.DeferConnectionReset ) )
-            {
-                Boolean isReturned = Pool.ReturnedToPool( Id );
-                IsInPool = isReturned;
-                return isReturned;
-            }
-            else
-            {
-                BackgroundConnectionResetHelper.AddSocket( this );
-                return false;
-            }
+            Boolean isReturned = Pool.ReturnedToPool( Id );
+            IsInPool = isReturned;
+
+            return isReturned;
         }
 
-        public async Task<Boolean> TryResetConnectionAsync( Boolean returnToPool, Boolean reuseSocket, IOBehavior ioBehavior )
+        public async Task<Boolean> TryRecoverConnectionAsync( Boolean returnToPool, Boolean reuseSocket, IOBehavior ioBehavior )
         {
             VerifyWorkState();
 
@@ -174,17 +170,38 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             {
                 ;//do nothing
             }
-
-            await DsConnectAsync( Id, Constants.ConnectTimeout, ioBehavior ).ConfigureAwait( continueOnCapturedContext: false );
-
-            if ( ( returnToPool ) && ( Pool != null ) )
+            catch(TimeoutException)
             {
-                Pool.ReturnedToPool( RemoteEndPoint );
+                ;//do nothing
             }
 
-            //because if we cannot to disconnect? it will occur exception in DiscoveryServiceSocket.DsDisconnectAsync
-            Boolean isResetConnection = true;
-            return isResetConnection;
+            ConnectionPoolSocket newSocket = new ConnectionPoolSocket( SocketType, ProtocolType, Id, Pool, Log );
+            Boolean isRecoveredConnection = false;
+
+            try
+            {
+                await newSocket.DsConnectAsync( Id, Constants.ConnectTimeout, ioBehavior ).ConfigureAwait( false );
+
+                //if we don't recovered connection, we will have an exception
+                isRecoveredConnection = true;
+            }
+            catch ( SocketException )
+            {
+                ;//do nothing
+            }
+            catch ( TimeoutException )
+            {
+                ;//do nothing
+            }
+            finally
+            {
+                if ( ( returnToPool ) && ( Pool != null ) )
+                {
+                    newSocket.ReturnedToPool();
+                }
+            }
+
+            return isRecoveredConnection;
         }
     }
 }

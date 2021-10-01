@@ -62,7 +62,7 @@ namespace LUC.DiscoveryService
             IOBehavior = ioBehavior;
         }
 
-        public IOBehavior IOBehavior { get; set; }
+        public IOBehavior IOBehavior { get; }
 
         public ILoggingService LoggingService { get; set; }
 
@@ -70,7 +70,7 @@ namespace LUC.DiscoveryService
         /// Downloads a file of any size
         /// </summary>
         /// <param name="localFolderPath">
-        /// Full path to file (except file name) which will contain file <paramref name="localOriginalName"/>
+        /// Full path to file (except file name) where you want to download it
         /// </param>
         /// <param name="bucketName">
         /// Group ID, which current user and remote contacts belong to. The last ones send bytes of the file to download

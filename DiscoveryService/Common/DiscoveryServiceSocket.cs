@@ -419,6 +419,7 @@ namespace LUC.DiscoveryService.Common
             }
         }
 
+        //It throws exceptions, not <see cref="Boolean"/> value, because if socket isn't connected we should immediately end method
         public void VerifyConnected()
         {
             if ( m_state == SocketState.Closed )

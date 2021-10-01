@@ -18,16 +18,13 @@ namespace LUC.DiscoveryService
     {
         static ServiceProfile()
         {
-            // Make sure Service is inited.
+            // Make sure NetworkEventInvoker is inited. This row causes initialization of all static members of NetworkEventInvoker
             NetworkEventInvoker.ReferenceEquals( null, null );
         }
 
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceProfile"/> class.
         /// </summary>
-        /// <param name="addresses">
-        /// <see cref="IPAddress"/> of network interfaces of current machine 
-        /// </param>
         public ServiceProfile( Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion,
             ConcurrentDictionary<String, String> groupsSupported = null )
         {
@@ -47,6 +44,6 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Known network interfaces
         /// </summary>
-        public IList<NetworkInterface> NetworkInterfaces => NetworkEventInvoker.KnownNetworks;
+        public IList<NetworkInterface> KnownNetworkInterfaces => NetworkEventInvoker.KnownNetworks;
     }
 }

@@ -89,25 +89,38 @@ namespace LUC.DiscoveryService
                 TcpServer tcpServer = new TcpServer( address, RunningTcpPort );
                 m_tcpServers.Add( tcpServer );
 
-                switch ( address.AddressFamily )
+                try
                 {
-                    case AddressFamily.InterNetwork:
+                    switch ( address.AddressFamily )
                     {
-                        udpReceiver4.Client.SetSocketOption( SocketOptionLevel.IP, SocketOptionName.AddMembership, optionValue: new MulticastOption( Constants.MulticastAddressIp4, address ) );
+                        case AddressFamily.InterNetwork:
+                        {
+                            udpReceiver4.Client.SetSocketOption( SocketOptionLevel.IP, SocketOptionName.AddMembership, optionValue: new MulticastOption( Constants.MulticastAddressIp4, address ) );
 
-                        break;
-                    }
+                            break;
+                        }
 
-                    case AddressFamily.InterNetworkV6:
-                    {
-                        udpReceiver6.Client.SetSocketOption( SocketOptionLevel.IPv6, SocketOptionName.AddMembership, optionValue: new IPv6MulticastOption( Constants.MulticastAddressIp6, address.ScopeId ) );
+                        case AddressFamily.InterNetworkV6:
+                        {
+                            udpReceiver6.Client.SetSocketOption( SocketOptionLevel.IPv6, SocketOptionName.AddMembership, optionValue: new IPv6MulticastOption( Constants.MulticastAddressIp6, address.ScopeId ) );
 
-                        break;
+                            break;
+                        }
+
+                        default:
+                        {
+                            throw new NotSupportedException( $"Address family {address.AddressFamily}." );
+                        }
                     }
-                    default:
-                    {
-                        throw new NotSupportedException( $"Address family {address.AddressFamily}." );
-                    }
+                }
+                catch (SocketException)
+                {
+                    ;//do nothing
+                }
+                //in case if DS is stopped
+                catch (ObjectDisposedException)
+                {
+                    ;//do nothing
                 }
             }
 
@@ -119,7 +132,16 @@ namespace LUC.DiscoveryService
             // TODO: add SSL support
             foreach ( TcpServer tcpReceiver in m_tcpServers )
             {
-                tcpReceiver.Start();
+                try
+                {
+                    tcpReceiver.Start();
+                }
+                catch (SocketException)
+                {
+                    //if PC has virtual box, we cannot bind to this address
+                    continue;
+                }
+
                 ListenTcp( tcpReceiver );
             }
         }

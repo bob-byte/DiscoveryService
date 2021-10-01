@@ -38,10 +38,10 @@ namespace LUC.DiscoveryService.Common
 #endif
 
         //TODO return from TimeSpan.FromSeconds to TimeSpan.FromMinutes
-        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromMinutes( value: 3 );
-        public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromMinutes( 3 );
-        public static readonly TimeSpan SendTimeout = TimeSpan.FromMinutes( 3 );
-        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromMinutes( 3 );
+        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds( value: 3 );
+        public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds( 3 );
+        public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds( 3 );
+        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds( 3 );
 
         /// <summary>
         /// it's max of execution Kademlia operation (first we connect to new contact, then if it is failed, we will be failed to send, 

@@ -307,7 +307,9 @@ namespace LUC.DiscoveryService.Test
 
                 discoveryService.NetworkEventInvoker.FindNodeReceived += ( sender, eventArgs ) => receivedFindNodeRequest.Set();
 
-                receivedFindNodeRequest.WaitOne();
+                receivedFindNodeRequest.WaitOne(TimeSpan.FromSeconds(value: 5));
+
+                //wait again, because contact should be added to NetworkEventInvoker.Dht.Node.BucketList after Find Node Kademlia operation
                 Thread.Sleep( TimeSpan.FromSeconds( value: 2 ) );
                 try
                 {

@@ -37,7 +37,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         public static void AddSocket( ConnectionPoolSocket socket )
         {
             SocketAsyncEventArgs disconnetArgs = new SocketAsyncEventArgs();
-            Task<Boolean> resetTask = socket.TryResetConnectionAsync( returnToPool: true, reuseSocket: true, IOBehavior.Asynchronous );
+            Task<Boolean> resetTask = socket.TryRecoverConnectionAsync( returnToPool: true, reuseSocket: false, IOBehavior.Asynchronous );
             lock ( s_lock )
             {
                 s_resetTasks.Add( resetTask );

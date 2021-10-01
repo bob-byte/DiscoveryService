@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Threading;
 using System.Threading.Tasks;
 
 using LUC.DiscoveryService.Common;
@@ -110,6 +111,8 @@ namespace LUC.DiscoveryService
         /// </summary>
         private readonly RecentMessages m_receivedMessages;
 
+        private readonly Object m_lockRecoverSocketsInPool;
+
         /// <summary>
         ///   Function used for listening filtered network interfaces.
         /// </summary>
@@ -148,6 +151,8 @@ namespace LUC.DiscoveryService
             m_networkInterfacesFilter = filter;
 
             IgnoreDuplicateMessages = false;
+
+            m_lockRecoverSocketsInPool = new Object();
         }
 
         public Contact OurContact { get; }
@@ -249,9 +254,12 @@ namespace LUC.DiscoveryService
 
         private void OnNetworkAddressChanged( Object sender, EventArgs e ) => FindNetworkInterfaces();
 
+        private CancellationTokenSource m_tokenSource;
+
         private void FindNetworkInterfaces()
         {
             LoggingService.LogInfo( "Finding network interfaces" );
+            m_tokenSource?.Cancel();
 
             try
             {
@@ -283,13 +291,20 @@ namespace LUC.DiscoveryService
                 // Only create client if something has change.
                 if ( newNics.Any() || oldNics.Any() )
                 {
-                    //InitKademliaProtocol();
-
                     m_udpSenders?.Dispose();
                     m_udpSenders = new UdpSenders( RunningIpAddresses );
 
                     m_listeners?.Dispose();
                     InitListeners();
+
+                    lock ( m_lockRecoverSocketsInPool )
+                    {
+
+                        ConnectionPool connectionPool = ConnectionPool.Instance();
+                        connectionPool.TryCancelRecoverConnections();
+
+                        connectionPool.TryRecoverAllConnectionsAsync( Constants.TimeWaitReturnToPool ).GetAwaiter().GetResult();
+                    }
                 }
 
                 if ( newNics.Any() )
@@ -300,17 +315,15 @@ namespace LUC.DiscoveryService
                     } );
                 }
 
-                //
                 // Situation has seen when NetworkAddressChanged is not triggered 
                 // (wifi off, but NIC is not disabled, wifi - on, NIC was not changed 
                 // so no event). Rebinding fixes this.
-                //
                 NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
                 NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
             }
             catch ( Exception e )
             {
-                LoggingService.LogError( e, "FindNics failed" );
+                LoggingService.LogError( e, $"FindNics failed:\n{e}" );
             }
         }
 
@@ -368,14 +381,13 @@ namespace LUC.DiscoveryService
                 Boolean isDsMessage = IsInPortRange( message.TcpPort );
 
 #if RECEIVE_TCP_FROM_OURSELF
-                Boolean isOwnMessage = ( message.ProtocolVersion == ProtocolVersion ) ||
-                    ( message.MachineId != MachineId );
+                Boolean isMessFromOtherPeerInNetwork = message.ProtocolVersion == ProtocolVersion;
 #else
-                Boolean isOwnMessage = (message.ProtocolVersion == ProtocolVersion) &&
+                Boolean isMessFromOtherPeerInNetwork = (message.ProtocolVersion == ProtocolVersion) &&
                     (message.MachineId != MachineId);
 #endif
 
-                if ( ( !IgnoreDuplicateMessages || !isRecentlyReceived ) && ( isDsMessage ) && ( isOwnMessage ) )
+                if ( ( !IgnoreDuplicateMessages || !isRecentlyReceived ) && ( isDsMessage ) && ( isMessFromOtherPeerInNetwork ) )
                 {
                     result.SetMessage( message );
 

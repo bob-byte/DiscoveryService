@@ -1,4 +1,4 @@
-﻿#define TEST_CONCURRENCY
+﻿//#define TEST_CONCURRENCY
 
 using System;
 using System.Net;
@@ -208,6 +208,14 @@ namespace LUC.DiscoveryService
                         client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,
                             Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
                         ForcingConcurrencyError.TryForce();
+                    }
+                    catch(TimeoutException)
+                    {
+                        ;//do nothing
+                    }
+                    catch (SocketException ex)
+                    {
+                        LoggingService.LogError( ex.ToString() );
                     }
                     finally
                     {

@@ -1,4 +1,4 @@
-﻿#define TEST_CONCURRENCY
+﻿//#define TEST_CONCURRENCY
 
 using System;
 using System.Collections.Concurrent;
