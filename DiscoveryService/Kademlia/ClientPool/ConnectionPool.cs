@@ -185,7 +185,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 }
                 else
                 {
-                    //case when BackgroundConnectionResetHelper wait to start finish reset connections
+                    //case when BackgroundConnectionResetHelper wait to start reset connections
                     m_log.LogError( $"\n*************************\nSocket with id {desiredSocket.Id} isn\'t returned to pool by some thread\n*************************\n" );
                 }
             }
