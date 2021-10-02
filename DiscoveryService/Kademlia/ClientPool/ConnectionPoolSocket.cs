@@ -23,7 +23,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
     ///<inheritdoc/>
     class ConnectionPoolSocket : DiscoveryServiceSocket
     {
-        private Boolean m_isInPool = false;
+        private SocketStateInPool m_isInPool;
+        private readonly AutoResetEvent m_canBeTaken;
 
         /// <inheritdoc/>
         public ConnectionPoolSocket( SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log )
@@ -31,6 +32,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         {
             Id = remoteEndPoint;
             Pool = belongPool;
+            m_canBeTaken = new AutoResetEvent( initialState: false );
+            m_isInPool = SocketStateInPool.NeverWasInPool;
         }
 
         /// <summary>
@@ -74,29 +77,53 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         public ConnectionPool Pool { get; }
 
-        public Boolean IsInPool
+        public SocketStateInPool IsInPool
         {
             get => m_isInPool;
-            //maybe body of set method should be placed in a lock
             set
             {
-                lock(ReturnedInPool)
+                lock ( m_canBeTaken )
                 {
-                    m_isInPool = value;
-
-                    if ( ( !m_isInPool ) && ( ReturnedInPool.CurrentCount == 1 ) )
+                    if(m_isInPool == SocketStateInPool.NeverWasInPool)
                     {
-                        ReturnedInPool.Wait( millisecondsTimeout: 0 );
+                        m_isInPool = value;
                     }
-                    else if ( ( m_isInPool ) && ( ReturnedInPool.CurrentCount == 0 ) )
+                    else
                     {
-                        ReturnedInPool.Release();
+                        m_isInPool = value;
+
+                        if ( m_isInPool == SocketStateInPool.TakenFromPool )
+                        {
+                            Boolean isReturned = m_canBeTaken.WaitOne( Constants.TimeWaitReturnToPool );
+                            if ( isReturned )
+                            {
+                                Log.LogInfo( $"\n*************************\nSocket with id {Id} successfully taken from pool\n*************************\n" );
+                            }
+                            else
+                            {
+                                Log.LogError( $"\n*************************\nSocket with id {Id} isn\'t returned to pool by some thread\n*************************\n" );
+                            }
+                        }
+                        else
+                        {
+                            //we don't use ReturnedInPool, otherwise we will have an deadlock
+                            m_canBeTaken.Set();
+                        }
                     }
                 }
             }
         }
 
-        public SemaphoreSlim ReturnedInPool { get; } = new SemaphoreSlim( initialCount: 0, maxCount: 1 );
+        public AutoResetEvent CanBeTaken
+        {
+            get
+            {
+                lock( m_canBeTaken )
+                {
+                    return m_canBeTaken;
+                }
+            }
+        }
 
         //public async Task ConnectAsync()
         //{
@@ -152,18 +179,20 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             //we shouldn't check IsInPool because ConnectionPool.semaphoreSocket.Release needed to be called, 
             //because after long time ConnectionPool.semaphoreSocket.CurrentCount can be 0 without this, that will cause the recovering sockets without necessity
             Boolean isReturned = Pool.ReturnedToPool( Id );
-            IsInPool = isReturned;
 
             return isReturned;
         }
 
-        public async Task<Boolean> TryRecoverConnectionAsync( Boolean returnToPool, Boolean reuseSocket, IOBehavior ioBehavior )
+        public async Task<Boolean> TryRecoverConnectionAsync( Boolean returnToPool, Boolean reuseSocket, 
+            IOBehavior ioBehavior, CancellationToken cancellationToken = default )
         {
-            VerifyWorkState();
+            Boolean isRecoveredConnection = false;
 
             try
             {
-                await DsDisconnectAsync( ioBehavior, reuseSocket, Constants.DisconnectTimeout ).
+                VerifyWorkState();
+
+                await DsDisconnectAsync( ioBehavior, reuseSocket, Constants.DisconnectTimeout, cancellationToken ).
                         ConfigureAwait( continueOnCapturedContext: false );
             }
             catch(SocketException)
@@ -174,30 +203,32 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             {
                 ;//do nothing
             }
-
-            ConnectionPoolSocket newSocket = new ConnectionPoolSocket( SocketType, ProtocolType, Id, Pool, Log );
-            Boolean isRecoveredConnection = false;
-
-            try
-            {
-                await newSocket.DsConnectAsync( Id, Constants.ConnectTimeout, ioBehavior ).ConfigureAwait( false );
-
-                //if we don't recovered connection, we will have an exception
-                isRecoveredConnection = true;
-            }
-            catch ( SocketException )
-            {
-                ;//do nothing
-            }
-            catch ( TimeoutException )
-            {
-                ;//do nothing
-            }
             finally
             {
-                if ( ( returnToPool ) && ( Pool != null ) )
+                ConnectionPoolSocket newSocket = null;
+                try
                 {
-                    newSocket.ReturnedToPool();
+                    newSocket = new ConnectionPoolSocket( SocketType, ProtocolType, Id, Pool, Log );
+
+                    await newSocket.DsConnectAsync( Id, Constants.ConnectTimeout, ioBehavior, cancellationToken ).ConfigureAwait( false );
+
+                    //if we don't recovered connection, we will have an exception
+                    isRecoveredConnection = true;
+                }
+                catch ( SocketException )
+                {
+                    ;//do nothing
+                }
+                catch ( TimeoutException )
+                {
+                    ;//do nothing
+                }
+                finally
+                {
+                    if ( ( returnToPool ) && ( Pool != null ) )
+                    {
+                        newSocket.ReturnedToPool();
+                    }
                 }
             }
 

@@ -1,6 +1,4 @@
-﻿//#define TEST_CONCURRENCY
-
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
 using LUC.DiscoveryService.Messages;
@@ -48,11 +46,13 @@ namespace LUC.DiscoveryService
 
         private readonly ForcingConcurrencyError m_forceConcurrencyError;
 
-        private readonly NetworkEventHandler m_networkEventHandler;
+        private NetworkEventHandler m_networkEventHandler;
 
         private readonly ConnectionPool m_connectionPool;
 
         private Boolean m_isDiscoveryServiceStarted = false;
+
+        private readonly ICurrentUserProvider m_currentUserProvider;
 
         /// <summary>
         /// For functional tests
@@ -60,9 +60,10 @@ namespace LUC.DiscoveryService
         public DiscoveryService( ServiceProfile profile, ICurrentUserProvider currentUserProvider )
             : this( profile )
         {
-            m_networkEventHandler = new NetworkEventHandler( this, NetworkEventInvoker, currentUserProvider );//puts in events of NetworkEventInvoker sendings response
+            m_currentUserProvider = currentUserProvider;
         }
 
+        //TODO delete this constructor
         public DiscoveryService( ServiceProfile profile )
         {
             if ( profile == null )
@@ -71,9 +72,7 @@ namespace LUC.DiscoveryService
             }
             else
             {
-#if TEST_CONCURRENCY
                 m_forceConcurrencyError = new ForcingConcurrencyError();
-#endif
 
                 GroupsSupported = profile.GroupsSupported;
 
@@ -148,6 +147,7 @@ namespace LUC.DiscoveryService
         {
             NetworkEventInvoker = new NetworkEventInvoker( MachineId, UseIpv4, UseIpv6, ProtocolVersion );
 
+            m_networkEventHandler = new NetworkEventHandler( this, NetworkEventInvoker, m_currentUserProvider );//puts in events of NetworkEventInvoker sendings response
             NetworkEventInvoker.QueryReceived += async ( invokerEvent, eventArgs ) => await SendTcpMessageAsync( invokerEvent, eventArgs );
 
             NetworkEventInvoker.AnswerReceived += AddEndpoint;
@@ -186,13 +186,13 @@ namespace LUC.DiscoveryService
 
                     Random random = new Random();
                     AcknowledgeTcpMessage tcpMessage = new AcknowledgeTcpMessage(
-                        messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
-                        MachineId,
-                        sendingContact.KadId.Value,
-                        RunningTcpPort,
-                        ProtocolVersion,
-                        groupsIds: GroupsSupported?.Keys?.ToList() 
-                    );
+                       messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
+                       MachineId,
+                       sendingContact.KadId.Value,
+                       RunningTcpPort,
+                       ProtocolVersion,
+                       groupsIds: GroupsSupported?.Keys?.ToList()
+                   );
 
                     ForcingConcurrencyError.TryForce();
                     Byte[] bytesToSend = tcpMessage.ToByteArray();
@@ -202,20 +202,28 @@ namespace LUC.DiscoveryService
                     try
                     {
                         client = await m_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
-                            IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
+                           IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
 
                         ForcingConcurrencyError.TryForce();
                         client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,
-                            Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
+                           Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
                         ForcingConcurrencyError.TryForce();
                     }
-                    catch(TimeoutException)
+                    catch ( TimeoutException )
                     {
                         ;//do nothing
                     }
-                    catch (SocketException ex)
+                    catch ( SocketException ex )
                     {
                         LoggingService.LogError( ex.ToString() );
+                    }
+                    catch ( AggregateException )
+                    {
+                        ;//do nothing
+                    }
+                    catch ( ObjectDisposedException )
+                    {
+                        ;//do nothing
                     }
                     finally
                     {

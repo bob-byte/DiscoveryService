@@ -34,10 +34,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         [Import( typeof( ILoggingService ) )]
         internal static ILoggingService LoggingService { get; private set; }
 
-        public static void AddSocket( ConnectionPoolSocket socket )
+        public static void AddSocket( ConnectionPoolSocket socket, CancellationToken cancellationToken = default )
         {
             SocketAsyncEventArgs disconnetArgs = new SocketAsyncEventArgs();
-            Task<Boolean> resetTask = socket.TryRecoverConnectionAsync( returnToPool: true, reuseSocket: false, IOBehavior.Asynchronous );
+            Task<Boolean> resetTask = socket.TryRecoverConnectionAsync( returnToPool: true, reuseSocket: false, IOBehavior.Asynchronous, cancellationToken );
             lock ( s_lock )
             {
                 s_resetTasks.Add( resetTask );

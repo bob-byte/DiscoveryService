@@ -15,55 +15,41 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
     sealed partial class ConnectionPool
     {
-        private readonly SemaphoreSlim m_recoverSocketsSemaphore;
-        private readonly TimeSpan m_maxTimeWaitEndPreviousRecovering;
         private CancellationTokenSource m_cancellationRecover;
 
         public async Task TryRecoverAllConnectionsAsync( TimeSpan timeWaitToReturnToPool )
         {
             if((m_sockets.Count > 0) || (m_leasedSockets.Count > 0))
             {
-                await m_recoverSocketsSemaphore.WaitAsync( m_maxTimeWaitEndPreviousRecovering ).
-                    ConfigureAwait( continueOnCapturedContext: false );
-
+                //use lock, because method TryCancelRecoverConnections want to cancel m_cancellationRecover
                 lock ( m_cancellationRecover )
                 {
                     m_cancellationRecover = new CancellationTokenSource();
-                    m_lastRecoveryTimeInTicks = unchecked((UInt32)Environment.TickCount);
+                }
+                m_lastRecoveryTimeInTicks = unchecked((UInt32)Environment.TickCount);
+
+                EndPoint[] idsOfRecoveredConnection = null;
+                if ( m_leasedSockets.Count > 0 )
+                {
+                    idsOfRecoveredConnection = await IdsOfRecoveredConnectionInLeasedSocketsAsync( timeWaitToReturnToPool,
+                        m_cancellationRecover.Token ).ConfigureAwait( continueOnCapturedContext: false );
                 }
 
-                try
+                if ( m_cancellationRecover.IsCancellationRequested )
                 {
-                    EndPoint[] idsOfRecoveredConnection = null;
-                    if ( m_leasedSockets.Count > 0 )
-                    {
-                        idsOfRecoveredConnection = await IdsOfRecoveredConnectionInLeasedSocketsAsync( timeWaitToReturnToPool,
-                            m_cancellationRecover.Token ).ConfigureAwait( continueOnCapturedContext: false );
-                    }
+                    return;
+                }
 
-                    if ( m_cancellationRecover.IsCancellationRequested )
-                    {
-                        return;
-                    }
-
-                    await RecoverPoolSocketsAsync( idsOfRecoveredConnection, timeWaitToReturnToPool, 
+                await RecoverPoolSocketsAsync( idsOfRecoveredConnection, timeWaitToReturnToPool, 
                         m_cancellationRecover.Token ).ConfigureAwait( false );
-                }
-                finally
-                {
-                    m_recoverSocketsSemaphore.Release();
-                }
             }
         }
 
         public void TryCancelRecoverConnections()
         {
-            if(IsNowRecovering())
+            lock ( m_cancellationRecover )
             {
-                lock ( m_cancellationRecover )
-                {
-                    m_cancellationRecover.Cancel();
-                }
+                m_cancellationRecover.Cancel();
             }
         }
 
@@ -73,15 +59,18 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             var parallelOptions = ParallelOptions(cancellationToken);
 
             //recover leased sockets
-            ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>> recoverLeasedSockets = new ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>>( async socket =>
+            ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>> recoverLeasedSockets = new ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>>( socket =>
             {
                 //it is not matter whether take async or synchronously
-                _ = await TakeLeasedSocket( socket.Key, IOBehavior.Synchronous, timeWaitToReturnToPool ).
-                    ConfigureAwait( continueOnCapturedContext: false );
+                //socket can be returned to pool before we receive it by another thread and place, so takenSocket can be null
+                ConnectionPoolSocket takenSocket = TakeLeasedSocket( socket.Key, IOBehavior.Synchronous, timeWaitToReturnToPool );
 
-                BackgroundConnectionResetHelper.AddSocket( socket.Value );
+                if(takenSocket != null)
+                {
+                    BackgroundConnectionResetHelper.AddSocket( takenSocket, cancellationToken );
 
-                socketsWithRecoveredConnection.Add( socket.Key );
+                    socketsWithRecoveredConnection.Add( socket.Key );
+                }
             }, parallelOptions );
 
             foreach ( var takenSocket in m_leasedSockets )
@@ -106,10 +95,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     timeWaitToReturnToPool ).ConfigureAwait(continueOnCapturedContext: false);
                 m_sockets.TryRemove( socket.Key, out _ );
 
-                socket.Value.IsInPool = false;
+                socket.Value.IsInPool = SocketStateInPool.TakenFromPool;
                 m_leasedSockets.TryAdd( socket.Key, socket.Value );
 
-                BackgroundConnectionResetHelper.AddSocket( socket.Value );
+                BackgroundConnectionResetHelper.AddSocket( socket.Value, cancellationToken );
             } );
 
             foreach ( var socket in m_sockets )
@@ -132,8 +121,5 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 MaxDegreeOfParallelism = Constants.MAX_THREADS,
                 MaxMessagesPerTask = 1
             };
-
-        private Boolean IsNowRecovering() =>
-            m_recoverSocketsSemaphore.CurrentCount == 0;
     }
 }

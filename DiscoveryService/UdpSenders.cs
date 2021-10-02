@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define TEST_WITH_ONE_IP_ADDRESS
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -114,6 +116,7 @@ namespace LUC.DiscoveryService
         {
             foreach ( KeyValuePair<IPAddress, UdpClient> sender in m_sendersUdp )
             {
+                AbstractService.LoggingService.LogInfo( "Sending UDP message:\n " );
                 try
                 {
                     IPEndPoint endpoint = sender.Key.AddressFamily == AddressFamily.InterNetwork ?
@@ -121,7 +124,9 @@ namespace LUC.DiscoveryService
                     await sender.Value.SendAsync( message, message.Length, endpoint ).
                         ConfigureAwait( continueOnCapturedContext: false );
 
-                    //break;
+#if TEST_WITH_ONE_IP_ADDRESS
+                    break;
+#endif
                 }
                 catch ( SocketException e )
                 {

@@ -49,15 +49,12 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             m_cleanSemaphore = new SemaphoreSlim( initialCount: 1 );
             m_socketSemaphore = new SemaphoreSlim( connectionSettings.MaximumPoolSize );
-            m_recoverSocketsSemaphore = new SemaphoreSlim( initialCount: 1, maxCount: 1 );
             m_lockLastRecoveryTime = new Object();
 
             m_sockets = new ConcurrentDictionary<EndPoint, ConnectionPoolSocket>();
             m_leasedSockets = new ConcurrentDictionary<EndPoint, ConnectionPoolSocket>();
 
             m_cancellationRecover = new CancellationTokenSource();
-
-            m_maxTimeWaitEndPreviousRecovering = Constants.ConnectTimeout;
         }
 
         public ConnectionSettings ConnectionSettings { get; }
@@ -80,11 +77,11 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         public async ValueTask<ConnectionPoolSocket> SocketAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool )
         {
-            if ( IsEmpty && ( unchecked(( (UInt32)Environment.TickCount ) - m_lastRecoveryTimeInTicks) >= POOL_RECOVERY_FREQUENCY_IN_TICKS ) )
+            if ( IsEmpty && ( unchecked(( (UInt32)Environment.TickCount ) - Volatile.Read( ref m_lastRecoveryTimeInTicks )) >= POOL_RECOVERY_FREQUENCY_IN_TICKS ) )
             {
                 TryCancelRecoverConnections();
 
-                if(ioBehavior == IOBehavior.Asynchronous)
+                if ( ioBehavior == IOBehavior.Asynchronous )
                 {
                     await TryRecoverAllConnectionsAsync( timeWaitToReturnToPool ).
                         ConfigureAwait( continueOnCapturedContext: false );
@@ -93,6 +90,11 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 {
                     Task taskRecoverConnections = TryRecoverAllConnectionsAsync( timeWaitToReturnToPool );
                     taskRecoverConnections.Wait();
+
+                    if ( taskRecoverConnections.Exception != null )
+                    {
+                        throw taskRecoverConnections.Exception.Flatten();
+                    }
                 }
             }
 
@@ -101,20 +103,44 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             m_log.LogInfo( "Pool waiting for a taking from the pool" );
 #endif
             //"_", because no matter whether socket is returned to the pool by the another thread
-            _ = await IsSocketReturnedToPoolAsync( ioBehavior, m_socketSemaphore, timeWaitToReturnToPool );
+            _ = await IsSocketReturnedToPoolAsync( ioBehavior, m_socketSemaphore, timeWaitToReturnToPool ).
+                ConfigureAwait(continueOnCapturedContext: false);
 
             ConnectionPoolSocket desiredSocket = null;
             if ( m_leasedSockets.ContainsKey( remoteEndPoint ) )
             {
-                desiredSocket = await TakeLeasedSocket( remoteEndPoint, ioBehavior, timeWaitToReturnToPool ).ConfigureAwait( false );
-                desiredSocket = await ConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket ).
+                desiredSocket = TakeLeasedSocket( remoteEndPoint, ioBehavior, timeWaitToReturnToPool );
+
+                //another thread can remove desiredSocket from m_leasedSockets, so it can be null
+                if ( desiredSocket != null)
+                {
+                    try
+                    {
+                        desiredSocket = await ConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket ).
                     ConfigureAwait( false );
+                    }
+                    finally
+                    {
+                        if ( (desiredSocket.IsInPool != SocketStateInPool.TakenFromPool) && 
+                             ( desiredSocket.IsInPool != SocketStateInPool.IsFailed ))
+                        {
+                            desiredSocket.IsInPool = SocketStateInPool.TakenFromPool;
+                        }
+                    }
+                }
             }
 
             Boolean takenFromPool = desiredSocket != null;
             if ( !takenFromPool )
             {
-                Boolean wasInPool = m_sockets.TryRemove( remoteEndPoint, out desiredSocket );
+                //desiredSocket may not be in pool, because it can be removed 
+                //by ConnectionPool.TryRecoverAllConnectionsAsync or disposed or is not created
+                m_sockets.TryRemove( remoteEndPoint, out desiredSocket );
+                if ( desiredSocket != null )
+                {
+                    desiredSocket.IsInPool = SocketStateInPool.DeletedFromPool;
+                }
+
                 try
                 {
                     desiredSocket = await ConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket ).
@@ -122,19 +148,22 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 }
                 finally
                 {
-                    if(desiredSocket != null)
-                    {
-                        desiredSocket.IsInPool = false;
-                    }
+                    //null-check, because we can get an exception in method ConnectedSocketAsync
+                    //if ( ( desiredSocket != null ) && ( desiredSocket.IsInPool != SocketStateInPool.TakenFromPool ) &&
+                    //     ( desiredSocket.IsInPool != SocketStateInPool.IsFailed) )
+                    //{
+                    //    desiredSocket.IsInPool = SocketStateInPool.TakenFromPool;
+                    //}
                 }
 
+                desiredSocket.IsInPool = SocketStateInPool.TakenFromPool;
                 m_leasedSockets.TryAdd( remoteEndPoint, desiredSocket );
             }
 
             return desiredSocket;
         }
 
-        private async ValueTask<ConnectionPoolSocket> TakeLeasedSocket( EndPoint remoteEndPoint, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool )
+        private ConnectionPoolSocket TakeLeasedSocket( EndPoint remoteEndPoint, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool )
         {
             ConnectionPoolSocket desiredSocket = null;
             try
@@ -144,12 +173,20 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             //case when another thread remove socket with desiredSocket.Id from leasedSockets
             catch ( KeyNotFoundException )
             {
-                ;//do nothing, because desiredSocket will be created in method ConnectedSocketAsync even the first one is null
+                ;//do nothing, because desiredSocket will be created in method ConnectedSocketAsync even the first one is null (see method ConnectionPool.SocketAsync). Null-check is in method ConnectionPool.IdsOfRecoveredConnectionInLeasedSocketsAsync
             }
 
             if(desiredSocket != null)
             {
-                _ = await IsSocketReturnedToPoolAsync( ioBehavior, desiredSocket.ReturnedInPool, timeWaitToReturnToPool ).ConfigureAwait( false );
+                Boolean isReturned = desiredSocket.CanBeTaken.WaitOne( timeWaitToReturnToPool );
+                if ( isReturned )
+                {
+                    m_log.LogInfo( $"\n*************************\nSocket with id {desiredSocket.Id} successfully taken from pool\n*************************\n" );
+                }
+                else
+                {
+                    m_log.LogError( $"\n*************************\nSocket with id {desiredSocket.Id} isn\'t returned to pool by some thread\n*************************\n" );
+                }
             }
 
             return desiredSocket;
@@ -171,13 +208,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                         await connectedSocket.DsConnectAsync( remoteEndPoint, timeoutToConnect, ioBehavior ).
                             ConfigureAwait( continueOnCapturedContext: false );
                     }
-                    catch (TimeoutException ex)
-                    {
-                        m_socketSemaphore.Release();
-
-                        m_log.LogError( ex.ToString() );
-                        throw;
-                    }
                     catch ( SocketException )
                     {
                         try
@@ -186,14 +216,19 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                             await connectedSocket.DsConnectAsync( remoteEndPoint, timeoutToConnect, ioBehavior ).
                                 ConfigureAwait( false );
                         }
-                        catch ( TimeoutException ex )
+                        catch ( Exception ex )
                         {
-                            m_socketSemaphore.Release();
-
-                            m_log.LogError( ex.ToString() );
-                            throw;
+                            HandleRemoteException( ex, connectedSocket );
                         }
                     }
+                    catch ( Exception ex )
+                    {
+                        HandleRemoteException( ex, connectedSocket );
+                    }
+                }
+                catch ( Exception ex )
+                {
+                    HandleRemoteException( ex, connectedSocket );
                 }
             }
             else
@@ -204,22 +239,31 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     await connectedSocket.DsConnectAsync( remoteEndPoint, timeoutToConnect, ioBehavior ).
                         ConfigureAwait( false );
                 }
-                catch ( TimeoutException )
+                catch ( Exception ex )
                 {
-                    m_socketSemaphore.Release();
-                    throw;
+                    HandleRemoteException( ex, connectedSocket );
                 }
             }
 
             return connectedSocket;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="ioBehavior"></param>
-        /// <param name="semaphoreSlim"></param>
-        /// <param name="waitTimeout"></param>
+        private void HandleRemoteException(Exception exception, ConnectionPoolSocket failedSocket = null)
+        {
+            //if(!(exception is TimeoutException) && !(exception is SocketException))
+            //{
+            //    m_log.LogError( exception.ToString() );
+            //}
+
+            if(failedSocket != null)
+            {
+                failedSocket.IsInPool = SocketStateInPool.IsFailed;
+            }
+
+            m_socketSemaphore.Release();
+            throw exception;
+        }
+
         /// <returns>
         /// It will return <a href="true"/> if socket is returned by another thread during <paramref name="waitTimeout"/>.
         /// It will return <a href="false"/> if socket isn't returned
@@ -261,7 +305,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     {
                         m_sockets.TryAdd( remoteEndPoint, socketInPool );
 
-                        socketInPool.IsInPool = true;
+                        socketInPool.IsInPool = SocketStateInPool.IsInPool;
                         isReturned = true;
                     }
                     else
@@ -279,6 +323,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                         {
                             socketInPool.Dispose();
                         }
+                        socketInPool.IsInPool = SocketStateInPool.IsFailed;
 
                         isReturned = false;
                     }

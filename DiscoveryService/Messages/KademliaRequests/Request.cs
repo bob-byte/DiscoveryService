@@ -210,6 +210,16 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 isTimeoutSocketOp = false;
                 HandleException( ex, ref nodeError );
             }
+            catch ( AggregateException ex)
+            {
+                isTimeoutSocketOp = false;
+                HandleException( ex, ref nodeError );
+            }
+            catch ( ObjectDisposedException ex)
+            {
+                isTimeoutSocketOp = false;
+                HandleException( ex, ref nodeError );
+            }
             finally
             {
                 client?.ReturnedToPool();

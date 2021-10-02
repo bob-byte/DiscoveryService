@@ -307,7 +307,7 @@ namespace LUC.DiscoveryService.Test
 
                 discoveryService.NetworkEventInvoker.FindNodeReceived += ( sender, eventArgs ) => receivedFindNodeRequest.Set();
 
-                receivedFindNodeRequest.WaitOne(TimeSpan.FromSeconds(value: 5));
+                receivedFindNodeRequest.WaitOne(TimeSpan.FromMilliseconds(value: -1));
 
                 //wait again, because contact should be added to NetworkEventInvoker.Dht.Node.BucketList after Find Node Kademlia operation
                 Thread.Sleep( TimeSpan.FromSeconds( value: 2 ) );
@@ -345,11 +345,6 @@ namespace LUC.DiscoveryService.Test
         /// <summary>
         /// Try execute selected operation while key is invalid
         /// </summary>
-        /// <param name="remoteContact"></param>
-        /// <param name="apiClient"></param>
-        /// <param name="currentUserProvider"></param>
-        /// <param name="pressedKey"></param>
-        /// <returns></returns>
         private static async Task TryExecuteSelectedOperationAsync( Contact remoteContact, IApiClient apiClient, ICurrentUserProvider currentUserProvider, ConsoleKey pressedKey )
         {
             while ( true )

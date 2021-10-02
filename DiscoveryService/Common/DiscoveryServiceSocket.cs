@@ -243,15 +243,15 @@ namespace LUC.DiscoveryService.Common
             return allMessage.ToArray();
         }
 
-        public async Task DsConnectAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior )
+        public async Task DsConnectAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, CancellationToken cancellationToken = default )
         {
             if ( ioBehavior == IOBehavior.Asynchronous )
             {
-                await DsConnectAsync( remoteEndPoint, timeoutToConnect ).ConfigureAwait( continueOnCapturedContext: false );
+                await DsConnectAsync( remoteEndPoint, timeoutToConnect, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
             }
             else if ( ioBehavior == IOBehavior.Synchronous )
             {
-                DsConnect( remoteEndPoint, timeoutToConnect );
+                DsConnect( remoteEndPoint, timeoutToConnect, cancellationToken );
             }
             else
             {
@@ -259,10 +259,10 @@ namespace LUC.DiscoveryService.Common
             }
         }
 
-        public async Task DsConnectAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect ) =>
-            await Task.Run( () => DsConnect( remoteEndPoint, timeoutToConnect ) ).ConfigureAwait( continueOnCapturedContext: false );
+        public async Task DsConnectAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, CancellationToken cancellationToken = default ) =>
+            await Task.Run( () => DsConnect( remoteEndPoint, timeoutToConnect, cancellationToken ) ).ConfigureAwait( continueOnCapturedContext: false );
 
-        public void DsConnect( EndPoint remoteEndPoint, TimeSpan timeout )
+        public void DsConnect( EndPoint remoteEndPoint, TimeSpan timeout, CancellationToken cancellationToken = default )
         {
             VerifyWorkState();
 
@@ -271,7 +271,10 @@ namespace LUC.DiscoveryService.Common
             AutoResetEvent connectDone = new AutoResetEvent( initialState: false );
             BeginConnect( remoteEndPoint, ( asyncResult ) => ConnectCallback( asyncResult, connectDone ), state: this );
 
-            Boolean isConnected = connectDone.WaitOne( timeout );
+            Boolean isConnected = cancellationToken != default ?
+                cancellationToken.WaitHandle.WaitOne( timeout ) :
+                connectDone.WaitOne( timeout );
+
             connectDone.Close();
             if ( !isConnected )
             {
@@ -451,15 +454,16 @@ namespace LUC.DiscoveryService.Common
             }
         }
 
-        public async Task DsDisconnectAsync( IOBehavior ioBehavior, Boolean reuseSocket, TimeSpan timeout )
+        public async Task DsDisconnectAsync( IOBehavior ioBehavior, Boolean reuseSocket, 
+            TimeSpan timeout, CancellationToken cancellationToken = default )
         {
             if ( ioBehavior == IOBehavior.Asynchronous )
             {
-                await DsDisconnectAsync( reuseSocket, timeout ).ConfigureAwait( continueOnCapturedContext: false );
+                await DsDisconnectAsync( reuseSocket, timeout, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
             }
             else if ( ioBehavior == IOBehavior.Synchronous )
             {
-                DsDisconnect( reuseSocket, timeout );
+                DsDisconnect( reuseSocket, timeout, cancellationToken );
             }
             else
             {
@@ -467,7 +471,7 @@ namespace LUC.DiscoveryService.Common
             }
         }
 
-        public void DsDisconnect( Boolean reuseSocket, TimeSpan timeout )
+        public void DsDisconnect( Boolean reuseSocket, TimeSpan timeout, CancellationToken cancellationToken = default )
         {
             VerifyConnected();
 
@@ -480,7 +484,10 @@ namespace LUC.DiscoveryService.Common
                 state: this
             );
 
-            Boolean isDisconnected = disconnectDone.WaitOne( timeout );
+            Boolean isDisconnected = cancellationToken != default ? 
+                cancellationToken.WaitHandle.WaitOne( timeout ) : 
+                disconnectDone.WaitOne( timeout );
+
             disconnectDone.Close();
             if ( !isDisconnected )
             {
@@ -491,8 +498,8 @@ namespace LUC.DiscoveryService.Common
         private void DisconnectCallback( IAsyncResult asyncResult, EventWaitHandle disconnectDone )
         {
             Socket socket = (Socket)asyncResult.AsyncState;
-            socket.EndDisconnect( asyncResult );
 
+            socket.EndDisconnect( asyncResult );
             m_state = SocketState.Disconnected;
 
             //another thread can receive timoeut and it will close disconnectDone
@@ -503,8 +510,8 @@ namespace LUC.DiscoveryService.Common
             }
         }
 
-        public async Task DsDisconnectAsync( Boolean reuseSocket, TimeSpan timeout ) =>
-            await Task.Run( () => DsDisconnect( reuseSocket, timeout ) ).ConfigureAwait( continueOnCapturedContext: false );
+        public async Task DsDisconnectAsync( Boolean reuseSocket, TimeSpan timeout, CancellationToken cancellationToken = default ) =>
+            await Task.Run( () => DsDisconnect( reuseSocket, timeout, cancellationToken ) ).ConfigureAwait( continueOnCapturedContext: false );
 
         private void VerifyState( SocketState state )
         {

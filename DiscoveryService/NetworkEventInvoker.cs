@@ -254,12 +254,9 @@ namespace LUC.DiscoveryService
 
         private void OnNetworkAddressChanged( Object sender, EventArgs e ) => FindNetworkInterfaces();
 
-        private CancellationTokenSource m_tokenSource;
-
         private void FindNetworkInterfaces()
         {
             LoggingService.LogInfo( "Finding network interfaces" );
-            m_tokenSource?.Cancel();
 
             try
             {
@@ -424,8 +421,6 @@ namespace LUC.DiscoveryService
         /// </param>
         private void RaiseAnswerReceived( Object sender, TcpMessageEventArgs receiveResult )
         {
-            //lock (this)
-            //{
             try
             {
                 IPAddress lastActiveAddress = ( receiveResult.LocalEndPoint as IPEndPoint ).Address;
