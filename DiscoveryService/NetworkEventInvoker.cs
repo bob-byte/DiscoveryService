@@ -111,8 +111,6 @@ namespace LUC.DiscoveryService
         /// </summary>
         private readonly RecentMessages m_receivedMessages;
 
-        private readonly Object m_lockRecoverSocketsInPool;
-
         /// <summary>
         ///   Function used for listening filtered network interfaces.
         /// </summary>
@@ -151,8 +149,6 @@ namespace LUC.DiscoveryService
             m_networkInterfacesFilter = filter;
 
             IgnoreDuplicateMessages = false;
-
-            m_lockRecoverSocketsInPool = new Object();
         }
 
         public Contact OurContact { get; }
@@ -294,14 +290,10 @@ namespace LUC.DiscoveryService
                     m_listeners?.Dispose();
                     InitListeners();
 
-                    lock ( m_lockRecoverSocketsInPool )
-                    {
+                    ConnectionPool connectionPool = ConnectionPool.Instance();
+                    connectionPool.TryCancelRecoverConnections();
 
-                        ConnectionPool connectionPool = ConnectionPool.Instance();
-                        connectionPool.TryCancelRecoverConnections();
-
-                        connectionPool.TryRecoverAllConnectionsAsync( Constants.TimeWaitReturnToPool ).GetAwaiter().GetResult();
-                    }
+                    connectionPool.TryRecoverAllConnectionsAsync( Constants.TimeWaitReturnToPool ).GetAwaiter().GetResult();
                 }
 
                 if ( newNics.Any() )
