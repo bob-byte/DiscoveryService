@@ -61,9 +61,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             //recover leased sockets
             ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>> recoverLeasedSockets = new ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>>( socket =>
             {
-                //it is not matter whether take async or synchronously
                 //socket can be returned to pool before we receive it by another thread and place, so takenSocket can be null
-                ConnectionPoolSocket takenSocket = TakeLeasedSocket( socket.Key, IOBehavior.Synchronous, timeWaitToReturnToPool );
+                ConnectionPoolSocket takenSocket = TakeLeasedSocket( socket.Key, timeWaitToReturnToPool );
 
                 if(takenSocket != null)
                 {
@@ -95,7 +94,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     timeWaitToReturnToPool ).ConfigureAwait(continueOnCapturedContext: false);
                 m_sockets.TryRemove( socket.Key, out _ );
 
-                socket.Value.IsInPool = SocketStateInPool.TakenFromPool;
+                socket.Value.StateInPool = SocketStateInPool.TakenFromPool;
                 m_leasedSockets.TryAdd( socket.Key, socket.Value );
 
                 BackgroundConnectionResetHelper.AddSocket( socket.Value, cancellationToken );

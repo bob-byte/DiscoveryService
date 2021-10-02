@@ -1,4 +1,4 @@
-﻿#define TEST_WITH_ONE_IP_ADDRESS
+﻿//#define TEST_WITH_ONE_IP_ADDRESS
 
 using System;
 using System.Collections.Concurrent;

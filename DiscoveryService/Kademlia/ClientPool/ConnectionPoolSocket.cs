@@ -23,8 +23,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
     ///<inheritdoc/>
     class ConnectionPoolSocket : DiscoveryServiceSocket
     {
-        private SocketStateInPool m_isInPool;
-        private readonly AutoResetEvent m_canBeTaken;
+        private SocketStateInPool m_stateInPool;
+        private readonly AutoResetEvent m_removedFromPool;
 
         /// <inheritdoc/>
         public ConnectionPoolSocket( SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log )
@@ -32,8 +32,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         {
             Id = remoteEndPoint;
             Pool = belongPool;
-            m_canBeTaken = new AutoResetEvent( initialState: false );
-            m_isInPool = SocketStateInPool.NeverWasInPool;
+            m_removedFromPool = new AutoResetEvent( initialState: false );
+            m_stateInPool = SocketStateInPool.NeverWasInPool;
         }
 
         /// <summary>
@@ -77,50 +77,51 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         public ConnectionPool Pool { get; }
 
-        public SocketStateInPool IsInPool
+        public SocketStateInPool StateInPool
         {
-            get => m_isInPool;
+            get => m_stateInPool;
             set
             {
-                lock ( m_canBeTaken )
+                lock ( m_removedFromPool )
                 {
-                    if(m_isInPool == SocketStateInPool.NeverWasInPool)
+                    if(m_stateInPool == SocketStateInPool.NeverWasInPool)
                     {
-                        m_isInPool = value;
+                        m_stateInPool = value;
                     }
                     else
                     {
-                        m_isInPool = value;
+                        m_stateInPool = value;
 
-                        if ( m_isInPool == SocketStateInPool.TakenFromPool )
+                        if ( m_stateInPool == SocketStateInPool.TakenFromPool )
                         {
-                            Boolean isReturned = m_canBeTaken.WaitOne( Constants.TimeWaitReturnToPool );
+                            Boolean isReturned = m_removedFromPool.WaitOne( Constants.TimeWaitReturnToPool );
                             if ( isReturned )
                             {
                                 Log.LogInfo( $"\n*************************\nSocket with id {Id} successfully taken from pool\n*************************\n" );
                             }
                             else
                             {
+                                //case when BackgroundConnectionResetHelper wait to start finish reset connections
                                 Log.LogError( $"\n*************************\nSocket with id {Id} isn\'t returned to pool by some thread\n*************************\n" );
                             }
                         }
                         else
                         {
                             //we don't use ReturnedInPool, otherwise we will have an deadlock
-                            m_canBeTaken.Set();
+                            m_removedFromPool.Set();
                         }
                     }
                 }
             }
         }
 
-        public AutoResetEvent CanBeTaken
+        public AutoResetEvent RemovedFromPool
         {
             get
             {
-                lock( m_canBeTaken )
+                lock( m_removedFromPool )
                 {
-                    return m_canBeTaken;
+                    return m_removedFromPool;
                 }
             }
         }
@@ -233,6 +234,12 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
 
             return isRecoveredConnection;
+        }
+
+        public new void Dispose()
+        {
+            StateInPool = SocketStateInPool.IsFailed;
+            base.Dispose();
         }
     }
 }

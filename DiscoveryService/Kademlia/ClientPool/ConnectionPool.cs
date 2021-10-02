@@ -109,7 +109,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             ConnectionPoolSocket desiredSocket = null;
             if ( m_leasedSockets.ContainsKey( remoteEndPoint ) )
             {
-                desiredSocket = TakeLeasedSocket( remoteEndPoint, ioBehavior, timeWaitToReturnToPool );
+                desiredSocket = TakeLeasedSocket( remoteEndPoint, timeWaitToReturnToPool );
 
                 //another thread can remove desiredSocket from m_leasedSockets, so it can be null
                 if ( desiredSocket != null)
@@ -121,10 +121,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     }
                     finally
                     {
-                        if ( (desiredSocket.IsInPool != SocketStateInPool.TakenFromPool) && 
-                             ( desiredSocket.IsInPool != SocketStateInPool.IsFailed ))
+                        if ( (desiredSocket.StateInPool != SocketStateInPool.TakenFromPool) && 
+                             ( desiredSocket.StateInPool != SocketStateInPool.IsFailed ))
                         {
-                            desiredSocket.IsInPool = SocketStateInPool.TakenFromPool;
+                            desiredSocket.StateInPool = SocketStateInPool.TakenFromPool;
                         }
                     }
                 }
@@ -138,7 +138,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 m_sockets.TryRemove( remoteEndPoint, out desiredSocket );
                 if ( desiredSocket != null )
                 {
-                    desiredSocket.IsInPool = SocketStateInPool.DeletedFromPool;
+                    desiredSocket.StateInPool = SocketStateInPool.DeletedFromPool;
                 }
 
                 try
@@ -156,14 +156,14 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     //}
                 }
 
-                desiredSocket.IsInPool = SocketStateInPool.TakenFromPool;
+                desiredSocket.StateInPool = SocketStateInPool.TakenFromPool;
                 m_leasedSockets.TryAdd( remoteEndPoint, desiredSocket );
             }
 
             return desiredSocket;
         }
 
-        private ConnectionPoolSocket TakeLeasedSocket( EndPoint remoteEndPoint, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool )
+        private ConnectionPoolSocket TakeLeasedSocket( EndPoint remoteEndPoint, TimeSpan timeWaitToReturnToPool )
         {
             ConnectionPoolSocket desiredSocket = null;
             try
@@ -178,13 +178,14 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             if(desiredSocket != null)
             {
-                Boolean isReturned = desiredSocket.CanBeTaken.WaitOne( timeWaitToReturnToPool );
+                Boolean isReturned = desiredSocket.RemovedFromPool.WaitOne( timeWaitToReturnToPool );
                 if ( isReturned )
                 {
                     m_log.LogInfo( $"\n*************************\nSocket with id {desiredSocket.Id} successfully taken from pool\n*************************\n" );
                 }
                 else
                 {
+                    //case when BackgroundConnectionResetHelper wait to start finish reset connections
                     m_log.LogError( $"\n*************************\nSocket with id {desiredSocket.Id} isn\'t returned to pool by some thread\n*************************\n" );
                 }
             }
@@ -216,19 +217,23 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                             await connectedSocket.DsConnectAsync( remoteEndPoint, timeoutToConnect, ioBehavior ).
                                 ConfigureAwait( false );
                         }
-                        catch ( Exception ex )
+                        catch ( SocketException ex )
+                        {
+                            HandleRemoteException( ex, connectedSocket );
+                        }
+                        catch ( TimeoutException ex )
                         {
                             HandleRemoteException( ex, connectedSocket );
                         }
                     }
-                    catch ( Exception ex )
+                    catch ( TimeoutException ex )
                     {
                         HandleRemoteException( ex, connectedSocket );
                     }
-                }
-                catch ( Exception ex )
-                {
-                    HandleRemoteException( ex, connectedSocket );
+                    catch ( ObjectDisposedException ex )
+                    {
+                        HandleRemoteException( ex, connectedSocket );
+                    }
                 }
             }
             else
@@ -239,7 +244,11 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     await connectedSocket.DsConnectAsync( remoteEndPoint, timeoutToConnect, ioBehavior ).
                         ConfigureAwait( false );
                 }
-                catch ( Exception ex )
+                catch ( SocketException ex )
+                {
+                    HandleRemoteException( ex, connectedSocket );
+                }
+                catch ( TimeoutException ex )
                 {
                     HandleRemoteException( ex, connectedSocket );
                 }
@@ -257,7 +266,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             if(failedSocket != null)
             {
-                failedSocket.IsInPool = SocketStateInPool.IsFailed;
+                failedSocket.StateInPool = SocketStateInPool.IsFailed;
             }
 
             m_socketSemaphore.Release();
@@ -305,7 +314,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     {
                         m_sockets.TryAdd( remoteEndPoint, socketInPool );
 
-                        socketInPool.IsInPool = SocketStateInPool.IsInPool;
+                        socketInPool.StateInPool = SocketStateInPool.IsInPool;
                         isReturned = true;
                     }
                     else
@@ -323,7 +332,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                         {
                             socketInPool.Dispose();
                         }
-                        socketInPool.IsInPool = SocketStateInPool.IsFailed;
 
                         isReturned = false;
                     }
