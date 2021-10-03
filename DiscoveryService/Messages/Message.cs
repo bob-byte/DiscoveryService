@@ -1,52 +1,26 @@
 ﻿using LUC.DiscoveryService.CodingData;
+using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Interfaces;
+
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages
 {
-    /// <summary>
-    /// <b>Abstract</b> class for messages
-    /// </summary>
-    public abstract class Message : IWireSerialiser
+    class Message : IWireSerialiser
     {
         /// <summary>
-        /// Maximum bytes of a message.
+        ///   The kind of message. This value always is first byte in it
         /// </summary>
-        /// <remarks>
-        /// In reality the max length is dictated by the network MTU.
-        /// </remarks>
-        public const Int32 MaxLength = 10240;
-
-        public Message()
-        {
-            ;
-        }
-
-        /// <summary>
-        ///   Create a new instance of the <see cref="Message"/> class.
-        /// </summary>
-        /// <param name="messageId">
-        ///   Unique message identifier. It is used to detect duplicate messages.
-        /// </param>
-        /// <param name="tcpPort">
-        /// TCP port which is being run in machine with machineId
-        /// </param>
-        public Message(UInt32 messageId, UInt32 protocolVersion)
-        {
-            MessageId = messageId;
-            ProtocolVersion = protocolVersion;
-        }
-
-        /// <summary>
-        ///   Unique message identifier. It is used to detect duplicate messages.
-        /// </summary>
-        public UInt32 MessageId { get; set; }
-
-        /// <summary>
-        ///   Supported version of protocol of the remote application.
-        /// </summary>
-        public UInt32 ProtocolVersion { get; set; }
+        public MessageOperation MessageOperation { get; protected set; }
 
         /// <summary>
         ///   Length in bytes of the object when serialised.
@@ -56,8 +30,8 @@ namespace LUC.DiscoveryService.Messages
         /// </returns>
         public Int32 Length()
         {
-            var writer = new WireWriter(Stream.Null);
-            Write(writer);
+            WireWriter writer = new WireWriter( Stream.Null );
+            Write( writer );
 
             return writer.Position;
         }
@@ -71,8 +45,8 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="buffer"/> is equal to null
         /// </exception>
-        public IWireSerialiser Read(Byte[] buffer) =>
-            Read(buffer, offset: 0, buffer.Length);
+        public IWireSerialiser Read( Byte[] buffer ) =>
+            Read( buffer, offset: 0, buffer.Length );
 
         /// <summary>
         ///   Reads the DNS object from a byte array.
@@ -89,11 +63,11 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="buffer"/> is equal to null
         /// </exception>
-        public IWireSerialiser Read(Byte[] buffer, Int32 offset, Int32 count)
+        public IWireSerialiser Read( Byte[] buffer, Int32 offset, Int32 count )
         {
-            using(var stream = new MemoryStream(buffer, offset, count))
+            using ( MemoryStream stream = new MemoryStream( buffer, offset, count ) )
             {
-                return Read(new CodingData.WireReader(stream));
+                return Read( new WireReader( stream ) );
             }
         }
 
@@ -110,7 +84,18 @@ namespace LUC.DiscoveryService.Messages
         /// <exception cref="IOException">
         /// 
         /// </exception>
-        public abstract IWireSerialiser Read(CodingData.WireReader reader);
+        public virtual IWireSerialiser Read( WireReader reader )
+        {
+            if ( reader != null )
+            {
+                MessageOperation = (MessageOperation)reader.ReadByte();
+                return this;
+            }
+            else
+            {
+                throw new ArgumentNullException( "ReaderNullException" );
+            }
+        }
 
         /// <summary>
         ///   Writes the Message object to a byte array.
@@ -120,9 +105,9 @@ namespace LUC.DiscoveryService.Messages
         /// </returns>
         public Byte[] ToByteArray()
         {
-            using(var stream = new MemoryStream())
+            using ( MemoryStream stream = new MemoryStream() )
             {
-                Write(stream);
+                Write( stream );
                 return stream.ToArray();
             }
         }
@@ -137,35 +122,46 @@ namespace LUC.DiscoveryService.Messages
         /// When <paramref name="writer"/> is equal to null
         /// </exception>
         /// <exception cref="ArgumentException">
-        /// If <seealso cref="Message"/> has string, which cannot be encoded to ASCII
+        /// If <seealso cref="DiscoveryServiceMessage"/> has string, which cannot be encoded to ASCII
         /// </exception>
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
-        public void Write(Stream stream) =>
-            Write(new WireWriter(stream));
+        public void Write( Stream stream ) =>
+            Write( new WireWriter( stream ) );
 
         /// <inheritdoc/>
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="writer"/> is equal to null
         /// </exception>
         /// <exception cref="ArgumentException">
-        /// If <seealso cref="Message"/> has string, which cannot be encoded to ASCII
+        /// If <seealso cref="DiscoveryServiceMessage"/> has string, which cannot be encoded to ASCII
         /// </exception>
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
-        public abstract void Write(WireWriter writer);
-
-        public override string ToString()
+        public virtual void Write( WireWriter writer )
         {
-            using (var writer = new StringWriter())
+            if ( writer != null )
             {
-                writer.Write($"MessageId = {MessageId};\n" +
-                             $"Protocol version = {ProtocolVersion}");
-
-                return writer.ToString();
+                writer.WriteByte( (Byte)MessageOperation );
+            }
+            else
+            {
+                throw new ArgumentNullException( "WriterNullException" );
             }
         }
+
+        public override String ToString() =>
+            Display.ObjectToString(objectToConvert: this);
+
+        protected virtual void DefaultInit( params Object[] args )
+        {
+            ;//do nothing
+        }
+
+        [MethodImpl( MethodImplOptions.AggressiveInlining )]
+        protected String PropertyWithValue<T>( String nameProp, T value ) =>
+            $"{nameProp} = {value}";
     }
 }

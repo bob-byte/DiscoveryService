@@ -1,18 +1,22 @@
-﻿using System;
+﻿using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Messages;
+using LUC.DiscoveryService.Messages.KademliaRequests;
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Numerics;
 using System.Text;
 
 namespace LUC.DiscoveryService.CodingData
 {
     /// <summary>
-    /// Methods to write DNS wire formatted data items.
+    /// Methods to write wire formatted data items.
     /// </summary>
-    public class WireWriter : IDisposable
+    class WireWriter : Binary, IDisposable
     {
-        private readonly Stream stream;
-
         /// <summary>
         /// Creates a new instance of the <see cref="WireWriter"/> on the
         /// specified <see cref="Stream"/>.
@@ -20,9 +24,9 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="stream">
         /// The destination for data items.
         /// </param>
-        public WireWriter(Stream stream)
+        public WireWriter( Stream stream )
         {
-            this.stream = stream;
+            m_stream = stream;
         }
 
         /// <summary>
@@ -36,9 +40,9 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="value">
         /// Value to write
         /// </param>
-        public void WriteByte(Byte value)
+        public void WriteByte( Byte value )
         {
-            stream.WriteByte(value);
+            m_stream.WriteByte( value );
             ++Position;
         }
 
@@ -48,14 +52,69 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="value">
         /// The four-byte unsigned integer to write.
         /// </param>
-        public void Write(UInt32 value)
+        public void Write( UInt16 value )
         {
-            stream.WriteByte((Byte)(value >> 24));
-            stream.WriteByte((Byte)(value >> 16));
-            stream.WriteByte((Byte)(value >> 8));
-            stream.WriteByte((Byte)value);
+            Write( countOfBits: 16, ( m_byte ) => (Byte)( value >> m_byte ) );
+
+            Position += 2;
+        }
+
+        private void Write( Int32 countOfBits, Func<Int32, Byte> valueToWrite )
+        {
+            for ( Int32 numsBit = countOfBits - BITS_IN_ONE_BYTE; numsBit >= 0; numsBit -= BITS_IN_ONE_BYTE )
+            {
+                m_stream.WriteByte( valueToWrite( numsBit ) );
+            }
+        }
+
+        /// <summary>
+        ///   Writes a four-byte unsigned integer to the current stream and advances the stream position by four bytes.
+        /// </summary>
+        /// <param name="value">
+        /// The four-byte unsigned integer to write.
+        /// </param>
+        public void Write( UInt32 value )
+        {
+            Write( countOfBits: 32, ( m_byte ) => (Byte)( value >> m_byte ) );
 
             Position += 4;
+        }
+
+        /// <summary>
+        ///   Writes a four-byte unsigned integer to the current stream and advances the stream position by four bytes.
+        /// </summary>
+        /// <param name="value">
+        /// The four-byte unsigned integer to write.
+        /// </param>
+        public void Write( UInt64 value )
+        {
+            Write( countOfBits: 64, ( m_byte ) => (Byte)( value >> m_byte ) );
+
+            Position += 8;
+        }
+
+        public void Write( BigInteger value )
+        {
+            Byte[] bytes = value.ToByteArray();
+            Int32 numByte = 0;
+            Write( (UInt32)bytes.Length );
+
+            Write( countOfBits: bytes.Length * BITS_IN_ONE_BYTE, ( m_byte ) =>
+             {
+                 Byte shiftValue = bytes[ numByte ];
+                 numByte++;
+
+                 return shiftValue;
+             } );
+
+            Position += bytes.Length;
+        }
+
+        public void Write( Boolean value )
+        {
+            m_stream.WriteByte( Convert.ToByte( value ) );
+
+            Position += 1;
         }
 
         /// <summary>
@@ -67,16 +126,16 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="bytes"/> is equal to null
         /// </exception>
-        public void WriteBytes(Byte[] bytes)
+        public void WriteBytes( Byte[] bytes )
         {
-            if(bytes != null)
+            if ( bytes != null )
             {
-                stream.Write(bytes, offset: 0, bytes.Length);
+                m_stream.Write( bytes, offset: 0, bytes.Length );
                 Position += bytes.Length;
             }
             else
             {
-                throw new ArgumentNullException(nameof(bytes));
+                throw new ArgumentNullException( nameof( bytes ) );
             }
         }
 
@@ -87,29 +146,29 @@ namespace LUC.DiscoveryService.CodingData
         ///   A sequence of bytes to write.
         /// </param>
         /// <exception cref="ArgumentException">
-        ///   When the length is greater than <see cref="byte.MaxValue"/>.
+        ///   When the length is greater than <see cref="Byte.MaxValue"/>.
         /// </exception>
         /// <exception cref="ArgumentNullException">
         /// Whne <paramref name="bytes"/> is equal to null 
         /// </exception>
-        public void WriteByteLengthPrefixedBytes(Byte[] bytes)
+        public void WriteByteLengthPrefixedBytes( Byte[] bytes )
         {
-            if(bytes != null)
+            if ( bytes != null )
             {
-                var length = bytes.Length;
-                if(length <= Byte.MaxValue)
+                Int32 length = bytes.Length;
+                if ( length <= Byte.MaxValue )
                 {
-                    WriteByte((Byte)length);
-                    WriteBytes(bytes);
+                    WriteByte( (Byte)length );
+                    WriteBytes( bytes );
                 }
                 else
                 {
-                    throw new ArgumentException($"Length can\'t exceed {Byte.MaxValue}", nameof(bytes));
+                    throw new ArgumentException( $"Length can\'t exceed {Byte.MaxValue}", nameof( bytes ) );
                 }
             }
             else
             {
-                throw new ArgumentNullException(nameof(bytes));
+                throw new ArgumentNullException( nameof( bytes ) );
             }
         }
 
@@ -128,23 +187,48 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EncoderFallbackException">
         /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
         /// </exception>
-        public void WriteString(String value)
+        public void WriteAsciiString( String value )
         {
-            if(value != null)
+            if ( value != null )
             {
-                if (!value.Any(c => c > 0x7F))
+                if ( !value.Any( c => c > MAX_VALUE_CHAR_IN_ASCII ) )
                 {
-                    var bytes = Encoding.ASCII.GetBytes(value);
-                    WriteByteLengthPrefixedBytes(bytes);
+                    Byte[] bytes = Encoding.ASCII.GetBytes( value );
+                    WriteByteLengthPrefixedBytes( bytes );
                 }
                 else
                 {
-                    throw new ArgumentException("Only ASCII characters are allowed");
+                    throw new ArgumentException( "Only ASCII characters are allowed" );
                 }
             }
             else
             {
-                throw new ArgumentNullException(nameof(value));
+                throw new ArgumentNullException( nameof( value ) );
+            }
+        }
+
+        /// <summary>
+        /// Writes a length-prefixed string to this stream in the current encoding of the WireWriter, and advances the current position of the stream in accordance with the encoding used and the specific characters being written to the stream.
+        /// </summary>
+        /// <param name="value">
+        /// The value to write.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="value"/> is equal to null
+        /// </exception>
+        /// <exception cref="EncoderFallbackException">
+        /// A rollback has occurred (see the article Character encoding in .NET for a full explanation)
+        /// </exception>
+        public void WriteUtf32String( String value )
+        {
+            if ( value != null )
+            {
+                Byte[] bytes = Encoding.UTF32.GetBytes( value );
+                WriteByteLengthPrefixedBytes( bytes );
+            }
+            else
+            {
+                throw new ArgumentNullException( nameof( value ) );
             }
         }
 
@@ -157,25 +241,84 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="ArgumentNullException">
         /// When <paramref name="enumerable"/> is equal to null
         /// </exception>
-        public void WriteEnumerable(IEnumerable<String> enumerable)
+        public void WriteEnumerable( IEnumerable<String> enumerable )
         {
-            if (enumerable != null)
+            if ( enumerable != null )
             {
-                var array = enumerable.ToArray();
+                Write( (UInt32)enumerable.Count() );
 
-                Write((UInt32)array.Length);
-                foreach (var item in array)
+                foreach ( String item in enumerable )
                 {
-                    WriteString(item);
+                    WriteAsciiString( item );
                 }
             }
             else
             {
-                throw new ArgumentNullException(nameof(enumerable));
+                throw new ArgumentNullException( nameof( enumerable ) );
+            }
+        }
+
+        /// <summary>
+        /// Writes enumerable of data
+        /// </summary>
+        /// <param name="enumerable">
+        /// Enumerable to write
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        /// When <paramref name="enumerable"/> is equal to null
+        /// </exception>
+        public void WriteEnumerable( IEnumerable<Contact> enumerable, String lastSeenFormat )
+        {
+            if ( enumerable != null )
+            {
+                Write( (UInt32)enumerable.Count() );
+
+                foreach ( Contact contact in enumerable )
+                {
+                    Write( contact, lastSeenFormat );
+                }
+            }
+            else
+            {
+                throw new ArgumentNullException( nameof( enumerable ) );
+            }
+        }
+
+        public void Write( Contact contact, String lastSeenFormat )
+        {
+            WriteAsciiString( contact.MachineId );
+            Write( contact.KadId.Value );
+
+            Write( contact.TcpPort );
+            WriteAsciiString( contact.LastSeen.ToString( lastSeenFormat ) );
+
+            Write( (UInt32)contact.IpAddressesCount );
+            if ( contact.IpAddressesCount > 0 )
+            {
+                List<IPAddress> addresses = contact.IpAddresses();
+
+                foreach ( IPAddress address in addresses )
+                {
+                    WriteAsciiString( address.ToString() );
+                }
+            }
+        }
+
+        public void Write( ChunkRange range )
+        {
+            if ( range != null )
+            {
+                Write( range.Start );
+                Write( range.End );
+                Write( range.Total );
+            }
+            else
+            {
+                throw new ArgumentNullException( $"{nameof( range )} is null" );
             }
         }
 
         public void Dispose() =>
-            stream.Close();
+            m_stream.Close();
     }
 }

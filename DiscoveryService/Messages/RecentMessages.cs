@@ -21,12 +21,12 @@ namespace LUC.DiscoveryService.Messages
         ///   The key is the Base64 encoding of the MD5 hash of 
         ///   a message and the value is when the message was seen.
         /// </value>
-        public ConcurrentDictionary<string, DateTime> Messages = new ConcurrentDictionary<string, DateTime>();
+        public ConcurrentDictionary<UInt32, DateTime> Messages { get; set; } = new ConcurrentDictionary<UInt32, DateTime>();
 
         /// <summary>
         ///   The time interval used to determine if a message is recent.
         /// </summary>
-        public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(1);
+        public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds( value: 5 );
 
         /// <summary>
         ///   Try adding a message to the recent message list.
@@ -38,10 +38,10 @@ namespace LUC.DiscoveryService.Messages
         ///   <b>true</b> if the message, did not already exist; otherwise,
         ///   <b>false</b> the message exists within the <see cref="Interval"/>.
         /// </returns>
-        public bool TryAdd(byte[] message)
+        public Boolean TryAdd( UInt32 messageId )
         {
             Prune();
-            return Messages.TryAdd(GetId(message), DateTime.Now);
+            return Messages.TryAdd( messageId, DateTime.UtcNow );
         }
 
         /// <summary>
@@ -53,37 +53,20 @@ namespace LUC.DiscoveryService.Messages
         /// <remarks>
         ///   Anything older than an <see cref="Interval"/> ago is removed.
         /// </remarks>
-        public int Prune()
+        public Int32 Prune()
         {
-            var dead = DateTime.Now - Interval;
-            var count = 0;
+            DateTime dead = DateTime.UtcNow - Interval;
+            Int32 count = 0;
 
-            foreach (var stale in Messages.Where(x => x.Value < dead))
+            foreach ( System.Collections.Generic.KeyValuePair<UInt32, DateTime> stale in Messages.Where( x => x.Value < dead ) )
             {
-                if (Messages.TryRemove(stale.Key, out _))
+                if ( Messages.TryRemove( stale.Key, out _ ) )
                 {
                     ++count;
                 }
             }
-            return count;
-        }
 
-        /// <summary>
-        ///   Gets a unique ID for a message.
-        /// </summary>
-        /// <param name="message">
-        ///   The binary representation of a message.
-        /// </param>
-        /// <returns>
-        ///   The Base64 encoding of the MD5 hash of the <paramref name="message"/>.
-        /// </returns>
-        public string GetId(byte[] message)
-        {
-            // MD5 is okay because the hash is not used for security.
-            using (HashAlgorithm hasher = MD5.Create())
-            {
-                return Convert.ToBase64String(hasher.ComputeHash(message));
-            }
+            return count;
         }
     }
 }

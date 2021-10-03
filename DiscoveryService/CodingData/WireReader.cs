@@ -1,18 +1,23 @@
-﻿using System;
+﻿using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Kademlia.ClientPool;
+using LUC.DiscoveryService.Messages;
+using LUC.DiscoveryService.Messages.KademliaRequests;
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Numerics;
 using System.Text;
 
 namespace LUC.DiscoveryService.CodingData
 {
     /// <summary>
-    /// Methods to read DNS wire formatted data items.
+    /// Methods to read and wire formatted data items.
     /// </summary>
-    public class WireReader : IDisposable
+    class WireReader : Binary, IDisposable
     {
-        private readonly Stream stream;
-
         /// <summary>
         ///   Creates a new instance of the <see cref="WireReader"/> on the
         ///   specified <see cref="Stream"/>.
@@ -20,9 +25,9 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="stream">
         ///   The source for data items.
         /// </param>
-        public WireReader(Stream stream)
+        public WireReader( Stream stream )
         {
-            this.stream = stream;
+            m_stream = stream;
         }
 
         /// <summary>
@@ -41,14 +46,26 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public Byte ReadByte()
         {
-            var value = stream.ReadByte();
-            if(value < 0)
+            Int32 value = m_stream.ReadByte();
+            if ( value < 0 )
             {
                 throw new EndOfStreamException();
             }
 
             ++Position;
             return (Byte)value;
+        }
+
+        /// <summary>
+        ///   Read unsigned integer of 16 bits
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public UInt16 ReadUInt16()
+        {
+            UInt16 value = (UInt16)ReadNumValue( countBytes: 2 );
+            return value;
         }
 
         /// <summary>
@@ -59,15 +76,50 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public UInt32 ReadUInt32()
         {
-            Int32 value = ReadByte();
-
-            Int32 bitInByte = 8;
-            value = value << bitInByte | ReadByte();
-            value = value << bitInByte | ReadByte();
-            value = value << bitInByte | ReadByte();
-
-            return (UInt32)value;
+            UInt32 value = (UInt32)ReadNumValue( countBytes: 4 );
+            return value;
         }
+
+        /// <summary>
+        ///   Read unsigned integer of 32 bits
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public UInt64 ReadUInt64()
+        {
+            UInt64 value = ReadNumValue( countBytes: 8 );
+            return value;
+        }
+
+        /// <summary>
+        ///   Read <seealso cref="BigInteger"/>
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public BigInteger ReadBigInteger()
+        {
+            UInt32 countOfBytes = ReadUInt32();
+
+            Byte[] bytes = new Byte[ countOfBytes ];
+            for ( Int32 numByte = 0; numByte < countOfBytes; numByte++ )
+            {
+                bytes[ numByte ] = ReadByte();
+            }
+
+            BigInteger bigInt = new BigInteger( bytes );
+            return bigInt;
+        }
+
+        /// <summary>
+        ///   Read unsigned integer of 32 bits
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public Boolean ReadBoolean() =>
+            Convert.ToBoolean( ReadByte() );
 
         /// <summary>
         ///   Read the specified number of bytes.
@@ -81,16 +133,16 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EndOfStreamException">
         ///   When no more data is available.
         /// </exception>
-        public Byte[] ReadBytes(Int32 length)
+        public Byte[] ReadBytes( Int32 length )
         {
-            var buffer = new Byte[length];
+            Byte[] buffer = new Byte[ length ];
             Int32 countReadBytes;
-            for (Int32 offset = 0; length > 0; offset += countReadBytes, 
-                                               length -= countReadBytes, 
-                                               Position += countReadBytes)
+            for ( Int32 offset = 0; length > 0; offset += countReadBytes,
+                                               length -= countReadBytes,
+                                               Position += countReadBytes )
             {
-                countReadBytes = stream.Read(buffer, offset, length);
-                if (countReadBytes == 0)
+                countReadBytes = m_stream.Read( buffer, offset, length );
+                if ( countReadBytes == 0 )
                 {
                     throw new EndOfStreamException();
                 }
@@ -111,7 +163,7 @@ namespace LUC.DiscoveryService.CodingData
         public Byte[] ReadByteLengthPrefixedBytes()
         {
             Int32 length = ReadByte();
-            return ReadBytes(length);
+            return ReadBytes( length );
         }
 
         /// <summary>
@@ -129,17 +181,24 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="InvalidDataException">
         ///   Only ASCII characters are allowed.
         /// </exception>
-        public String ReadString()
+        public String ReadAsciiString()
         {
-            var bytes = ReadByteLengthPrefixedBytes();
-            if(!bytes.Any(c => c > 0x7F))
+            Byte[] bytes = ReadByteLengthPrefixedBytes();
+            if ( !bytes.Any( c => c > MAX_VALUE_CHAR_IN_ASCII ) )
             {
-                return Encoding.ASCII.GetString(bytes);
+                return Encoding.ASCII.GetString( bytes );
             }
             else
             {
-                throw new InvalidDataException("Only ASCII characters are allowed");
+                throw new InvalidDataException( "Only ASCII characters are allowed" );
             }
+        }
+
+        public String ReadUtf32String()
+        {
+            Byte[] bytes = ReadByteLengthPrefixedBytes();
+
+            return Encoding.UTF32.GetString( bytes );
         }
 
         /// <summary>
@@ -152,19 +211,92 @@ namespace LUC.DiscoveryService.CodingData
         public List<String> ReadListOfStrings()
         {
             List<String> list = new List<String>();
-            var length = ReadUInt32();
-            if (length > 0)
+            UInt32 length = ReadUInt32();
+            if ( length > 0 )
             {
-                for (Int32 i = 0; i < length; i++)
+                for ( Int32 numString = 0; numString < length; numString++ )
                 {
-                    list.Add(ReadString());
+                    list.Add( ReadAsciiString() );
                 }
             }
 
             return list;
         }
 
+        /// <summary>
+        /// Read string list of rank 1
+        /// (jagged arrays not supported atm)
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public List<Contact> ReadListOfContacts( String lastSeenFormat )
+        {
+            List<Contact> list = new List<Contact>();
+            UInt32 length = ReadUInt32();
+            if ( length > 0 )
+            {
+                for ( Int32 numContact = 0; numContact < length; numContact++ )
+                {
+                    list.Add( ReadContact( lastSeenFormat ) );
+                }
+            }
+
+            return list;
+        }
+
+        public Contact ReadContact( String lastSeenFormat )
+        {
+            String machineId = ReadAsciiString();
+            BigInteger idAsBigInt = ReadBigInteger();
+            UInt16 tcpPort = ReadUInt16();
+
+            String lastSeenAsStr = ReadAsciiString();
+            DateTime lastSeen = DateTime.ParseExact( lastSeenAsStr, lastSeenFormat, provider: null );
+
+            UInt32 addressesCount = ReadUInt32();
+            ICollection<IPAddress> addresses = new List<IPAddress>( (Int32)addressesCount );
+            for ( Int32 numAddress = 0; numAddress < addressesCount; numAddress++ )
+            {
+                String addressAsStr = ReadAsciiString();
+                addresses.Add( IPAddress.Parse( addressAsStr ) );
+            }
+
+            Contact contact = new Contact( machineId, new KademliaId( idAsBigInt ), tcpPort, addresses, lastSeen );
+            return contact;
+        }
+
+        public ChunkRange ReadRange()
+        {
+            UInt64 start = ReadUInt64();
+            UInt64 end = ReadUInt64();
+            UInt64 total = ReadUInt64();
+
+            ChunkRange readRange = new ChunkRange( start, end, total );
+            return readRange;
+        }
+
         public void Dispose() =>
-            stream.Close();
+            m_stream.Close();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value">
+        /// Already read value
+        /// </param>
+        /// <returns></returns>
+        private UInt64 ReadNumValue( Int32 countBytes )
+        {
+            UInt64 value = ReadByte();
+
+            //numByte starts from 1 because one byte has been already read
+            for ( Int32 numByte = 1; numByte < countBytes; numByte++ )
+            {
+                value = ( value << BITS_IN_ONE_BYTE ) | ReadByte();
+            }
+
+            return value;
+        }
     }
 }

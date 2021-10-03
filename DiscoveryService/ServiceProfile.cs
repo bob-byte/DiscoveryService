@@ -1,5 +1,8 @@
 ﻿using DeviceId;
-using LUC.DiscoveryService.Extensions;
+
+using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Kademlia;
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,35 +14,24 @@ namespace LUC.DiscoveryService
     /// <summary>
     ///   Contains info about current peer
     /// </summary>
-    public class ServiceProfile : CollectedInfoInLan
+    public class ServiceProfile : AbstractService
     {
         static ServiceProfile()
         {
-            // Make sure Service is inited.
-            Service.ReferenceEquals(null, null);
+            // Make sure NetworkEventInvoker is inited. This row causes initialization of all static members of NetworkEventInvoker
+            NetworkEventInvoker.ReferenceEquals( null, null );
         }
 
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceProfile"/> class.
         /// </summary>
-        /// <param name="addresses">
-        /// <see cref="IPAddress"/> of network interfaces of current machine 
-        /// </param>
-        public ServiceProfile(Boolean useIpv4, Boolean useIpv6, UInt32 protocolVersion, 
-            ConcurrentDictionary<String, String> groupsSupported = null, 
-            IEnumerable<IPAddress> addresses = null)
+        public ServiceProfile( Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion,
+            ConcurrentDictionary<String, String> groupsSupported = null )
         {
-            DeviceIdBuilder deviceIdBuilder = new DeviceIdBuilder();
-            MachineId = deviceIdBuilder.MachineId();
+            LUC.DiscoveryService.MachineId.Create(out String machineId);
+            MachineId = machineId;
 
-            if(groupsSupported != null)
-            {
-                GroupsSupported = groupsSupported;
-            }
-            else
-            {
-                GroupsSupported = new ConcurrentDictionary<String, String>();
-            }
+            GroupsSupported = groupsSupported ?? new ConcurrentDictionary<String, String>();
 
             ProtocolVersion = protocolVersion;
 
@@ -47,9 +39,11 @@ namespace LUC.DiscoveryService
             UseIpv6 = useIpv6;
         }
 
+        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
+
         /// <summary>
         /// Known network interfaces
         /// </summary>
-        public ICollection<NetworkInterface> NetworkInterfaces => Service.KnownNics;
+        public IList<NetworkInterface> KnownNetworkInterfaces => NetworkEventInvoker.KnownNetworks;
     }
 }
