@@ -261,7 +261,9 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         public new void Dispose()
         {
             StateInPool = SocketStateInPool.IsFailed;
-            base.Dispose();
+            m_state = SocketState.Closing;
+            base.Dispose( disposing: false );
+            m_state = SocketState.Closed;
         }
     }
 }

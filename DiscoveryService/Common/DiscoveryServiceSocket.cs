@@ -25,7 +25,7 @@ namespace LUC.DiscoveryService.Common
         private readonly TimeSpan m_howOftenCheckAcceptedClient;
         private readonly ConcurrentQueue<Socket> m_acceptedSockets;
 
-        private volatile SocketState m_state;
+        protected volatile SocketState m_state;
 
         [Import( typeof( ILoggingService ) )]
         internal static ILoggingService Log { get; private set; }
