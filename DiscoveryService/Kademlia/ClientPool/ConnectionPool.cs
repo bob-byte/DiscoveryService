@@ -141,20 +141,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     desiredSocket.StateInPool = SocketStateInPool.DeletedFromPool;
                 }
 
-                try
-                {
-                    desiredSocket = await ConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket ).
-                        ConfigureAwait( false );
-                }
-                finally
-                {
-                    //null-check, because we can get an exception in method ConnectedSocketAsync
-                    //if ( ( desiredSocket != null ) && ( desiredSocket.IsInPool != SocketStateInPool.TakenFromPool ) &&
-                    //     ( desiredSocket.IsInPool != SocketStateInPool.IsFailed) )
-                    //{
-                    //    desiredSocket.IsInPool = SocketStateInPool.TakenFromPool;
-                    //}
-                }
+                desiredSocket = await ConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket ).
+                    ConfigureAwait( false );
 
                 desiredSocket.StateInPool = SocketStateInPool.TakenFromPool;
                 m_leasedSockets.TryAdd( remoteEndPoint, desiredSocket );

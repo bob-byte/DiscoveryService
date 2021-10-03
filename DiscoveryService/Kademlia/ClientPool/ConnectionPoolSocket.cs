@@ -25,6 +25,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
     {
         private SocketStateInPool m_stateInPool;
         private readonly AutoResetEvent m_removedFromPool;
+        private readonly Semaphore m_stateInPoolSemaphore;//we use semaphore to release lock in different places
 
         /// <inheritdoc/>
         public ConnectionPoolSocket( SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log )
@@ -32,8 +33,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         {
             Id = remoteEndPoint;
             Pool = belongPool;
+
             m_removedFromPool = new AutoResetEvent( initialState: false );
             m_stateInPool = SocketStateInPool.NeverWasInPool;
+            m_stateInPoolSemaphore = new Semaphore( initialCount: 1, maximumCount: 1);
         }
 
         /// <summary>
@@ -79,37 +82,46 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         public SocketStateInPool StateInPool
         {
-            get => m_stateInPool;
+            get
+            {
+                m_stateInPoolSemaphore.WaitOne();
+                try
+                {
+                    return m_stateInPool;
+                }
+                finally
+                {
+                    m_stateInPoolSemaphore.Release();
+                }
+            }
             set
             {
-                lock ( m_removedFromPool )
-                {
-                    if(m_stateInPool == SocketStateInPool.NeverWasInPool)
-                    {
-                        m_stateInPool = value;
-                    }
-                    else
-                    {
-                        m_stateInPool = value;
+                m_stateInPoolSemaphore.WaitOne();
 
-                        if ( m_stateInPool == SocketStateInPool.TakenFromPool )
+                if(m_stateInPool == SocketStateInPool.NeverWasInPool)
+                {
+                    m_stateInPool = value;
+                    m_stateInPoolSemaphore.Release();
+                }
+                else
+                {
+                    m_stateInPoolSemaphore.Release();
+                    if ( value == SocketStateInPool.TakenFromPool )
+                    {
+                        Boolean isReturned = m_removedFromPool.WaitOne( Constants.TimeWaitReturnToPool );
+                        if ( isReturned )
                         {
-                            Boolean isReturned = m_removedFromPool.WaitOne( Constants.TimeWaitReturnToPool );
-                            if ( isReturned )
-                            {
-                                Log.LogInfo( $"\n*************************\nSocket with id {Id} successfully taken from pool\n*************************\n" );
-                            }
-                            else
-                            {
-                                //case when BackgroundConnectionResetHelper wait to start reset connections
-                                Log.LogError( $"\n*************************\nSocket with id {Id} isn\'t returned to pool by some thread\n*************************\n" );
-                            }
+                            Log.LogInfo( $"\n*************************\nSocket with id {Id} successfully taken from pool\n*************************\n" );
                         }
                         else
                         {
-                            //we don't use ReturnedInPool, otherwise we will have an deadlock
-                            m_removedFromPool.Set();
+                            //case when BackgroundConnectionResetHelper wait to start reset connections
+                            Log.LogError( $"\n*************************\nSocket with id {Id} isn\'t returned to pool by some thread\n*************************\n" );
                         }
+                    }
+                    else if ( value != SocketStateInPool.NeverWasInPool )//it is additional test to make this method absolutely thread-safe if logic will be changed
+                    {
+                        m_removedFromPool.Set();
                     }
                 }
             }
@@ -119,9 +131,15 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         {
             get
             {
-                lock( m_removedFromPool )
+                //we use lock to make sure that we get current value of StateInPool (see method StateInPool.set)
+                m_stateInPoolSemaphore.WaitOne();
+                try
                 {
                     return m_removedFromPool;
+                }
+                finally
+                {
+                    m_stateInPoolSemaphore.Release();
                 }
             }
         }
@@ -226,9 +244,13 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 }
                 finally
                 {
-                    if ( ( returnToPool ) && ( Pool != null ) )
+                    if ( ( !cancellationToken.IsCancellationRequested ) && ( returnToPool ) )
                     {
-                        newSocket.ReturnedToPool();
+                        newSocket?.ReturnedToPool();
+                    }
+                    else if ( cancellationToken.IsCancellationRequested )
+                    {
+                        StateInPool = SocketStateInPool.IsFailed;
                     }
                 }
             }
