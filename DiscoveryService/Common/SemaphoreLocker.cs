@@ -40,32 +40,64 @@ namespace LUC.DiscoveryService.Common
             }
         }
 
+        //https://stackoverflow.com/a/61806749/7889645"
         public async Task LockAsync( Func<Task> procedure )
         {
-            await m_semaphoreSlim.WaitAsync();
+            Boolean isTaken = false;
 
             try
             {
+                do
+                {
+                    try
+                    {
+                    }
+                    finally
+                    {
+                        isTaken = await m_semaphoreSlim.WaitAsync( TimeSpan.FromSeconds( 1 ) );
+                    }
+                }
+                while ( !isTaken );
+
                 await procedure();
             }
             finally
             {
-                m_semaphoreSlim.Release();
+                if ( isTaken )
+                {
+                    m_semaphoreSlim.Release();
+                }
             }
         }
 
+        //https://stackoverflow.com/a/61806749/7889645"
         public async Task<T> LockAsync<T>( Func<Task<T>> func )
         {
-            await m_semaphoreSlim.WaitAsync();
+            Boolean isTaken = false;
 
             try
             {
+                do
+                {
+                    try
+                    {
+                    }
+                    finally
+                    {
+                        isTaken = await m_semaphoreSlim.WaitAsync( TimeSpan.FromSeconds( 1 ) );
+                    }
+                }
+                while ( !isTaken );
+
                 T result = await func();
                 return result;
             }
             finally
             {
-                m_semaphoreSlim.Release();
+                if ( isTaken )
+                {
+                    m_semaphoreSlim.Release();
+                }
             }
         }
     }

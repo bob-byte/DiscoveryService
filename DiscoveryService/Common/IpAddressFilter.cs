@@ -19,7 +19,7 @@ namespace LUC.DiscoveryService.Common
 
         private const Int32 CODE_WIN_32_SUCCESS_OPERATION = 0;
 
-        public static Boolean IsIpAddressInTheSameNetwork( IPAddress destinationAddress )
+        public static Boolean IsIpAddressInTheSameNetwork( IPAddress destinationAddress, IList<NetworkInterface> ourInterfaces = null )
         {
             UInt32 interfaceIndex;
             UInt32 gatewayForDest;
@@ -47,7 +47,11 @@ namespace LUC.DiscoveryService.Common
             }
 
             Boolean foundApprociateNetwork = false;
-            List<NetworkInterface> ourInterfaces = NetworkEventInvoker.KnownNetworks;
+            if(ourInterfaces == null || ourInterfaces.Count == 0)
+            {
+                ourInterfaces = NetworkEventInvoker.NetworkInterfaces().ToList();
+            }
+
             for ( Int32 numInterface = 0; ( numInterface < ourInterfaces.Count ) && ( !foundApprociateNetwork ); numInterface++ )
             {
                 IPInterfaceProperties ipProps = ourInterfaces[ numInterface ].GetIPProperties();

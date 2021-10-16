@@ -33,11 +33,29 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'IntegrationTest|AnyCPU'">
+    <DefineConstants>DEBUG;TRACE;INTEGRATION_TESTS</DefineConstants>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\IntegrationTests\</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'ReceiveTcpFromOurself|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;RECEIVE_TCP_FROM_OURSELF</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -58,10 +76,18 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Extensions\DirectoryExtension.cs" />
+    <Compile Include="InternalTests\Attributes\ConnectionPoolSocketConventionsAttribute.cs" />
+    <Compile Include="Builders\BuildEndPointRequest.cs" />
+    <Compile Include="InternalTests\Builders\ConnectionPoolSocketBuilder.cs" />
+    <Compile Include="Builders\EndPointBuilder.cs" />
+    <Compile Include="InternalTests\Customizations\ConnectionPoolSocketBasicCustomization.cs" />
     <Compile Include="DiscoveryServiceSocketTest.cs" />
     <Compile Include="DownloadTest.cs" />
     <Compile Include="FunctionalTest.cs" />
+    <Compile Include="InternalTests\ConnectionPoolSocketTest.cs" />
     <Compile Include="MulticastMessageTest.cs" />
+    <Compile Include="Extensions\RandomExtension.cs" />
     <Compile Include="RecentMessagesTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DiscoveryServiceTest.cs" />
@@ -77,28 +103,27 @@
     <None Include="Dockerfile" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\LucWithNewUpload\dubstack-win\WpfClient\LUC.ApiClient\LUC.ApiClient.csproj">
+      <Project>{f071e944-a1ee-4aee-b74a-36fd5b246ba5}</Project>
+      <Name>LUC.ApiClient</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\LucWithNewUpload\dubstack-win\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
+      <Project>{0f5f0967-f62a-4099-a6d7-2687cba9e4df}</Project>
+      <Name>LUC.Interfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\LucWithNewUpload\dubstack-win\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
+      <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
+      <Name>LUC.Services.Implementation</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\DiscoveryService\DiscoveryService.csproj">
       <Project>{9daf9ac8-c899-4d34-a5f8-8850fa45f26e}</Project>
       <Name>DiscoveryService</Name>
     </ProjectReference>
-    <ProjectReference Include="D:\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win\WpfClient\LUC.ApiClient\LUC.ApiClient.csproj">
-      <Project>{f071e944-a1ee-4aee-b74a-36fd5b246ba5}</Project>
-      <Name>LUC.ApiClient</Name>
-    </ProjectReference>
-    <ProjectReference Include="D:\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win\WpfClient\LUC.Globalization\LUC.Globalization.csproj">
-      <Project>{0c8b6b6f-c6ad-4bbf-bcf9-d60b6286c763}</Project>
-      <Name>LUC.Globalization</Name>
-    </ProjectReference>
-    <ProjectReference Include="D:\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
-      <Project>{0f5f0967-f62a-4099-a6d7-2687cba9e4df}</Project>
-      <Name>LUC.Interfaces</Name>
-    </ProjectReference>
-    <ProjectReference Include="D:\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
-      <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
-      <Name>LUC.Services.Implementation</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AutoFixture.AutoMoq">
+      <Version>4.17.0</Version>
+    </PackageReference>
     <PackageReference Include="AutoFixture.NUnit3">
       <Version>4.17.0</Version>
     </PackageReference>
@@ -118,6 +143,7 @@
       <Version>4.0.0</Version>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

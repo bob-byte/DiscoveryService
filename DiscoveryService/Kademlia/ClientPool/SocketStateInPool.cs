@@ -10,7 +10,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
     {
         NeverWasInPool,
         TakenFromPool,
-        DeletedFromPool,
+        //DeletedFromPool,
         IsFailed,
         IsInPool
     }

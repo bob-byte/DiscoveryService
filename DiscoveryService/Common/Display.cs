@@ -16,6 +16,8 @@ namespace LUC.DiscoveryService.Common
 {
     class Display
     {
+        public const String TABULATION = "\t";
+
         [Import( typeof( ILoggingService ) )]
         public static ILoggingService LoggingService { get; set; }
 
@@ -45,12 +47,14 @@ namespace LUC.DiscoveryService.Common
                 {
                     if ( ( prop.PropertyType != typeof( String ) ) && ( typeof( IEnumerable ).IsAssignableFrom( prop.PropertyType ) ) )
                     {
-                        IEnumerable enumerable = prop.GetValue( objectToConvert ) as IEnumerable;
-                        stringBuilder.Append( $"\t{prop.Name}:\n" );
+                        stringBuilder.Append( $"{TABULATION}{prop.Name}:\n" );
 
-                        foreach ( Object item in enumerable )
+                        if (prop.GetValue( objectToConvert ) is IEnumerable enumerable )
                         {
-                            stringBuilder.Append( $"\t\t{item};\n" );
+                            foreach ( Object item in enumerable )
+                            {
+                                stringBuilder.Append( $"{TABULATION}{TABULATION}{item};\n" );
+                            }
                         }
                     }
                     else
@@ -67,8 +71,27 @@ namespace LUC.DiscoveryService.Common
             }
         }
 
+        internal static String StringWithAttention( String logRecord ) =>
+            $"\n*************************\n{logRecord}\n*************************\n";
+
+        /// <summary>
+        /// With tabulation in start
+        /// </summary>
         [MethodImpl( MethodImplOptions.AggressiveInlining )]
-        internal static String PropertyWithValue<T>( String nameProp, T value ) =>
-            $"\t{nameProp} = {value}";
+        internal static String PropertyWithValue<T>( String nameProp, T value, Boolean useTab = true )
+        {
+            String tab;
+            if(useTab)
+            {
+                tab = TABULATION;
+            }
+            else
+            {
+                tab = String.Empty;
+            }
+
+            String propertyWithValue = $"{tab}{nameProp} = {value}";
+            return propertyWithValue;
+        }
     }
 }

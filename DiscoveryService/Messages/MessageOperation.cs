@@ -13,7 +13,7 @@ namespace LUC.DiscoveryService.Messages
     /// <seealso cref="DiscoveryServiceMessage.Opcode"/>
     public enum MessageOperation : Byte
     {
-        ErrorResponse,
+        LocalError,
 
         Multicast,
 

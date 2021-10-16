@@ -54,7 +54,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         /// <summary>
         /// Returns whether received right response to <a href="last"/> request
         /// </summary>
-        //It is internal to not show all bytes in log(see method Display.ObjectToString)
+        //It is internal to not show it in log(see method Display.ObjectToString)
         internal Boolean IsReceivedLastRightResp { get; private set; }
 
         /// <inheritdoc/>
@@ -100,8 +100,10 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public async Task<(TResponse, RpcError)> ResultAsync<TResponse>( Contact remoteContact, IOBehavior ioBehavior, UInt16 protocolVersion )
             where TResponse : Response
         {
-            ErrorResponse nodeError = null;
             Boolean isTimeoutSocketOp = false;
+            Boolean isTheSameNetwork = false;
+
+            ErrorResponse nodeError = null;
             TResponse response = null;
 
             List<IPAddress> cloneIpAddresses = remoteContact.IpAddresses();
@@ -109,7 +111,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 ( numAddress >= 0 ) && ( response == null ); numAddress-- )
             {
                 IPEndPoint ipEndPoint = new IPEndPoint( cloneIpAddresses[ numAddress ], remoteContact.TcpPort );
-                (isTimeoutSocketOp, nodeError, response) = await ClientStartAsync<TResponse>( ipEndPoint, ioBehavior ).ConfigureAwait( continueOnCapturedContext: false );
+                (isTimeoutSocketOp, nodeError, response, isTheSameNetwork) = await ClientStartAsync<TResponse>( ipEndPoint, ioBehavior ).ConfigureAwait( continueOnCapturedContext: false );
 
                 if ( response != null )
                 {
@@ -119,7 +121,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 }
             }
 
-            RpcError rpcError = RpcError( RandomID, response, isTimeoutSocketOp, nodeError );
+            RpcError rpcError = RpcError( RandomID, response, isTimeoutSocketOp, nodeError, isTheSameNetwork );
             IsReceivedLastRightResp = !rpcError.HasError;
 
             if ( !IsReceivedLastRightResp )
@@ -130,21 +132,22 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return (response, rpcError);
         }
 
-        private async Task<(Boolean isTimeoutSocketOp, ErrorResponse nodeError, TResponse response)> ClientStartAsync<TResponse>( IPEndPoint remoteEndPoint, IOBehavior ioBehavior )
+        private async Task<(Boolean isTimeoutSocketOp, ErrorResponse nodeError, TResponse response, Boolean isTheSameNetwork)> ClientStartAsync<TResponse>( IPEndPoint remoteEndPoint, IOBehavior ioBehavior )
             where TResponse : Response
         {
-            ErrorResponse nodeError = null;
             Boolean isTimeoutSocketOp = false;
+            Boolean isSameNetwork = false;
+
+            ErrorResponse nodeError = null;
             TResponse response = null;
 
             ConnectionPoolSocket client = null;
 
             try
             {
-                Boolean isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( remoteEndPoint.Address );
-                if ( isTheSameNetwork )
+                isSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( remoteEndPoint.Address );
+                if ( isSameNetwork )
                 {
-
                     Byte[] bytesOfRequest = ToByteArray();
 
                     client = await s_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
@@ -173,10 +176,18 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                     {
                         Byte[] bytesOfResponse = await client.DsReceiveAsync( ioBehavior, Constants.ReceiveTimeout ).ConfigureAwait( false );
 
-                        response = (TResponse)Activator.CreateInstance( typeof( TResponse ), RandomID );
-                        response.Read( bytesOfResponse );
+                        if(bytesOfResponse[0] != (Byte)MessageOperation.LocalError)
+                        {
+                            response = (TResponse)Activator.CreateInstance( typeof( TResponse ) );
+                            response.Read( bytesOfResponse );
 
-                        s_log.LogInfo( $"The response is received ({bytesOfResponse.Length} bytes):\n{response}" );
+                            s_log.LogInfo( $"The response is received ({bytesOfResponse.Length} bytes):\n{response}" );
+                        }
+                        else
+                        {
+                            nodeError = new ErrorResponse();
+                            nodeError.Read( bytesOfResponse );
+                        }
                     }
                     else
                     {
@@ -192,32 +203,31 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
             catch ( SocketException ex )
             {
-                isTimeoutSocketOp = false;
                 HandleException( ex, ref nodeError );
             }
             catch ( EndOfStreamException ex )
             {
-                isTimeoutSocketOp = false;
                 HandleException( ex, ref nodeError );
             }
             catch ( ArgumentException ex )
             {
-                isTimeoutSocketOp = false;
                 HandleException( ex, ref nodeError );
             }
             catch ( Win32Exception ex )
             {
-                isTimeoutSocketOp = false;
                 HandleException( ex, ref nodeError );
             }
             catch ( AggregateException ex)
             {
-                isTimeoutSocketOp = false;
                 HandleException( ex, ref nodeError );
             }
             catch ( ObjectDisposedException ex)
             {
-                isTimeoutSocketOp = false;
+                HandleException( ex, ref nodeError );
+            }
+            //Too big response
+            catch ( InvalidOperationException ex )
+            {
                 HandleException( ex, ref nodeError );
             }
             finally
@@ -225,10 +235,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 client?.ReturnedToPool();
             }
 
-            return (isTimeoutSocketOp, nodeError, response);
+            return (isTimeoutSocketOp, nodeError, response, isSameNetwork);
         }
-
-
 
         private async Task Wait( IOBehavior ioBehavior, TimeSpan timeToWait )
         {
@@ -244,21 +252,25 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
         private void HandleException( Exception exception, ref ErrorResponse nodeError )
         {
-            nodeError = new ErrorResponse( RandomID )
-            {
-                ErrorMessage = exception.Message
-            };
+            nodeError = new ErrorResponse( RandomID, exception.Message );
             s_log.LogError( exception.ToString() );
         }
 
-        private RpcError RpcError( BigInteger id, Response resp, Boolean timeoutError, ErrorResponse peerError )
+        private RpcError RpcError( BigInteger id, Response resp, Boolean timeoutError, ErrorResponse peerError, Boolean isTheSameNetwork)
         {
             RpcError rpcError = new RpcError
             {
                 TimeoutError = timeoutError,
-                PeerError = peerError != null,
-                PeerErrorMessage = peerError?.ErrorMessage
+                PeerError = ( peerError != null ) || ( !isTheSameNetwork )
             };
+            if(peerError != null)
+            {
+                rpcError.PeerErrorMessage = peerError.ErrorMessage;
+            }
+            else if(!isTheSameNetwork)
+            {
+                rpcError.PeerErrorMessage = $"{Display.PropertyWithValue( nameof( isTheSameNetwork ), isTheSameNetwork, useTab: false )}";
+            }
 
             if ( ( resp != null ) && ( id != default ) )
             {

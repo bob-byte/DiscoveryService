@@ -176,6 +176,10 @@ namespace LUC.DiscoveryService
 
                     FilePartiallyDownloaded?.Invoke( sender: this, fullFileName );
                 }
+                catch ( AggregateException ex )
+                {
+                    HandleException( ex.Flatten(), bytesCount, fullFileName );
+                }
             }
         }
 

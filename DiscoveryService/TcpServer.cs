@@ -1,4 +1,6 @@
-﻿using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Common.Extensions;
+using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
@@ -338,7 +340,7 @@ namespace LUC.DiscoveryService
                 clientToReadMessage = await SessionWithNewDataAsync();
 
                 AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
-                Task<Byte[]> taskReadBytes = clientToReadMessage.ReadBytesAsync( receiveDone );
+                Task<Byte[]> taskReadBytes = clientToReadMessage.Socket.ReadBytesAsync( receiveDone, Constants.MAX_CHUNK_SIZE, Constants.MaxAvailableReadBytes );
                 taskReadBytes.ConfigureAwait( continueOnCapturedContext: false ).GetAwaiter();
 
                 Boolean isReceivedInTime = receiveDone.WaitOne( timeoutToRead );

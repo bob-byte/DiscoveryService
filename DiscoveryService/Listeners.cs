@@ -136,10 +136,9 @@ namespace LUC.DiscoveryService
                 {
                     tcpReceiver.Start();
                 }
-                catch (SocketException)
+                catch (SocketException ex)
                 {
-                    //if PC has virtual box, we cannot bind to this address
-                    continue;
+                    LoggingService.LogError( ex.Message );
                 }
 
                 ListenTcp( tcpReceiver );

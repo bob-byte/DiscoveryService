@@ -106,6 +106,8 @@ namespace LUC.DiscoveryService
         /// </summary>
         private static readonly ConcurrentDictionary<UInt16, Dht> s_dhts;
 
+        private static IList<NetworkInterface> m_knownInterfaces = new List<NetworkInterface>();
+
         /// <summary>
         ///   Recently received messages.
         /// </summary>
@@ -152,11 +154,6 @@ namespace LUC.DiscoveryService
         }
 
         public Contact OurContact { get; }
-
-        /// <summary>
-        /// Known network interfaces
-        /// </summary>
-        internal static List<NetworkInterface> KnownNetworks { get; private set; } = new List<NetworkInterface>();
 
         /// <summary>
         ///   Determines if received messages are checked for duplicates.
@@ -232,7 +229,7 @@ namespace LUC.DiscoveryService
         /// IP-addresses which <seealso cref="DiscoveryService"/> uses to exchange messages
         /// </summary>
         public List<IPAddress> RunningIpAddresses =>
-            Listeners.IpAddressesOfInterfaces( m_networkInterfacesFilter?.Invoke( KnownNetworks ) ?? KnownNetworks, UseIpv4, UseIpv6 );
+            Listeners.IpAddressesOfInterfaces( m_networkInterfacesFilter?.Invoke( m_knownInterfaces ) ?? m_knownInterfaces, UseIpv4, UseIpv6 );
 
         /// <summary>
         ///   Get the link local IP addresses of the local machine.
@@ -261,7 +258,7 @@ namespace LUC.DiscoveryService
                 List<NetworkInterface> newNics = new List<NetworkInterface>();
                 List<NetworkInterface> oldNics = new List<NetworkInterface>();
 
-                foreach ( NetworkInterface nic in KnownNetworks.Where( k => !currentNics.Any( n => k.Id == n.Id ) ) )
+                foreach ( NetworkInterface nic in m_knownInterfaces.Where( k => !currentNics.Any( n => k.Id == n.Id ) ) )
                 {
                     oldNics.Add( nic );
 
@@ -270,7 +267,7 @@ namespace LUC.DiscoveryService
 #endif
                 }
 
-                foreach ( NetworkInterface nic in currentNics.Where( nic => !KnownNetworks.Any( k => k.Id == nic.Id ) ) )
+                foreach ( NetworkInterface nic in currentNics.Where( nic => !m_knownInterfaces.Any( k => k.Id == nic.Id ) ) )
                 {
                     newNics.Add( nic );
 
@@ -279,7 +276,7 @@ namespace LUC.DiscoveryService
 #endif
                 }
 
-                KnownNetworks = currentNics;
+                m_knownInterfaces = currentNics;
 
                 // Only create client if something has change.
                 if ( newNics.Any() || oldNics.Any() )
@@ -519,7 +516,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         internal void Start()
         {
-            KnownNetworks.Clear();
+            m_knownInterfaces.Clear();
 
             FindNetworkInterfaces();
         }

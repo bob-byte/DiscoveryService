@@ -83,7 +83,7 @@ namespace LUC.DiscoveryService.Kademlia
         public void AddContact( ref Contact contact )
         {
 #if !RECEIVE_TCP_FROM_OURSELF
-            Validate.IsFalse<OurNodeCannotBeAContactException>(ourContact.MachineId == contact.MachineId, "Cannot add ourselves as a contact!");
+            Validate.IsFalse<OurNodeCannotBeAContactException>(OurContact.MachineId == contact.MachineId, "Cannot add ourselves as a contact!");
 #endif
 
             // Update the LastSeen to now.

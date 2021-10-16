@@ -57,7 +57,7 @@ namespace LUC.DiscoveryService.Kademlia
         public void Ping( Contact sender )
         {
 #if !RECEIVE_TCP_FROM_OURSELF
-            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
+            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == OurContact.MachineId, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
 #endif
 
@@ -91,7 +91,7 @@ namespace LUC.DiscoveryService.Kademlia
         public void Store( Contact sender, KademliaId key, String val, Boolean isCached = false, Int32 expirationTimeSec = 0 )
         {
 #if !RECEIVE_TCP_FROM_OURSELF
-            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
+            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == OurContact.MachineId, "Sender should not be ourself!");
             if(!isCached)
             {
                 SendKeyValuesIfNewContact(sender);
@@ -138,7 +138,7 @@ namespace LUC.DiscoveryService.Kademlia
         public void FindNode( Contact sender, KademliaId key, out List<Contact> contacts )
         {
 #if !RECEIVE_TCP_FROM_OURSELF
-            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
+            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == OurContact.MachineId, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
 #endif
 
@@ -170,7 +170,7 @@ namespace LUC.DiscoveryService.Kademlia
         public void FindValue( Contact sender, KademliaId key, out List<Contact> contacts, out String nodeValue )
         {
 #if !RECEIVE_TCP_FROM_OURSELF
-            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == ourContact.MachineId, "Sender should not be ourself!");
+            Validate.IsFalse<SendingQueryToSelfException>(sender.MachineId == OurContact.MachineId, "Sender should not be ourself!");
             SendKeyValuesIfNewContact(sender);
 #endif
 

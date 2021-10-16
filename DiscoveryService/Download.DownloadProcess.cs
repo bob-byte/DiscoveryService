@@ -374,7 +374,8 @@ namespace LUC.DiscoveryService
                 UInt32 maxChunkSize = Constants.MAX_CHUNK_SIZE;
                 DownloadFileRequest sampleRequest = oldRequests.First();
 
-                List<Contact> contactsWithFile = await ContactsWithFileAsync( m_discoveryService.OnlineContacts, sampleRequest, cancellationToken ).
+                List<Contact> aliveContacts = ContactsWithZeroEvictionCount().ToList();
+                List<Contact> contactsWithFile = await ContactsWithFileAsync( aliveContacts, sampleRequest, cancellationToken ).
                     ConfigureAwait( continueOnCapturedContext: false );
 
                 for ( Int32 numContact = 0, numRequest = 0;
@@ -420,6 +421,14 @@ namespace LUC.DiscoveryService
 
                 return newContactsWithRequest;
             }
+        }
+
+        private IEnumerable<Contact> ContactsWithZeroEvictionCount()
+        {
+            var dht = NetworkEventInvoker.DistributedHashTable( m_discoveryService.ProtocolVersion );
+            var contactsWithZeroEvictionCount = m_discoveryService.OnlineContacts.Where( c => dht.EvictionCount[ c.KadId.Value ] == 0 );
+
+            return contactsWithZeroEvictionCount;
         }
     }
 }

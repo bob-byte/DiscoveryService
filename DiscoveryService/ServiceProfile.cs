@@ -6,6 +6,7 @@ using LUC.DiscoveryService.Kademlia;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 
@@ -44,6 +45,6 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Known network interfaces
         /// </summary>
-        public IList<NetworkInterface> KnownNetworkInterfaces => NetworkEventInvoker.KnownNetworks;
+        public IList<NetworkInterface> KnownNetworkInterfaces => NetworkEventInvoker.NetworkInterfaces().ToList();
     }
 }

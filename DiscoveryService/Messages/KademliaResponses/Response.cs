@@ -28,6 +28,17 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             };
         }
 
+        /// <summary>
+        /// Use this constructor when you want to read remote response
+        /// </summary>
+        public Response()
+        {
+            ;//do nothing
+        }
+
+        /// <summary>
+        /// Use this constructor when you want to send response
+        /// </summary>
         public Response( BigInteger requestRandomId )
         {
             RandomID = requestRandomId;

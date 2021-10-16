@@ -19,7 +19,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE;RECEIVE_TCP_FROM_OURSELF</DefineConstants>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -32,6 +32,26 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReceiveTcpFromOurself|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;RECEIVE_TCP_FROM_OURSELF</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'IntegrationTest|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE;INTEGRATION_TESTS</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -50,9 +70,12 @@
     <Compile Include="CodingData\Binary.cs" />
     <Compile Include="CodingData\Buffer.cs" />
     <Compile Include="Common\Display.cs" />
+    <Compile Include="Common\Extensions\EventWaitHandleExtension.cs" />
+    <Compile Include="Common\Extensions\SocketExtension.cs" />
     <Compile Include="Common\IpAddressFilter.cs" />
     <Compile Include="Common\IpAddressFilter.SockAddrIn6.cs" />
     <Compile Include="Common\ForcingConcurrencyError.cs" />
+    <Compile Include="Common\ThrowingConcurrencyException.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.RecoverSockets.cs" />
     <Compile Include="Kademlia\ClientPool\SocketStateInPool.cs" />
     <Compile Include="UdpSenders.cs" />
@@ -156,6 +179,9 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Castle.Core">
+      <Version>4.4.1</Version>
+    </PackageReference>
     <PackageReference Include="DeviceId">
       <Version>5.2.0</Version>
     </PackageReference>
@@ -212,11 +238,11 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D:\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
+    <ProjectReference Include="..\..\..\LucWithNewUpload\dubstack-win\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
       <Project>{0f5f0967-f62a-4099-a6d7-2687cba9e4df}</Project>
       <Name>LUC.Interfaces</Name>
     </ProjectReference>
-    <ProjectReference Include="D:\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
+    <ProjectReference Include="..\..\..\LucWithNewUpload\dubstack-win\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
       <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
       <Name>LUC.Services.Implementation</Name>
     </ProjectReference>

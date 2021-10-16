@@ -24,19 +24,18 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
     class ConnectionPoolSocket : DiscoveryServiceSocket
     {
         private SocketStateInPool m_stateInPool;
-        private readonly AutoResetEvent m_removedFromPool;
-        private readonly Semaphore m_stateInPoolSemaphore;//we use semaphore to release lock in different places
+        private Object m_lockStateInPool;
 
         /// <inheritdoc/>
-        public ConnectionPoolSocket( SocketType socketType, ProtocolType protocolType, EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log )
-            : base( remoteEndPoint.AddressFamily, socketType, protocolType, log )
+        public ConnectionPoolSocket( EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log, SocketStateInPool socketStateInPool = SocketStateInPool.NeverWasInPool )
+            : base( remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp, log )
         {
             Id = remoteEndPoint;
             Pool = belongPool;
 
-            m_removedFromPool = new AutoResetEvent( initialState: false );
-            m_stateInPool = SocketStateInPool.NeverWasInPool;
-            m_stateInPoolSemaphore = new Semaphore( initialCount: 1, maximumCount: 1);
+            RemovedFromPool = new AutoResetEvent( initialState: false );
+            m_stateInPool = socketStateInPool;
+            m_lockStateInPool = new Object();
         }
 
         /// <summary>
@@ -63,7 +62,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             {
                 Log.LogError( $"Failed to send message, try only one more: {e}" );
 
-                sendingBytesSocket = new ConnectionPoolSocket( SocketType, ProtocolType, Id, Pool, Log );
+                sendingBytesSocket = new ConnectionPoolSocket( Id, Pool, Log, SocketStateInPool.TakenFromPool );
                 await sendingBytesSocket.DsConnectAsync( remoteEndPoint: sendingBytesSocket.Id, timeoutToConnect, ioBehavior ).ConfigureAwait( false );
 
                 await sendingBytesSocket.DsSendAsync( bytesToSend, timeoutToSend, ioBehavior ).ConfigureAwait( false );
@@ -84,65 +83,49 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         {
             get
             {
-                m_stateInPoolSemaphore.WaitOne();
-                try
+                lock(m_lockStateInPool)
                 {
                     return m_stateInPool;
-                }
-                finally
-                {
-                    m_stateInPoolSemaphore.Release();
                 }
             }
             set
             {
-                m_stateInPoolSemaphore.WaitOne();
-
-                if(m_stateInPool == SocketStateInPool.NeverWasInPool)
+                SocketStateInPool previousState;
+                lock (m_lockStateInPool)
                 {
+                    previousState = m_stateInPool;
                     m_stateInPool = value;
-                    m_stateInPoolSemaphore.Release();
+
+                    if ( previousState == SocketStateInPool.NeverWasInPool )
+                    {
+                        return;
+                    }
                 }
-                else
+
+                if ( value == SocketStateInPool.TakenFromPool )
                 {
-                    m_stateInPoolSemaphore.Release();
-                    if ( value == SocketStateInPool.TakenFromPool )
+                    Boolean isReturned = RemovedFromPool.WaitOne( Constants.TimeWaitReturnToPool );
+                    if ( isReturned )
                     {
-                        Boolean isReturned = m_removedFromPool.WaitOne( Constants.TimeWaitReturnToPool );
-                        if ( isReturned )
-                        {
-                            Log.LogInfo( $"\n*************************\nSocket with id {Id} successfully taken from pool\n*************************\n" );
-                        }
-                        else
-                        {
-                            //case when BackgroundConnectionResetHelper wait to start reset connections
-                            Log.LogError( $"\n*************************\nSocket with id {Id} isn\'t returned to pool by some thread\n*************************\n" );
-                        }
+                        Log.LogInfo( $"\n*************************\nSocket with id {Id} successfully taken from pool\n*************************\n" );
                     }
-                    else if ( value != SocketStateInPool.NeverWasInPool )//it is additional test to make this method absolutely thread-safe if logic will be changed
+                    else
                     {
-                        m_removedFromPool.Set();
+#if DEBUG
+                        ThrowConcurrencyException.ThrowWithConnectionPoolSocketDescr( this );
+#else
+                        Log.LogError( Display.StringWithAttention( logRecord: $"Socket with id {Id} isn\'t returned to pool by some thread" );
+#endif
                     }
+                }
+                else if ( value != SocketStateInPool.NeverWasInPool )//it is additional test to make this method absolutely thread-safe if logic will be changed
+                {
+                    RemovedFromPool.Set();
                 }
             }
         }
 
-        public AutoResetEvent RemovedFromPool
-        {
-            get
-            {
-                //we use lock to make sure that we get current value of StateInPool (see method StateInPool.set)
-                m_stateInPoolSemaphore.WaitOne();
-                try
-                {
-                    return m_removedFromPool;
-                }
-                finally
-                {
-                    m_stateInPoolSemaphore.Release();
-                }
-            }
-        }
+        public AutoResetEvent RemovedFromPool { get; }
 
         //public async Task ConnectAsync()
         //{
@@ -169,8 +152,9 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 return socketHealth;
             }
 
-            if ( ( connectionSettings.ConnectionLifeTime > 0 ) &&
-               ( unchecked((UInt32)Environment.TickCount) - CreatedTicks >= connectionSettings.ConnectionLifeTime ) )
+            Boolean hasLongBeenCreated = unchecked((UInt32)Environment.TickCount) - CreatedTicks >= connectionSettings.ConnectionLifeTime;
+            if ( ( ( m_state >= SocketState.Closing ) && ( m_stateInPool != SocketStateInPool.IsFailed ) ) || 
+                 ( ( connectionSettings.ConnectionLifeTime > 0 ) && ( hasLongBeenCreated ) ) )
             {
                 socketHealth = ClientPool.SocketHealth.Expired;
             }
@@ -209,10 +193,9 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             try
             {
-                VerifyWorkState();
+                VerifyConnected();
 
-                await DsDisconnectAsync( ioBehavior, reuseSocket, Constants.DisconnectTimeout, cancellationToken ).
-                        ConfigureAwait( continueOnCapturedContext: false );
+                await DsDisconnectAsync( ioBehavior, reuseSocket, Constants.DisconnectTimeout, cancellationToken );
             }
             catch(SocketException)
             {
@@ -222,12 +205,16 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             {
                 ;//do nothing
             }
+            catch ( ObjectDisposedException )
+            {
+                ;//do nothing
+            }
             finally
             {
                 ConnectionPoolSocket newSocket = null;
                 try
                 {
-                    newSocket = new ConnectionPoolSocket( SocketType, ProtocolType, Id, Pool, Log );
+                    newSocket = new ConnectionPoolSocket( Id, Pool, Log, SocketStateInPool.TakenFromPool );
 
                     await newSocket.DsConnectAsync( Id, Constants.ConnectTimeout, ioBehavior, cancellationToken ).ConfigureAwait( false );
 
@@ -239,6 +226,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     ;//do nothing
                 }
                 catch ( TimeoutException )
+                {
+                    ;//do nothing
+                }
+                catch ( ObjectDisposedException )
                 {
                     ;//do nothing
                 }

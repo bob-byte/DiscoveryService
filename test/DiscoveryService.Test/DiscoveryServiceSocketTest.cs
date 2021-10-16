@@ -103,7 +103,6 @@ namespace LUC.DiscoveryService.Test
                 async () =>
                 {
                     await socket.DsSendAsync( bytesToSend, waitIndefinitely ).ConfigureAwait( continueOnCapturedContext: false );
-                    return Task.CompletedTask;
                 },
                 Throws.TypeOf( typeof( SocketException ) )
             );

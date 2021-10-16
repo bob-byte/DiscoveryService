@@ -28,7 +28,10 @@ namespace LUC.DiscoveryService
 
                  if ( isExistInContact )
                  {
-                     contactsWithFile.Add( contact );
+                     lock(contactsWithFile)
+                     {
+                         contactsWithFile.Add( contact );
+                     }
                  }
              }, parallelOptions );
 
@@ -42,6 +45,8 @@ namespace LUC.DiscoveryService
 
             //await getting all contactsWithFile
             await checkFileExistsInContact.Completion.ConfigureAwait( false );
+
+
 
             return contactsWithFile;
         }

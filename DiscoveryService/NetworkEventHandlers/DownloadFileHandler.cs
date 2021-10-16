@@ -69,7 +69,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
                             {
                                 using ( FileStream stream = new FileStream( fullFileName, FileMode.Open, FileAccess.Read ) )
                                 {
-                                    if ( ( stream.CanSeek ) && ( (Int64)request.ChunkRange.Start != stream.Position ) )
+                                    if( (Int64)request.ChunkRange.Start != stream.Position )
                                     {
                                         stream.Seek( (Int64)request.ChunkRange.Start, origin: SeekOrigin.Begin );
                                     }
@@ -83,17 +83,12 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
                         downloadFileResponse.Send( eventArgs.AcceptedSocket );
                     }
                 }
-                catch ( ArgumentNullException ex )
-                {
-                    m_loggingService.LogInfo( ex.ToString() );
-                }
                 catch ( IOException ex )
                 {
                     m_loggingService.LogInfo( ex.ToString() );
-                }
-                catch ( Exception ex )
-                {
-                    m_loggingService.LogInfo( ex.ToString() );
+
+                    ErrorResponse errorResponse = new ErrorResponse( request.RandomID, ex.Message );
+                    errorResponse.Send( eventArgs.AcceptedSocket );
                 }
             }
         }

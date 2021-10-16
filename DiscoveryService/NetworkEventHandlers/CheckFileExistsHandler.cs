@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -78,6 +79,13 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
 
             if ( localBucketDirectoryPath != null )
             {
+//#if INTEGRATION_TESTS
+//                String fullDllFileName = Assembly.GetEntryAssembly().Location;
+//                String directoryName = Path.GetFileName( localBucketDirectoryPath );
+
+//                localBucketDirectoryPath = Path.Combine( fullDllFileName, directoryName );
+//#endif
+
                 String filePrefix = request.HexPrefix.FromHexString();
 
                 String fullFileName = Path.Combine( localBucketDirectoryPath, filePrefix, request.FileOriginalName );

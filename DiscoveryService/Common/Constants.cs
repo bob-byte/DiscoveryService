@@ -7,7 +7,10 @@ namespace LUC.DiscoveryService.Common
 {
     static class Constants
     {
+        public const String DOWNLOAD_TEST_NAME_FOLDER = "DownloadTest";
+
         public const Int32 MAX_CHUNK_SIZE = 2000000;
+        public const Int32 MaxAvailableReadBytes = (Int32)( MAX_CHUNK_SIZE * 1.5 );
 
         public const Int32 B = 5;
         public const Int32 K = 20;

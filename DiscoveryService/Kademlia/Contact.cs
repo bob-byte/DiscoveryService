@@ -160,16 +160,16 @@ namespace LUC.DiscoveryService.Kademlia
                 writer.WriteLine( $"{Display.PropertyWithValue( nameof( KadId ), KadId )};\n" +
                                  $"{Display.PropertyWithValue( nameof( LastSeen ), LastSeen )};" );
 
-                writer.WriteLine( $"{nameof( m_ipAddresses )}:" );
+                writer.WriteLine( $"{Display.TABULATION}{nameof( m_ipAddresses )}:" );
                 for ( Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++ )
                 {
                     if ( numAddress == IpAddressesCount - 1 )
                     {
-                        writer.Write( $"{m_ipAddresses[ numAddress ]}" );
+                        writer.Write( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]}" );
                     }
                     else
                     {
-                        writer.WriteLine( $"{m_ipAddresses[ numAddress ]};" );
+                        writer.WriteLine( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]};" );
                     }
                 }
 

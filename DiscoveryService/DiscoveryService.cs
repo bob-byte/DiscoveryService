@@ -1,4 +1,6 @@
-﻿using System;
+﻿//#define IS_IN_LUC
+
+using System;
 using System.Net;
 using System.Net.Sockets;
 using LUC.DiscoveryService.Messages;
@@ -20,9 +22,13 @@ using LUC.DiscoveryService.NetworkEventHandlers;
 using System.Runtime.CompilerServices;
 using LUC.DiscoveryService.Common;
 using System.ComponentModel.Composition;
+using Castle.Core.Internal;
+using System.Reflection;
+using LUC.Services.Implementation;
 
 //access permission to internal members in current project for DiscoveryService.Test
 [assembly: InternalsVisibleTo( "DiscoveryService.Test" )]
+[assembly: InternalsVisibleTo( InternalsVisible.ToDynamicProxyGenAssembly2 )]
 namespace LUC.DiscoveryService
 {
     /// <summary>
@@ -61,6 +67,18 @@ namespace LUC.DiscoveryService
             : this( profile )
         {
             m_currentUserProvider = currentUserProvider;
+
+#if !IS_IN_LUC
+            SettingsService = new SettingsService
+            {
+                CurrentUserProvider = m_currentUserProvider
+            };
+
+            LoggingService = new LoggingService
+            {
+                SettingsService = SettingsService
+            };
+#endif
         }
 
         //TODO delete this constructor
@@ -88,6 +106,8 @@ namespace LUC.DiscoveryService
                 m_distributedHashTable = NetworkEventInvoker.DistributedHashTable( ProtocolVersion );
             }
         }
+
+        
 
         /// <summary>
         /// If user of ServiceDiscovery forget to call method Stop
@@ -171,15 +191,9 @@ namespace LUC.DiscoveryService
 
             if ( ( udpMessage != null ) && ( eventArgs?.RemoteEndPoint is IPEndPoint ipEndPoint ) )
             {
-                //true, because we send AcknowledgeTcpMessage only after receving UdpMessage and we cannot get it from different network
-                Boolean isTheSameNetwork = true;
-
                 ForcingConcurrencyError.TryForce();
 
-#if RECEIVE_TCP_FROM_OURSELF
-                isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( ipEndPoint.Address );
-#endif
-
+                Boolean isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( ipEndPoint.Address );
                 if ( isTheSameNetwork )
                 {
                     Contact sendingContact = NetworkEventInvoker.OurContact;
@@ -209,21 +223,21 @@ namespace LUC.DiscoveryService
                            Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
                         ForcingConcurrencyError.TryForce();
                     }
-                    catch ( TimeoutException )
+                    catch ( TimeoutException ex)
                     {
-                        ;//do nothing
+                        LoggingService.LogError( ex.ToString() );
                     }
                     catch ( SocketException ex )
                     {
                         LoggingService.LogError( ex.ToString() );
                     }
-                    catch ( AggregateException )
+                    catch ( AggregateException ex)
                     {
-                        ;//do nothing
+                        LoggingService.LogError( ex.ToString() );
                     }
-                    catch ( ObjectDisposedException )
+                    catch ( ObjectDisposedException ex)
                     {
-                        ;//do nothing
+                        LoggingService.LogError( ex.ToString() );
                     }
                     finally
                     {

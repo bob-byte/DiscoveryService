@@ -1,6 +1,10 @@
 ﻿using DeviceId;
 
+using Newtonsoft.Json;
+
 using System;
+using System.IO;
+using System.Reflection;
 
 namespace LUC.DiscoveryService
 {
@@ -11,10 +15,42 @@ namespace LUC.DiscoveryService
         /// </summary>
         public static void Create(out String machineId)
         {
-            DeviceIdBuilder machineIdBuilder = new DeviceIdBuilder();
-            DeviceIdBuilder motherboard = machineIdBuilder.AddMotherboardSerialNumber();
+#if ( RECEIVE_TCP_FROM_OURSELF ) || ( INTEGRATION_TESTS )
+            String fullFileNameWithMachineId = FullFileNameWithMachineId();
 
-            machineId = $"{motherboard}-{Guid.NewGuid()}";
+            if (File.Exists(fullFileNameWithMachineId))
+            {
+                using ( StreamReader streamReader = new StreamReader( fullFileNameWithMachineId ) )
+                {
+                    machineId = streamReader.ReadToEnd();
+                }
+            }
+            else
+            {
+#endif
+                DeviceIdBuilder machineIdBuilder = new DeviceIdBuilder();
+                DeviceIdBuilder motherboard = machineIdBuilder.AddMotherboardSerialNumber();
+
+                machineId = $"{motherboard}-{Guid.NewGuid()}";
+
+#if ( RECEIVE_TCP_FROM_OURSELF ) || ( INTEGRATION_TESTS )
+                using ( StreamWriter streamWriter = new StreamWriter( fullFileNameWithMachineId ) )
+                {
+                    streamWriter.Write( machineId );
+                }
+            }
+#endif
+        }
+
+        private static String FullFileNameWithMachineId()
+        {
+            String fullExeName = Assembly.GetExecutingAssembly().Location;
+            String pathToExeFile = Path.GetDirectoryName( fullExeName );
+
+            String fileNameWithMachineId = "Current machine ID.txt";
+            String fullFileNameWithMachineId = $"{pathToExeFile}\\{fileNameWithMachineId}";
+
+            return fullFileNameWithMachineId;
         }
     }
 }

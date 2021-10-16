@@ -12,10 +12,14 @@ using LUC.Services.Implementation;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Net;
+using System.Reflection;
+using System.Security;
+using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,15 +28,20 @@ namespace LUC.DiscoveryService.Test
 {
     class FunctionalTest
     {
+        private const String IS_TRUE = "1";
+        private const String IS_FALSE = "2";
+        private const ConsoleKey KEY_TO_CONTINUE_PROGRAM = ConsoleKey.Enter;
+
         private static readonly Object s_ttyLock;
         private static DiscoveryService s_discoveryService;
         private static readonly SettingsService s_settingsService;
         private static readonly CancellationTokenSource s_cancellationTokenSource;
 
+        private static FileSystemWatcher s_fileSystemWatcher;
+
         static FunctionalTest()
         {
             s_ttyLock = new Object();
-
             s_settingsService = new SettingsService();
             s_cancellationTokenSource = new CancellationTokenSource();
         }
@@ -72,6 +81,16 @@ namespace LUC.DiscoveryService.Test
         /// </remarks>
         public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
 
+        public static String DownloadTestFolderFullName( String downloadTestFolderName )
+        {
+            String fullDllFileName = Assembly.GetEntryAssembly().Location;
+            String pathToDllFileName = Path.GetDirectoryName( fullDllFileName );
+
+            String downloadTestFolderFullName = Path.Combine( pathToDllFileName, downloadTestFolderName );
+
+            return downloadTestFolderFullName;
+        }
+
         static async Task Main()
         {
             SetUpTests.AssemblyInitialize();
@@ -100,15 +119,31 @@ namespace LUC.DiscoveryService.Test
             }
             while ( !loginResponse.IsSuccess );
 
-            apiClient.CurrentUserProvider.RootFolderPath = s_settingsService.ReadUserRootFolderPath();
-
             ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
+
+#if INTEGRATION_TESTS
+            Boolean wantToObserveChageInDownloadTestFolder = NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to observe changes in {Constants.DOWNLOAD_TEST_NAME_FOLDER} folder" );
+
+            if ( wantToObserveChageInDownloadTestFolder )
+            {
+                Console.WriteLine( Display.StringWithAttention( $"When you hear deep, then folder {Constants.DOWNLOAD_TEST_NAME_FOLDER} is changed. \n" +
+                    $"And if you press {IS_TRUE} and {KEY_TO_CONTINUE_PROGRAM}, certain file will be uploaded to server. \n" +
+                    $"If you press {IS_FALSE} and {KEY_TO_CONTINUE_PROGRAM}, it will not be uploaded" ) );
+                Console.WriteLine( "If you have read this, press any button to continue" );
+                Console.ReadKey();
+
+                InitWatcherForIntegrationTests( apiClient );
+            }
+
+            groupsSupported.TryAdd( login, password );
+#else
+            apiClient.CurrentUserProvider.RootFolderPath = s_settingsService.ReadUserRootFolderPath();
+#endif
 
             IList<String> serverBuckets = s_settingsService.CurrentUserProvider.GetServerBuckets();
             String sslCert = "<SSL-Cert>";
             foreach ( String bucketOnServer in serverBuckets )
             {
-                groupsSupported.TryAdd( bucketOnServer, sslCert );
                 groupsSupported.TryAdd( bucketOnServer, sslCert );
             }
 
@@ -152,7 +187,7 @@ namespace LUC.DiscoveryService.Test
                     }
                     else
                     {
-                        Boolean isTesterOnlyInNetwork = NormalResposeFromUserAtClosedQuestion( closedQuestion: "Are you only on the local network?" );
+                        Boolean isTesterOnlyInNetwork = NormalResposeFromUserAtClosedQuestion( "Are you only on the local network?" );
                         if ( ( contact == null ) || ( !isTesterOnlyInNetwork ) )
                         {
                             //in order to GetRemoteContact can send multicasts messages
@@ -176,6 +211,75 @@ namespace LUC.DiscoveryService.Test
                 }
 
                 isFirstTest = false;
+            }
+        }
+
+        //[PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
+        private static void InitWatcherForIntegrationTests(ApiClient.ApiClient apiClient)
+        {
+            String downloadTestFolderFullName = DownloadTestFolderFullName( Constants.DOWNLOAD_TEST_NAME_FOLDER );
+            String rootFolder = s_settingsService.ReadUserRootFolderPath();
+
+            if(rootFolder != null)
+            {
+                try
+                {
+                    DirectoryExtension.CopyDirsAndSubdirs( rootFolder, downloadTestFolderFullName );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            }
+
+            UpdateRootFolderPath( downloadTestFolderFullName, apiClient );
+
+            s_fileSystemWatcher = new FileSystemWatcher( downloadTestFolderFullName )
+            {
+                IncludeSubdirectories = true,
+                Filter = "*.*"
+            };
+
+            s_fileSystemWatcher.Created += ( sender, eventArgs ) => OnChanged( apiClient, eventArgs );
+            //s_fileSystemWatcher.Changed += ( sender, eventArgs ) => OnChanged( apiClient, eventArgs );
+
+            s_fileSystemWatcher.EnableRaisingEvents = true;
+        }
+
+        private static void UpdateRootFolderPath(String downloadTestFolderFullName, ApiClient.ApiClient apiClient = null)
+        {
+            s_settingsService.CurrentUserProvider.RootFolderPath = downloadTestFolderFullName;
+            SetUpTests.LoggingService.SettingsService = s_settingsService;
+
+            if ( apiClient != null )
+            {
+                apiClient.CurrentUserProvider.RootFolderPath = downloadTestFolderFullName;
+            }
+        }
+
+        private static async void OnChanged(Object sender, FileSystemEventArgs eventArgs) =>
+            await TryUploadFileAsync( (IApiClient)sender, eventArgs ).ConfigureAwait( continueOnCapturedContext: false );
+
+        private static async Task TryUploadFileAsync( IApiClient apiClient, FileSystemEventArgs eventArgs)
+        {
+            //to signal that file was changed in Constants.DOWNLOAD_TEST_NAME_FOLDER
+            Console.Beep();
+
+            Boolean whetherTryUpload = NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to upload on server file {eventArgs.Name}. It was {Enum.GetName( typeof( WatcherChangeTypes), eventArgs.ChangeType)}" );
+            if(whetherTryUpload)
+            {
+                try
+                {
+                    await apiClient.TryUploadAsync( new FileInfo( eventArgs.FullPath ) ).ConfigureAwait( continueOnCapturedContext: false );
+                }
+                catch(NullReferenceException)
+                {
+                    ;//file is not changed in any group
+                }
+                catch(Exception ex)
+                {
+                    Debug.Fail( ex.Message, detailMessage: ex.ToString() );
+                }
             }
         }
 
@@ -350,6 +454,7 @@ namespace LUC.DiscoveryService.Test
             while ( true )
             {
                 ClientKadOperation kadOperation = new ClientKadOperation( s_discoveryService.ProtocolVersion );
+                TimeSpan timeExecutionKadOp = Constants.TimeWaitReturnToPool;
 
                 switch ( pressedKey )
                 {
@@ -360,10 +465,10 @@ namespace LUC.DiscoveryService.Test
 
                         AutoResetEvent receivedFindNodeRequest = new AutoResetEvent( initialState: false );
                         //because we listen TCP messages in other threads.
-                        s_discoveryService.NetworkEventInvoker.FindNodeReceived += ( sender, eventArgs ) => receivedFindNodeRequest.Set();
-                        receivedFindNodeRequest.WaitOne();
+                        s_discoveryService.NetworkEventInvoker.AnswerReceived += ( sender, eventArgs ) => receivedFindNodeRequest.Set();
+                        receivedFindNodeRequest.WaitOne(timeExecutionKadOp);
 
-                        Thread.Sleep( TimeSpan.FromSeconds( value: 2 ) );
+                        //Thread.Sleep( TimeSpan.FromSeconds( value: 2 ) );
 
                         return;
                     }
@@ -404,9 +509,12 @@ namespace LUC.DiscoveryService.Test
 
                         AutoResetEvent receivedTcpMess = new AutoResetEvent( initialState: false );
 
-                        //because we listen TCP messages in other threads
                         s_discoveryService.NetworkEventInvoker.AnswerReceived += ( sender, eventArgs ) => receivedTcpMess.Set();
-                        receivedTcpMess.WaitOne();
+
+                        //After revecing AcknowledgeTcpMessage we will receive FindNodeResponse
+                        receivedTcpMess.WaitOne( (Int32)timeExecutionKadOp.TotalMilliseconds * 2 );
+
+                        await Task.Delay( TimeSpan.FromSeconds( value: 1.5 ) );
 
                         return;
                     }
@@ -556,6 +664,7 @@ namespace LUC.DiscoveryService.Test
 
         private async static Task<(ObjectDescriptionModel randomFileToDownload, String serverBucketName, String localFolderPath)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String filePrefix )
         {
+            
             IList<String> bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
 
             Random random = new Random();
@@ -566,8 +675,6 @@ namespace LUC.DiscoveryService.Test
             ObjectsListModel objectsListModel = objectsListResponse.ToObjectsListModel();
             ObjectDescriptionModel[] undeletedObjectsListModel = objectsListModel.ObjectDescriptions.Where( c => !c.IsDeleted ).ToArray();
 
-            Boolean isOnlyInNetwork = s_discoveryService.ContactId == remoteContact.KadId;
-
             //select from undeletedObjectsListModel files which exist in current PC if tester is only in network. 
             //If the last one is not, select files which don't exist in current PC
             List<ObjectDescriptionModel> bjctDscrptnsFrDwnld = undeletedObjectsListModel.Where( cachedFileInServer =>
@@ -576,14 +683,11 @@ namespace LUC.DiscoveryService.Test
                  Boolean isFileInCurrentPc = File.Exists( fullPathToFile );
 
                  Boolean shouldBeDownloaded;
-                 if ( isOnlyInNetwork )
-                 {
-                     shouldBeDownloaded = isFileInCurrentPc;
-                 }
-                 else
-                 {
-                     shouldBeDownloaded = !isFileInCurrentPc;
-                 }
+#if RECEIVE_TCP_FROM_OURSELF
+                 shouldBeDownloaded = isFileInCurrentPc;
+#else
+                 shouldBeDownloaded = !isFileInCurrentPc;
+#endif
 
                  return shouldBeDownloaded;
              } ).ToList();
@@ -593,10 +697,15 @@ namespace LUC.DiscoveryService.Test
             //It will download random file at local PC if you don't have any file to download, 
             //server has any file which isn't deleted and you are only in network
             Boolean canWeDownloadAnything = undeletedObjectsListModel.Length > 0;
-            if ( ( bjctDscrptnsFrDwnld.Count == 0 ) && ( canWeDownloadAnything ) && ( isOnlyInNetwork ) )
+            if ( ( bjctDscrptnsFrDwnld.Count == 0 ) && ( canWeDownloadAnything ) )
             {
+#if RECEIVE_TCP_FROM_OURSELF
                 randomFileToDownload = undeletedObjectsListModel[ random.Next( undeletedObjectsListModel.Length ) ];
                 await apiClient.DownloadFileAsync( serverBucketName, filePrefix, rndBcktDrctrPth, randomFileToDownload.OriginalName, randomFileToDownload ).ConfigureAwait( false );
+#else
+                Console.WriteLine( $"You should put few files in {rndBcktDrctrPth} and using WpfClient, upload it" );
+                throw new InvalidOperationException();
+#endif
             }
             else if ( bjctDscrptnsFrDwnld.Count > 0 )
             {
