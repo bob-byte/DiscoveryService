@@ -23,8 +23,9 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
     ///<inheritdoc/>
     class ConnectionPoolSocket : DiscoveryServiceSocket
     {
+        private readonly Object m_lockStateInPool;
+
         private SocketStateInPool m_stateInPool;
-        private Object m_lockStateInPool;
 
         /// <inheritdoc/>
         public ConnectionPoolSocket( EndPoint remoteEndPoint, ConnectionPool belongPool, ILoggingService log, SocketStateInPool socketStateInPool = SocketStateInPool.NeverWasInPool )
@@ -102,7 +103,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     }
                 }
 
-                if ( value == SocketStateInPool.TakenFromPool )
+                if ( (value == SocketStateInPool.TakenFromPool) && (previousState != SocketStateInPool.IsInPool) )
                 {
                     Boolean isReturned = RemovedFromPool.WaitOne( Constants.TimeWaitReturnToPool );
                     if ( isReturned )
@@ -125,6 +126,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
         }
 
+        //TODO rename
         public AutoResetEvent RemovedFromPool { get; }
 
         //public async Task ConnectAsync()
@@ -152,9 +154,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 return socketHealth;
             }
 
-            Boolean hasLongBeenCreated = unchecked((UInt32)Environment.TickCount) - CreatedTicks >= connectionSettings.ConnectionLifeTime;
-            if ( ( ( m_state >= SocketState.Closing ) && ( m_stateInPool != SocketStateInPool.IsFailed ) ) || 
-                 ( ( connectionSettings.ConnectionLifeTime > 0 ) && ( hasLongBeenCreated ) ) )
+            Boolean longAgoHasBeenCreated = unchecked((UInt32)Environment.TickCount) - CreatedTicks >= connectionSettings.ConnectionLifeTime;
+            if ( ( m_state >= SocketState.Closing ) || 
+                 ( m_stateInPool == SocketStateInPool.IsFailed ) || 
+                 ( ( connectionSettings.ConnectionLifeTime > 0 ) && ( longAgoHasBeenCreated ) ) )
             {
                 socketHealth = ClientPool.SocketHealth.Expired;
             }
@@ -253,6 +256,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         {
             StateInPool = SocketStateInPool.IsFailed;
             m_state = SocketState.Closing;
+
             base.Dispose( disposing: false );
             m_state = SocketState.Closed;
         }

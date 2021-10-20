@@ -9,53 +9,56 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using System.Collections.Concurrent;
+using Nito.AsyncEx;
+using LUC.DiscoveryService.Common;
 
 namespace LUC.DiscoveryService
 {
     public partial class Download
     {
-        private async Task<List<Contact>> ContactsWithFileAsync( IList<Contact> onlineContacts, DownloadFileRequest sampleRequest, CancellationToken cancellationToken )
+        private IEnumerable<Contact> ContactsWithFile( IEnumerable<Contact> onlineContacts, DownloadFileRequest sampleRequest, CancellationToken cancellationToken )
         {
-            List<Contact> contactsWithFile = new List<Contact>();
+            BlockingCollection<Contact> contactsWithFile = new BlockingCollection<Contact>( onlineContacts.Count() );
 
-            ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
-
-            ActionBlock<Contact> checkFileExistsInContact = new ActionBlock<Contact>( async ( contact ) =>
+            Task.Factory.StartNew( async () =>
              {
-                 Boolean isExistInContact = await IsFileExistsInContactAsync( sampleRequest, contact ).ConfigureAwait( continueOnCapturedContext: false );
+                 ExecutionDataflowBlockOptions parallelOptions = ParallelOptions(cancellationToken);
 
-                 cancellationToken.ThrowIfCancellationRequested();
-
-                 if ( isExistInContact )
+                 var checkFileExistsInContact = new ActionBlock<Contact>( async ( contact ) =>
                  {
-                     lock(contactsWithFile)
+                     var isExistInContact = await IsFileExistsInContactAsync( sampleRequest, contact ).ConfigureAwait( continueOnCapturedContext: false );
+
+                     cancellationToken.ThrowIfCancellationRequested();
+
+                     if ( isExistInContact )
                      {
                          contactsWithFile.Add( contact );
                      }
+                 }, parallelOptions );
+
+                 foreach ( var contact in onlineContacts )
+                 {
+                     checkFileExistsInContact.Post( contact );
                  }
-             }, parallelOptions );
 
-            for ( Int32 numContact = 0; numContact < onlineContacts.Count; numContact++ )
-            {
-                checkFileExistsInContact.Post( onlineContacts[ numContact ] );
-            }
+                 //Signals that we will not post more Contact
+                 checkFileExistsInContact.Complete();
 
-            //Signals that we will not post more Contact
-            checkFileExistsInContact.Complete();
+                 //await getting all contactsWithFile
+                 await checkFileExistsInContact.Completion.ConfigureAwait( false );
 
-            //await getting all contactsWithFile
-            await checkFileExistsInContact.Completion.ConfigureAwait( false );
+                 contactsWithFile.CompleteAdding();
+             } );
 
-
-
-            return contactsWithFile;
+            return contactsWithFile.GetConsumingEnumerable( cancellationToken );
         }
 
         private async Task<Boolean> IsFileExistsInContactAsync( DownloadFileRequest sampleRequest, Contact contact )
         {
             CheckFileExistsRequest request = new CheckFileExistsRequest( m_ourContact.KadId.Value )
             {
-                BucketName = sampleRequest.BucketName,
+                BucketId = sampleRequest.BucketId,
                 FileOriginalName = sampleRequest.FileOriginalName,
                 HexPrefix = sampleRequest.HexPrefix,
             };

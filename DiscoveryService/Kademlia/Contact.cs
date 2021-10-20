@@ -14,6 +14,8 @@ namespace LUC.DiscoveryService.Kademlia
     public class Contact : IComparable
     {
         private readonly Object m_lockIpAddresses;
+
+        //TODO change to type ConcurrentStack<IPAddress>
         private readonly List<IPAddress> m_ipAddresses;
         private IPAddress m_lastActiveIpAddress;
 
@@ -72,13 +74,16 @@ namespace LUC.DiscoveryService.Kademlia
 
         public UInt16 TcpPort { get; set; }
 
+        public List<String> SupportedBuckets { get; set; }
+
         public IPAddress LastActiveIpAddress
         {
             get => m_lastActiveIpAddress;
             set
             {
                 m_lastActiveIpAddress = value;
-                TryAddIpAddress( m_lastActiveIpAddress, out _ );
+
+                TryAddIpAddress( value, out _ );
             }
         }
 

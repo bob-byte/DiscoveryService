@@ -32,11 +32,11 @@ namespace LUC.DiscoveryService.Test.InternalTests
     [TestFixture]
     class ConnectionPoolSocketTest
     {
+#if RECEIVE_TCP_FROM_OURSELF
         [Test, ConnectionPoolSocketConventions( BuildEndPointRequest.ReachableDsEndPoint )]
         public async Task DsReceiveAsync_SendPingRequestThenStopDsThenReceiveResponse_GetResponse(ConnectionPoolSocket socket)
         {
-            Fixture specimens = new Fixture();
-            DiscoveryService discoveryService = specimens.Create<DiscoveryService>();
+            DiscoveryService discoveryService = SetUpTests.DiscoveryService;
             discoveryService.Start();
 
             socket.DsConnect( socket.Id, Constants.ConnectTimeout );
@@ -50,19 +50,9 @@ namespace LUC.DiscoveryService.Test.InternalTests
             Task.Run( () => discoveryService.Stop() ).GetAwaiter();
 
             Byte[] bytes = await socket.DsReceiveAsync( Timeout.InfiniteTimeSpan );
-            bytes.Should().NotBeEmpty();
+            bytes.Should().NotBeNullOrEmpty();
         }
-
-        [Test, ConnectionPoolSocketConventions(BuildEndPointRequest.RandomEndPoint)]
-        public void StateInPool_SetIsInPoolInAnotherTask_ShouldBeIsInPool( ConnectionPoolSocket socket)
-        {
-            socket.StateInPool = SocketStateInPool.TakenFromPool;
-            Task.Run( () => socket.StateInPool = SocketStateInPool.IsInPool );
-
-            Thread.Sleep( TimeSpan.FromSeconds( value: 0.5 ) );
-
-            socket.StateInPool.Should().Be( SocketStateInPool.IsInPool );
-        }
+#endif
 
         [Test, ConnectionPoolSocketConventions(BuildEndPointRequest.RandomEndPoint)]
         public void StateInPool_FewTasksWantToTakeSocketAndOnlyOneSetsItInPool_WaitingOfTakingFromPoolIsGreaterThanFrequencySetItInPool( ConnectionPoolSocket socket )
@@ -70,8 +60,8 @@ namespace LUC.DiscoveryService.Test.InternalTests
             //set TakenFromPool
             socket.StateInPool = SocketStateInPool.TakenFromPool;
             Int32 countOfThreads = 3;
-            TimeSpan waitSeconds = TimeSpan.FromSeconds( value: 3 );
-            TimeSpan waitSecondsForTask = TimeSpan.FromSeconds( value: 3 );
+            TimeSpan waitSeconds = TimeSpan.FromSeconds( value: 0.5 );
+            TimeSpan waitSecondsForTask = waitSeconds;
 
             //3 another tasks also do it
             for ( Int32 numThread = 0; numThread < countOfThreads; numThread++ )
@@ -93,6 +83,24 @@ namespace LUC.DiscoveryService.Test.InternalTests
                 Thread.Sleep( waitSeconds );
                 socket.StateInPool = SocketStateInPool.IsInPool;
             }
+        }
+
+        [Test]
+        public async Task ReturnedToPool_TakeSocketFromPoolThenSetStateInPoolInIsFailedAndReturnToPool_ShouldntBeReturned()
+        {
+            SetUpTests.DiscoveryService.Start();
+
+            Fixture specimens = new Fixture();
+            ConnectionPool connectionPool = specimens.Create<ConnectionPool>();
+
+            EndPointBuilder endPointBuilder = new EndPointBuilder( BuildEndPointRequest.ReachableDsEndPoint );
+            EndPoint socketId = endPointBuilder.Create<IPEndPoint>();
+
+            var socket = await connectionPool.SocketAsync( socketId, Constants.ConnectTimeout, IOBehavior.Synchronous, Constants.TimeWaitReturnToPool ).
+                ConfigureAwait( continueOnCapturedContext: false );
+
+            socket.StateInPool = SocketStateInPool.IsFailed;
+            socket.ReturnedToPool().Should().BeFalse();
         }
     }
 }

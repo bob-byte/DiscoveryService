@@ -76,7 +76,7 @@
     <Compile Include="Common\IpAddressFilter.SockAddrIn6.cs" />
     <Compile Include="Common\ForcingConcurrencyError.cs" />
     <Compile Include="Common\ThrowingConcurrencyException.cs" />
-    <Compile Include="Kademlia\ClientPool\ConnectionPool.RecoverSockets.cs" />
+    <Compile Include="Kademlia\ClientPool\ConnectionPool.RecoverConnections.cs" />
     <Compile Include="Kademlia\ClientPool\SocketStateInPool.cs" />
     <Compile Include="UdpSenders.cs" />
     <Compile Include="Download.CheckFileExists.cs" />
@@ -196,6 +196,9 @@
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
+    </PackageReference>
+    <PackageReference Include="Nito.AsyncEx">
+      <Version>5.1.2</Version>
     </PackageReference>
     <PackageReference Include="SimpleBase">
       <Version>1.3.1</Version>

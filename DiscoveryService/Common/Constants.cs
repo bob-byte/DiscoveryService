@@ -16,7 +16,7 @@ namespace LUC.DiscoveryService.Common
         public const Int32 K = 20;
         public const Int32 ID_LENGTH_BYTES = 20;
         public const Int32 ID_LENGTH_BITS = 160;
-        public const Int32 MAX_CHECK_AVAILABLE_DATA = 20;//FindValue can be too long if look up algorithm is started
+        public const Int32 MAX_CHECK_AVAILABLE_DATA = 5;//FindValue can be too long if look up algorithm is started
 
         public const Int32 MAX_THREADS = 4;
         public const Int32 QUERY_TIME = 500;  // in ms.

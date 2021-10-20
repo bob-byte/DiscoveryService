@@ -167,6 +167,18 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public Boolean IgnoreDuplicateMessages { get; set; }
 
+        /// <summary>
+        /// Get distributed hash table of object with type of <see cref="DiscoveryService"/> with <paramref name="protocolVersion"/>
+        /// </summary>
+        /// <remarks>
+        /// Use this method only if <see cref="DiscoveryService"/> is initialized with <paramref name="protocolVersion"/>
+        /// </remarks>
+        /// <param name="protocolVersion">
+        /// The version of protocol which object with type of <see cref="DiscoveryService"/> has
+        /// </param>
+        /// <exception cref="ArgumentException">
+        /// If object <see cref="NetworkEventInvoker"/> is not initialized with <paramref name="protocolVersion"/>
+        /// </exception>
         internal static Dht DistributedHashTable( UInt16 protocolVersion )
         {
             if ( s_dhts.ContainsKey( protocolVersion ) )

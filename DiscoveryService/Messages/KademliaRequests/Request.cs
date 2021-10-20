@@ -178,7 +178,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
                         if(bytesOfResponse[0] != (Byte)MessageOperation.LocalError)
                         {
-                            response = (TResponse)Activator.CreateInstance( typeof( TResponse ) );
+                            //TODO take out using RandomID in the next row
+                            response = (TResponse)Activator.CreateInstance( typeof( TResponse ), RandomID );
                             response.Read( bytesOfResponse );
 
                             s_log.LogInfo( $"The response is received ({bytesOfResponse.Length} bytes):\n{response}" );

@@ -24,22 +24,18 @@ namespace LUC.DiscoveryService
             /// Full file name involves path to <paramref name="localOriginalName"/> and <paramref name="localOriginalName"/>
             /// If it is Functional test where is in use only current PC, return will be <paramref name="localFolderPath"/> + <paramref name="filePrefix"/> + <paramref name="localOriginalName"/>, else <paramref name="bucketName"/> also will be used
             /// </returns>
-            public String FullFileName( ICollection<Contact> onlineContacts, String ourMachineId, String localFolderPath,
-                String localOriginalName )
+            public String FullFileName( String localFolderPath, String localOriginalName )
             {
                 String fullPathToFile;
-                Boolean canReceivedAnswerFromYourself = onlineContacts.Any( c => ( ourMachineId == onlineContacts.First().MachineId ) );
 
-                if ( canReceivedAnswerFromYourself )
-                {
-                    //download in root directory, because you cannot create file with the same path and name
-                    String rootFolder = Path.GetDirectoryName( localFolderPath );
-                    fullPathToFile = Path.Combine( rootFolder, localOriginalName );
-                }
-                else
-                {
-                    fullPathToFile = Path.Combine( localFolderPath, localOriginalName );
-                }
+#if RECEIVE_TCP_FROM_OURSELF
+                //download in root directory, because you cannot create file with the same path and name
+                String rootFolder = Path.GetDirectoryName( localFolderPath );
+                fullPathToFile = Path.Combine( rootFolder, localOriginalName );
+
+#else
+                fullPathToFile = Path.Combine( localFolderPath, localOriginalName );
+#endif
 
                 return fullPathToFile;
             }

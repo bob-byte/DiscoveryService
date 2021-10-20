@@ -28,7 +28,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
         public String HexPrefix { get; set; }
 
-        public String BucketName { get; set; }
+        public String BucketId { get; set; }
 
         public override void Write( WireWriter writer )
         {
@@ -38,7 +38,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
                 writer.WriteUtf32String( FileOriginalName );
                 writer.WriteAsciiString( HexPrefix );
-                writer.WriteAsciiString( BucketName );
+                writer.WriteAsciiString( BucketId );
             }
             else
             {
@@ -54,7 +54,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
                 FileOriginalName = reader.ReadUtf32String();
                 HexPrefix = reader.ReadAsciiString();
-                BucketName = reader.ReadAsciiString();
+                BucketId = reader.ReadAsciiString();
             }
             else
             {

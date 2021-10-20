@@ -76,6 +76,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DsBucketsSupported.cs" />
     <Compile Include="Extensions\DirectoryExtension.cs" />
     <Compile Include="InternalTests\Attributes\ConnectionPoolSocketConventionsAttribute.cs" />
     <Compile Include="Builders\BuildEndPointRequest.cs" />
@@ -83,7 +84,6 @@
     <Compile Include="Builders\EndPointBuilder.cs" />
     <Compile Include="InternalTests\Customizations\ConnectionPoolSocketBasicCustomization.cs" />
     <Compile Include="DiscoveryServiceSocketTest.cs" />
-    <Compile Include="DownloadTest.cs" />
     <Compile Include="FunctionalTest.cs" />
     <Compile Include="InternalTests\ConnectionPoolSocketTest.cs" />
     <Compile Include="MulticastMessageTest.cs" />

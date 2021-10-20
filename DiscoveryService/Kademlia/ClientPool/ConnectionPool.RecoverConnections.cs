@@ -19,7 +19,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         public async Task TryRecoverAllConnectionsAsync( TimeSpan timeWaitToReturnToPool )
         {
-            if((m_sockets.Count > 0) || (m_leasedSockets.Count > 0))
+            if ( ( m_sockets.Count > 0 ) || ( m_leasedSockets.Count > 0 ) )
             {
                 UpdateRecoveryPars();
 
@@ -40,21 +40,20 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
         }
 
+        public void TryCancelRecoverConnections()
+        {
+            lock ( m_cancellationRecover )
+            {
+                m_cancellationRecover.Cancel();
+            }
+        }
+
         private void UpdateRecoveryPars()
         {
             //use lock, because method TryCancelRecoverConnections want to cancel m_cancellationRecover
             lock ( m_cancellationRecover )
             {
                 m_cancellationRecover = new CancellationTokenSource();
-                m_lastRecoveryTimeInTicks = unchecked((UInt32)Environment.TickCount);
-            }
-        }
-
-        public void TryCancelRecoverConnections()
-        {
-            lock ( m_cancellationRecover )
-            {
-                m_cancellationRecover.Cancel();
             }
         }
 
@@ -117,79 +116,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             recoverSockets.Complete();
             await recoverSockets.Completion.ConfigureAwait( continueOnCapturedContext: false );
-        }
-
-        private async Task ShallowRecoverPoolSocketsAsync( TimeSpan timeoutToConnect, CancellationToken cancellationToken )
-        {
-            List<ConnectionPoolSocket> recoveredSockets = new List<ConnectionPoolSocket>();
-
-            lock ( m_lockLastRecoveryTime )
-            {
-                m_lastRecoveryTimeInTicks = unchecked((UInt32)Environment.TickCount);
-            }
-
-            var parallelOptions = ParallelOptions( cancellationToken );
-            ActionBlock<ConnectionPoolSocket> recoverSockets = new ActionBlock<ConnectionPoolSocket>( async ( socket ) =>
-            {
-                try
-                {
-                    ConnectionPoolSocket restoredSocket = await ConnectedSocketAsync(
-                        socket.Id,
-                        timeoutToConnect,
-                        IOBehavior.Synchronous, //now we don't have any reason do it async
-                        socket, 
-                        cancellationToken
-                    ).ConfigureAwait( false );
-
-                    restoredSocket.VerifyConnected();
-
-                    recoveredSockets.Add( restoredSocket );
-                }
-                //if recoveredSocket is not connected, SocketException will occur
-                catch ( SocketException )
-                {
-                    ;//do nothing
-                }
-                catch ( TimeoutException )
-                {
-                    ;//do nothing
-                }
-            }, parallelOptions );
-
-            lock(m_sockets)
-            {
-                ConnectionPoolSocket[] socketsInPool = m_sockets.Values.ToArray();
-                for ( Int32 numSocket = 0; numSocket < socketsInPool.Length; numSocket++ )
-                {
-                    ConnectionPoolSocket socket = socketsInPool[ numSocket ];
-
-                    m_sockets.TryRemove( socket.Id, out _ );
-                    socket.StateInPool = SocketStateInPool.TakenFromPool;
-                    m_leasedSockets.TryAdd( socket.Id, socket );
-
-                    recoverSockets.Post( socket );
-                }
-            }
-
-            recoverSockets.Complete();
-
-            await recoverSockets.Completion;
-
-            if ( recoveredSockets.Count == 0 )
-            {
-#if DEBUG
-                m_log.LogInfo( $"Pool recovered no sockets" );
-#endif
-            }
-            else
-            {
-                m_log.LogInfo( $"Pool now recovers socket count = {recoveredSockets.Count}" );
-            }
-
-            foreach ( ConnectionPoolSocket socket in recoveredSockets )
-            {
-                socket.ReturnedToPool();
-            }
         }
 
         private ExecutionDataflowBlockOptions ParallelOptions( CancellationToken cancellationToken ) =>

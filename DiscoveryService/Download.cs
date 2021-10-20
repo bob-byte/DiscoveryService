@@ -48,6 +48,7 @@ namespace LUC.DiscoveryService
 
         private readonly Object m_lockWriteFile;
         private readonly DownloadedFile m_downloadedFile;
+
         private readonly DiscoveryService m_discoveryService;
         private readonly Contact m_ourContact;
 
@@ -56,8 +57,9 @@ namespace LUC.DiscoveryService
             m_downloadedFile = new DownloadedFile();
             m_lockWriteFile = new Object();
 
-            this.m_discoveryService = discoveryService;
+            m_discoveryService = discoveryService;
             m_ourContact = discoveryService.NetworkEventInvoker.OurContact;
+
             LoggingService = AbstractService.LoggingService;
             IOBehavior = ioBehavior;
         }
@@ -98,23 +100,21 @@ namespace LUC.DiscoveryService
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
-            String filePrefix = hexPrefix.FromHexString();
             Boolean isRightParameters = IsRightInputParameters( 
                 localFolderPath, 
                 bucketName, 
-                filePrefix,
                 localOriginalName, 
                 bytesCount, 
                 fileVersion 
             );
+
             if ( isRightParameters )
             {
-                List<Contact> onlineContacts = m_discoveryService.OnlineContacts;
+                //add constraint of count contacts(see at Buckets)
+                List<Contact> onlineContacts = m_discoveryService.OnlineContacts();
 
                 //Full file name is path to file, file name and extension
                 String fullFileName = m_downloadedFile.FullFileName(
-                    onlineContacts,
-                    m_discoveryService.MachineId,
                     localFolderPath,
                     localOriginalName
                 );
@@ -127,48 +127,40 @@ namespace LUC.DiscoveryService
                         {
                             FullPathToFile = fullFileName,
                             FileOriginalName = localOriginalName,
-                            BucketName = bucketName,
+                            BucketId = bucketName,
                             ChunkRange = new ChunkRange { Start = 0, Total = (UInt64)bytesCount },
                             HexPrefix = hexPrefix,
                             FileVersion = fileVersion
                         };
 
-                        List<Contact> contactsWithFile = await ContactsWithFileAsync( onlineContacts,
-                            initialRequest, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
-                        if ( contactsWithFile.Count >= 1 )
+                        IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, initialRequest, cancellationToken );
+                        if ( bytesCount <= Constants.MAX_CHUNK_SIZE )
                         {
-                            if ( bytesCount <= Constants.MAX_CHUNK_SIZE )
-                            {
-                                await DownloadSmallFileAsync( contactsWithFile, initialRequest, cancellationToken ).ConfigureAwait( false );
-                            }
-                            else
-                            {
-                                await DownloadBigFileAsync( contactsWithFile, initialRequest, cancellationToken ).ConfigureAwait( false );
-                            }
-
-                            FileIsDownloaded?.Invoke( sender: this, fullFileName );
+                            await DownloadSmallFileAsync( contactsWithFile, initialRequest, cancellationToken ).ConfigureAwait( false );
                         }
                         else
                         {
-                            LoggingService.LogInfo( MESS_IF_FILE_DOESNT_EXIST_IN_ANY_NODE );
+                            await DownloadBigFileAsync( contactsWithFile, initialRequest, cancellationToken ).ConfigureAwait( false );
                         }
+
+                        FileIsDownloaded?.Invoke( sender: this, fullFileName );
                     }
                 }
                 catch ( OperationCanceledException ex )
                 {
-                    HandleException( ex, bytesCount, fullFileName );
+                    HandleException( ex );
                 }
                 catch ( InvalidOperationException ex )
                 {
-                    HandleException( ex, bytesCount, fullFileName );
+                    HandleException( ex );
                 }
                 catch ( PathTooLongException ex )
                 {
-                    HandleException( ex, bytesCount, fullFileName );
+                    HandleException( ex );
                 }
                 catch ( ArgumentException ex )
                 {
-                    HandleException( ex, bytesCount, fullFileName );
+                    HandleException( ex );
                 }
                 catch ( FilePartiallyDownloadedException ex )
                 {
@@ -178,23 +170,14 @@ namespace LUC.DiscoveryService
                 }
                 catch ( AggregateException ex )
                 {
-                    HandleException( ex.Flatten(), bytesCount, fullFileName );
+                    HandleException( ex.Flatten() );
                 }
             }
         }
 
-        private void HandleException( Exception exception, Int64 bytesCount, String fullPathToFile )
+        private void HandleException( Exception exception )
         {
             LoggingService.LogError( exception.ToString() );
-
-            if ( bytesCount <= Constants.MAX_CHUNK_SIZE )
-            {
-                m_downloadedFile.TryDeleteFile( fullPathToFile );
-            }
-            else
-            {
-                TryDeletePartsOfUndownloadedBigFile( fullPathToFile );
-            }
 
             DownloadErrorHappened?.Invoke( sender: this, exception );
         }
@@ -211,35 +194,21 @@ namespace LUC.DiscoveryService
         private Boolean IsRightInputParameters( 
             String localFolderPath, 
             String bucketName, 
-            String filePrefix, 
             String localOriginalName,
             Int64 bytesCount, 
             String fileVersion )
         {
             //check first 4 parameters for null is in system methods
-            Boolean isRightInputParameters = ( Directory.Exists( localFolderPath ) ) && ( !String.IsNullOrEmpty( bucketName ) ) &&
-                ( bytesCount > 0 ) && ( fileVersion != null );
+            Boolean isRightInputParameters = ( !String.IsNullOrWhiteSpace( bucketName ) ) && ( String.IsNullOrWhiteSpace( fileVersion ) ) && ( bytesCount > 0 );
             if ( isRightInputParameters )
             {
-                if ( !String.IsNullOrWhiteSpace( filePrefix ) )
+                //file shouldn't exist before download
+                String fullFileFile = m_downloadedFile.FullFileName( localFolderPath, localOriginalName );
+
+                isRightInputParameters = !File.Exists( fullFileFile );
+                if ( !isRightInputParameters )
                 {
-                    String[] folders = localFolderPath.Split( '\\' );
-                    String filePrefixInFullPath = folders[ folders.Length - 1 ];
-
-                    isRightInputParameters = filePrefixInFullPath == filePrefix;
-                }
-
-                if(isRightInputParameters)
-                {
-                    //file shouldn't exist before download
-                    String fullPathToFile = m_downloadedFile.FullFileName( m_discoveryService.OnlineContacts, m_discoveryService.MachineId,
-                        localFolderPath, localOriginalName );
-
-                    isRightInputParameters = !File.Exists( fullPathToFile );
-                    if ( !isRightInputParameters )
-                    {
-                        LoggingService.LogInfo( $"File {fullPathToFile} already exists" );
-                    }
+                    LoggingService.LogInfo( $"File {fullFileFile} already exists" );
                 }
             }
 

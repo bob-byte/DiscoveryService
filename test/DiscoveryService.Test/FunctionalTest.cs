@@ -4,6 +4,7 @@ using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
+using LUC.DiscoveryService.Test.Extensions;
 using LUC.Interfaces;
 using LUC.Interfaces.Models;
 using LUC.Interfaces.OutputContracts;
@@ -35,7 +36,7 @@ namespace LUC.DiscoveryService.Test
         private static readonly Object s_ttyLock;
         private static DiscoveryService s_discoveryService;
         private static readonly SettingsService s_settingsService;
-        private static readonly CancellationTokenSource s_cancellationTokenSource;
+        private static CancellationTokenSource s_cancellationTokenSource;
 
         private static FileSystemWatcher s_fileSystemWatcher;
 
@@ -95,10 +96,7 @@ namespace LUC.DiscoveryService.Test
         {
             SetUpTests.AssemblyInitialize();
 
-            s_settingsService.CurrentUserProvider = new CurrentUserProvider();
-
-            ApiClient.ApiClient apiClient = new ApiClient.ApiClient( s_settingsService.CurrentUserProvider, SetUpTests.LoggingService );
-            apiClient.SyncingObjectsList = new SyncingObjectsList();
+            ApiClient.ApiClient apiClient;
 
             String login = "integration1";
             String password = "integration1";
@@ -106,7 +104,7 @@ namespace LUC.DiscoveryService.Test
             LoginResponse loginResponse = null;
             do
             {
-                loginResponse = await apiClient.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
+                (apiClient, loginResponse, s_settingsService.CurrentUserProvider) = await SetUpTests.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
 
                 if ( !loginResponse.IsSuccess )
                 {
@@ -119,7 +117,7 @@ namespace LUC.DiscoveryService.Test
             }
             while ( !loginResponse.IsSuccess );
 
-            ConcurrentDictionary<String, String> groupsSupported = new ConcurrentDictionary<String, String>();
+            ConcurrentDictionary<String, String> bucketsSupported = new ConcurrentDictionary<String, String>();
 
 #if INTEGRATION_TESTS
             Boolean wantToObserveChageInDownloadTestFolder = NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to observe changes in {Constants.DOWNLOAD_TEST_NAME_FOLDER} folder" );
@@ -134,20 +132,13 @@ namespace LUC.DiscoveryService.Test
 
                 InitWatcherForIntegrationTests( apiClient );
             }
-
-            groupsSupported.TryAdd( login, password );
 #else
             apiClient.CurrentUserProvider.RootFolderPath = s_settingsService.ReadUserRootFolderPath();
 #endif
 
-            IList<String> serverBuckets = s_settingsService.CurrentUserProvider.GetServerBuckets();
-            String sslCert = "<SSL-Cert>";
-            foreach ( String bucketOnServer in serverBuckets )
-            {
-                groupsSupported.TryAdd( bucketOnServer, sslCert );
-            }
+            DsBucketsSupported.Define( s_settingsService.CurrentUserProvider, out bucketsSupported );
 
-            s_discoveryService = new DiscoveryService( new ServiceProfile( useIpv4: true, useIpv6: true, protocolVersion: 1, groupsSupported ), s_settingsService.CurrentUserProvider );
+            s_discoveryService = new DiscoveryService( new ServiceProfile( useIpv4: true, useIpv6: true, protocolVersion: 1, bucketsSupported ), s_settingsService.CurrentUserProvider );
             s_discoveryService.Start();
 
             foreach ( IPAddress address in s_discoveryService.NetworkEventInvoker.RunningIpAddresses )
@@ -414,7 +405,7 @@ namespace LUC.DiscoveryService.Test
                 receivedFindNodeRequest.WaitOne(TimeSpan.FromSeconds(value: 4));
 
                 //wait again, because contact should be added to NetworkEventInvoker.Dht.Node.BucketList after Find Node Kademlia operation
-                Thread.Sleep( TimeSpan.FromSeconds( value: 2 ) );
+                Thread.Sleep( TimeSpan.FromSeconds( value: 5 ) );
                 try
                 {
                     remoteContact = RandomContact( discoveryService, isOnlyInNetwork );
@@ -438,7 +429,7 @@ namespace LUC.DiscoveryService.Test
                 predicateToSelectContacts = c => ( c.LastActiveIpAddress != null ) && ( c.KadId == discoveryService.NetworkEventInvoker.OurContact.KadId );
             }
 
-            Contact[] contacts = discoveryService.OnlineContacts.Where( predicateToSelectContacts ).ToArray();
+            Contact[] contacts = discoveryService.OnlineContacts().Where( predicateToSelectContacts ).ToArray();
 
             Random random = new Random();
             Contact randomContact = contacts[ random.Next( contacts.Length ) ];
@@ -464,11 +455,13 @@ namespace LUC.DiscoveryService.Test
                         s_discoveryService.QueryAllServices();
 
                         AutoResetEvent receivedFindNodeRequest = new AutoResetEvent( initialState: false );
+
                         //because we listen TCP messages in other threads.
                         s_discoveryService.NetworkEventInvoker.AnswerReceived += ( sender, eventArgs ) => receivedFindNodeRequest.Set();
                         receivedFindNodeRequest.WaitOne(timeExecutionKadOp);
 
-                        //Thread.Sleep( TimeSpan.FromSeconds( value: 2 ) );
+                        //because we receive response from different contacts and IP-addresses
+                        Thread.Sleep( TimeSpan.FromSeconds( value: 5 ) );
 
                         return;
                     }
@@ -544,7 +537,8 @@ namespace LUC.DiscoveryService.Test
 
                     default:
                     {
-                        continue;
+                        Console.WriteLine("Inputted wrong key");
+                        return;
                     }
                 }
             }
@@ -656,10 +650,30 @@ namespace LUC.DiscoveryService.Test
             String filePrefix = String.Empty;
             (ObjectDescriptionModel fileDescription, String bucketName, String localFolderPath) = await RandomFileToDownloadAsync( apiClient, currentUserProvider, remoteContact, filePrefix ).ConfigureAwait( false );
 
-            await download.DownloadFileAsync( localFolderPath, bucketName,
+            Console.WriteLine( "Press any key to start download process. \n" +
+                "After that when you hear deep you can cancel download, if you press C key. If you do not want to cancel, press any other button." );
+            Console.ReadKey(intercept: true);//true says that pressed key will not show in console
+
+            Task downloadTask = download.DownloadFileAsync( localFolderPath, bucketName,
                 filePrefix, fileDescription.OriginalName, fileDescription.Bytes,
-                fileDescription.Version, s_cancellationTokenSource.Token )
-                .ConfigureAwait( false );
+                fileDescription.Version, s_cancellationTokenSource.Token );
+
+#pragma warning disable CS4014 // Так как этот вызов не ожидается, выполнение существующего метода продолжается до тех пор, пока вызов не будет завершен
+            downloadTask.ConfigureAwait( false );
+#pragma warning restore CS4014
+
+            Console.Beep();
+
+            ConsoleKey pressedKey = Console.ReadKey().Key;
+            Console.WriteLine();
+            if(pressedKey == ConsoleKey.C)
+            {
+                s_cancellationTokenSource.Cancel();
+            }
+
+            await downloadTask;
+
+            s_cancellationTokenSource = new CancellationTokenSource();
         }
 
         private async static Task<(ObjectDescriptionModel randomFileToDownload, String serverBucketName, String localFolderPath)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String filePrefix )

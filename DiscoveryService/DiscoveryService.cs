@@ -48,15 +48,13 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public event EventHandler<TcpMessageEventArgs> ServiceInstanceShutdown;
 
-        private readonly Dht m_distributedHashTable;
+        private Dht m_distributedHashTable;
 
-        private readonly ForcingConcurrencyError m_forceConcurrencyError;
+        private ForcingConcurrencyError m_forceConcurrencyError;
 
         private NetworkEventHandler m_networkEventHandler;
 
-        private readonly ConnectionPool m_connectionPool;
-
-        private Boolean m_isDiscoveryServiceStarted = false;
+        private ConnectionPool m_connectionPool;
 
         private readonly ICurrentUserProvider m_currentUserProvider;
 
@@ -64,50 +62,56 @@ namespace LUC.DiscoveryService
         /// For functional tests
         /// </summary>
         public DiscoveryService( ServiceProfile profile, ICurrentUserProvider currentUserProvider )
-            : this( profile )
         {
-            m_currentUserProvider = currentUserProvider;
+            if ( profile != null )
+            {
+                InitDiscoveryService( profile );
+
+                m_currentUserProvider = currentUserProvider;
+                InitNetworkEventInvoker();
 
 #if !IS_IN_LUC
-            SettingsService = new SettingsService
-            {
-                CurrentUserProvider = m_currentUserProvider
-            };
+                SettingsService = new SettingsService
+                {
+                    CurrentUserProvider = m_currentUserProvider
+                };
 
-            LoggingService = new LoggingService
-            {
-                SettingsService = SettingsService
-            };
+                LoggingService = new LoggingService
+                {
+                    SettingsService = SettingsService
+                };
 #endif
-        }
-
-        //TODO delete this constructor
-        public DiscoveryService( ServiceProfile profile )
-        {
-            if ( profile == null )
-            {
-                throw new ArgumentNullException( nameof( profile ) );
             }
             else
             {
-                m_forceConcurrencyError = new ForcingConcurrencyError();
-
-                GroupsSupported = profile.GroupsSupported;
-
-                UseIpv4 = profile.UseIpv4;
-                UseIpv6 = profile.UseIpv6;
-                ProtocolVersion = profile.ProtocolVersion;
-                MachineId = profile.MachineId;
-                m_connectionPool = ConnectionPool.Instance();
-
-                InitNetworkEventInvoker();
-
-                //It should be initialized after previous method
-                m_distributedHashTable = NetworkEventInvoker.DistributedHashTable( ProtocolVersion );
+                throw new ArgumentNullException( nameof( profile ) );
             }
         }
 
-        
+        public DiscoveryService( ServiceProfile profile )
+        {
+            if(profile != null)
+            {
+                InitDiscoveryService( profile );
+
+                InitNetworkEventInvoker();
+            }
+            else
+            {
+                throw new ArgumentNullException( nameof( profile ) );
+            }
+        }
+
+        private void InitDiscoveryService( ServiceProfile profile )
+        {
+            BucketsSupported = profile.GroupsSupported;
+
+            UseIpv4 = profile.UseIpv4;
+            UseIpv6 = profile.UseIpv6;
+            ProtocolVersion = profile.ProtocolVersion;
+            MachineId = profile.MachineId;
+            m_connectionPool = ConnectionPool.Instance();
+        }
 
         /// <summary>
         /// If user of ServiceDiscovery forget to call method Stop
@@ -117,18 +121,22 @@ namespace LUC.DiscoveryService
             Stop();
         }
 
+        //public Boolean IsRunning { get; private set; }
+
         /// <summary>
         /// Groups which current peer supports.
         /// Key is a name of group, which current peer supports.
         /// Value is a SSL certificate of group
         /// </summary>
-        public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
+        public ConcurrentDictionary<String, String> BucketsSupported { get; protected set; }
+
+        public Boolean IsRunning { get; private set; } = false;
 
         public KademliaId ContactId
         {
             get
             {
-                if ( m_isDiscoveryServiceStarted )
+                if ( IsRunning )
                 {
                     return NetworkEventInvoker.OurContact.KadId;
                 }
@@ -147,7 +155,7 @@ namespace LUC.DiscoveryService
         public ConcurrentDictionary<EndPoint, String> KnownIps { get; protected set; } =
             new ConcurrentDictionary<EndPoint, String>();
 
-        public List<Contact> OnlineContacts => NetworkEventInvoker.DistributedHashTable( ProtocolVersion ).OnlineContacts;
+        public List<Contact> OnlineContacts() => m_distributedHashTable.OnlineContacts;
 
         /// <summary>
         ///   LightUpon.Cloud Discovery Service.
@@ -172,6 +180,8 @@ namespace LUC.DiscoveryService
 
             NetworkEventInvoker.AnswerReceived += AddEndpoint;
             NetworkEventInvoker.AnswerReceived += NetworkEventInvoker.Bootstrap;
+
+            m_distributedHashTable = NetworkEventInvoker.DistributedHashTable( ProtocolVersion );
         }
 
         //TODO: check SSL certificate with SNI
@@ -205,7 +215,7 @@ namespace LUC.DiscoveryService
                        sendingContact.KadId.Value,
                        RunningTcpPort,
                        ProtocolVersion,
-                       groupsIds: GroupsSupported?.Keys?.ToList()
+                       groupsIds: BucketsSupported?.Keys?.ToList()
                    );
 
                     ForcingConcurrencyError.TryForce();
@@ -276,15 +286,16 @@ namespace LUC.DiscoveryService
         /// </summary>
         public void Start()
         {
-            if ( !m_isDiscoveryServiceStarted )
+            if ( !IsRunning )
             {
                 if ( NetworkEventInvoker == null )
                 {
                     InitNetworkEventInvoker();
                 }
+                m_forceConcurrencyError = new ForcingConcurrencyError();
                 NetworkEventInvoker.Start();
 
-                m_isDiscoveryServiceStarted = true;
+                IsRunning = true;
             }
         }
 
@@ -293,7 +304,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         public void QueryAllServices()
         {
-            if ( m_isDiscoveryServiceStarted )
+            if ( IsRunning )
             {
                 NetworkEventInvoker.SendQuery();
             }
@@ -308,7 +319,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         public void Stop()
         {
-            if ( m_isDiscoveryServiceStarted )
+            if ( IsRunning )
             {
                 NetworkEventInvoker.Stop();
                 NetworkEventInvoker = null;
@@ -316,11 +327,10 @@ namespace LUC.DiscoveryService
                 ServiceInstanceShutdown?.Invoke( sender: this, new TcpMessageEventArgs() );
 
                 m_connectionPool.ClearPoolAsync( IOBehavior.Synchronous, respectMinPoolSize: false, CancellationToken.None ).GetAwaiter().GetResult();
+                m_forceConcurrencyError?.Dispose();
 
-                m_isDiscoveryServiceStarted = false;
+                IsRunning = false;
             }
-
-            m_forceConcurrencyError?.Dispose();
         }
     }
 }

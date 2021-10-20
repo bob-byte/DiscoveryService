@@ -29,10 +29,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         private readonly SemaphoreSlim m_socketSemaphore;
         private readonly Object m_lockLastRecoveryTime;
 
+        //We use ConcurrentDictionary and lockers, because sometimes we have intermidiate steps 
+        //between using these dictionaries and we use this type for more security
         private readonly ConcurrentDictionary<EndPoint, ConnectionPoolSocket> m_sockets;
         private readonly ConcurrentDictionary<EndPoint, ConnectionPoolSocket> m_leasedSockets;
-
-        private UInt32 m_lastRecoveryTimeInTicks;
 
         private ConnectionPool( ConnectionSettings connectionSettings )
         {
@@ -59,12 +59,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         public ConnectionSettings ConnectionSettings { get; }
 
-        /// <summary>
-		/// Returns <c>true</c> if the connection pool is empty, i.e., all connections are in use. Note that in a highly-multithreaded
-		/// environment, the value of this property may be stale by the time it's returned.
-		/// </summary>
-		internal Boolean IsEmpty => m_socketSemaphore.CurrentCount == 0;
-
         public static ConnectionPool Instance()
         {
             if ( s_instance == null )
@@ -78,29 +72,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         public async Task<ConnectionPoolSocket> SocketAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool )
         {
 #if DEBUG
-            if ( IsEmpty && ( unchecked(( (UInt32)Environment.TickCount ) - Volatile.Read( ref m_lastRecoveryTimeInTicks )) >= POOL_RECOVERY_FREQUENCY_IN_TICKS ) )
-            {
-                TryCancelRecoverConnections();
-
-                UpdateRecoveryPars();
-
-                if ( ioBehavior == IOBehavior.Asynchronous )
-                {
-                    await ShallowRecoverPoolSocketsAsync( timeWaitToReturnToPool, m_cancellationRecover.Token ).
-                        ConfigureAwait( continueOnCapturedContext: false );
-                }
-                else if ( ioBehavior == IOBehavior.Synchronous )
-                {
-                    Task taskRecoverConnections = ShallowRecoverPoolSocketsAsync( timeWaitToReturnToPool, m_cancellationRecover.Token );
-                    taskRecoverConnections.Wait();
-
-                    if ( taskRecoverConnections.Exception != null )
-                    {
-                        throw taskRecoverConnections.Exception.Flatten();
-                    }
-                }
-            }
-
             // wait for an open slot (until timeout return to pool is raised)
             m_log.LogInfo( "Pool waiting for a taking from the pool" );
 #endif
@@ -120,7 +91,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 }
                 finally
                 {
-                    if ( ( desiredSocket.StateInPool != SocketStateInPool.TakenFromPool ) &&
+                    if ( ( desiredSocket?.StateInPool != SocketStateInPool.TakenFromPool ) &&
                          ( desiredSocket.StateInPool != SocketStateInPool.IsFailed ) )
                     {
                         desiredSocket.StateInPool = SocketStateInPool.TakenFromPool;
@@ -186,6 +157,11 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             return takenSocket;
         }
 
+        //private async Task RecoverConnectionIfItIsNeeded( TimeSpan timeoutToConnect, IOBehavior ioBehavior, ref ConnectionPoolSocket socket, CancellationToken cancellationToken = default )
+        //{
+
+        //}
+
         private async Task<ConnectionPoolSocket> ConnectedSocketAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, ConnectionPoolSocket socket, CancellationToken cancellationToken = default )
         {
             ConnectionPoolSocket connectedSocket = socket;
@@ -206,7 +182,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     {
                         try
                         {
-                            connectedSocket = new ConnectionPoolSocket( remoteEndPoint, s_instance, m_log, connectedSocket.StateInPool );
+                            connectedSocket = new ConnectionPoolSocket( remoteEndPoint, s_instance, m_log, socket.StateInPool );
                             await connectedSocket.DsConnectAsync( remoteEndPoint, timeoutToConnect, ioBehavior, cancellationToken ).
                                 ConfigureAwait( false );
                         }

@@ -48,7 +48,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
         {
             CheckFileExistsResponse response = new CheckFileExistsResponse( request.RandomID )
             {
-                IsRightBucket = m_discoveryService.GroupsSupported.ContainsKey( request.BucketName ),
+                IsRightBucket = m_discoveryService.BucketsSupported.Any( c => c.Key == request.BucketId ),
             };
 
             if ( response.IsRightBucket )
@@ -74,7 +74,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             String localBucketDirectoryPath = bucketDirectoryPathes.SingleOrDefault( bucketFullName =>
              {
                  String bucketDirectoryName = Path.GetFileName( bucketFullName );
-                 return request.BucketName.ToLowerInvariant().Contains( bucketDirectoryName.ToLowerInvariant() );
+                 return request.BucketId.ToLowerInvariant().Contains( bucketDirectoryName.ToLowerInvariant() );
              } );
 
             if ( localBucketDirectoryPath != null )
@@ -93,7 +93,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             }
             else
             {
-                StringBuilder messageException = new StringBuilder( $"Server bucket name {request.BucketName} doesn't match to:\n" );
+                StringBuilder messageException = new StringBuilder( $"Server bucket name {request.BucketId} doesn't match to:\n" );
                 foreach ( String bucketFullName in bucketDirectoryPathes )
                 {
                     messageException.Append( $"{bucketFullName}; " );

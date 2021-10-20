@@ -147,9 +147,9 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             {
                 LoggingService.LogInfo( $"Cannot find sender of {typeof( T ).Name}: {ex.Message}" );
 
-//#if !RECEIVE_TCP_FROM_OURSELF
+#if !RECEIVE_TCP_FROM_OURSELF
                 return;
-//#endif
+#endif
             }
 
             try
