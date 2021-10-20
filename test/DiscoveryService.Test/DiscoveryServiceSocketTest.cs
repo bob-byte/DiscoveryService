@@ -24,7 +24,7 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void Connect_RemoteEndPointIsNull_GetException()
         {
-            DiscoveryServiceSocket dsSocket = InitializedTcpSocket();
+            AsyncSocket dsSocket = InitializedTcpSocket();
 
             Assert.That( () =>
                      dsSocket.DsConnect( remoteEndPoint: null, TimeSpan.FromSeconds( 1 ) ),
@@ -34,7 +34,7 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void ConnectAsync_RemoteEndPointIsNull_GetException()
         {
-            DiscoveryServiceSocket dsSocket = InitializedTcpSocket();
+            AsyncSocket dsSocket = InitializedTcpSocket();
 
             Assert.That( async () =>
                      await dsSocket.DsConnectAsync( remoteEndPoint: null, TimeSpan.FromSeconds( 1 ) ),
@@ -47,7 +47,7 @@ namespace LUC.DiscoveryService.Test
             DiscoveryService discoveryService = new DiscoveryService( new ServiceProfile( useIpv4: true, useIpv6: true, protocolVersion: 1 ) );
             discoveryService.Start();
 
-            DiscoveryServiceSocket client = InitializedTcpSocket();
+            AsyncSocket client = InitializedTcpSocket();
 
             IPEndPoint endPoint = AvailableIpAddress( discoveryService, client.AddressFamily );
             client.DsConnect( endPoint, Constants.ConnectTimeout );
@@ -69,8 +69,8 @@ namespace LUC.DiscoveryService.Test
             }
         }
 
-        private DiscoveryServiceSocket InitializedTcpSocket() =>
-            new DiscoveryServiceSocket(
+        private AsyncSocket InitializedTcpSocket() =>
+            new AsyncSocket(
                 AddressFamily.InterNetwork,
                 SocketType.Stream,
                 ProtocolType.Tcp,
@@ -92,7 +92,7 @@ namespace LUC.DiscoveryService.Test
         [Test]
         public void SendAsync_WithoutSettingConnection_ThrowSocketException()
         {
-            DiscoveryServiceSocket socket = InitializedTcpSocket();
+            AsyncSocket socket = InitializedTcpSocket();
 
             Byte[] bytesToSend = new Byte[ 20 ];
             Random random = new Random();

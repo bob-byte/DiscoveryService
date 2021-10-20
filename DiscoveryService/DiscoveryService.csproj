@@ -81,7 +81,7 @@
     <Compile Include="UdpSenders.cs" />
     <Compile Include="Download.CheckFileExists.cs" />
     <Compile Include="Download.cs" />
-    <Compile Include="Common\DiscoveryServiceSocket.cs" />
+    <Compile Include="Common\AsyncSocket.cs" />
     <Compile Include="Download.DownloadProcess.cs" />
     <Compile Include="Download.DownloadedFile.cs" />
     <Compile Include="MachineId.cs" />

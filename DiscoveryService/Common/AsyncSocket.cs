@@ -21,7 +21,7 @@ namespace LUC.DiscoveryService.Common
     /// New socket methods are marked <a href="Ds"/> in the front of the name, so only there <see cref="m_state"/> will be changed, 
     /// except <see cref="Dispose"/> (there also will be changed) in order to you can easily use this object in <a href="using"/> statement
     /// </summary>
-    public class DiscoveryServiceSocket : Socket
+    public class AsyncSocket : Socket
     {
         private readonly TimeSpan m_howOftenCheckAcceptedClient;
         private ConcurrentQueue<Socket> m_acceptedSockets;
@@ -32,13 +32,13 @@ namespace LUC.DiscoveryService.Common
         internal static ILoggingService Log { get; private set; }
 
         /// <inheritdoc/>
-        public DiscoveryServiceSocket( AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, BigInteger contactId, ILoggingService loggingService )
+        public AsyncSocket( AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, BigInteger contactId, ILoggingService loggingService )
             : this( addressFamily, socketType, protocolType, loggingService )
         {
             ContactId = contactId;
         }
 
-        public DiscoveryServiceSocket( AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, ILoggingService loggingService )
+        public AsyncSocket( AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType, ILoggingService loggingService )
             : base( addressFamily, socketType, protocolType )
         {
             m_state = SocketState.Creating;
@@ -183,7 +183,9 @@ namespace LUC.DiscoveryService.Common
                 Task<(Byte[], SocketException)> taskReadBytes = ReadBytesAsync( clientToReadMessage, receiveDone );
 
                 //just configure context without waiting
-                taskReadBytes.ConfigureAwait( false ).GetAwaiter();
+#pragma warning disable CS4014 //Because this call is not awaited, execution of the current method continues before the call is completed.
+                taskReadBytes.ConfigureAwait( false );
+#pragma warning restore CS4014
 
                 //wait until timeoutToRead
                 Boolean isReceivedInTime = receiveDone.WaitOne( timeoutToRead );
@@ -401,7 +403,7 @@ namespace LUC.DiscoveryService.Common
         {
             if ( m_state == SocketState.Closed )
             {
-                throw new ObjectDisposedException( nameof( DiscoveryServiceSocket ) );
+                throw new ObjectDisposedException( nameof( AsyncSocket ) );
             }
             else if ( !Connected || ( ( SocketState.Disconnected <= m_state ) && ( m_state <= SocketState.Closed ) ) )
             {

@@ -341,12 +341,15 @@ namespace LUC.DiscoveryService
 
                 AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
                 Task<Byte[]> taskReadBytes = clientToReadMessage.Socket.ReadAllAvailableBytesAsync( receiveDone, Constants.MAX_CHUNK_SIZE, Constants.MaxAvailableReadBytes );
-                taskReadBytes.ConfigureAwait( continueOnCapturedContext: false ).GetAwaiter();
+
+#pragma warning disable CS4014 //Because this call is not awaited, execution of the current method continues before the call is completed.
+                taskReadBytes.ConfigureAwait( continueOnCapturedContext: false );
+#pragma warning restore CS4014
 
                 Boolean isReceivedInTime = receiveDone.WaitOne( timeoutToRead );
                 if ( isReceivedInTime )
                 {
-                    readBytes = taskReadBytes.Result;
+                    readBytes = await taskReadBytes;
                     ipEndPoint = clientToReadMessage.Socket.RemoteEndPoint as IPEndPoint;
                 }
                 else

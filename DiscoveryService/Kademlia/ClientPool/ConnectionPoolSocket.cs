@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
     ///<inheritdoc/>
-    class ConnectionPoolSocket : DiscoveryServiceSocket
+    class ConnectionPoolSocket : AsyncSocket
     {
         private readonly Object m_lockStateInPool;
 
