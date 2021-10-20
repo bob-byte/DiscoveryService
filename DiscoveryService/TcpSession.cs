@@ -397,30 +397,6 @@ namespace LUC.DiscoveryService
             return Encoding.UTF8.GetString( buffer, 0, (Int32)length );
         }
 
-        
-
-        
-
-        /// <summary>
-        ///   Reads all available data
-        /// </summary>
-        public Byte[] ReadAllAvailableBytes()
-        {
-            List<Byte> allMessage = new List<Byte>();
-            Int32 availableDataToRead = Socket.Available;
-
-            for ( Int64 countReadBytes = 1; countReadBytes > 0 && availableDataToRead > 0; )
-            {
-                Byte[] buffer = new Byte[ availableDataToRead ];
-                countReadBytes = Receive( buffer, offset: 0, availableDataToRead );
-                allMessage.AddRange( buffer );
-
-                availableDataToRead = Socket.Available;
-            }
-
-            return allMessage.ToArray();
-        }
-
         /// <summary>
         /// Receive data from the client (asynchronous)
         /// </summary>

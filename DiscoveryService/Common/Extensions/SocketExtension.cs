@@ -13,7 +13,7 @@ namespace LUC.DiscoveryService.Common.Extensions
         /// <summary>
         ///   Reads all available data
         /// </summary>
-        public async static Task<Byte[]> ReadBytesAsync( this Socket socket, EventWaitHandle receiveDone, Int32 chunkSizeToReadPerOneTime, Int32 maxReadBytes )
+        public async static Task<Byte[]> ReadAllAvailableBytesAsync( this Socket socket, EventWaitHandle receiveDone, Int32 chunkSizeToReadPerOneTime, Int32 maxReadBytes )
         {
             List<Byte> allMessage = new List<Byte>();
             Int32 availableDataToRead = socket.Available;
@@ -43,7 +43,7 @@ namespace LUC.DiscoveryService.Common.Extensions
             }
             while ( ( countReadBytes > 0 ) && ( availableDataToRead > 0 ) );
 
-            receiveDone.Set();
+            receiveDone.SafeSet(isSet: out _);
 
             return allMessage.ToArray();
         }

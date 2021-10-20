@@ -100,24 +100,20 @@ namespace LUC.DiscoveryService
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
-            Boolean isRightParameters = IsRightInputParameters( 
+            CheckInputParameters( 
                 localFolderPath, 
                 bucketName, 
                 localOriginalName, 
                 bytesCount, 
-                fileVersion 
+                fileVersion,
+                out Boolean isRightInputParameters,
+                out String fullFileName
             );
 
-            if ( isRightParameters )
+            if ( isRightInputParameters )
             {
                 //add constraint of count contacts(see at Buckets)
                 List<Contact> onlineContacts = m_discoveryService.OnlineContacts();
-
-                //Full file name is path to file, file name and extension
-                String fullFileName = m_downloadedFile.FullFileName(
-                    localFolderPath,
-                    localOriginalName
-                );
 
                 try
                 {
@@ -191,28 +187,27 @@ namespace LUC.DiscoveryService
         }
 
         //TODO: optimize it
-        private Boolean IsRightInputParameters( 
+        private void CheckInputParameters( 
             String localFolderPath, 
             String bucketName, 
             String localOriginalName,
             Int64 bytesCount, 
-            String fileVersion )
+            String fileVersion,
+            out Boolean isRightInputParameters,
+            out String fullFileFile )
         {
-            //check first 4 parameters for null is in system methods
-            Boolean isRightInputParameters = ( !String.IsNullOrWhiteSpace( bucketName ) ) && ( String.IsNullOrWhiteSpace( fileVersion ) ) && ( bytesCount > 0 );
+            isRightInputParameters = ( !String.IsNullOrWhiteSpace( bucketName ) ) && ( !String.IsNullOrWhiteSpace( fileVersion ) ) && ( bytesCount > 0 );
+            fullFileFile = m_downloadedFile.FullFileName( localFolderPath, localOriginalName );
+
             if ( isRightInputParameters )
             {
                 //file shouldn't exist before download
-                String fullFileFile = m_downloadedFile.FullFileName( localFolderPath, localOriginalName );
-
                 isRightInputParameters = !File.Exists( fullFileFile );
                 if ( !isRightInputParameters )
                 {
                     LoggingService.LogInfo( $"File {fullFileFile} already exists" );
                 }
             }
-
-            return isRightInputParameters;
         }
 
         private ExecutionDataflowBlockOptions ParallelOptions(CancellationToken cancellationToken) =>

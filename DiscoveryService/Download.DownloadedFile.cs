@@ -20,10 +20,9 @@ namespace LUC.DiscoveryService
         /// </summary>
         private class DownloadedFile
         {
-            /// <returns>
-            /// Full file name involves path to <paramref name="localOriginalName"/> and <paramref name="localOriginalName"/>
-            /// If it is Functional test where is in use only current PC, return will be <paramref name="localFolderPath"/> + <paramref name="filePrefix"/> + <paramref name="localOriginalName"/>, else <paramref name="bucketName"/> also will be used
-            /// </returns>
+            ///<summary>
+            /// Full file name is path to file, file name and extension
+            /// </summary>
             public String FullFileName( String localFolderPath, String localOriginalName )
             {
                 String fullPathToFile;

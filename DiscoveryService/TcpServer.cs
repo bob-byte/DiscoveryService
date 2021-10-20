@@ -340,7 +340,7 @@ namespace LUC.DiscoveryService
                 clientToReadMessage = await SessionWithNewDataAsync();
 
                 AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
-                Task<Byte[]> taskReadBytes = clientToReadMessage.Socket.ReadBytesAsync( receiveDone, Constants.MAX_CHUNK_SIZE, Constants.MaxAvailableReadBytes );
+                Task<Byte[]> taskReadBytes = clientToReadMessage.Socket.ReadAllAvailableBytesAsync( receiveDone, Constants.MAX_CHUNK_SIZE, Constants.MaxAvailableReadBytes );
                 taskReadBytes.ConfigureAwait( continueOnCapturedContext: false ).GetAwaiter();
 
                 Boolean isReceivedInTime = receiveDone.WaitOne( timeoutToRead );

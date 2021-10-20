@@ -237,7 +237,7 @@ namespace LUC.DiscoveryService.Common
             Byte[] readBytes = new Byte[ 0 ];
             try
             {
-                readBytes = await socketToRead.ReadBytesAsync( receiveDone, Constants.MAX_CHUNK_SIZE, Constants.MaxAvailableReadBytes ).
+                readBytes = await socketToRead.ReadAllAvailableBytesAsync( receiveDone, Constants.MAX_CHUNK_SIZE, Constants.MaxAvailableReadBytes ).
                      ConfigureAwait( continueOnCapturedContext: false );
             }
             catch ( SocketException ex )
