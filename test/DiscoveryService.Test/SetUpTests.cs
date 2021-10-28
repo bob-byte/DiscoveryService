@@ -18,6 +18,11 @@ namespace LUC.DiscoveryService.Test
     [SetUpFixture]
     static class SetUpTests
     {
+        private static ICurrentUserProvider s_currentUserProvider;
+        private static DiscoveryService s_discoveryService = null;
+
+        private static ISettingsService s_settingsService;
+
         static SetUpTests()
         {
             Fixture = new Fixture();
@@ -31,12 +36,10 @@ namespace LUC.DiscoveryService.Test
             {
                 SettingsService = new SettingsService()
             };
+
+            UseIpv4 = true;
+            UseIpv6 = true;
         }
-
-        private static ICurrentUserProvider s_currentUserProvider;
-        private static DiscoveryService s_discoveryService = null;
-
-        public static ISettingsService s_settingsService;
 
         public static IFixture Fixture { get; }
 
@@ -63,11 +66,11 @@ namespace LUC.DiscoveryService.Test
 
         public static UInt16 DefaultProtocolVersion { get; set; }
 
-        public static Boolean UseIpv4 { get; set; } = true;
+        public static Boolean UseIpv4 { get; set; }
 
-        public static Boolean UseIpv6 { get; set; } = true;
+        public static Boolean UseIpv6 { get; set; }
 
-        public static Boolean IsUserLogged { get; set; } = false;
+        public static Boolean IsUserLogged { get; set; }
 
         public static ICurrentUserProvider CurrentUserProvider 
         { 
@@ -75,7 +78,7 @@ namespace LUC.DiscoveryService.Test
             {
                 if(!IsUserLogged)
                 {
-                    LUC.Interfaces.OutputContracts.LoginResponse loginResponse;
+                    LoginResponse loginResponse;
                     (_, loginResponse, s_currentUserProvider) = LoginAsync().GetAwaiter().GetResult();
 
                     IsUserLogged = loginResponse.IsSuccess;

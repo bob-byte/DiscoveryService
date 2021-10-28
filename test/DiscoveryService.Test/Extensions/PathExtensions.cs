@@ -13,8 +13,8 @@ namespace LUC.DiscoveryService.Test.Extensions
         public static Boolean IsValidFullFileName( String fullFileName )
         {
             String fileName = Path.GetFileName( fullFileName );
-            return ( fileName.Intersect( Path.GetInvalidFileNameChars() ).Count() == 0 ) &&
-                ( IsValidPath(fullFileName) );
+            return ( IsValidPath(fullFileName) ) &&
+                ( !fileName.Intersect( Path.GetInvalidFileNameChars() ).Any() );
         }
 
         public static Boolean IsValidPath( String pathToFile ) =>
