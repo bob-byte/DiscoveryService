@@ -2,6 +2,7 @@
 using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Interfaces;
 using LUC.DiscoveryService.Kademlia;
+using LUC.Interfaces.Models;
 
 using System;
 using System.Collections.Generic;

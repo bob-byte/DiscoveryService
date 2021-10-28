@@ -42,7 +42,9 @@ namespace LUC.DiscoveryService
                      checkFileExistsInContact.Post( contact );
                  }
 
-                 //Signals that we will not post more Contact
+                 //Signals that we will not post more Contact. 
+                 //Try without this method, but I think that if we do that, 
+                 //call of method checkFileExistsInContact.Completion will never complete
                  checkFileExistsInContact.Complete();
 
                  //await getting all contactsWithFile

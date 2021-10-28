@@ -48,7 +48,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
         {
             CheckFileExistsResponse response = new CheckFileExistsResponse( request.RandomID )
             {
-                IsRightBucket = m_discoveryService.BucketsSupported.Any( c => c.Key == request.BucketId ),
+                IsRightBucket = m_discoveryService.SupportedBuckets().Any( c => c.Key == request.BucketId ),
             };
 
             if ( response.IsRightBucket )

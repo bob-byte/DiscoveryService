@@ -8,6 +8,7 @@ using System.Collections;
 using System.IO;
 using LUC.DiscoveryService.Kademlia.Exceptions;
 using LUC.DiscoveryService.Common;
+using LUC.Interfaces.Models;
 
 namespace LUC.DiscoveryService.Kademlia
 {
@@ -15,14 +16,15 @@ namespace LUC.DiscoveryService.Kademlia
     {
         private readonly Object m_lockIpAddresses;
 
-        //TODO change to type ConcurrentStack<IPAddress>
         private readonly List<IPAddress> m_ipAddresses;
+        private List<String> m_supportedBuckets;
+
         private IPAddress m_lastActiveIpAddress;
 
         /// <summary>
-        /// Initialize a contact with its ID.
+        /// Initialize a contact with its ID. Use this constructor when you want to initialize contact of current PC first time
         /// </summary>
-        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort )
+        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<String> bucketLocalNames )
         {
             MachineId = machineId;
             KadId = contactID;
@@ -31,14 +33,16 @@ namespace LUC.DiscoveryService.Kademlia
             m_ipAddresses = new List<IPAddress>();
             m_lockIpAddresses = new Object();
 
+            InitBucketLocalNames( bucketLocalNames );
+
             Touch();
         }
 
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress )
-            : this( machineId, contactID, tcpPort )
+        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress, IEnumerable<String> bucketLocalNames )
+            : this( machineId, contactID, tcpPort, bucketLocalNames )
         {
             LastActiveIpAddress = lastActiveIpAddress;
         }
@@ -46,7 +50,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen )
+        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen, IEnumerable<String> bucketLocalNames )
         {
             MachineId = machineId;
             KadId = contactID;
@@ -63,18 +67,24 @@ namespace LUC.DiscoveryService.Kademlia
                 }
             }
 
+            InitBucketLocalNames( bucketLocalNames );
+
             LastSeen = lastSeen;
         }
 
-        public DateTime LastSeen { get; set; }
+        public DateTime LastSeen { get; private set; }
 
-        public String MachineId { get; set; }
+        public String MachineId { get; }
 
+        /// <summary>
+        /// It shoud have public method set, because if node disapears 
+        /// from network and returns there, it will have new <see cref="KadId"/>, 
+        /// but the same <see cref="MachineId"/> and it can still be in some bucket, 
+        /// so it should have the opportunity to update <see cref="KadId"/>
+        /// </summary>
         public KademliaId KadId { get; set; }
 
-        public UInt16 TcpPort { get; set; }
-
-        public List<String> SupportedBuckets { get; set; }
+        public UInt16 TcpPort { get; }
 
         public IPAddress LastActiveIpAddress
         {
@@ -96,8 +106,17 @@ namespace LUC.DiscoveryService.Kademlia
         public void Touch() => 
             LastSeen = DateTime.UtcNow;
 
+        /// <returns>
+        /// Copy of IP-addresses of contact
+        /// </returns>
         public List<IPAddress> IpAddresses() =>
             m_ipAddresses.ToList();
+
+        /// <returns>
+        /// Copy of bucket local names of contact
+        /// </returns>
+        public List<String> SupportedBuckets() =>
+            m_supportedBuckets.ToList();
 
         public void TryAddIpAddress( IPAddress address, out Boolean isAdded )
         {
@@ -113,6 +132,29 @@ namespace LUC.DiscoveryService.Kademlia
 
                     AddNewIpAddresss( address );
                     isAdded = true;
+                }
+            }
+            else
+            {
+                isAdded = false;
+            }
+        }
+
+        public void TryAddBucketLocalName(String bucketLocalName, out Boolean isAdded)
+        {
+            if ( bucketLocalName != null )
+            {
+                lock ( m_supportedBuckets )
+                {
+                    if ( !m_supportedBuckets.Contains( bucketLocalName ) )
+                    {
+                        m_supportedBuckets.Add( bucketLocalName );
+                        isAdded = true;
+                    }
+                    else
+                    {
+                        isAdded = false;
+                    }
                 }
             }
             else
@@ -142,6 +184,14 @@ namespace LUC.DiscoveryService.Kademlia
                 {
                     isRemoved = false;
                 }
+            }
+        }
+
+        public void TryRemoveBucketLocalName( String bucketLocalName, out Boolean isRemoved )
+        {
+            lock(m_supportedBuckets)
+            {
+                isRemoved = m_supportedBuckets.Contains( bucketLocalName ) ? m_supportedBuckets.Remove( bucketLocalName ) : false;
             }
         }
 
@@ -184,37 +234,62 @@ namespace LUC.DiscoveryService.Kademlia
 
         public static Boolean operator ==( Contact a, Contact b )
         {
-            if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) != null ) )
-                return false;
-            if ( ( ( (Object)a ) != null ) && ( ( (Object)b ) == null ) )
-                return false;
-            if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) == null ) )
-                return true;
+            Boolean isEqual = false;
 
-            return a.KadId == b.KadId;
+            if( ( ( (Object)a ) != null ) && ( ( (Object)b ) != null ) )
+            {
+                isEqual = a.MachineId == b.MachineId;
+            }
+            else if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) == null ) )
+            {
+                isEqual = true;
+            }
+            else if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) != null ) )
+            {
+                isEqual = false;
+            }
+            else if ( ( ( (Object)a ) != null ) && ( ( (Object)b ) == null ) )
+            {
+                isEqual = false;
+            }
+
+            return isEqual;
         }
 
-        public static Boolean operator !=( Contact a, Contact b )
-        {
-            if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) != null ) )
-                return true;
-            if ( ( ( (Object)a ) != null ) && ( ( (Object)b ) == null ) )
-                return true;
-            if ( ( ( (Object)a ) == null ) && ( ( (Object)b ) == null ) )
-                return false;
-
-            return !( a.KadId == b.KadId );
-        }
+        public static Boolean operator !=( Contact a, Contact b ) =>
+            !( a == b );
 
         public override Boolean Equals( Object obj )
         {
-            if ( obj == null || !( obj is Contact ) )
-                return false;
+            Boolean isEqual;
 
-            return this == (Contact)obj;
+            //if obj is null it also hasn't Contact type
+            if(obj is Contact contact)
+            {
+                isEqual = this == contact;
+            }
+            else
+            {
+                isEqual = false;
+            }
+
+            return isEqual;
         }
 
-        public override Int32 GetHashCode() => base.GetHashCode();
+        public override Int32 GetHashCode() => 
+            MachineId.GetHashCode();
+
+        private void InitBucketLocalNames(IEnumerable<String> bucketLocalNames)
+        {
+            m_supportedBuckets = new List<String>();
+            if ( bucketLocalNames != null )
+            {
+                foreach ( var bucketName in bucketLocalNames )
+                {
+                    TryAddBucketLocalName( bucketName, isAdded: out _ );
+                }
+            }
+        }
 
         private void AddNewIpAddresss( IPAddress address )
         {

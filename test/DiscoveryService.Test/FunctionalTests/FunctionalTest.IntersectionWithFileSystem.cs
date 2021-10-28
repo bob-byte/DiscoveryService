@@ -1,0 +1,86 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace LUC.DiscoveryService.Test.FunctionalTests
+{
+    partial class FunctionalTest
+    {
+#if INTEGRATION_TESTS
+        private static FileSystemWatcher s_fileSystemWatcher;
+
+        //[PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
+        private static void InitWatcherForIntegrationTests( ApiClient.ApiClient apiClient )
+        {
+            String downloadTestFolderFullName = DownloadTestFolderFullName( Constants.DOWNLOAD_TEST_NAME_FOLDER );
+            String rootFolder = s_settingsService.ReadUserRootFolderPath();
+
+            if ( rootFolder != null )
+            {
+                try
+                {
+                    DirectoryExtension.CopyDirsAndSubdirs( rootFolder, downloadTestFolderFullName );
+                }
+                catch ( Exception ex )
+                {
+                    Console.WriteLine( ex.ToString() );
+                }
+            }
+
+            UpdateRootFolderPath( downloadTestFolderFullName, apiClient );
+
+            s_fileSystemWatcher = new FileSystemWatcher( downloadTestFolderFullName )
+            {
+                IncludeSubdirectories = true,
+                Filter = "*.*"
+            };
+
+            s_fileSystemWatcher.Created += ( sender, eventArgs ) => OnChanged( apiClient, eventArgs );
+            //s_fileSystemWatcher.Changed += ( sender, eventArgs ) => OnChanged( apiClient, eventArgs );
+
+            s_fileSystemWatcher.EnableRaisingEvents = true;
+        }
+
+        private static void UpdateRootFolderPath( String downloadTestFolderFullName, ApiClient.ApiClient apiClient = null )
+        {
+            s_settingsService.CurrentUserProvider.RootFolderPath = downloadTestFolderFullName;
+            SetUpTests.LoggingService.SettingsService = s_settingsService;
+
+            if ( apiClient != null )
+            {
+                apiClient.CurrentUserProvider.RootFolderPath = downloadTestFolderFullName;
+            }
+        }
+
+        private static async void OnChanged( Object sender, FileSystemEventArgs eventArgs ) =>
+            await TryUploadFileAsync( (IApiClient)sender, eventArgs ).ConfigureAwait( continueOnCapturedContext: false );
+
+        private static async Task TryUploadFileAsync( IApiClient apiClient, FileSystemEventArgs eventArgs )
+        {
+            //to signal that file was changed in Constants.DOWNLOAD_TEST_NAME_FOLDER
+            Console.Beep();
+
+            Boolean whetherTryUpload = NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to upload on server file {eventArgs.Name}. It was {Enum.GetName( typeof( WatcherChangeTypes ), eventArgs.ChangeType )}" );
+            if ( whetherTryUpload )
+            {
+                try
+                {
+                    await apiClient.TryUploadAsync( new FileInfo( eventArgs.FullPath ) ).ConfigureAwait( continueOnCapturedContext: false );
+                }
+                catch ( NullReferenceException )
+                {
+                    ;//file is not changed in any group
+                }
+                catch ( Exception ex )
+                {
+                    Debug.Fail( ex.Message, detailMessage: ex.ToString() );
+                }
+            }
+        }
+#endif
+    }
+}

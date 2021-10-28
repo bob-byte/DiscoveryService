@@ -1,26 +1,14 @@
 ﻿using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.ClientPool;
 using LUC.DiscoveryService.Kademlia.Exceptions;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
-using LUC.DiscoveryService.Messages.KademliaResponses;
 using LUC.Interfaces;
-using LUC.Interfaces.Extensions;
-using LUC.Interfaces.Models;
-using LUC.Services.Implementation;
-
-using Microsoft.Win32.SafeHandles;
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
@@ -74,8 +62,8 @@ namespace LUC.DiscoveryService
         /// <param name="localFolderPath">
         /// Full path to file (except file name) where you want to download it
         /// </param>
-        /// <param name="bucketName">
-        /// Group ID, which current user and remote contacts belong to. The last ones send bytes of the file to download
+        /// <param name="localBucketName">
+        /// Group ID, which current user and remote contacts belong to
         /// </param>
         /// <param name="hexPrefix">
         /// The name of the folder on the server in hexadecimal which will contain <paramref name="localOriginalName"/> 
@@ -92,8 +80,8 @@ namespace LUC.DiscoveryService
         /// <param name="cancellationToken">
         /// Token to cancel download process
         /// </param>
-        public async Task DownloadFileAsync( String localFolderPath, String bucketName, String hexPrefix, String localOriginalName,
-            Int64 bytesCount, String fileVersion, CancellationToken cancellationToken )
+        public async Task DownloadFileAsync( String localFolderPath, String localBucketName, String hexPrefix, String localOriginalName,
+            Int64 bytesCount, String fileVersion, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress = null )
         {
             if ( cancellationToken != default )
             {
@@ -102,7 +90,7 @@ namespace LUC.DiscoveryService
 
             CheckInputParameters( 
                 localFolderPath, 
-                bucketName, 
+                localBucketName, 
                 localOriginalName, 
                 bytesCount, 
                 fileVersion,
@@ -113,30 +101,31 @@ namespace LUC.DiscoveryService
             if ( isRightInputParameters )
             {
                 //add constraint of count contacts(see at Buckets)
-                List<Contact> onlineContacts = m_discoveryService.OnlineContacts();
+                IEnumerable<Contact> onlineContacts = ContactsInSameBucket(localBucketName);
 
                 try
                 {
-                    if ( onlineContacts.Count >= 1 )
+                    if ( onlineContacts.Count() >= 1 )
                     {
                         DownloadFileRequest initialRequest = new DownloadFileRequest( sender: m_ourContact.KadId.Value )
                         {
                             FullPathToFile = fullFileName,
                             FileOriginalName = localOriginalName,
-                            BucketId = bucketName,
+                            BucketId = localBucketName,
                             ChunkRange = new ChunkRange { Start = 0, Total = (UInt64)bytesCount },
                             HexPrefix = hexPrefix,
                             FileVersion = fileVersion
                         };
 
                         IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, initialRequest, cancellationToken );
+
                         if ( bytesCount <= Constants.MAX_CHUNK_SIZE )
                         {
-                            await DownloadSmallFileAsync( contactsWithFile, initialRequest, cancellationToken ).ConfigureAwait( false );
+                            await DownloadSmallFileAsync( contactsWithFile, initialRequest, cancellationToken, downloadProgress ).ConfigureAwait( false );
                         }
                         else
                         {
-                            await DownloadBigFileAsync( contactsWithFile, initialRequest, cancellationToken ).ConfigureAwait( false );
+                            await DownloadBigFileAsync( contactsWithFile, initialRequest, cancellationToken, downloadProgress ).ConfigureAwait( false );
                         }
 
                         FileIsDownloaded?.Invoke( sender: this, fullFileName );
@@ -155,6 +144,10 @@ namespace LUC.DiscoveryService
                     HandleException( ex );
                 }
                 catch ( ArgumentException ex )
+                {
+                    HandleException( ex );
+                }
+                catch ( NotEnoughDriveSpaceException ex )
                 {
                     HandleException( ex );
                 }
@@ -178,14 +171,6 @@ namespace LUC.DiscoveryService
             DownloadErrorHappened?.Invoke( sender: this, exception );
         }
 
-        private void TryDeletePartsOfUndownloadedBigFile( String fullFileName )
-        {
-            m_downloadedFile.TryDeleteFile( fullFileName );
-
-            String tempFullFileName = m_downloadedFile.TempFullFileName( fullFileName );
-            m_downloadedFile.TryDeleteFile( tempFullFileName );
-        }
-
         //TODO: optimize it
         private void CheckInputParameters( 
             String localFolderPath, 
@@ -202,7 +187,7 @@ namespace LUC.DiscoveryService
             if ( isRightInputParameters )
             {
                 //file shouldn't exist before download
-                isRightInputParameters = !File.Exists( fullFileFile );
+                isRightInputParameters = ( isRightInputParameters ) && !File.Exists( fullFileFile );
                 if ( !isRightInputParameters )
                 {
                     LoggingService.LogInfo( $"File {fullFileFile} already exists" );
@@ -210,12 +195,15 @@ namespace LUC.DiscoveryService
             }
         }
 
+        private IEnumerable<Contact> ContactsInSameBucket(String serverBucketName) =>
+            m_discoveryService.OnlineContacts().Where( c => c.SupportedBuckets().Any( b => b == serverBucketName ) );
+
         private ExecutionDataflowBlockOptions ParallelOptions(CancellationToken cancellationToken) =>
             new ExecutionDataflowBlockOptions
             {
                 MaxDegreeOfParallelism = Constants.MAX_THREADS,
                 CancellationToken = cancellationToken,
-                BoundedCapacity = DataflowBlockOptions.Unbounded,
+                BoundedCapacity = DataflowBlockOptions.Unbounded,//try to delete this row
                 MaxMessagesPerTask = 1,
                 EnsureOrdered = false
             };

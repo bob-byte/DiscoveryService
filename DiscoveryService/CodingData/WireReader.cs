@@ -252,17 +252,20 @@ namespace LUC.DiscoveryService.CodingData
             UInt16 tcpPort = ReadUInt16();
 
             String lastSeenAsStr = ReadAsciiString();
+
+            //don't change next row
             DateTime lastSeen = DateTime.ParseExact( lastSeenAsStr, lastSeenFormat, provider: null );
 
-            UInt32 addressesCount = ReadUInt32();
-            ICollection<IPAddress> addresses = new List<IPAddress>( (Int32)addressesCount );
-            for ( Int32 numAddress = 0; numAddress < addressesCount; numAddress++ )
+            List<String> addressesAsStr = ReadListOfStrings();
+            ICollection<IPAddress> addresses = new List<IPAddress>( addressesAsStr.Count );
+            foreach ( var strAddress in addressesAsStr )
             {
-                String addressAsStr = ReadAsciiString();
-                addresses.Add( IPAddress.Parse( addressAsStr ) );
+                addresses.Add( IPAddress.Parse( strAddress ) );
             }
 
-            Contact contact = new Contact( machineId, new KademliaId( idAsBigInt ), tcpPort, addresses, lastSeen );
+            List<String> bucketLocalNames = ReadListOfStrings();
+
+            Contact contact = new Contact( machineId, new KademliaId( idAsBigInt ), tcpPort, addresses, lastSeen, bucketLocalNames );
             return contact;
         }
 

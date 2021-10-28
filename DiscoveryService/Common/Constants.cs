@@ -7,10 +7,13 @@ namespace LUC.DiscoveryService.Common
 {
     static class Constants
     {
+#if INTEGRATION_TESTS
         public const String DOWNLOAD_TEST_NAME_FOLDER = "DownloadTest";
+        public const String FILE_WITH_MACHINE_ID = "Current machine id.txt";
+#endif
 
         public const Int32 MAX_CHUNK_SIZE = 2000000;
-        public const Int32 MaxAvailableReadBytes = (Int32)( MAX_CHUNK_SIZE * 1.5 );
+        public const Int32 MAX_AVAILABLE_READ_BYTES = (Int32)( MAX_CHUNK_SIZE * 1.5 );
 
         public const Int32 B = 5;
         public const Int32 K = 20;
@@ -21,6 +24,8 @@ namespace LUC.DiscoveryService.Common
         public const Int32 MAX_THREADS = 4;
         public const Int32 QUERY_TIME = 500;  // in ms.
         public const Int32 RESPONSE_WAIT_TIME = 1 * 1000;   // in ms.
+
+
 
 #if DEBUG       // For unit tests
         public const Int32 ALPHA = 20;

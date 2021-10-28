@@ -15,8 +15,14 @@ namespace LUC.DiscoveryService.Messages
     /// </summary>
     public class TcpMessageEventArgs : MessageEventArgs
     {
+        /// <summary>
+        /// Socket which is accepted after any <see cref="Socket.Accept"/> method
+        /// </summary>
         public Socket AcceptedSocket { get; set; }
 
+        /// <summary>
+        /// <see cref="EndPoint"/> which received TCP message
+        /// </summary>
         public EndPoint LocalEndPoint { get; set; }
     }
 }

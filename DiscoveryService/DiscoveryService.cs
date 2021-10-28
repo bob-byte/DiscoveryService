@@ -25,9 +25,10 @@ using System.ComponentModel.Composition;
 using Castle.Core.Internal;
 using System.Reflection;
 using LUC.Services.Implementation;
+using System.Security.Cryptography.X509Certificates;
 
 //access permission to internal members in current project for DiscoveryService.Test
-[assembly: InternalsVisibleTo( "DiscoveryService.Test" )]
+[assembly: InternalsVisibleTo( assemblyName: "DiscoveryService.Test" )]
 [assembly: InternalsVisibleTo( InternalsVisible.ToDynamicProxyGenAssembly2 )]
 namespace LUC.DiscoveryService
 {
@@ -56,12 +57,14 @@ namespace LUC.DiscoveryService
 
         private ConnectionPool m_connectionPool;
 
+        private ConcurrentDictionary<String, String> m_supportedBuckets;
+
         private readonly ICurrentUserProvider m_currentUserProvider;
 
         /// <summary>
         /// For functional tests
         /// </summary>
-        public DiscoveryService( ServiceProfile profile, ICurrentUserProvider currentUserProvider )
+        internal DiscoveryService( ServiceProfile profile, ICurrentUserProvider currentUserProvider )
         {
             if ( profile != null )
             {
@@ -102,17 +105,6 @@ namespace LUC.DiscoveryService
             }
         }
 
-        private void InitDiscoveryService( ServiceProfile profile )
-        {
-            BucketsSupported = profile.GroupsSupported;
-
-            UseIpv4 = profile.UseIpv4;
-            UseIpv6 = profile.UseIpv6;
-            ProtocolVersion = profile.ProtocolVersion;
-            MachineId = profile.MachineId;
-            m_connectionPool = ConnectionPool.Instance();
-        }
-
         /// <summary>
         /// If user of ServiceDiscovery forget to call method Stop
         /// </summary>
@@ -121,16 +113,7 @@ namespace LUC.DiscoveryService
             Stop();
         }
 
-        //public Boolean IsRunning { get; private set; }
-
-        /// <summary>
-        /// Groups which current peer supports.
-        /// Key is a name of group, which current peer supports.
-        /// Value is a SSL certificate of group
-        /// </summary>
-        public ConcurrentDictionary<String, String> BucketsSupported { get; protected set; }
-
-        public Boolean IsRunning { get; private set; } = false;
+        public Boolean IsRunning { get; private set; }
 
         public KademliaId ContactId
         {
@@ -155,8 +138,6 @@ namespace LUC.DiscoveryService
         public ConcurrentDictionary<EndPoint, String> KnownIps { get; protected set; } =
             new ConcurrentDictionary<EndPoint, String>();
 
-        public List<Contact> OnlineContacts() => m_distributedHashTable.OnlineContacts;
-
         /// <summary>
         ///   LightUpon.Cloud Discovery Service.
         /// </summary>
@@ -171,95 +152,58 @@ namespace LUC.DiscoveryService
         /// </remarks>
         public NetworkEventInvoker NetworkEventInvoker { get; private set; }
 
-        private void InitNetworkEventInvoker()
-        {
-            NetworkEventInvoker = new NetworkEventInvoker( MachineId, UseIpv4, UseIpv6, ProtocolVersion );
-
-            m_networkEventHandler = new NetworkEventHandler( this, NetworkEventInvoker, m_currentUserProvider );//puts in events of NetworkEventInvoker sendings response
-            NetworkEventInvoker.QueryReceived += async ( invokerEvent, eventArgs ) => await SendTcpMessageAsync( invokerEvent, eventArgs );
-
-            NetworkEventInvoker.AnswerReceived += AddEndpoint;
-            NetworkEventInvoker.AnswerReceived += NetworkEventInvoker.Bootstrap;
-
-            m_distributedHashTable = NetworkEventInvoker.DistributedHashTable( ProtocolVersion );
-        }
-
-        //TODO: check SSL certificate with SNI
         /// <summary>
-        ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.RemoteEndPoint"/> using <seealso cref="UdpMessage.TcpPort"/>
-        ///  It is added to <seealso cref="NetworkEventInvoker.QueryReceived"/>. 
+        /// Groups which current peer supports.
+        /// Key is a name of group, which current peer supports.
+        /// Value is path to a SSL certificate of group
         /// </summary>
-        /// <param name="sender">
-        ///  Object which invoked event <seealso cref="NetworkEventInvoker.QueryReceived"/>
-        /// </param>
-        /// <param name="e">
-        ///  Information about UDP sender, that we have received.
-        /// </param>
-        public async Task SendTcpMessageAsync( Object sender, UdpMessageEventArgs eventArgs )
+        public ConcurrentDictionary<String, String> SupportedBuckets() =>
+            new ConcurrentDictionary<String, String>( m_supportedBuckets );
+
+        public void TryAddNewBucket(String bucketLocalName, String pathToSslCert, out Boolean isAdded)
         {
-            UdpMessage udpMessage = eventArgs.Message<UdpMessage>( whetherReadMessage: false );
-
-            if ( ( udpMessage != null ) && ( eventArgs?.RemoteEndPoint is IPEndPoint ipEndPoint ) )
+            if(!String.IsNullOrWhiteSpace(bucketLocalName) && String.IsNullOrWhiteSpace(pathToSslCert))
             {
-                ForcingConcurrencyError.TryForce();
-
-                Boolean isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( ipEndPoint.Address );
-                if ( isTheSameNetwork )
+                isAdded = m_supportedBuckets.TryAdd( bucketLocalName, pathToSslCert );
+                if(isAdded)
                 {
-                    Contact sendingContact = NetworkEventInvoker.OurContact;
+                    NetworkEventInvoker.OurContact.TryAddBucketLocalName( bucketLocalName, out isAdded );
 
-                    Random random = new Random();
-                    AcknowledgeTcpMessage tcpMessage = new AcknowledgeTcpMessage(
-                       messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
-                       MachineId,
-                       sendingContact.KadId.Value,
-                       RunningTcpPort,
-                       ProtocolVersion,
-                       groupsIds: BucketsSupported?.Keys?.ToList()
-                   );
-
-                    ForcingConcurrencyError.TryForce();
-                    Byte[] bytesToSend = tcpMessage.ToByteArray();
-
-                    IPEndPoint remoteEndPoint = new IPEndPoint( ipEndPoint.Address, (Int32)udpMessage.TcpPort );
-                    ConnectionPoolSocket client = null;
-                    try
+                    if(!isAdded)
                     {
-                        client = await m_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
-                           IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
-
-                        ForcingConcurrencyError.TryForce();
-                        client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,
-                           Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
-                        ForcingConcurrencyError.TryForce();
-                    }
-                    catch ( TimeoutException ex)
-                    {
-                        LoggingService.LogError( ex.ToString() );
-                    }
-                    catch ( SocketException ex )
-                    {
-                        LoggingService.LogError( ex.ToString() );
-                    }
-                    catch ( AggregateException ex)
-                    {
-                        LoggingService.LogError( ex.ToString() );
-                    }
-                    catch ( ObjectDisposedException ex)
-                    {
-                        LoggingService.LogError( ex.ToString() );
-                    }
-                    finally
-                    {
-                        client?.ReturnedToPool();
+                        m_supportedBuckets.TryRemove( bucketLocalName, value: out _ );
                     }
                 }
             }
             else
             {
-                throw new ArgumentException( $"Bad format of {nameof( eventArgs )}" );
+                throw new ArgumentException($"{nameof(bucketLocalName)} or {nameof(pathToSslCert)} is null or white space");
             }
         }
+
+        public void TryRemoveBucket(String bucketLocalName, out Boolean isRemoved )
+        {
+            if ( ( bucketLocalName != null ) && ( m_supportedBuckets.ContainsKey( bucketLocalName ) ) )
+            {
+                isRemoved = m_supportedBuckets.TryRemove( bucketLocalName, out String fullPathToSslCert );
+
+                if(isRemoved)
+                {
+                    NetworkEventInvoker.OurContact.TryRemoveBucketLocalName( bucketLocalName, out isRemoved );
+
+                    if(!isRemoved)
+                    {
+                        m_supportedBuckets.TryAdd( bucketLocalName, fullPathToSslCert );
+                    }
+                }
+            }
+            else
+            {
+                isRemoved = false;
+            }
+        }
+
+        public List<Contact> OnlineContacts() => m_distributedHashTable.OnlineContacts;
 
         public void AddEndpoint( Object sender, TcpMessageEventArgs e )
         {
@@ -331,6 +275,107 @@ namespace LUC.DiscoveryService
 
                 IsRunning = false;
             }
+        }
+
+        //TODO: check SSL certificate with SNI
+        /// <summary>
+        ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.RemoteEndPoint"/> using <seealso cref="UdpMessage.TcpPort"/>
+        ///  It is added to <seealso cref="NetworkEventInvoker.QueryReceived"/>. 
+        /// </summary>
+        /// <param name="sender">
+        ///  Object which invoked event <seealso cref="NetworkEventInvoker.QueryReceived"/>
+        /// </param>
+        /// <param name="e">
+        ///  Information about UDP sender, that we have received.
+        /// </param>
+        internal async Task SendTcpMessageAsync( Object sender, UdpMessageEventArgs eventArgs )
+        {
+            UdpMessage udpMessage = eventArgs.Message<UdpMessage>( whetherReadMessage: false );
+
+            if ( ( udpMessage != null ) && ( eventArgs?.RemoteEndPoint is IPEndPoint ipEndPoint ) )
+            {
+                ForcingConcurrencyError.TryForce();
+
+                Boolean isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( ipEndPoint.Address );
+                if ( isTheSameNetwork )
+                {
+                    Contact sendingContact = NetworkEventInvoker.OurContact;
+
+                    Random random = new Random();
+                    AcknowledgeTcpMessage tcpMessage = new AcknowledgeTcpMessage(
+                       messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
+                       MachineId,
+                       sendingContact.KadId.Value,
+                       RunningTcpPort,
+                       ProtocolVersion,
+                       groupsIds: SupportedBuckets()?.Keys?.ToList()
+                   );
+
+                    ForcingConcurrencyError.TryForce();
+                    Byte[] bytesToSend = tcpMessage.ToByteArray();
+
+                    IPEndPoint remoteEndPoint = new IPEndPoint( ipEndPoint.Address, (Int32)udpMessage.TcpPort );
+                    ConnectionPoolSocket client = null;
+                    try
+                    {
+                        client = await m_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
+                           IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
+
+                        ForcingConcurrencyError.TryForce();
+                        client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,
+                           Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
+                        ForcingConcurrencyError.TryForce();
+                    }
+                    catch ( TimeoutException ex )
+                    {
+                        LoggingService.LogError( ex.ToString() );
+                    }
+                    catch ( SocketException ex )
+                    {
+                        LoggingService.LogError( ex.ToString() );
+                    }
+                    catch ( AggregateException ex )
+                    {
+                        LoggingService.LogError( ex.ToString() );
+                    }
+                    catch ( ObjectDisposedException ex )
+                    {
+                        LoggingService.LogError( ex.ToString() );
+                    }
+                    finally
+                    {
+                        client?.ReturnedToPool();
+                    }
+                }
+            }
+            else
+            {
+                throw new ArgumentException( $"Bad format of {nameof( eventArgs )}" );
+            }
+        }
+
+        private void InitDiscoveryService( ServiceProfile profile )
+        {
+            m_supportedBuckets = profile.GroupsSupported;
+
+            UseIpv4 = profile.UseIpv4;
+            UseIpv6 = profile.UseIpv6;
+            ProtocolVersion = profile.ProtocolVersion;
+            MachineId = profile.MachineId;
+            m_connectionPool = ConnectionPool.Instance();
+        }
+
+        private void InitNetworkEventInvoker()
+        {
+            NetworkEventInvoker = new NetworkEventInvoker( MachineId, UseIpv4, UseIpv6, ProtocolVersion, SupportedBuckets().Keys );
+
+            m_networkEventHandler = new NetworkEventHandler( this, NetworkEventInvoker, m_currentUserProvider );//puts in events of NetworkEventInvoker sendings response
+            NetworkEventInvoker.QueryReceived += async ( invokerEvent, eventArgs ) => await SendTcpMessageAsync( invokerEvent, eventArgs );
+
+            NetworkEventInvoker.AnswerReceived += AddEndpoint;
+            NetworkEventInvoker.AnswerReceived += NetworkEventInvoker.Bootstrap;
+
+            m_distributedHashTable = NetworkEventInvoker.DistributedHashTable( ProtocolVersion );
         }
     }
 }

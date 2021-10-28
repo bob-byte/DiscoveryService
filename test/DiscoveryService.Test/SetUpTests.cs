@@ -5,9 +5,8 @@ using System.Threading.Tasks;
 
 using AutoFixture;
 
-using LightClient;
-
 using LUC.Interfaces;
+using LUC.Interfaces.OutputContracts;
 using LUC.Services.Implementation;
 
 using Moq;
@@ -19,10 +18,27 @@ namespace LUC.DiscoveryService.Test
     [SetUpFixture]
     static class SetUpTests
     {
-        private static ICurrentUserProvider s_currentUserProvider = null;
+        static SetUpTests()
+        {
+            Fixture = new Fixture();
+
+            s_currentUserProvider = null;
+            s_discoveryService = null;
+
+            DefaultProtocolVersion = 1;
+
+            LoggingService = new LoggingService
+            {
+                SettingsService = new SettingsService()
+            };
+        }
+
+        private static ICurrentUserProvider s_currentUserProvider;
         private static DiscoveryService s_discoveryService = null;
 
         public static ISettingsService s_settingsService;
+
+        public static IFixture Fixture { get; }
 
         public static DiscoveryService DiscoveryService
         {
@@ -45,7 +61,7 @@ namespace LUC.DiscoveryService.Test
             }
         }
 
-        public static UInt16 DefaultProtocolVersion { get; set; } = 1;
+        public static UInt16 DefaultProtocolVersion { get; set; }
 
         public static Boolean UseIpv4 { get; set; } = true;
 
@@ -73,32 +89,22 @@ namespace LUC.DiscoveryService.Test
             }
         }
 
-        internal static LoggingService LoggingService { get; private set; } = new LoggingService
-        {
-            SettingsService = new SettingsService()
-        };
+        internal static LoggingService LoggingService { get; private set; }
 
-        internal async static Task<(ApiClient.ApiClient apiClient, LUC.Interfaces.OutputContracts.LoginResponse loginResponse, ICurrentUserProvider userProvider)> LoginAsync( String login = "integration1", String password = "integration1" )
+        internal async static Task<(ApiClient.ApiClient apiClient, LoginResponse loginResponse, ICurrentUserProvider userProvider)> LoginAsync( 
+            String login = "integration1", 
+            String password = "integration1" )
         {
             ICurrentUserProvider currentUserProvider = new CurrentUserProvider();
 
-            ApiClient.ApiClient apiClient = new ApiClient.ApiClient( currentUserProvider, LoggingService );
-            apiClient.SyncingObjectsList = new SyncingObjectsList();
+            ApiClient.ApiClient apiClient = new ApiClient.ApiClient( currentUserProvider, LoggingService )
+            {
+                SyncingObjectsList = new SyncingObjectsList()
+            };
 
-            LUC.Interfaces.OutputContracts.LoginResponse loginResponse = await apiClient.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
+            LoginResponse loginResponse = await apiClient.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
 
             return (apiClient, loginResponse, currentUserProvider);
-        }
-
-        [ OneTimeSetUp ]
-        public static void AssemblyInitialize()
-        {
-
-            //set logger factory
-            //LoggingService = new LoggingService
-            //{
-            //    SettingsService = new SettingsService()
-            //};
         }
     }
 }

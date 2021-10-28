@@ -12,6 +12,9 @@ namespace LUC.DiscoveryService.Messages
     {
         private Message m_message;
 
+        /// <summary>
+        /// Bytes which <see cref="RemoteEndPoint"/> sent
+        /// </summary>
         public Byte[] Buffer { get; set; }
 
         /// <summary>
@@ -27,8 +30,6 @@ namespace LUC.DiscoveryService.Messages
         {
             return (m_message as T) != null;
         }
-
-        public BigInteger LocalContactId { get; set; }
 
         /// <summary>
         ///   The LightUpon.Cloud app message.
@@ -51,10 +52,19 @@ namespace LUC.DiscoveryService.Messages
             return m_message as T;
         }
 
+        /// <summary>
+        /// Set read message
+        /// </summary>
+        /// <typeparam name="T">
+        /// Type of any Discovery Service message
+        /// </typeparam>
+        /// <param name="message">
+        /// Read message
+        /// </param>
         internal void SetMessage<T>( T message )
             where T : Message, new()
         {
-            this.m_message = message;
+            m_message = message;
         }
     }
 }

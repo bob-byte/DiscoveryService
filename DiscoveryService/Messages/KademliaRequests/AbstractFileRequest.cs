@@ -28,6 +28,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 
         public String HexPrefix { get; set; }
 
+        //TODO delete it
         public String BucketId { get; set; }
 
         public override void Write( WireWriter writer )

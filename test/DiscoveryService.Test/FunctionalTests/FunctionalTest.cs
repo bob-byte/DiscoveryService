@@ -19,26 +19,21 @@ using System.Linq;
 using System.Management.Automation;
 using System.Net;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security;
 using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Test
+namespace LUC.DiscoveryService.Test.FunctionalTests
 {
-    class FunctionalTest
+    partial class FunctionalTest
     {
-        private const String IS_TRUE = "1";
-        private const String IS_FALSE = "2";
-        private const ConsoleKey KEY_TO_CONTINUE_PROGRAM = ConsoleKey.Enter;
-
         private static readonly Object s_ttyLock;
         private static DiscoveryService s_discoveryService;
         private static readonly SettingsService s_settingsService;
         private static CancellationTokenSource s_cancellationTokenSource;
-
-        private static FileSystemWatcher s_fileSystemWatcher;
 
         static FunctionalTest()
         {
@@ -94,8 +89,6 @@ namespace LUC.DiscoveryService.Test
 
         static async Task Main()
         {
-            SetUpTests.AssemblyInitialize();
-
             ApiClient.ApiClient apiClient;
 
             String login = "integration1";
@@ -120,13 +113,27 @@ namespace LUC.DiscoveryService.Test
             ConcurrentDictionary<String, String> bucketsSupported = new ConcurrentDictionary<String, String>();
 
 #if INTEGRATION_TESTS
+            Boolean deleteMachineId = NormalResposeFromUserAtClosedQuestion( $"Do you want to update Machine ID (it is always needed if you run firstly container)?" );
+            if(deleteMachineId)
+            {
+                String pathToExeFile = PathExtensions.PathToExeFile();
+
+                String fullFileNameWithMachineId = Path.Combine( pathToExeFile, Constants.FILE_WITH_MACHINE_ID );
+
+                //it will be generated in DS
+                File.Delete( fullFileNameWithMachineId );
+            }
+
             Boolean wantToObserveChageInDownloadTestFolder = NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to observe changes in {Constants.DOWNLOAD_TEST_NAME_FOLDER} folder" );
 
             if ( wantToObserveChageInDownloadTestFolder )
             {
                 Console.WriteLine( Display.StringWithAttention( $"When you hear deep, then folder {Constants.DOWNLOAD_TEST_NAME_FOLDER} is changed. \n" +
-                    $"And if you press {IS_TRUE} and {KEY_TO_CONTINUE_PROGRAM}, certain file will be uploaded to server. \n" +
-                    $"If you press {IS_FALSE} and {KEY_TO_CONTINUE_PROGRAM}, it will not be uploaded" ) );
+                    $"And if you press {UserIntersectionInConsole.IS_TRUE} and " +
+                    $"{UserIntersectionInConsole.KEY_TO_CONTINUE_PROGRAM}, certain file will be uploaded to server. \n" +
+                    $"If you press {UserIntersectionInConsole.IS_FALSE} and " +
+                    $"{UserIntersectionInConsole.KEY_TO_CONTINUE_PROGRAM}, it will not be uploaded" ) );
+
                 Console.WriteLine( "If you have read this, press any button to continue" );
                 Console.ReadKey();
 
@@ -202,75 +209,6 @@ namespace LUC.DiscoveryService.Test
                 }
 
                 isFirstTest = false;
-            }
-        }
-
-        //[PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
-        private static void InitWatcherForIntegrationTests(ApiClient.ApiClient apiClient)
-        {
-            String downloadTestFolderFullName = DownloadTestFolderFullName( Constants.DOWNLOAD_TEST_NAME_FOLDER );
-            String rootFolder = s_settingsService.ReadUserRootFolderPath();
-
-            if(rootFolder != null)
-            {
-                try
-                {
-                    DirectoryExtension.CopyDirsAndSubdirs( rootFolder, downloadTestFolderFullName );
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            }
-
-            UpdateRootFolderPath( downloadTestFolderFullName, apiClient );
-
-            s_fileSystemWatcher = new FileSystemWatcher( downloadTestFolderFullName )
-            {
-                IncludeSubdirectories = true,
-                Filter = "*.*"
-            };
-
-            s_fileSystemWatcher.Created += ( sender, eventArgs ) => OnChanged( apiClient, eventArgs );
-            //s_fileSystemWatcher.Changed += ( sender, eventArgs ) => OnChanged( apiClient, eventArgs );
-
-            s_fileSystemWatcher.EnableRaisingEvents = true;
-        }
-
-        private static void UpdateRootFolderPath(String downloadTestFolderFullName, ApiClient.ApiClient apiClient = null)
-        {
-            s_settingsService.CurrentUserProvider.RootFolderPath = downloadTestFolderFullName;
-            SetUpTests.LoggingService.SettingsService = s_settingsService;
-
-            if ( apiClient != null )
-            {
-                apiClient.CurrentUserProvider.RootFolderPath = downloadTestFolderFullName;
-            }
-        }
-
-        private static async void OnChanged(Object sender, FileSystemEventArgs eventArgs) =>
-            await TryUploadFileAsync( (IApiClient)sender, eventArgs ).ConfigureAwait( continueOnCapturedContext: false );
-
-        private static async Task TryUploadFileAsync( IApiClient apiClient, FileSystemEventArgs eventArgs)
-        {
-            //to signal that file was changed in Constants.DOWNLOAD_TEST_NAME_FOLDER
-            Console.Beep();
-
-            Boolean whetherTryUpload = NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to upload on server file {eventArgs.Name}. It was {Enum.GetName( typeof( WatcherChangeTypes), eventArgs.ChangeType)}" );
-            if(whetherTryUpload)
-            {
-                try
-                {
-                    await apiClient.TryUploadAsync( new FileInfo( eventArgs.FullPath ) ).ConfigureAwait( continueOnCapturedContext: false );
-                }
-                catch(NullReferenceException)
-                {
-                    ;//file is not changed in any group
-                }
-                catch(Exception ex)
-                {
-                    Debug.Fail( ex.Message, detailMessage: ex.ToString() );
-                }
             }
         }
 
@@ -647,22 +585,31 @@ namespace LUC.DiscoveryService.Test
         {
             Download download = new Download( s_discoveryService, IOBehavior.Asynchronous );
 
-            String filePrefix = String.Empty;
+            
+            String filePrefix = UserIntersectionInConsole.ValidValueInputtedByUser( requestToUser: "Input file prefix where new file can exist on the server: ", ( userInput ) =>
+             {
+                 Boolean isValidInput = ( PathExtensions.IsValidPath( userInput ) ) && ( !userInput.Contains( ":" ) );
+                 return isValidInput;
+             } );
+
             (ObjectDescriptionModel fileDescription, String bucketName, String localFolderPath) = await RandomFileToDownloadAsync( apiClient, currentUserProvider, remoteContact, filePrefix ).ConfigureAwait( false );
 
             Console.WriteLine( "Press any key to start download process. \n" +
-                "After that when you hear deep you can cancel download, if you press C key. If you do not want to cancel, press any other button." );
+                "After that if you want to cancel download, press C key. If you do not want to cancel, press any other button." );
             Console.ReadKey(intercept: true);//true says that pressed key will not show in console
 
-            Task downloadTask = download.DownloadFileAsync( localFolderPath, bucketName,
-                filePrefix, fileDescription.OriginalName, fileDescription.Bytes,
-                fileDescription.Version, s_cancellationTokenSource.Token );
-
-#pragma warning disable CS4014 //Because this call is not awaited, execution of the current method continues before the call is completed.
-            downloadTask.ConfigureAwait( false );
-#pragma warning restore CS4014
-
-            Console.Beep();
+            ConfiguredTaskAwaitable downloadTask = Task.Run( async () =>
+             {
+                 await download.DownloadFileAsync( 
+                     localFolderPath, 
+                     bucketName,
+                     filePrefix, 
+                     fileDescription.OriginalName, 
+                     fileDescription.Bytes,
+                     fileDescription.Version, 
+                     s_cancellationTokenSource.Token 
+                 ).ConfigureAwait( false );
+             } ).ConfigureAwait(false);
 
             ConsoleKey pressedKey = Console.ReadKey().Key;
             Console.WriteLine();
@@ -678,12 +625,19 @@ namespace LUC.DiscoveryService.Test
 
         private async static Task<(ObjectDescriptionModel randomFileToDownload, String serverBucketName, String localFolderPath)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String filePrefix )
         {
-            
             IList<String> bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
 
-            Random random = new Random();
-            String rndBcktDrctrPth = bucketDirectoryPathes[ random.Next( bucketDirectoryPathes.Count ) ];
-            String serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath( rndBcktDrctrPth ).ServerName;
+            String bucketPath = null;
+            UserIntersectionInConsole.ValidValueInputtedByUser(
+                requestToUser: "Input bucket directory path or it name: ",
+                ( userInput ) =>
+                {
+                    bucketPath = bucketDirectoryPathes.SingleOrDefault( ( path ) => path.Contains( userInput ) );
+                    return bucketPath != null;
+                }
+            );
+
+            String serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath( bucketPath ).ServerName;
 
             ObjectsListResponse objectsListResponse = await apiClient.ListAsync( serverBucketName, filePrefix ).ConfigureAwait( continueOnCapturedContext: false );
             ObjectsListModel objectsListModel = objectsListResponse.ToObjectsListModel();
@@ -693,7 +647,7 @@ namespace LUC.DiscoveryService.Test
             //If the last one is not, select files which don't exist in current PC
             List<ObjectDescriptionModel> bjctDscrptnsFrDwnld = undeletedObjectsListModel.Where( cachedFileInServer =>
              {
-                 String fullPathToFile = Path.Combine( rndBcktDrctrPth, filePrefix, cachedFileInServer.OriginalName );
+                 String fullPathToFile = Path.Combine( bucketPath, filePrefix, cachedFileInServer.OriginalName );
                  Boolean isFileInCurrentPc = File.Exists( fullPathToFile );
 
                  Boolean shouldBeDownloaded;
@@ -707,17 +661,19 @@ namespace LUC.DiscoveryService.Test
              } ).ToList();
 
             ObjectDescriptionModel randomFileToDownload;
+            Random random = new Random();
 
             //It will download random file at local PC if you don't have any file to download, 
             //server has any file which isn't deleted and you are only in network
             Boolean canWeDownloadAnything = undeletedObjectsListModel.Length > 0;
             if ( ( bjctDscrptnsFrDwnld.Count == 0 ) && ( canWeDownloadAnything ) )
             {
+                //TODO add possibility to upload file to server and run this method again
 #if RECEIVE_TCP_FROM_OURSELF
                 randomFileToDownload = undeletedObjectsListModel[ random.Next( undeletedObjectsListModel.Length ) ];
-                await apiClient.DownloadFileAsync( serverBucketName, filePrefix, rndBcktDrctrPth, randomFileToDownload.OriginalName, randomFileToDownload ).ConfigureAwait( false );
+                await apiClient.DownloadFileAsync( serverBucketName, filePrefix, bucketPath, randomFileToDownload.OriginalName, randomFileToDownload ).ConfigureAwait( false );
 #else
-                Console.WriteLine( $"You should put few files in {rndBcktDrctrPth} and using WpfClient, upload it" );
+                Console.WriteLine( $"You should put few files in {bucketPath} and using WpfClient, upload it" );
                 throw new InvalidOperationException();
 #endif
             }
@@ -727,11 +683,12 @@ namespace LUC.DiscoveryService.Test
             }
             else
             {
-                Console.WriteLine( $"You should put few files in {rndBcktDrctrPth} and using WpfClient, upload it" );
+
+                Console.WriteLine( $"You should put few files in {bucketPath} and using WpfClient, upload it" );
                 throw new InvalidOperationException();
             }
 
-            return (randomFileToDownload, serverBucketName, rndBcktDrctrPth);
+            return (randomFileToDownload, serverBucketName, bucketPath);
         }
     }
 }

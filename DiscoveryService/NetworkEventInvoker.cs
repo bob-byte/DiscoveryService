@@ -106,7 +106,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         private static readonly ConcurrentDictionary<UInt16, Dht> s_dhts;
 
-        private static IList<NetworkInterface> m_knownInterfaces = new List<NetworkInterface>();
+        private static IList<NetworkInterface> s_knownInterfaces = new List<NetworkInterface>();
 
         /// <summary>
         ///   Recently received messages.
@@ -134,7 +134,8 @@ namespace LUC.DiscoveryService
         ///   Multicast listener will be bound to result of filtering function.
         /// </param>
         internal NetworkEventInvoker( String machineId, Boolean useIpv4, Boolean useIpv6,
-            UInt16 protocolVersion, Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null )
+            UInt16 protocolVersion, IEnumerable<String> bucketLocalNames, 
+            Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null )
         {
             m_receivedMessages = new RecentMessages();
 
@@ -143,7 +144,7 @@ namespace LUC.DiscoveryService
             UseIpv6 = useIpv6;
             ProtocolVersion = protocolVersion;
 
-            OurContact = new Contact( MachineId, KademliaId.RandomIDInKeySpace, RunningTcpPort );
+            OurContact = new Contact( MachineId, KademliaId.RandomIDInKeySpace, RunningTcpPort, bucketLocalNames );
             Dht distributedHashTable = new Dht( OurContact, ProtocolVersion,
                 storageFactory: () => new VirtualStorage(), new ParallelRouter( ProtocolVersion ) );
             s_dhts.TryAdd( protocolVersion, distributedHashTable );
@@ -213,7 +214,7 @@ namespace LUC.DiscoveryService
             IEnumerable<NetworkInterface> nics = NetworkInterface.GetAllNetworkInterfaces().
                 Where( nic => nic.OperationalStatus == OperationalStatus.Up ).
                 Where( nic => nic.NetworkInterfaceType != NetworkInterfaceType.Loopback );
-
+            
             // Special case: no operational NIC, then use loopbacks.
             if ( nics.Count() == 0 )
             {
@@ -241,7 +242,7 @@ namespace LUC.DiscoveryService
         /// IP-addresses which <seealso cref="DiscoveryService"/> uses to exchange messages
         /// </summary>
         public List<IPAddress> RunningIpAddresses =>
-            Listeners.IpAddressesOfInterfaces( m_networkInterfacesFilter?.Invoke( m_knownInterfaces ) ?? m_knownInterfaces, UseIpv4, UseIpv6 );
+            Listeners.IpAddressesOfInterfaces( m_networkInterfacesFilter?.Invoke( s_knownInterfaces ) ?? s_knownInterfaces, UseIpv4, UseIpv6 );
 
         /// <summary>
         ///   Get the link local IP addresses of the local machine.
@@ -270,7 +271,7 @@ namespace LUC.DiscoveryService
                 List<NetworkInterface> newNics = new List<NetworkInterface>();
                 List<NetworkInterface> oldNics = new List<NetworkInterface>();
 
-                foreach ( NetworkInterface nic in m_knownInterfaces.Where( k => !currentNics.Any( n => k.Id == n.Id ) ) )
+                foreach ( NetworkInterface nic in s_knownInterfaces.Where( k => !currentNics.Any( n => k.Id == n.Id ) ) )
                 {
                     oldNics.Add( nic );
 
@@ -279,7 +280,7 @@ namespace LUC.DiscoveryService
 #endif
                 }
 
-                foreach ( NetworkInterface nic in currentNics.Where( nic => !m_knownInterfaces.Any( k => k.Id == nic.Id ) ) )
+                foreach ( NetworkInterface nic in currentNics.Where( nic => !s_knownInterfaces.Any( k => k.Id == nic.Id ) ) )
                 {
                     newNics.Add( nic );
 
@@ -288,7 +289,7 @@ namespace LUC.DiscoveryService
 #endif
                 }
 
-                m_knownInterfaces = currentNics;
+                s_knownInterfaces = currentNics;
 
                 // Only create client if something has change.
                 if ( newNics.Any() || oldNics.Any() )
@@ -432,7 +433,11 @@ namespace LUC.DiscoveryService
                 IPEndPoint ipEndPoint = receiveResult.AcceptedSocket.LocalEndPoint as IPEndPoint;
                 Boolean canBeDsMessage = IsInPortRange( ipEndPoint?.Port );
 
-                if ( canBeDsMessage )
+                if ( !canBeDsMessage )
+                {
+                    LoggingService.LogError( "Received message not from DS" );
+                }
+                else 
                 {
                     switch ( message.MessageOperation )
                     {
@@ -512,7 +517,7 @@ namespace LUC.DiscoveryService
             {
                 if ( ( tcpMessage != null ) && ( receiveResult.RemoteEndPoint is IPEndPoint ipEndPoint ) )
                 {
-                    Contact knownContact = new Contact( tcpMessage.MachineId, new KademliaId( tcpMessage.IdOfSendingContact ), tcpMessage.TcpPort, ipEndPoint.Address );
+                    Contact knownContact = new Contact( tcpMessage.MachineId, new KademliaId( tcpMessage.IdOfSendingContact ), tcpMessage.TcpPort, ipEndPoint.Address, tcpMessage.GroupIds );
 
                     s_dhts[ ProtocolVersion ].Bootstrap( knownContact );
                 }
@@ -528,7 +533,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         internal void Start()
         {
-            m_knownInterfaces.Clear();
+            s_knownInterfaces.Clear();
 
             FindNetworkInterfaces();
         }

@@ -23,10 +23,12 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         private const UInt32 POOL_RECOVERY_FREQUENCY_IN_TICKS = 1000;
         
         private static ConnectionPool s_instance;
+
         private readonly ILoggingService m_log;
 
         private readonly SemaphoreSlim m_cleanSemaphore;
         private readonly SemaphoreSlim m_socketSemaphore;
+        private readonly SemaphoreLocker m_lockTakeSocket;
         private readonly Object m_lockLastRecoveryTime;
 
         //We use ConcurrentDictionary and lockers, because sometimes we have intermidiate steps 
@@ -49,7 +51,9 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             m_cleanSemaphore = new SemaphoreSlim( initialCount: 1 );
             m_socketSemaphore = new SemaphoreSlim( connectionSettings.MaximumPoolSize );
+
             m_lockLastRecoveryTime = new Object();
+            m_lockTakeSocket = new SemaphoreLocker();
 
             m_sockets = new ConcurrentDictionary<EndPoint, ConnectionPoolSocket>();
             m_leasedSockets = new ConcurrentDictionary<EndPoint, ConnectionPoolSocket>();
@@ -79,6 +83,22 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             _ = await CanSocketBeTakenFromPoolAsync( ioBehavior, m_socketSemaphore, timeWaitToReturnToPool ).
                 ConfigureAwait(continueOnCapturedContext: false);
 
+            ConnectionPoolSocket desiredSocket = await m_lockTakeSocket.LockAsync(async () =>
+            {
+                return await CreatedOrTakenSocketAsync( 
+                    remoteEndPoint, 
+                    timeoutToConnect, 
+                    ioBehavior, 
+                    timeWaitToReturnToPool 
+                ).ConfigureAwait( false );
+
+            }).ConfigureAwait(false);
+
+            return desiredSocket;
+        }
+
+        private async Task<ConnectionPoolSocket> CreatedOrTakenSocketAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, TimeSpan timeWaitToReturnToPool )
+        {
             TryTakeLeasedSocket( remoteEndPoint, timeWaitToReturnToPool, out ConnectionPoolSocket desiredSocket );
 
             //another thread can remove desiredSocket from m_leasedSockets, so it can be null
@@ -104,9 +124,9 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             {
                 //desiredSocket may not be in pool, because it can be removed 
                 //by ConnectionPool.TryRecoverAllConnectionsAsync or disposed or is not created
-                lock(m_sockets)
+                lock ( m_sockets )
                 {
-                    m_sockets.TryRemove( remoteEndPoint, out desiredSocket );
+                    Boolean wasInPool = m_sockets.TryRemove( remoteEndPoint, out desiredSocket );
                 }
 
                 desiredSocket = await ConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket ).
@@ -118,7 +138,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 }
 
                 Boolean added;
-                lock (m_leasedSockets)
+                lock ( m_leasedSockets )
                 {
                     added = m_leasedSockets.TryAdd( remoteEndPoint, desiredSocket );
                 }
@@ -138,10 +158,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             if ( takenSocket )
             {
-                Boolean isReturned = desiredSocket.RemovedFromPool.WaitOne( timeWaitToReturnToPool );
+                Boolean isReturned = desiredSocket.CanBeTakenFromPool.WaitOne( timeWaitToReturnToPool );
                 if ( isReturned )
                 {
-                    m_log.LogInfo( $"\n*************************\nSocket with id {desiredSocket.Id} successfully taken from pool\n*************************\n" );
+                    m_log.LogInfo( logRecord: Display.StringWithAttention( $"Socket with id {desiredSocket.Id} successfully taken from pool" ) );
                 }
                 else
                 {
@@ -156,11 +176,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             return takenSocket;
         }
-
-        //private async Task RecoverConnectionIfItIsNeeded( TimeSpan timeoutToConnect, IOBehavior ioBehavior, ref ConnectionPoolSocket socket, CancellationToken cancellationToken = default )
-        //{
-
-        //}
 
         private async Task<ConnectionPoolSocket> ConnectedSocketAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, ConnectionPoolSocket socket, CancellationToken cancellationToken = default )
         {
@@ -380,7 +395,16 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                             waitingSocket = m_sockets.FirstOrDefault();
                         }
 
-                        Boolean isInPoolAnySocket = !waitingSocket.Equals( default( KeyValuePair<EndPoint, ConnectionPoolSocket> ) );
+                        Boolean isInPoolAnySocket;
+                        try
+                        {
+                            isInPoolAnySocket = !waitingSocket.Equals( default( KeyValuePair<EndPoint, ConnectionPoolSocket> ) );
+                        }
+                        catch(ObjectDisposedException)
+                        {
+                            isInPoolAnySocket = true;
+                        }
+
                         if ( isInPoolAnySocket )
                         {
                             waitingSocket.Value.Dispose();

@@ -39,13 +39,19 @@ namespace LUC.DiscoveryService.Test.InternalTests
             DiscoveryService discoveryService = SetUpTests.DiscoveryService;
             discoveryService.Start();
 
+            AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
+            discoveryService.NetworkEventInvoker.PingReceived += ( sender, eventArgs ) => receiveDone.Set();
+
             socket.DsConnect( socket.Id, Constants.ConnectTimeout );
             PingRequest pingRequest = new PingRequest( KademliaId.RandomIDInKeySpace.Value );
 
             socket.DsSend( pingRequest.ToByteArray(), Constants.SendTimeout );
 
+            //wait until ds handle request
+            receiveDone.WaitOne( Constants.SendTimeout );
+
             //wait until ds send response
-            Thread.Sleep( TimeSpan.FromSeconds( value: 5 ) );
+            //Thread.Sleep( Constants.ReceiveTimeout );
 
             Task.Run( () => discoveryService.Stop() ).GetAwaiter();
 
@@ -59,23 +65,41 @@ namespace LUC.DiscoveryService.Test.InternalTests
         {
             //set TakenFromPool
             socket.StateInPool = SocketStateInPool.TakenFromPool;
-            Int32 countOfThreads = 3;
+            Int32 countOfThreads = 10;
+
             TimeSpan waitSeconds = TimeSpan.FromSeconds( value: 0.5 );
-            TimeSpan waitSecondsForTask = waitSeconds;
+            TimeSpan precision = TimeSpan.FromMilliseconds( 100 );
+            TimeSpan timeExecution = TimeSpan.FromMilliseconds( waitSeconds.TotalMilliseconds * countOfThreads );
+            TimeSpan waitSecondsForThread = waitSeconds;
 
-            //3 another tasks also do it
-            for ( Int32 numThread = 0; numThread < countOfThreads; numThread++ )
-            {
-                Task.Run( () =>
-                {
-                    DateTime start = DateTime.Now;
-                    socket.StateInPool = SocketStateInPool.TakenFromPool;
-                    DateTime end = DateTime.Now;
+            Thread[] threadsThatTakingFromPool = new Thread[ countOfThreads ];
+            AutoResetEvent allThreadIsEnded = new AutoResetEvent(initialState: false);
 
-                    end.Subtract( start ).Should().BeGreaterThan(waitSecondsForTask  );
-                    waitSecondsForTask = TimeSpan.FromSeconds(waitSecondsForTask.TotalSeconds * 2);
-                } );
-            }
+            Task.Factory.StartNew( () =>
+             {
+                 //{countOfThreads} another threads also do it
+                 for ( Int32 numThread = 0; numThread < countOfThreads; numThread++ )
+                 {
+
+                     threadsThatTakingFromPool[ numThread ] = new Thread( () =>
+                       {
+                           DateTime start = DateTime.Now;
+                           socket.StateInPool = SocketStateInPool.TakenFromPool;
+                           DateTime end = DateTime.Now;
+
+                           end.Subtract( start ).Should().BeCloseTo( waitSecondsForThread, precision );
+                           waitSecondsForThread = TimeSpan.FromMilliseconds( waitSecondsForThread.TotalMilliseconds + waitSeconds.TotalMilliseconds );
+
+                           Boolean isLastIteration = ( ( timeExecution.TotalMilliseconds - precision.TotalMilliseconds ) <= waitSecondsForThread.TotalMilliseconds ) &&
+                                  ( waitSecondsForThread.TotalMilliseconds <= ( timeExecution.TotalMilliseconds + precision.TotalMilliseconds ) );
+                           if ( isLastIteration )
+                           {
+                               allThreadIsEnded.Set();
+                           }
+                       } );
+                     threadsThatTakingFromPool[ numThread ].Start();
+                 }
+             } );
 
             Int32 settingIsInPoolCount = countOfThreads;
             for ( Int32 numSettingIsInPool = 0; numSettingIsInPool < settingIsInPoolCount; numSettingIsInPool++ )
@@ -83,6 +107,9 @@ namespace LUC.DiscoveryService.Test.InternalTests
                 Thread.Sleep( waitSeconds );
                 socket.StateInPool = SocketStateInPool.IsInPool;
             }
+
+            Boolean isExecutedLastIterationInTime = allThreadIsEnded.WaitOne((Int32)waitSeconds.TotalMilliseconds * countOfThreads);
+            isExecutedLastIterationInTime.Should().BeTrue();
         }
 
         [Test]
@@ -99,7 +126,7 @@ namespace LUC.DiscoveryService.Test.InternalTests
             var socket = await connectionPool.SocketAsync( socketId, Constants.ConnectTimeout, IOBehavior.Synchronous, Constants.TimeWaitReturnToPool ).
                 ConfigureAwait( continueOnCapturedContext: false );
 
-            socket.StateInPool = SocketStateInPool.IsFailed;
+            socket.Dispose();
             socket.ReturnedToPool().Should().BeFalse();
         }
     }

@@ -34,9 +34,11 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             Id = remoteEndPoint;
             Pool = belongPool;
 
-            RemovedFromPool = new AutoResetEvent( initialState: false );
+            CanBeTakenFromPool = new AutoResetEvent( initialState: false );
             m_stateInPool = socketStateInPool;
             m_lockStateInPool = new Object();
+
+            CreatedTicks = unchecked((UInt32)Environment.TickCount);
         }
 
         /// <summary>
@@ -72,7 +74,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             return sendingBytesSocket;
         }
 
-        public UInt32 CreatedTicks { get; } = unchecked((UInt32)Environment.TickCount);
+        public UInt32 CreatedTicks { get; }
 
         public UInt32 LastReturnedTicks { get; private set; }
 
@@ -105,10 +107,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
                 if ( (value == SocketStateInPool.TakenFromPool) && (previousState != SocketStateInPool.IsInPool) )
                 {
-                    Boolean isReturned = RemovedFromPool.WaitOne( Constants.TimeWaitReturnToPool );
+                    Boolean isReturned = CanBeTakenFromPool.WaitOne( Constants.TimeWaitReturnToPool );
                     if ( isReturned )
                     {
-                        Log.LogInfo( $"\n*************************\nSocket with id {Id} successfully taken from pool\n*************************\n" );
+                        Log.LogInfo( logRecord: Display.StringWithAttention( $"Socket with id {Id} successfully taken from pool" ) );
                     }
                     else
                     {
@@ -121,13 +123,12 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 }
                 else if ( value != SocketStateInPool.NeverWasInPool )//it is additional test to make this method absolutely thread-safe if logic will be changed
                 {
-                    RemovedFromPool.Set();
+                    CanBeTakenFromPool.Set();
                 }
             }
         }
 
-        //TODO rename
-        public AutoResetEvent RemovedFromPool { get; }
+        public AutoResetEvent CanBeTakenFromPool { get; }
 
         //public async Task ConnectAsync()
         //{
@@ -153,10 +154,13 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 socketHealth = ClientPool.SocketHealth.IsNotConnected;
                 return socketHealth;
             }
+            catch(ObjectDisposedException)
+            {
+                ;//do nothing, because check whether it is disposed is in ( m_stateInPool == SocketStateInPool.IsFailed )
+            }
 
             Boolean longAgoHasBeenCreated = unchecked((UInt32)Environment.TickCount) - CreatedTicks >= connectionSettings.ConnectionLifeTime;
-            if ( ( m_state >= SocketState.Closing ) || 
-                 ( m_stateInPool == SocketStateInPool.IsFailed ) || 
+            if ( ( m_stateInPool == SocketStateInPool.IsFailed ) || 
                  ( ( connectionSettings.ConnectionLifeTime > 0 ) && ( longAgoHasBeenCreated ) ) )
             {
                 socketHealth = ClientPool.SocketHealth.Expired;

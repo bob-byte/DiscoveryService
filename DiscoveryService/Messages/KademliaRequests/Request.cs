@@ -167,7 +167,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                     Int32 countCheck = 0;
                     while ( ( client.Available == 0 ) && ( countCheck <= Constants.MAX_CHECK_AVAILABLE_DATA ) )
                     {
-                        await Wait( ioBehavior, Constants.TimeCheckDataToRead ).ConfigureAwait( false );
+                        await WaitAsync( ioBehavior, Constants.TimeCheckDataToRead ).ConfigureAwait( false );
 
                         countCheck++;
                     }
@@ -193,7 +193,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                     else
                     {
                         await client.DsDisconnectAsync( ioBehavior, reuseSocket: false, Constants.DisconnectTimeout ).ConfigureAwait( false );
-                        throw new TimeoutException();
+                        throw new TimeoutException($"Request \n{this}\n didn't receive response from {remoteEndPoint} in time");
                     }
                 }
             }
@@ -239,7 +239,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return (isTimeoutSocketOp, nodeError, response, isSameNetwork);
         }
 
-        private async Task Wait( IOBehavior ioBehavior, TimeSpan timeToWait )
+        private async Task WaitAsync( IOBehavior ioBehavior, TimeSpan timeToWait )
         {
             if ( ioBehavior == IOBehavior.Asynchronous )
             {

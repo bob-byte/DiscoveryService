@@ -26,6 +26,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         /// </value>
         public Boolean FileExists { get; set; }
 
+        //TODO delete it
         public Boolean IsRightBucket { get; set; }
 
         public String FileVersion { get; set; }

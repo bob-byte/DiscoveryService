@@ -1,6 +1,11 @@
-﻿using LUC.DiscoveryService.Common;
+﻿using AutoFixture;
+
+using FluentAssertions;
+
+using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Messages;
+using LUC.DiscoveryService.Test.Extensions;
 
 using NUnit.Framework;
 
@@ -20,11 +25,23 @@ namespace LUC.DiscoveryService.Test
     {
         private DiscoveryService m_discoveryService;
 
-        [SetUp]
+        [OneTimeSetUp]
         public void SetupService() => m_discoveryService = new DiscoveryService( new ServiceProfile( useIpv4: true, useIpv6: true, protocolVersion: 1 ) );
 
-        [TearDown]
+        [OneTimeTearDown]
         public void TearDownService() => m_discoveryService?.Stop();
+
+        [Test]
+        public void SupportedBuckets_AddOneItemUsingCollectionFunc_ShoudntBeAddedToDs()
+        {
+            Fixture specimens = new Fixture();
+            String randomBucketLocalName = specimens.Create<String>();
+            String randomSslCert = specimens.Create<String>();
+
+            m_discoveryService.SupportedBuckets().TryAdd( randomBucketLocalName, randomSslCert );
+
+            m_discoveryService.SupportedBuckets().ContainsKey( randomBucketLocalName ).Should().BeFalse();
+        }
 
         [Test]
         public void Ctor_PassNullPar_GetException() => Assert.That( code: () => m_discoveryService = new DiscoveryService( null ),

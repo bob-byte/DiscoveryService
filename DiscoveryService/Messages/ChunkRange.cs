@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryService.Messages
 {
-    class ChunkRange : ICloneable
+    public class ChunkRange : ICloneable
     {
         public ChunkRange( UInt64 start, UInt64 end, UInt64 total )
             : this()
