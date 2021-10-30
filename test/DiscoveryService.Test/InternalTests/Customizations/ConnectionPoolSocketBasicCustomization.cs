@@ -25,7 +25,6 @@ namespace LUC.DiscoveryService.Test.InternalTests.Customizations
 
         public virtual void Customize( IFixture fixture )
         {
-            //fixture.Customize<ILoggingService>( c => c.FromFactory( () => SetUpTests.LoggingService ) );
             fixture.Customize<ConnectionPoolSocket>( c => c.OmitAutoProperties() );
             fixture.Customizations.Add( new TypeRelay( from: typeof( EndPoint ), to: typeof( IPEndPoint ) ) );
 
@@ -39,8 +38,6 @@ namespace LUC.DiscoveryService.Test.InternalTests.Customizations
             {
                 throw new InvalidOperationException( $"{nameof( DiscoveryService )} hasn't reachable {nameof( IPAddress )}" );
             }
-
-            fixture.Customizations.Add( new ConnectionPoolSocketBuilder( SetUpTests.LoggingService, endPoint ) );
         }
     }
 }
