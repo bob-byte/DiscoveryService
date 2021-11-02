@@ -22,7 +22,7 @@ namespace LUC.DiscoveryService.Kademlia
         private IPAddress m_lastActiveIpAddress;
 
         /// <summary>
-        /// Initialize a contact with its ID. Use this constructor when you want to initialize contact of current PC first time
+        /// Initialize a contact with its ID. Use this constructor when you don't know IP-addresses of your PC
         /// </summary>
         public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<String> bucketLocalNames )
         {

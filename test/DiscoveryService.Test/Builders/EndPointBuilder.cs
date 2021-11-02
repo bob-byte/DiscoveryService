@@ -14,16 +14,15 @@ using System.Net.NetworkInformation;
 
 namespace LUC.DiscoveryService.Test.Builders
 {
-    class EndPointBuilder : ISpecimenBuilder
+    class EndPointBuilder : AbstractSeededBuilder<BuildEndPointRequest>
     {
         public EndPointBuilder(BuildEndPointRequest request)
+            : base(request)
         {
-            Request = request;
+            ;//do nothing
         }
 
-        public BuildEndPointRequest Request { get; set; }
-
-        public Object Create(Object request, ISpecimenContext specimenContext)
+        public override Object Create(Object request, ISpecimenContext specimenContext)
         {
             Object createdObject = null;
             Boolean isRightRequest = IsRightRequest( request );
@@ -42,7 +41,6 @@ namespace LUC.DiscoveryService.Test.Builders
 
                     case ( BuildEndPointRequest.ReachableDsEndPoint ):
                     {
-                        //get working IP-address
                         IEnumerable<NetworkInterface> networkInterfaces = NetworkEventInvoker.NetworkInterfaces();
                         List<IPAddress> runningIpAddresses = Listeners.IpAddressesOfInterfaces(
                             networkInterfaces,
@@ -81,14 +79,11 @@ namespace LUC.DiscoveryService.Test.Builders
             return createdObject;
         }
 
-        private Boolean IsRightRequest( Object request )
+        protected override Boolean IsRightRequest( Object request )
         {
-            Boolean isRightRequest = false;
-            if ( ( request is SeededRequest seededRequest ) && ( seededRequest.Request is Type type ) && ( type == typeof( IPEndPoint ) ) )
-            {
-                isRightRequest = true;
-            }
+            Type requestType = base.RequestType( request );
 
+            Boolean isRightRequest = requestType == typeof( IPEndPoint );
             return isRightRequest;
         }
     }

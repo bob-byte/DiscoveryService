@@ -61,31 +61,27 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         {
             BlockingCollection<EndPoint> socketsWithRecoveredConnection = new BlockingCollection<EndPoint>();
 
-            Task.Factory.StartNew( async () =>
+            Task.Factory.StartNew( () =>
             {
-                ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
+                ParallelOptions parallelOptions = new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Constants.MAX_THREADS,
+                    CancellationToken = cancellationToken
+                };
 
                 //recover leased sockets
-                ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>> recoverLeasedSockets = new ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>>( socket =>
-                {
-                    //socket can be returned to pool before we receive it by another thread and place, so takenSocket can be null
-                    Boolean isTaken = TryTakeLeasedSocket( socket.Key, timeWaitToReturnToPool, out ConnectionPoolSocket takenSocket );
+                Parallel.ForEach( m_leasedSockets, parallelOptions, ( socket ) =>
+                 {
+                     //socket can be returned to pool before we receive it by another thread and place, so takenSocket can be null
+                     Boolean isTaken = TryTakeLeasedSocket( socket.Key, timeWaitToReturnToPool, out ConnectionPoolSocket takenSocket );
 
-                    if ( isTaken )
-                    {
-                        BackgroundConnectionResetHelper.AddSocket( takenSocket, cancellationToken );
+                     if ( isTaken )
+                     {
+                         BackgroundConnectionResetHelper.AddSocket( takenSocket, cancellationToken );
 
-                        socketsWithRecoveredConnection.Add( socket.Key );
-                    }
-                }, parallelOptions );
-
-                foreach ( var takenSocket in m_leasedSockets )
-                {
-                    recoverLeasedSockets.Post( takenSocket );
-                }
-
-                recoverLeasedSockets.Complete();
-                await recoverLeasedSockets.Completion.ConfigureAwait( continueOnCapturedContext: false );
+                         socketsWithRecoveredConnection.Add( socket.Key );
+                     }
+                 } );
 
                 socketsWithRecoveredConnection.CompleteAdding();
             } );
@@ -95,8 +91,9 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         private async Task RecoverPoolSocketsAsync(IEnumerable<EndPoint> idsOfRecoveredConnection, TimeSpan timeWaitToReturnToPool, CancellationToken cancellationToken)
         {
-            var parallelOptions = ParallelOptions( cancellationToken );
+            ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
 
+            //here we call async method, so we cannot use Parallel.ForEach(in this case it will be ended before all iterations)
             ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>> recoverSockets = new ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>>( async socket =>
             {
                 //wait while any socket returns to pool
@@ -109,9 +106,9 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 m_sockets.TryRemove( socket.Key, out _ );
 
                 BackgroundConnectionResetHelper.AddSocket( socket.Value, cancellationToken );
-            } );
+            }, parallelOptions );
 
-            foreach ( var socket in m_sockets )
+            foreach ( KeyValuePair<EndPoint, ConnectionPoolSocket> socket in m_sockets )
             {
                 Boolean isConnAlreadyRecovered = idsOfRecoveredConnection != null && idsOfRecoveredConnection.Contains( socket.Key );
                 if ( !isConnAlreadyRecovered )

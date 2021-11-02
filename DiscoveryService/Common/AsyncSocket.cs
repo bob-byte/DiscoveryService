@@ -20,7 +20,7 @@ namespace LUC.DiscoveryService.Common
     /// <summary>
     /// New socket methods are marked <a href="Ds"/> in the front of the name, so only there <see cref="State"/> will be changed
     /// </summary>
-    class AsyncSocket : Socket
+    public class AsyncSocket : Socket
     {
         protected volatile SocketState m_state;
 

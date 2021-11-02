@@ -98,7 +98,11 @@ namespace LUC.DiscoveryService.Test
             String login = "integration1", 
             String password = "integration1" )
         {
-            ICurrentUserProvider currentUserProvider = new CurrentUserProvider();
+            ICurrentUserProvider currentUserProvider = new CurrentUserProvider
+            {
+                LoggingService = LoggingService,
+                //RootFolderPath = LoggingService.SettingsService.ReadUserRootFolderPath()
+            };
 
             ApiClient.ApiClient apiClient = new ApiClient.ApiClient( currentUserProvider, LoggingService )
             {
