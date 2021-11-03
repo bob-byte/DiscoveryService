@@ -13,7 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Kademlia.Downloads
 {
     /// <summary>
     /// Thread safe class for download files
@@ -100,7 +100,6 @@ namespace LUC.DiscoveryService
 
             if ( isRightInputParameters )
             {
-                //add constraint of count contacts(see at Buckets)
                 IEnumerable<Contact> onlineContacts = ContactsInSameBucket(localBucketName);
 
                 try
@@ -117,14 +116,14 @@ namespace LUC.DiscoveryService
                             FileVersion = fileVersion
                         };
 
-                        IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, initialRequest, cancellationToken );
-
                         if ( bytesCount <= Constants.MAX_CHUNK_SIZE )
                         {
-                            await DownloadSmallFileAsync( contactsWithFile, initialRequest, cancellationToken, downloadProgress ).ConfigureAwait( false );
+                            await DownloadSmallFileAsync( onlineContacts, initialRequest, cancellationToken, downloadProgress ).ConfigureAwait( false );
                         }
                         else
                         {
+                            IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, initialRequest, cancellationToken );
+
                             await DownloadBigFileAsync( contactsWithFile, initialRequest, cancellationToken, downloadProgress ).ConfigureAwait( false );
                         }
 

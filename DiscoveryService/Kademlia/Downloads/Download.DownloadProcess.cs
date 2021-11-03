@@ -15,14 +15,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Kademlia.Downloads
 {
     public partial class Download
     {
         private const Int32 MIN_CONTACT_FOR_RETRY_DOWNLOAD = 2;
 
-        private async Task DownloadSmallFileAsync( IEnumerable<Contact> contactsWithFile, DownloadFileRequest initialRequest, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
+        private async Task DownloadSmallFileAsync( IEnumerable<Contact> onlineContacts, DownloadFileRequest initialRequest, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
         {
+            //we need to cancel requesting another contacts whether they have file when we have downloaded it
+            CancellationTokenSource cancelSource = new CancellationTokenSource();
+            IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, initialRequest, cancelSource.Token );
+
             DownloadFileRequest request = (DownloadFileRequest)initialRequest.Clone();
             request.ChunkRange.End = request.ChunkRange.Total - 1;
             request.ChunkRange.NumsUndownloadedChunk.Add( 0 );
@@ -38,6 +42,7 @@ namespace LUC.DiscoveryService
 
                     if ( isRightDownloaded )
                     {
+                        cancelSource.Cancel();
                         break;
                     }
                 }
@@ -140,74 +145,73 @@ namespace LUC.DiscoveryService
 
                 try
                 {
-                    DriveInfo driveInfo = new DriveInfo( driveName: tempFullPath[ 0 ].ToString() );
-                    Boolean isAvailableToDownload = ( driveInfo.IsReady ) && ( driveInfo.AvailableFreeSpace > (Int64)initialRequest.ChunkRange.Total );
-                    if ( !isAvailableToDownload )
+                    using ( FileStream fileStream = File.OpenWrite( tempFullPath ) )
                     {
-                        throw new NotEnoughDriveSpaceException( initialRequest.FullPathToFile );
-                    }
-                    else
-                    {
-                        using ( FileStream fileStream = File.OpenWrite( tempFullPath ) )
+                        m_downloadedFile.SetTempFileAttributes( tempFullPath, fileStream.SafeFileHandle );
+
+                        //we need to set fileStream.Length only at start downloading file. 
+                        Int64 bytesStreamCount = (Int64)initialRequest.ChunkRange.Total;
+
+                        DriveInfo driveInfo = new DriveInfo( driveName: tempFullPath[ 0 ].ToString() );
+                        Boolean isAvailableToDownload = ( driveInfo.IsReady ) && ( driveInfo.AvailableFreeSpace > (Int64)initialRequest.ChunkRange.Total );
+
+                        if ( ( fileStream.Length != bytesStreamCount ) && ( isAvailableToDownload ) )
                         {
-                            m_downloadedFile.SetTempFileAttributes( tempFullPath, fileStream.SafeFileHandle );
-
-                            //we need to set fileStream.Length only at start downloading file. 
-                            Int64 bytesStreamCount = (Int64)initialRequest.ChunkRange.Total;
-                            if ( fileStream.Length != bytesStreamCount )
-                            {
-                                fileStream.SetLength( bytesStreamCount );
-                            }
-
-                            ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
-
-                            do
-                            {
-                                //Producer/consumer pattern:
-                                //current thread is producer and  produce contact and request to
-                                //download some parts of the file using method ActionBlock.Post. 
-                                //Consumers send request, receive response and write accepted bytes in stream.
-                                ActionBlock<KeyValuePair<Contact, DownloadFileRequest>> downloadProcess = new ActionBlock<KeyValuePair<Contact, DownloadFileRequest>>( async ( contactWithRequest ) =>
-                                {
-                                    DownloadFileRequest updatedRequest = await DownloadProcessBigFileAsync(
-                                        contactWithRequest.Key,
-                                        contactWithRequest.Value,
-                                        fileStream,
-                                        cancellationToken,
-                                        downloadProgress
-                                    );
-
-                                    dictContactsWithRequest.AddOrUpdate( contactWithRequest.Key, updatedRequest, ( contact, oldRequest ) => updatedRequest );
-                                }, parallelOptions );
-
-                                foreach ( KeyValuePair<Contact, DownloadFileRequest> contactWithRequest in dictContactsWithRequest )
-                                {
-                                    downloadProcess.Post( contactWithRequest );
-                                }
-
-                                //Signals that we will not post more contactWithRequest
-                                downloadProcess.Complete();
-
-                                //await completion of download all file
-                                await downloadProcess.Completion.ConfigureAwait( false );
-
-                                isDownloadedFile = IsDownloadedFile( tempFullPath, (UInt64)bytesStreamCount,
-                                    downloadedBytesByEachContact: dictContactsWithRequest.Values.Select( c => c.CountDownloadedBytes ) );
-                                if ( !isDownloadedFile )
-                                {
-                                    //get new contacts and requests considering the previous download
-                                    dictContactsWithRequest = ContactsWithRequestToDownload( dictContactsWithRequest, cancellationToken );
-
-                                    if ( dictContactsWithRequest.Count == 0 )
-                                    {
-                                        throw new FilePartiallyDownloadedException( MESS_IF_FILE_DOESNT_EXIST_IN_ANY_NODE );
-                                    }
-                                }
-                            }
-                            while ( !isDownloadedFile );
+                            fileStream.SetLength( bytesStreamCount );
                         }
+                        else
+                        {
+                            throw new NotEnoughDriveSpaceException( initialRequest.FullPathToFile );
+                        }
+
+                        ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
+
+                        do
+                        {
+                            //Producer/consumer pattern:
+                            //current thread is producer and  produce contact and request to
+                            //download some parts of the file using method ActionBlock.Post. 
+                            //Consumers send request, receive response and write accepted bytes in stream.
+                            ActionBlock<KeyValuePair<Contact, DownloadFileRequest>> downloadProcess = new ActionBlock<KeyValuePair<Contact, DownloadFileRequest>>( async ( contactWithRequest ) =>
+                            {
+                                DownloadFileRequest updatedRequest = await DownloadProcessBigFileAsync(
+                                    contactWithRequest.Key,
+                                    contactWithRequest.Value,
+                                    fileStream,
+                                    cancellationToken,
+                                    downloadProgress
+                                );
+
+                                dictContactsWithRequest.AddOrUpdate( contactWithRequest.Key, updatedRequest, ( contact, oldRequest ) => updatedRequest );
+                            }, parallelOptions );
+
+                            foreach ( KeyValuePair<Contact, DownloadFileRequest> contactWithRequest in dictContactsWithRequest )
+                            {
+                                downloadProcess.Post( contactWithRequest );
+                            }
+
+                            //Signals that we will not post more contactWithRequest. 
+                            //downloadProcess.Completion will never be completed without this calling
+                            downloadProcess.Complete();
+
+                            //await completion of download all file
+                            await downloadProcess.Completion.ConfigureAwait( false );
+
+                            isDownloadedFile = IsDownloadedFile( tempFullPath, (UInt64)bytesStreamCount,
+                                downloadedBytesByEachContact: dictContactsWithRequest.Values.Select( c => c.CountDownloadedBytes ) );
+                            if ( !isDownloadedFile )
+                            {
+                                //get new contacts and requests considering the previous download
+                                dictContactsWithRequest = ContactsWithRequestToDownload( dictContactsWithRequest, cancellationToken );
+
+                                if ( dictContactsWithRequest.Count == 0 )
+                                {
+                                    throw new FilePartiallyDownloadedException( MESS_IF_FILE_DOESNT_EXIST_IN_ANY_NODE );
+                                }
+                            }
+                        }
+                        while ( !isDownloadedFile );
                     }
-                    
                 }
                 catch ( FilePartiallyDownloadedException ex )
                 {

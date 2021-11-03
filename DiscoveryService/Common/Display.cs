@@ -59,7 +59,7 @@ namespace LUC.DiscoveryService.Common
                     }
                     else
                     {
-                        stringBuilder.Append( $"{PropertyWithValue( prop.Name, prop.GetValue( objectToConvert, index: null ) )};\n" );
+                        stringBuilder.Append( $"{VariableWithValue( prop.Name, prop.GetValue( objectToConvert, index: null ) )};\n" );
                     }
                 }
 
@@ -78,7 +78,7 @@ namespace LUC.DiscoveryService.Common
         /// With tabulation in start
         /// </summary>
         [MethodImpl( MethodImplOptions.AggressiveInlining )]
-        internal static String PropertyWithValue<T>( String nameProp, T value, Boolean useTab = true )
+        internal static String VariableWithValue<T>( String nameProp, T value, Boolean useTab = true )
         {
             String tab;
             if(useTab)

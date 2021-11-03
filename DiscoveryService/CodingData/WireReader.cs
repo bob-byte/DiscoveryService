@@ -208,7 +208,35 @@ namespace LUC.DiscoveryService.CodingData
         /// <exception cref="EndOfStreamException">
         ///   When no more data is available.
         /// </exception>
-        public List<String> ReadListOfStrings()
+        public List<String> ReadListOfAsciiStrings()
+        {
+            List<String> list = ReadListOfStrings( ReadAsciiString );
+
+            return list;
+        }
+
+        /// <summary>
+        /// Read string list of rank 1
+        /// (jagged arrays not supported atm)
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public List<String> ReadListOfUtf32Strings()
+        {
+            List<String> list = ReadListOfStrings( ReadUtf32String );
+
+            return list;
+        }
+
+        /// <summary>
+        /// Read string list of rank 1
+        /// (jagged arrays not supported atm)
+        /// </summary>
+        /// <exception cref="EndOfStreamException">
+        ///   When no more data is available.
+        /// </exception>
+        public List<String> ReadListOfStrings(Func<String> readOneString)
         {
             List<String> list = new List<String>();
             UInt32 length = ReadUInt32();
@@ -216,7 +244,8 @@ namespace LUC.DiscoveryService.CodingData
             {
                 for ( Int32 numString = 0; numString < length; numString++ )
                 {
-                    list.Add( ReadAsciiString() );
+                    String newString = readOneString();
+                    list.Add( newString );
                 }
             }
 
@@ -238,7 +267,8 @@ namespace LUC.DiscoveryService.CodingData
             {
                 for ( Int32 numContact = 0; numContact < length; numContact++ )
                 {
-                    list.Add( ReadContact( lastSeenFormat ) );
+                    Contact contact = ReadContact( lastSeenFormat );
+                    list.Add( contact );
                 }
             }
 
@@ -256,14 +286,15 @@ namespace LUC.DiscoveryService.CodingData
             //don't change next row
             DateTime lastSeen = DateTime.ParseExact( lastSeenAsStr, lastSeenFormat, provider: null );
 
-            List<String> addressesAsStr = ReadListOfStrings();
+            List<String> addressesAsStr = ReadListOfAsciiStrings();
             ICollection<IPAddress> addresses = new List<IPAddress>( addressesAsStr.Count );
             foreach ( var strAddress in addressesAsStr )
             {
-                addresses.Add( IPAddress.Parse( strAddress ) );
+                IPAddress ipAddress = IPAddress.Parse( strAddress );
+                addresses.Add( ipAddress );
             }
 
-            List<String> bucketLocalNames = ReadListOfStrings();
+            List<String> bucketLocalNames = ReadListOfUtf32Strings();
 
             Contact contact = new Contact( machineId, new KademliaId( idAsBigInt ), tcpPort, addresses, lastSeen, bucketLocalNames );
             return contact;

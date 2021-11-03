@@ -50,7 +50,7 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
         {
             StringBuilder stringBuilder = new StringBuilder( base.ToString() );
 
-            stringBuilder.Append( $"{Display.PropertyWithValue( $"Length of the {nameof(Chunk)}", Chunk.Length )};\n" );
+            stringBuilder.Append( $"{Display.VariableWithValue( $"Length of the {nameof(Chunk)}", Chunk.Length )};\n" );
 
             return stringBuilder.ToString();
         }

@@ -136,21 +136,8 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
         private void HandleKademliaRequest<T>( Response response, TcpMessageEventArgs eventArgs, PriorityHandleKadRequest priority, Action<Contact> kadServerOp )
             where T : Request, new()
         {
-            Contact sender = null;
-            T request = null;
-            try
-            {
-                request = eventArgs.Message<T>();
-                sender = m_distributedHashTable.OnlineContacts.Single( c => c.KadId == new KademliaId( request.Sender ) );
-            }
-            catch ( InvalidOperationException ex )
-            {
-                LoggingService.LogInfo( $"Cannot find sender of {typeof( T ).Name}: {ex.Message}" );
-
-#if !RECEIVE_TCP_FROM_OURSELF
-                return;
-#endif
-            }
+            T request = eventArgs.Message<T>();
+            Contact sender = m_distributedHashTable.OnlineContacts.SingleOrDefault( c => c.KadId == new KademliaId( request.Sender ) );
 
             try
             {
@@ -168,7 +155,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
                 }
                 else
                 {
-                    throw new ArgumentException( Display.PropertyWithValue( nameof( priority ), priority ) );
+                    throw new ArgumentException( Display.VariableWithValue( nameof( priority ), priority ) );
                 }
             }
             catch ( SocketException ex )

@@ -302,6 +302,16 @@ namespace LUC.DiscoveryService.CodingData
                     WriteAsciiString( address.ToString() );
                 }
             }
+
+            List<String> supportedBuckets = contact.SupportedBuckets();
+            Write( (UInt32)supportedBuckets.Count );
+            if(supportedBuckets.Count > 0)
+            {
+                foreach ( String bucket in supportedBuckets )
+                {
+                    WriteUtf32String( bucket );
+                }
+            }
         }
 
         public void Write( ChunkRange range )

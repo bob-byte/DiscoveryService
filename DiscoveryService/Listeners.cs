@@ -139,6 +139,7 @@ namespace LUC.DiscoveryService
                 catch (SocketException ex)
                 {
                     LoggingService.LogError( ex.Message );
+                    continue;
                 }
 
                 ListenTcp( tcpReceiver );

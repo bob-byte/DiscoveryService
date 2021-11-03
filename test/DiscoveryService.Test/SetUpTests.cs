@@ -90,6 +90,8 @@ namespace LUC.DiscoveryService.Test
 
                 return s_currentUserProvider;
             }
+
+            set => s_currentUserProvider = value;
         }
 
         internal static LoggingService LoggingService { get; private set; }

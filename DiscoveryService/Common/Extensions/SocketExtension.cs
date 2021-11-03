@@ -56,13 +56,9 @@ namespace LUC.DiscoveryService.Common.Extensions
             {
                 chunkSize = availableDataToRead;
             }
-            else if ( chunkSizeToReadPerOneTime <= availableDataToRead )
-            {
-                chunkSize = Constants.MAX_CHUNK_SIZE;
-            }
             else
             {
-                throw new InvalidOperationException();
+                chunkSize = chunkSizeToReadPerOneTime;
             }
 
             return chunkSize;

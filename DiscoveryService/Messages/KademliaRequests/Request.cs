@@ -153,11 +153,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                     client = await s_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
                         ioBehavior, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
 
-                    //clean extra bytes
-                    if ( client.Available > 0 )
-                    {
-                        await client.DsReceiveAsync( ioBehavior, Constants.ReceiveTimeout ).ConfigureAwait( false );
-                    }
+                    await CleanExtraBytesAsync( client, ioBehavior ).ConfigureAwait(continueOnCapturedContext: false);
 
                     client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesOfRequest,
                         Constants.SendTimeout, Constants.ConnectTimeout, ioBehavior ).ConfigureAwait( false );
@@ -239,6 +235,14 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return (isTimeoutSocketOp, nodeError, response, isSameNetwork);
         }
 
+        private async ValueTask CleanExtraBytesAsync( ConnectionPoolSocket client, IOBehavior ioBehavior )
+        {
+            if ( client.Available > 0 )
+            {
+                await client.DsReceiveAsync( ioBehavior, Constants.ReceiveTimeout ).ConfigureAwait( continueOnCapturedContext: false );
+            }
+        }
+
         private async Task WaitAsync( IOBehavior ioBehavior, TimeSpan timeToWait )
         {
             if ( ioBehavior == IOBehavior.Asynchronous )
@@ -270,7 +274,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
             else if(!isTheSameNetwork)
             {
-                rpcError.PeerErrorMessage = $"{Display.PropertyWithValue( nameof( isTheSameNetwork ), isTheSameNetwork, useTab: false )}";
+                rpcError.PeerErrorMessage = $"{Display.VariableWithValue( nameof( isTheSameNetwork ), isTheSameNetwork, useTab: false )}";
             }
 
             if ( ( resp != null ) && ( id != default ) )
@@ -289,7 +293,12 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         private void ResetEvictionCount( Contact remoteContact, UInt16 protocolVersion )
         {
             Dht dht = NetworkEventInvoker.DistributedHashTable( protocolVersion );
-            dht.EvictionCount[ remoteContact.KadId.Value ] = 0;
+
+            BigInteger contactId = remoteContact.KadId.Value;
+            if(dht.EvictionCount.ContainsKey(contactId))
+            {
+                dht.EvictionCount[ contactId ] = 0;
+            }
         }
 
         private void TryToEvictContact( Contact remoteContact, UInt16 protocolVersion )

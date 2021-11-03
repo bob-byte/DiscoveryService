@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Kademlia.Downloads
 {
     public partial class Download
     {

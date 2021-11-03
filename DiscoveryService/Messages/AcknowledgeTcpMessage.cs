@@ -90,7 +90,7 @@ namespace LUC.DiscoveryService.Messages
 
                 ProtocolVersion = reader.ReadUInt16();
                 TcpPort = reader.ReadUInt16();
-                GroupIds = reader.ReadListOfStrings();
+                GroupIds = reader.ReadListOfAsciiStrings();
 
                 return this;
             }

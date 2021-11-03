@@ -90,7 +90,7 @@ namespace LUC.DiscoveryService.Test
             ms.Position = 0;
             WireReader reader = new WireReader( ms );
 
-            CollectionAssert.AreEquivalent( expected: data, actual: reader.ReadListOfStrings() );
+            CollectionAssert.AreEquivalent( expected: data, actual: reader.ReadListOfAsciiStrings() );
         }
     }
 }

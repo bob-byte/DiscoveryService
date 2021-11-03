@@ -26,15 +26,15 @@ namespace LUC.DiscoveryService.Kademlia
             using ( StringWriter stringWriter = new StringWriter() )
             {
                 stringWriter.Write( $"{GetType().Name}:\n" +
-                $"{Display.PropertyWithValue( nameof( HasError ), HasError )}" );
+                $"{Display.VariableWithValue( nameof( HasError ), HasError )}" );
 
                 if ( HasError )
                 {
                     stringWriter.WriteLine( $";\n" +
-                        $"{Display.PropertyWithValue( nameof( TimeoutError ), TimeoutError )};\n" +
-                        $"{Display.PropertyWithValue( nameof( IDMismatchError ), IDMismatchError )};\n" +
-                        $"{Display.PropertyWithValue( nameof( PeerError ), PeerError )};\n" +
-                        $"{Display.PropertyWithValue( nameof( PeerErrorMessage ), PeerErrorMessage )}" );
+                        $"{Display.VariableWithValue( nameof( TimeoutError ), TimeoutError )};\n" +
+                        $"{Display.VariableWithValue( nameof( IDMismatchError ), IDMismatchError )};\n" +
+                        $"{Display.VariableWithValue( nameof( PeerError ), PeerError )};\n" +
+                        $"{Display.VariableWithValue( nameof( PeerErrorMessage ), PeerErrorMessage )}" );
                 }
 
                 return stringWriter.ToString();

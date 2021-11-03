@@ -133,7 +133,12 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     desiredSocket.StateInPool = SocketStateInPool.TakenFromPool;
                 }
 
-                m_leasedSockets.TryAdd( remoteEndPoint, desiredSocket );
+                Boolean isAdded = m_leasedSockets.TryAdd( remoteEndPoint, desiredSocket );
+                if(!isAdded)
+                {
+                    String logRecord = Display.StringWithAttention( "Taken socket which is used by another thread" );
+                    m_log.LogInfo( logRecord );
+                }
             }
 
             return desiredSocket;

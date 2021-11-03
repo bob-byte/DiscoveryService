@@ -13,44 +13,60 @@ using System.Collections.Concurrent;
 using Nito.AsyncEx;
 using LUC.DiscoveryService.Common;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryService.Kademlia.Downloads
 {
     public partial class Download
     {
-        private IEnumerable<Contact> ContactsWithFile( IEnumerable<Contact> onlineContacts, DownloadFileRequest sampleRequest, CancellationToken cancellationToken )
+        private IEnumerable<Contact> ContactsWithFile( 
+            IEnumerable<Contact> onlineContacts, 
+            DownloadFileRequest sampleRequest, 
+            CancellationToken cancellationToken )
         {
             BlockingCollection<Contact> contactsWithFile = new BlockingCollection<Contact>( onlineContacts.Count() );
 
+            //we need parallel execution. Task.Run is async
             Task.Factory.StartNew( async () =>
              {
                  ExecutionDataflowBlockOptions parallelOptions = ParallelOptions(cancellationToken);
 
-                 var checkFileExistsInContact = new ActionBlock<Contact>( async ( contact ) =>
+                 try
                  {
-                     var isExistInContact = await IsFileExistsInContactAsync( sampleRequest, contact ).ConfigureAwait( continueOnCapturedContext: false );
-
-                     cancellationToken.ThrowIfCancellationRequested();
-
-                     if ( isExistInContact )
+                     var checkFileExistsInContact = new ActionBlock<Contact>( async ( contact ) =>
                      {
-                         contactsWithFile.Add( contact );
+                         var isExistInContact = await IsFileExistsInContactAsync( sampleRequest, contact ).ConfigureAwait( continueOnCapturedContext: false );
+
+                         if ( cancellationToken.IsCancellationRequested )
+                         {
+                             return;
+                         }
+
+                         if ( isExistInContact )
+                         {
+                             contactsWithFile.Add( contact );
+                         }
+                     }, parallelOptions );
+
+                     foreach ( var contact in onlineContacts )
+                     {
+                         checkFileExistsInContact.Post( contact );
                      }
-                 }, parallelOptions );
 
-                 foreach ( var contact in onlineContacts )
-                 {
-                     checkFileExistsInContact.Post( contact );
+                     //Signals that we will not post more Contact.
+                     //checkFileExistsInContact.Completion will never be completed without this
+                     checkFileExistsInContact.Complete();
+
+                     //await getting all contactsWithFile
+                     await checkFileExistsInContact.Completion.ConfigureAwait( false );
                  }
-
-                 //Signals that we will not post more Contact. 
-                 //Try without this method, but I think that if we do that, 
-                 //call of method checkFileExistsInContact.Completion will never complete
-                 checkFileExistsInContact.Complete();
-
-                 //await getting all contactsWithFile
-                 await checkFileExistsInContact.Completion.ConfigureAwait( false );
-
-                 contactsWithFile.CompleteAdding();
+                 catch(OperationCanceledException)
+                 {
+                     ;//do nothing
+                 }
+                 finally
+                 {
+                     //contactsWithFile.GetConsumingEnumerable will never be completed without this
+                     contactsWithFile.CompleteAdding();
+                 }
              } );
 
             return contactsWithFile.GetConsumingEnumerable( cancellationToken );

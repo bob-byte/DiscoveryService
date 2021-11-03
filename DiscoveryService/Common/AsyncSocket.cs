@@ -256,13 +256,16 @@ namespace LUC.DiscoveryService.Common
             }
 
             AutoResetEvent operationDone = new AutoResetEvent( initialState: false );
+
             SocketException socketException = new SocketException((Int32)SocketError.Success);
-            AsyncCallback asyncCallback = ( asyncResult ) => SocketOperationCallback( socketOp, asyncResult, operationDone, out socketException );
+            ObjectDisposedException disposedException = null;
+
+            AsyncCallback asyncCallback = ( asyncResult ) => SocketOperationCallback( socketOp, asyncResult, operationDone, out disposedException, out socketException );
 
             try
             {
                 beginOperation( asyncCallback );
-                WaitResultOfAsyncSocketOperation( operationDone, timeout, ref socketException, cancellationToken );
+                WaitResultOfAsyncSocketOperation( operationDone, timeout, ref socketException, ref disposedException, cancellationToken );
             }
             finally
             {
@@ -298,7 +301,7 @@ namespace LUC.DiscoveryService.Common
         /// <param name="socketException">
         /// If it is not ref parameter, it will not be updated by another thread
         /// </param>
-        private void WaitResultOfAsyncSocketOperation( EventWaitHandle operationDone, TimeSpan timeout, ref SocketException socketException, CancellationToken cancellationToken = default)
+        private void WaitResultOfAsyncSocketOperation( EventWaitHandle operationDone, TimeSpan timeout, ref SocketException socketException, ref ObjectDisposedException disposedException, CancellationToken cancellationToken = default)
         {
             Boolean isInTime = cancellationToken != default ? 
                 cancellationToken.WaitHandle.WaitOne( timeout ) : 
@@ -318,6 +321,10 @@ namespace LUC.DiscoveryService.Common
             {
                 exception = new TimeoutException();
             }
+            else if ( disposedException != null)
+            {
+                exception = disposedException;
+            }
             else
             {
                 //it can't be
@@ -328,10 +335,11 @@ namespace LUC.DiscoveryService.Common
         }
 
         //Now it is only for Connect, Send and Disconnect 
-        private void SocketOperationCallback(SocketAsyncOperation socketOp, IAsyncResult asyncResult, EventWaitHandle operationDone, out SocketException socketException)
+        private void SocketOperationCallback(SocketAsyncOperation socketOp, IAsyncResult asyncResult, EventWaitHandle operationDone, out ObjectDisposedException disposedException, out SocketException socketException)
         {
             Socket socket = (Socket)asyncResult.AsyncState;
             socketException = new SocketException((Int32)SocketError.Success);
+            disposedException = null;
 
             try
             {
@@ -371,18 +379,28 @@ namespace LUC.DiscoveryService.Common
             }
             catch (SocketException ex)
             {
-                //in case if ThreadAbortException is thrown (the whole finally block will be finished first, as it is a critical section). 
-                try
-                {
-                    ;//do nothing
-                }
-                finally
-                {
-                    socketException = ex;
-                    State = SocketState.Failed;
+                HandleExceptionOfEndSocketOp( ex, operationDone, out socketException );
+            }
+            catch(ObjectDisposedException ex)
+            {
+                HandleExceptionOfEndSocketOp( ex, operationDone, out disposedException );
+            }
+        }
 
-                    operationDone.SafeSet( isSet: out _ );
-                }
+        private void HandleExceptionOfEndSocketOp<T>(Exception inEx, EventWaitHandle operationDone, out T outEx)
+            where T: Exception
+        {
+            //in case if ThreadAbortException is thrown (the whole finally block will be finished first, as it is a critical section). 
+            try
+            {
+                ;//do nothing
+            }
+            finally
+            {
+                outEx = inEx as T;
+                State = SocketState.Failed;
+
+                operationDone.SafeSet( isSet: out _ );
             }
         }
 
@@ -414,6 +432,14 @@ namespace LUC.DiscoveryService.Common
                 }
 
                 return (readBytes, socketException);
+            }
+            finally
+            {
+                if(readBytes.Length == 0)
+                {
+                    String logRecord = Display.StringWithAttention( $"Read 0 bytes" );
+                    Log.LogError( logRecord );
+                }
             }
 
             m_state = SocketState.AlreadyRead;

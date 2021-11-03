@@ -1,5 +1,7 @@
 ﻿using DeviceId;
 
+using LUC.DiscoveryService.Common;
+
 using Newtonsoft.Json;
 
 using System;
@@ -42,15 +44,16 @@ namespace LUC.DiscoveryService
 #endif
         }
 
+#if ( RECEIVE_TCP_FROM_OURSELF ) || ( INTEGRATION_TESTS )
         private static String FullFileNameWithMachineId()
         {
             String fullExeName = Assembly.GetExecutingAssembly().Location;
             String pathToExeFile = Path.GetDirectoryName( fullExeName );
 
-            String fileNameWithMachineId = "Current machine ID.txt";
-            String fullFileNameWithMachineId = $"{pathToExeFile}\\{fileNameWithMachineId}";
+            String fullFileNameWithMachineId = $"{pathToExeFile}\\{Constants.FILE_WITH_MACHINE_ID}";
 
             return fullFileNameWithMachineId;
         }
+#endif
     }
 }

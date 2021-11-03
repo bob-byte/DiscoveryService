@@ -27,4 +27,3 @@ services:
 
 networks:
   dsApi:
-    internal: false

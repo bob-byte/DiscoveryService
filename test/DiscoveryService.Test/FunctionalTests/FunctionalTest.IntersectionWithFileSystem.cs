@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+
+using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Test.Extensions;
+using LUC.Interfaces;
 
 namespace LUC.DiscoveryService.Test.FunctionalTests
 {
@@ -77,7 +82,9 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 }
                 catch ( Exception ex )
                 {
-                    Debug.Fail( ex.Message, detailMessage: ex.ToString() );
+                    String logRecord = Display.StringWithAttention( ex.ToString() );
+                    SetUpTests.LoggingService.LogInfo( logRecord );
+                    //Debug.Fail( ex.Message, detailMessage: ex.ToString() );
                 }
             }
         }

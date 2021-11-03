@@ -7,9 +7,12 @@ namespace LUC.DiscoveryService.Common
 {
     static class Constants
     {
+#if ( RECEIVE_TCP_FROM_OURSELF ) || ( INTEGRATION_TESTS )
+        public const String FILE_WITH_MACHINE_ID = "current machine id.txt";
+#endif
+
 #if INTEGRATION_TESTS
         public const String DOWNLOAD_TEST_NAME_FOLDER = "DownloadTest";
-        public const String FILE_WITH_MACHINE_ID = "Current machine id.txt";
 #endif
 
         public const Int32 MAX_CHUNK_SIZE = 2000000;
@@ -19,7 +22,7 @@ namespace LUC.DiscoveryService.Common
         public const Int32 K = 20;
         public const Int32 ID_LENGTH_BYTES = 20;
         public const Int32 ID_LENGTH_BITS = 160;
-        public const Int32 MAX_CHECK_AVAILABLE_DATA = 5;//FindValue can be too long if look up algorithm is started
+        public const Int32 MAX_CHECK_AVAILABLE_DATA = 30;//FindValue can be too long if look up algorithm is started
 
         public const Int32 MAX_THREADS = 4;
         public const Int32 QUERY_TIME = 500;  // in ms.
@@ -46,10 +49,10 @@ namespace LUC.DiscoveryService.Common
 #endif
 
         //TODO return from TimeSpan.FromSeconds to TimeSpan.FromMinutes
-        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds( value: 3 );
-        public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds( 3 );
-        public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds( 3 );
-        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds( 3 );
+        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds( value: 30 );
+        public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds( 30 );
+        public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds( 30 );
+        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds( 30 );
 
         /// <summary>
         /// it's max of execution Kademlia operation (first we connect to new contact, then if it is failed, we will be failed to send, 

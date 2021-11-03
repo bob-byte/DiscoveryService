@@ -14,8 +14,6 @@ namespace LUC.DiscoveryService.Kademlia
 {
     public class Contact : IComparable
     {
-        private readonly Object m_lockIpAddresses;
-
         private readonly List<IPAddress> m_ipAddresses;
         private List<String> m_supportedBuckets;
 
@@ -31,7 +29,6 @@ namespace LUC.DiscoveryService.Kademlia
 
             TcpPort = tcpPort;
             m_ipAddresses = new List<IPAddress>();
-            m_lockIpAddresses = new Object();
 
             InitBucketLocalNames( bucketLocalNames );
 
@@ -56,7 +53,6 @@ namespace LUC.DiscoveryService.Kademlia
             KadId = contactID;
 
             TcpPort = tcpPort;
-            m_lockIpAddresses = new Object();
 
             m_ipAddresses = new List<IPAddress>();
             if ( ipAddresses != null )
@@ -97,7 +93,16 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
-        public Int32 IpAddressesCount => m_ipAddresses.Count;
+        public Int32 IpAddressesCount
+        {
+            get
+            {
+                lock ( m_ipAddresses )
+                {
+                    return m_ipAddresses.Count;
+                }
+            }
+        }
 
         /// <summary>
         /// Update the fact that we've just seen this contact.
@@ -109,20 +114,30 @@ namespace LUC.DiscoveryService.Kademlia
         /// <returns>
         /// Copy of IP-addresses of contact
         /// </returns>
-        public List<IPAddress> IpAddresses() =>
-            m_ipAddresses.ToList();
+        public List<IPAddress> IpAddresses()
+        {
+            lock ( m_ipAddresses )
+            {
+                return m_ipAddresses.ToList();
+            }
+        }
 
         /// <returns>
         /// Copy of bucket local names of contact
         /// </returns>
-        public List<String> SupportedBuckets() =>
-            m_supportedBuckets.ToList();
+        public List<String> SupportedBuckets()
+        {
+            lock(m_supportedBuckets)
+            {
+                return m_supportedBuckets.ToList();
+            }
+        }
 
         public void TryAddIpAddress( IPAddress address, out Boolean isAdded )
         {
             if ( address != null )
             {
-                lock ( m_lockIpAddresses )
+                lock ( m_ipAddresses )
                 {
                     //to put in the end last active IP address
                     if ( m_ipAddresses.Contains( address ) )
@@ -165,7 +180,7 @@ namespace LUC.DiscoveryService.Kademlia
 
         public void TryRemoveIpAddress( IPAddress address, out Boolean isRemoved )
         {
-            lock ( m_lockIpAddresses )
+            lock ( m_ipAddresses )
             {
                 if ( m_ipAddresses.Contains( address ) )
                 {
@@ -212,8 +227,8 @@ namespace LUC.DiscoveryService.Kademlia
         {
             using ( StringWriter writer = new StringWriter() )
             {
-                writer.WriteLine( $"{Display.PropertyWithValue( nameof( KadId ), KadId )};\n" +
-                                 $"{Display.PropertyWithValue( nameof( LastSeen ), LastSeen )};" );
+                writer.WriteLine( $"{Display.VariableWithValue( nameof( KadId ), KadId )};\n" +
+                                 $"{Display.VariableWithValue( nameof( LastSeen ), LastSeen )};" );
 
                 writer.WriteLine( $"{Display.TABULATION}{nameof( m_ipAddresses )}:" );
                 for ( Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++ )

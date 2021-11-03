@@ -2,6 +2,7 @@
 using LUC.DiscoveryService.Common;
 using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.ClientPool;
+using LUC.DiscoveryService.Kademlia.Downloads;
 using LUC.DiscoveryService.Messages;
 using LUC.DiscoveryService.Messages.KademliaRequests;
 using LUC.DiscoveryService.Test.Extensions;
@@ -110,6 +111,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             }
             while ( !loginResponse.IsSuccess );
 
+            SetUpTests.CurrentUserProvider = s_settingsService.CurrentUserProvider;
             ConcurrentDictionary<String, String> bucketsSupported = new ConcurrentDictionary<String, String>();
 
 #if INTEGRATION_TESTS
@@ -146,6 +148,8 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             DsBucketsSupported.Define( s_settingsService.CurrentUserProvider, out bucketsSupported );
 
             s_discoveryService = new DiscoveryService( new ServiceProfile( useIpv4: true, useIpv6: true, protocolVersion: 1, bucketsSupported ), s_settingsService.CurrentUserProvider );
+            Console.WriteLine($"Your machine Id: {s_discoveryService.MachineId}");
+
             s_discoveryService.Start();
 
             foreach ( IPAddress address in s_discoveryService.NetworkEventInvoker.RunningIpAddresses )
@@ -329,7 +333,8 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                                $"5 - send {typeof( FindValueRequest ).Name}\n" +
                                $"6 - send {typeof( AcknowledgeTcpMessage ).Name}\n" +
                                $"7 - test count available connections\n" +
-                               $"8 - download random file from another contact(-s)" );
+                               $"8 - download random file from another contact(-s)\n" +
+                               $"9 - create file with random bytes" );
 
         private static void GetRemoteContact( DiscoveryService discoveryService, Boolean isOnlyInNetwork, ref Contact remoteContact )
         {
@@ -468,12 +473,20 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                     case ConsoleKey.NumPad8:
                     case ConsoleKey.D8:
                     {
-                        await DownloadRandomFile( apiClient, currentUserProvider, remoteContact ).ConfigureAwait( false );
+                        await DownloadRandomFileAsync( apiClient, currentUserProvider, remoteContact ).ConfigureAwait( false );
 
                         return;
                     }
 
-                    default:
+                    case ConsoleKey.NumPad9:
+                    case ConsoleKey.D9:
+                    {
+                        CreateFileWithRndBytes();
+
+                        return;
+                    }
+
+                        default:
                     {
                         Console.WriteLine("Inputted wrong key");
                         return;
@@ -576,119 +589,6 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             return parameters;
         }
 
-        /// <summary>
-        /// Will download random file which isn't in current PC if you aren't only in network. Otherwise it will download file which is
-        /// </summary>
-        /// <returns></returns>
-        private async static Task DownloadRandomFile( IApiClient apiClient,
-            ICurrentUserProvider currentUserProvider, Contact remoteContact )
-        {
-            Download download = new Download( s_discoveryService, IOBehavior.Asynchronous );
-
-            
-            String filePrefix = UserIntersectionInConsole.ValidValueInputtedByUser( requestToUser: "Input file prefix where new file can exist on the server: ", ( userInput ) =>
-             {
-                 Boolean isValidInput = ( PathExtensions.IsValidPath( userInput ) ) && ( !userInput.Contains( ":" ) );
-                 return isValidInput;
-             } );
-
-            (ObjectDescriptionModel fileDescription, String bucketName, String localFolderPath) = await RandomFileToDownloadAsync( apiClient, currentUserProvider, remoteContact, filePrefix ).ConfigureAwait( false );
-
-            Console.WriteLine( "Press any key to start download process. \n" +
-                "After that if you want to cancel download, press C key. If you do not want to cancel, press any other button." );
-            Console.ReadKey(intercept: true);//true says that pressed key will not show in console
-
-            ConfiguredTaskAwaitable downloadTask = Task.Run( async () =>
-             {
-                 await download.DownloadFileAsync( 
-                     localFolderPath, 
-                     bucketName,
-                     filePrefix, 
-                     fileDescription.OriginalName, 
-                     fileDescription.Bytes,
-                     fileDescription.Version, 
-                     s_cancellationTokenSource.Token 
-                 ).ConfigureAwait( false );
-             } ).ConfigureAwait(false);
-
-            ConsoleKey pressedKey = Console.ReadKey().Key;
-            Console.WriteLine();
-            if(pressedKey == ConsoleKey.C)
-            {
-                s_cancellationTokenSource.Cancel();
-            }
-
-            await downloadTask;
-
-            s_cancellationTokenSource = new CancellationTokenSource();
-        }
-
-        private async static Task<(ObjectDescriptionModel randomFileToDownload, String serverBucketName, String localFolderPath)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String filePrefix )
-        {
-            IList<String> bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
-
-            String bucketPath = null;
-            UserIntersectionInConsole.ValidValueInputtedByUser(
-                requestToUser: "Input bucket directory path or it name: ",
-                ( userInput ) =>
-                {
-                    bucketPath = bucketDirectoryPathes.SingleOrDefault( ( path ) => path.Contains( userInput ) );
-                    return bucketPath != null;
-                }
-            );
-
-            String serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath( bucketPath ).ServerName;
-
-            ObjectsListResponse objectsListResponse = await apiClient.ListAsync( serverBucketName, filePrefix ).ConfigureAwait( continueOnCapturedContext: false );
-            ObjectsListModel objectsListModel = objectsListResponse.ToObjectsListModel();
-            ObjectDescriptionModel[] undeletedObjectsListModel = objectsListModel.ObjectDescriptions.Where( c => !c.IsDeleted ).ToArray();
-
-            //select from undeletedObjectsListModel files which exist in current PC if tester is only in network. 
-            //If the last one is not, select files which don't exist in current PC
-            List<ObjectDescriptionModel> bjctDscrptnsFrDwnld = undeletedObjectsListModel.Where( cachedFileInServer =>
-             {
-                 String fullPathToFile = Path.Combine( bucketPath, filePrefix, cachedFileInServer.OriginalName );
-                 Boolean isFileInCurrentPc = File.Exists( fullPathToFile );
-
-                 Boolean shouldBeDownloaded;
-#if RECEIVE_TCP_FROM_OURSELF
-                 shouldBeDownloaded = isFileInCurrentPc;
-#else
-                 shouldBeDownloaded = !isFileInCurrentPc;
-#endif
-
-                 return shouldBeDownloaded;
-             } ).ToList();
-
-            ObjectDescriptionModel randomFileToDownload;
-            Random random = new Random();
-
-            //It will download random file at local PC if you don't have any file to download, 
-            //server has any file which isn't deleted and you are only in network
-            Boolean canWeDownloadAnything = undeletedObjectsListModel.Length > 0;
-            if ( ( bjctDscrptnsFrDwnld.Count == 0 ) && ( canWeDownloadAnything ) )
-            {
-                //TODO add possibility to upload file to server and run this method again
-#if RECEIVE_TCP_FROM_OURSELF
-                randomFileToDownload = undeletedObjectsListModel[ random.Next( undeletedObjectsListModel.Length ) ];
-                await apiClient.DownloadFileAsync( serverBucketName, filePrefix, bucketPath, randomFileToDownload.OriginalName, randomFileToDownload ).ConfigureAwait( false );
-#else
-                Console.WriteLine( $"You should put few files in {bucketPath} and using WpfClient, upload it" );
-                throw new InvalidOperationException();
-#endif
-            }
-            else if ( bjctDscrptnsFrDwnld.Count > 0 )
-            {
-                randomFileToDownload = bjctDscrptnsFrDwnld[ random.Next( bjctDscrptnsFrDwnld.Count ) ];
-            }
-            else
-            {
-
-                Console.WriteLine( $"You should put few files in {bucketPath} and using WpfClient, upload it" );
-                throw new InvalidOperationException();
-            }
-
-            return (randomFileToDownload, serverBucketName, bucketPath);
-        }
+        
     }
 }
