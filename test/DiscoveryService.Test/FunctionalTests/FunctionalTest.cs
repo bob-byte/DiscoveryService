@@ -114,7 +114,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             SetUpTests.CurrentUserProvider = s_settingsService.CurrentUserProvider;
             ConcurrentDictionary<String, String> bucketsSupported = new ConcurrentDictionary<String, String>();
 
-#if INTEGRATION_TESTS
+#if DEBUG
             Boolean deleteMachineId = NormalResposeFromUserAtClosedQuestion( $"Do you want to update Machine ID (it is always needed if you run firstly container)?" );
             if(deleteMachineId)
             {
@@ -141,8 +141,10 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
                 InitWatcherForIntegrationTests( apiClient );
             }
-#else
-            apiClient.CurrentUserProvider.RootFolderPath = s_settingsService.ReadUserRootFolderPath();
+            else
+            {
+                apiClient.CurrentUserProvider.RootFolderPath = s_settingsService.ReadUserRootFolderPath();
+            }
 #endif
 
             DsBucketsSupported.Define( s_settingsService.CurrentUserProvider, out bucketsSupported );
@@ -195,7 +197,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                             //in order to GetRemoteContact can send multicasts messages
                             contact = null;
 
-                            GetRemoteContact( s_discoveryService, isTesterOnlyInNetwork, ref contact );
+                            GetRemoteContact( s_discoveryService, ref contact );
                         }
 
                         ShowAvailableUserOptions();
@@ -336,7 +338,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                                $"8 - download random file from another contact(-s)\n" +
                                $"9 - create file with random bytes" );
 
-        private static void GetRemoteContact( DiscoveryService discoveryService, Boolean isOnlyInNetwork, ref Contact remoteContact )
+        private static void GetRemoteContact( DiscoveryService discoveryService, ref Contact remoteContact )
         {
             while ( remoteContact == null )
             {
@@ -351,7 +353,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 Thread.Sleep( TimeSpan.FromSeconds( value: 5 ) );
                 try
                 {
-                    remoteContact = RandomContact( discoveryService, isOnlyInNetwork );
+                    remoteContact = RandomContact( discoveryService );
                 }
                 catch ( IndexOutOfRangeException ) //if knowContacts.Count == 0
                 {
@@ -360,19 +362,9 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             }
         }
 
-        private static Contact RandomContact( DiscoveryService discoveryService, Boolean isOnlyInNetwork )
+        private static Contact RandomContact( DiscoveryService discoveryService )
         {
-            Func<Contact, Boolean> predicateToSelectContacts;
-            if(isOnlyInNetwork)
-            {
-                predicateToSelectContacts = c => c.LastActiveIpAddress != null;
-            }
-            else
-            {
-                predicateToSelectContacts = c => ( c.LastActiveIpAddress != null ) && ( c.KadId == discoveryService.NetworkEventInvoker.OurContact.KadId );
-            }
-
-            Contact[] contacts = discoveryService.OnlineContacts().Where( predicateToSelectContacts ).ToArray();
+            Contact[] contacts = discoveryService.OnlineContacts().Where( c => c.LastActiveIpAddress != null ).ToArray();
 
             Random random = new Random();
             Contact randomContact = contacts[ random.Next( contacts.Length ) ];

@@ -25,9 +25,13 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
 
         private readonly DiscoveryService m_discoveryService;
 
+        protected readonly Dht m_distributedHashTable;
+
         public CheckFileExistsHandler( ICurrentUserProvider currentUserProvider, DiscoveryService discoveryService )
         {
             m_discoveryService = discoveryService;
+
+            m_distributedHashTable = NetworkEventInvoker.DistributedHashTable( m_discoveryService.ProtocolVersion );
 
             m_currentUserProvider = currentUserProvider;
             m_settingsService = new SettingsService
@@ -39,9 +43,19 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
         public virtual void SendResponse( Object sender, TcpMessageEventArgs eventArgs )
         {
             CheckFileExistsRequest request = eventArgs.Message<CheckFileExistsRequest>( whetherReadMessage: false );
-            AbstactFileResponse response = FileResponse( request );
+            if(request != null)
+            {
+                AbstactFileResponse response = FileResponse( request );
 
-            response.Send( eventArgs.AcceptedSocket );
+                try
+                {
+                    response.Send( eventArgs.AcceptedSocket );
+                }
+                finally
+                {
+                    m_distributedHashTable.UpdateSenderByMachineId( request.SenderMachineId );
+                }
+            }
         }
 
         protected AbstactFileResponse FileResponse( AbstractFileRequest request )

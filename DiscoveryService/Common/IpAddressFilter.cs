@@ -41,46 +41,45 @@ namespace LUC.DiscoveryService.Common
                 interfaceIndex = (UInt32)ipv6InterfaceIndex;
             }
 
-            if ( gatewayForDest != CODE_WIN_32_SUCCESS_OPERATION )
-            {
-                throw new Win32Exception( (Int32)gatewayForDest );
-            }
-
             Boolean foundApprociateNetwork = false;
-            if(ourInterfaces == null || ourInterfaces.Count == 0)
-            {
-                ourInterfaces = NetworkEventInvoker.NetworkInterfaces().ToList();
-            }
 
-            for ( Int32 numInterface = 0; ( numInterface < ourInterfaces.Count ) && ( !foundApprociateNetwork ); numInterface++ )
+            if ( gatewayForDest == CODE_WIN_32_SUCCESS_OPERATION )
             {
-                IPInterfaceProperties ipProps = ourInterfaces[ numInterface ].GetIPProperties();
-                if ( ipProps != null )
+                if ( ( ourInterfaces == null ) || ( ourInterfaces.Count == 0 ) )
                 {
-                    IPAddress gateway = ipProps.GatewayAddresses?.FirstOrDefault()?.Address;
+                    ourInterfaces = NetworkEventInvoker.NetworkInterfaces().ToList();
+                }
 
-                    if ( gateway != null )
+                for ( Int32 numInterface = 0; ( numInterface < ourInterfaces.Count ) && ( !foundApprociateNetwork ); numInterface++ )
+                {
+                    IPInterfaceProperties ipProps = ourInterfaces[ numInterface ].GetIPProperties();
+                    if ( ipProps != null )
                     {
-                        if ( ourInterfaces[ numInterface ].Supports( NetworkInterfaceComponent.IPv4 ) )
-                        {
-                            IPv4InterfaceProperties v4Props = ipProps.GetIPv4Properties();
-                            if ( v4Props?.Index == interfaceIndex )
-                            {
-                                foundApprociateNetwork = true;
-                            }
-                        }
+                        IPAddress gateway = ipProps.GatewayAddresses?.FirstOrDefault()?.Address;
 
-                        if ( ( !foundApprociateNetwork ) && ( ourInterfaces[ numInterface ].Supports( NetworkInterfaceComponent.IPv6 ) ) )
+                        if ( gateway != null )
                         {
-                            IPv6InterfaceProperties v6Props = ipProps.GetIPv6Properties();
-                            if ( v6Props?.Index == interfaceIndex )
+                            if ( ourInterfaces[ numInterface ].Supports( NetworkInterfaceComponent.IPv4 ) )
                             {
-                                foundApprociateNetwork = true;
+                                IPv4InterfaceProperties v4Props = ipProps.GetIPv4Properties();
+                                if ( v4Props?.Index == interfaceIndex )
+                                {
+                                    foundApprociateNetwork = true;
+                                }
+                            }
+
+                            if ( ( !foundApprociateNetwork ) && ( ourInterfaces[ numInterface ].Supports( NetworkInterfaceComponent.IPv6 ) ) )
+                            {
+                                IPv6InterfaceProperties v6Props = ipProps.GetIPv6Properties();
+                                if ( v6Props?.Index == interfaceIndex )
+                                {
+                                    foundApprociateNetwork = true;
+                                }
                             }
                         }
                     }
                 }
-            }
+            }            
 
             return foundApprociateNetwork;
         }

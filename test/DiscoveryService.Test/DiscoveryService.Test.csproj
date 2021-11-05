@@ -94,6 +94,7 @@
     <Compile Include="DiscoveryServiceSocketTest.cs" />
     <Compile Include="FunctionalTests\FunctionalTest.cs" />
     <Compile Include="InternalTests\ConnectionPoolSocketTest.cs" />
+    <Compile Include="InternalTests\Kademlia\KademliaIdTest.cs" />
     <Compile Include="InternalTests\Kademlia\BucketListTest.cs" />
     <Compile Include="InternalTests\Requests\BuildContactRequest.cs" />
     <Compile Include="InternalTests\Requests\CreateBucketListRequest.cs" />

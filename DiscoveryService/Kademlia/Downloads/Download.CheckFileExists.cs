@@ -74,7 +74,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 
         private async Task<Boolean> IsFileExistsInContactAsync( DownloadFileRequest sampleRequest, Contact contact )
         {
-            CheckFileExistsRequest request = new CheckFileExistsRequest( m_ourContact.KadId.Value )
+            CheckFileExistsRequest request = new CheckFileExistsRequest( m_ourContact.KadId.Value, m_ourContact.MachineId )
             {
                 BucketId = sampleRequest.BucketId,
                 FileOriginalName = sampleRequest.FileOriginalName,

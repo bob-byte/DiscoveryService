@@ -35,10 +35,11 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             };
         }
 
-        public Request( BigInteger sender )
+        public Request( BigInteger senderKadId, String senderMachineId )
             : this()
         {
-            Sender = sender;
+            SenderKadId = senderKadId;
+            SenderMachineId = senderMachineId;
         }
 
         public Request()
@@ -49,7 +50,11 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         }
 
         public BigInteger RandomID { get; private set; }
-        public BigInteger Sender { get; private set; }
+
+        public BigInteger SenderKadId { get; private set; }
+        
+        public String SenderMachineId { get; private set; }
+
 
         /// <summary>
         /// Returns whether received right response to <a href="last"/> request
@@ -64,7 +69,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             {
                 base.Read( reader );
 
-                Sender = reader.ReadBigInteger();
+                SenderKadId = reader.ReadBigInteger();
+                SenderMachineId = reader.ReadAsciiString();
                 RandomID = reader.ReadBigInteger();
 
                 return this;
@@ -82,7 +88,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             {
                 base.Write( writer );
 
-                writer.Write( Sender );
+                writer.Write( SenderKadId );
+                writer.WriteAsciiString( SenderMachineId );
                 writer.Write( RandomID );
             }
             else
@@ -163,12 +170,12 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                     Int32 countCheck = 0;
                     while ( ( client.Available == 0 ) && ( countCheck <= Constants.MAX_CHECK_AVAILABLE_DATA ) )
                     {
-                        await WaitAsync( ioBehavior, Constants.TimeCheckDataToRead ).ConfigureAwait( false );
+                        await WaitAsync( ioBehavior, Constants.TimeCheckDataToRead );
 
                         countCheck++;
                     }
 
-                    if ( countCheck <= Constants.MAX_CHECK_AVAILABLE_DATA )
+                    if ( client.Available > 0 )
                     {
                         Byte[] bytesOfResponse = await client.DsReceiveAsync( ioBehavior, Constants.ReceiveTimeout ).ConfigureAwait( false );
 
@@ -210,7 +217,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             {
                 HandleException( ex, ref nodeError );
             }
-            catch ( Win32Exception ex )
+            //if it have been tried to read bytes from connection, but it was read 0 bytes
+            catch ( IndexOutOfRangeException ex )
             {
                 HandleException( ex, ref nodeError );
             }

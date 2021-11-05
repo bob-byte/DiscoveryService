@@ -43,7 +43,7 @@ namespace LUC.DiscoveryService.Test.InternalTests
             discoveryService.NetworkEventInvoker.PingReceived += ( sender, eventArgs ) => receiveDone.Set();
 
             socket.DsConnect( socket.Id, Constants.ConnectTimeout );
-            PingRequest pingRequest = new PingRequest( KademliaId.RandomIDInKeySpace.Value );
+            PingRequest pingRequest = new PingRequest( KademliaId.RandomIDInKeySpace.Value, discoveryService.MachineId );
 
             socket.DsSend( pingRequest.ToByteArray(), Constants.SendTimeout );
 

@@ -15,7 +15,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 {
     partial class FunctionalTest
     {
-#if INTEGRATION_TESTS
+#if DEBUG
         private static FileSystemWatcher s_fileSystemWatcher;
 
         //[PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
@@ -54,6 +54,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
         {
             s_settingsService.CurrentUserProvider.RootFolderPath = downloadTestFolderFullName;
             SetUpTests.LoggingService.SettingsService = s_settingsService;
+            s_settingsService.WriteUserRootFolderPath( downloadTestFolderFullName );
 
             if ( apiClient != null )
             {

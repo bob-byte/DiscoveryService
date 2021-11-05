@@ -285,7 +285,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
                 if ( wasInPool )
                 {
-                    SocketHealth socketHealth = socketInPool.SocketHealth( ConnectionSettings );
+                    SocketHealth socketHealth = socketInPool.SocketHealth();
                     if ( socketHealth == SocketHealth.Healthy )
                     {
                         //m_sockets.AddOrUpdate( remoteEndPoint, socketInPool, updateValueFactory: (socketId, oldSocket) => socketInPool );

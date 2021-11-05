@@ -46,15 +46,6 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
 
         public BigInteger RandomID { get; private set; }
 
-        public virtual void Send( Socket sender )
-        {
-            sender.SendTimeout = (Int32)Constants.SendTimeout.TotalMilliseconds;
-            Byte[] buffer = ToByteArray();
-            sender.Send( buffer );
-
-            LogResponse( sender, buffer.Length );
-        }
-
         /// <inheritdoc/>
         public override IWireSerialiser Read( WireReader reader )
         {

@@ -23,6 +23,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             Dht dht = NetworkEventInvoker.DistributedHashTable( discoveryService.ProtocolVersion );
 
             INetworkEventHandler kadOpRequestHandler = new KadOperationRequestHandler( dht );
+
             networkEventInvoker.PingReceived += kadOpRequestHandler.SendResponse;
             networkEventInvoker.StoreReceived += kadOpRequestHandler.SendResponse;
             networkEventInvoker.FindNodeReceived += kadOpRequestHandler.SendResponse;

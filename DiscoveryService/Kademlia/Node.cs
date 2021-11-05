@@ -61,7 +61,7 @@ namespace LUC.DiscoveryService.Kademlia
             SendKeyValuesIfNewContact(sender);
 #endif
 
-            BucketList.AddContact( ref sender );
+            BucketList.AddContact( sender );
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace LUC.DiscoveryService.Kademlia
             }
 #endif
 
-            BucketList.AddContact( ref sender );
+            BucketList.AddContact( sender );
 
             if ( isCached )
             {
@@ -142,7 +142,7 @@ namespace LUC.DiscoveryService.Kademlia
             SendKeyValuesIfNewContact(sender);
 #endif
 
-            BucketList.AddContact( ref sender );
+            BucketList.AddContact( sender );
 
             contacts = BucketList.GetCloseContacts( key, exclude: sender.KadId );
         }
@@ -174,7 +174,7 @@ namespace LUC.DiscoveryService.Kademlia
             SendKeyValuesIfNewContact(sender);
 #endif
 
-            BucketList.AddContact( ref sender );
+            BucketList.AddContact( sender );
 
             if ( Storage.Contains( key ) )
             {

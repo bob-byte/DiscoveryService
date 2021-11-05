@@ -7,15 +7,16 @@ namespace LUC.DiscoveryService.Common
 {
     static class Constants
     {
-#if ( RECEIVE_TCP_FROM_OURSELF ) || ( INTEGRATION_TESTS )
+#if DEBUG
         public const String FILE_WITH_MACHINE_ID = "current machine id.txt";
 #endif
 
-#if INTEGRATION_TESTS
+#if DEBUG
         public const String DOWNLOAD_TEST_NAME_FOLDER = "DownloadTest";
 #endif
 
         public const Int32 MAX_CHUNK_SIZE = 2000000;
+        public const UInt16 MAX_CHUNK_READ_PER_ONE_TIME = UInt16.MaxValue;
         public const Int32 MAX_AVAILABLE_READ_BYTES = (Int32)( MAX_CHUNK_SIZE * 1.5 );
 
         public const Int32 B = 5;

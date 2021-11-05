@@ -335,19 +335,24 @@ namespace LUC.DiscoveryService
             IPEndPoint ipEndPoint;
             TcpSession clientToReadMessage;
             Byte[] readBytes;
+            CancellationTokenSource cancelSource = new CancellationTokenSource();
 
             try
             {
                 clientToReadMessage = await SessionWithNewDataAsync().ConfigureAwait(continueOnCapturedContext: false);
 
                 AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
-                ConfiguredTaskAwaitable<Byte[]> taskReadBytes = clientToReadMessage.Socket.ReadAllAvailableBytesAsync( receiveDone, Constants.MAX_CHUNK_SIZE, Constants.MAX_AVAILABLE_READ_BYTES ).ConfigureAwait( false );
+
+                ConfiguredTaskAwaitable<Byte[]> taskReadBytes = clientToReadMessage.Socket.ReadAllAvailableBytesAsync( receiveDone, Constants.MAX_CHUNK_READ_PER_ONE_TIME, Constants.MAX_AVAILABLE_READ_BYTES, cancelSource.Token ).ConfigureAwait( false );
 
                 Boolean isReceivedInTime = receiveDone.WaitOne( timeoutToRead );
+                cancelSource.Cancel();
+
                 if ( isReceivedInTime )
                 {
                     readBytes = await taskReadBytes;
                     ipEndPoint = clientToReadMessage.Socket.RemoteEndPoint as IPEndPoint;
+
                 }
                 else
                 {
@@ -368,6 +373,10 @@ namespace LUC.DiscoveryService
                 {
                     throw;
                 }
+            }
+            finally
+            {
+                cancelSource.Dispose();
             }
 
             TcpMessageEventArgs receiveResult = new TcpMessageEventArgs();

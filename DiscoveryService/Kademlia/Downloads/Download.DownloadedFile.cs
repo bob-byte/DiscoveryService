@@ -31,7 +31,6 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                 //download in root directory, because you cannot create file with the same path and name
                 String rootFolder = Path.GetDirectoryName( localFolderPath );
                 fullPathToFile = Path.Combine( rootFolder, localOriginalName );
-
 #else
                 fullPathToFile = Path.Combine( localFolderPath, localOriginalName );
 #endif
@@ -55,10 +54,10 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                 }
             }
 
-            public String UniqueTempFullFileName( String tempFullPath )
+            public String UniqueTempFullFileName( String fullTempFileName )
             {
-                String pathToTempFile = Path.GetDirectoryName( tempFullPath );
-                String tempFileName = Path.GetFileName( tempFullPath );
+                String pathToTempFile = Path.GetDirectoryName( fullTempFileName );
+                String tempFileName = Path.GetFileName( fullTempFileName );
 
                 String uniqueTempFileName = (String)tempFileName.Clone();
                 String fullUniqueTempFileName = $"{pathToTempFile}\\{uniqueTempFileName}";
@@ -73,11 +72,19 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 
             public void RenameFile( String sourceFileName, String destFileName ) => File.Move( sourceFileName, destFileName );
 
-            public void TryDeleteFile( String fullPathToFile )
+            public void TryDeleteFile( String fullFileName )
             {
-                if ( File.Exists( fullPathToFile ) )
+                if ( File.Exists( fullFileName ) )
                 {
-                    File.Delete( fullPathToFile );
+                    try
+                    {
+                        File.Delete( fullFileName );
+                    }
+                    //user opened this file
+                    catch(IOException)
+                    {
+                        ;//do nothing
+                    }
                 }
             }
 

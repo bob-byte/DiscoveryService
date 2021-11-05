@@ -50,7 +50,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 
             if ( !isRightDownloaded )
             {
-                //TODO try to delete file
+                m_downloadedFile.TryDeleteFile( request.FullPathToFile );
                 throw new InvalidOperationException( $"Cannot download small file {request.FullPathToFile}. Contact count which have this file = {contactsWithFile.Count()}" );
             }
         }
@@ -256,7 +256,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             UInt64 start = lastRequest.ChunkRange.Start;
             Boolean isRightResponse = true;
 
-            for ( UInt64 end = maxChunkSize - 1;
+            for ( UInt64 end = start + maxChunkSize - 1;
                  ( !IsFinishedDownload( start, end ) ) && ( isRightResponse );
                  start = end + 1, end = ( ( end + maxChunkSize ) < initialContantRange.TotalPerContact ) ? ( end + maxChunkSize ) : initialContantRange.TotalPerContact - 1 )
             {
@@ -442,16 +442,35 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
         /// </returns>
         private IEnumerable<Contact> ContactsForRetryDownload(String localBucketName)
         {
-            IEnumerable<Contact> contactsInSameBucket = ContactsInSameBucket( localBucketName );
-
-            Dht dht = NetworkEventInvoker.DistributedHashTable( m_discoveryService.ProtocolVersion );
-            IEnumerable<Contact> contactsForRetryDownload = contactsInSameBucket.Where( c => dht.EvictionCount[ c.KadId.Value ] == 0 );
-
-
-            if ( contactsForRetryDownload.Count() < MIN_CONTACT_FOR_RETRY_DOWNLOAD)
+            IEnumerable<Contact> contactsForRetryDownload;
+            try
             {
-                contactsForRetryDownload = contactsInSameBucket;
+                IEnumerable<Contact> contactsInSameBucket = ContactsInSameBucket( localBucketName );
+
+                Dht dht = NetworkEventInvoker.DistributedHashTable( m_discoveryService.ProtocolVersion );
+                contactsForRetryDownload = contactsInSameBucket.Where( c =>
+                {
+                    Boolean shouldCommunicateInDownload = !dht.EvictionCount.ContainsKey(c.KadId.Value);
+                    if(!shouldCommunicateInDownload)
+                    {
+                        shouldCommunicateInDownload = dht.EvictionCount[ c.KadId.Value ] == 0;
+                    }
+
+                    return shouldCommunicateInDownload;
+                } );
+
+                if ( contactsForRetryDownload.Count() < MIN_CONTACT_FOR_RETRY_DOWNLOAD )
+                {
+                    contactsForRetryDownload = contactsInSameBucket;
+                }
             }
+            catch (Exception ex)
+            {
+                String logRecord = Display.StringWithAttention( ex.ToString() );
+                LoggingService.LogError( logRecord );
+                throw;
+            }
+            
 
             return contactsForRetryDownload;
         }

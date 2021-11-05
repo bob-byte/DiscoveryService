@@ -131,20 +131,24 @@ namespace LUC.DiscoveryService.Common
             Boolean isTaskEnded;
             Task<(Byte[], SocketException)> taskReadBytes;
             AutoResetEvent taskDone = new AutoResetEvent( initialState: false );
+            CancellationTokenSource cancelSource = new CancellationTokenSource();
 
             try
             {
-                taskReadBytes = ReadAllAvailableBytesAsync( socketToRead: this, taskDone );
+                taskReadBytes = ReadAllAvailableBytesAsync( socketToRead: this, taskDone, cancelSource.Token );
 
                 isTaskEnded = IsInTimeCompleted( taskDone, timeout, cancellationToken );
             }
             finally
             {
+                cancelSource.Cancel();
                 taskDone.Close();
             }
 
             (Byte[] readBytes, SocketException socketException) = taskReadBytes.GetAwaiter().GetResult();
             HandleSocketOperationResult( isTaskEnded, socketException );
+
+            cancelSource.Dispose();
             return readBytes;
         }
         
@@ -407,14 +411,14 @@ namespace LUC.DiscoveryService.Common
         /// <summary>
         ///   Reads all available data
         /// </summary>
-        private async Task<(Byte[] readBytes, SocketException socketException)> ReadAllAvailableBytesAsync( Socket socketToRead, EventWaitHandle receiveDone )
+        private async Task<(Byte[] readBytes, SocketException socketException)> ReadAllAvailableBytesAsync( Socket socketToRead, EventWaitHandle receiveDone, CancellationToken cancellationToken )
         {
             m_state = SocketState.Reading;
             SocketException socketException = new SocketException( (Int32)SocketError.Success );
             Byte[] readBytes = new Byte[ 0 ];
             try
             {
-                readBytes = await socketToRead.ReadAllAvailableBytesAsync( receiveDone, Constants.MAX_CHUNK_SIZE, Constants.MAX_AVAILABLE_READ_BYTES ).
+                readBytes = await socketToRead.ReadAllAvailableBytesAsync( receiveDone, Constants.MAX_CHUNK_READ_PER_ONE_TIME, Constants.MAX_AVAILABLE_READ_BYTES, cancellationToken ).
                      ConfigureAwait( continueOnCapturedContext: false );
             }
             catch ( SocketException ex )

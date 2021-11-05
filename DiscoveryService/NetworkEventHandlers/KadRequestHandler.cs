@@ -41,7 +41,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
         public static ILoggingService LoggingService { get; set; }
 
         //Sometimes to send response, we need to call server kademlia operation and then send
-        public void SendResponse( Object sender, TcpMessageEventArgs eventArgs )
+        public virtual void SendResponse( Object sender, TcpMessageEventArgs eventArgs )
         {
             //read request
             Message message = eventArgs.Message<Message>();
@@ -137,7 +137,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             where T : Request, new()
         {
             T request = eventArgs.Message<T>();
-            Contact sender = m_distributedHashTable.OnlineContacts.SingleOrDefault( c => c.KadId == new KademliaId( request.Sender ) );
+            Contact sender = m_distributedHashTable.OnlineContacts.SingleOrDefault( c => c.MachineId == request.SenderMachineId );
 
             try
             {
@@ -145,10 +145,12 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
                 {
                     response.Send( eventArgs.AcceptedSocket );
 
+                    m_distributedHashTable.UpdateSender( sender );
                     kadServerOp( sender );
                 }
                 else if ( priority == PriorityHandleKadRequest.FirstExecuteKadServerOp )
                 {
+                    m_distributedHashTable.UpdateSender( sender );
                     kadServerOp( sender );
 
                     response.Send( eventArgs.AcceptedSocket );
@@ -168,6 +170,8 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             }
         }
 
+        
+
         private void GetCloseContacts( Contact sendingContact, FindNodeRequest request, out List<Contact> closeContacts )
         {
             if ( sendingContact != null )
@@ -176,7 +180,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             }
             else
             {
-                closeContacts = m_node.BucketList.GetCloseContacts( new KademliaId( request.KeyToFindCloseContacts ), new KademliaId( request.Sender ) );
+                closeContacts = m_node.BucketList.GetCloseContacts( new KademliaId( request.KeyToFindCloseContacts ), new KademliaId( request.SenderKadId ) );
             }
         }
 
@@ -191,7 +195,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             }
             else
             {
-                closeContacts = m_node.BucketList.GetCloseContacts( new KademliaId( request.KeyToFindCloseContacts ), new KademliaId( request.Sender ) );
+                closeContacts = m_node.BucketList.GetCloseContacts( new KademliaId( request.KeyToFindCloseContacts ), new KademliaId( request.SenderKadId ) );
             }
         }
     }

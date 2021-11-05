@@ -16,8 +16,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     class DownloadFileRequest : AbstractFileRequest, ICloneable
     {
-        public DownloadFileRequest( BigInteger sender )
-            : base( sender )
+        public DownloadFileRequest( BigInteger senderKadId, String senderMachineId )
+            : base( senderKadId, senderMachineId )
         {
             DefaultInit();
         }

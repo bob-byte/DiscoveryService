@@ -144,7 +144,7 @@ namespace LUC.DiscoveryService
             UseIpv6 = useIpv6;
             ProtocolVersion = protocolVersion;
 
-            OurContact = new Contact( MachineId, KademliaId.RandomIDInKeySpace, RunningTcpPort, bucketLocalNames );
+            OurContact = new Contact( MachineId, KademliaId.RandomID, RunningTcpPort, bucketLocalNames );
             Dht distributedHashTable = new Dht( OurContact, ProtocolVersion,
                 storageFactory: () => new VirtualStorage(), new ParallelRouter( ProtocolVersion ) );
             s_dhts.TryAdd( protocolVersion, distributedHashTable );

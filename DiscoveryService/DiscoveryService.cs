@@ -277,6 +277,8 @@ namespace LUC.DiscoveryService
             }
         }
 
+        SemaphoreLocker m_locker = new SemaphoreLocker();
+
         //TODO: check SSL certificate with SNI
         /// <summary>
         ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.RemoteEndPoint"/> using <seealso cref="UdpMessage.TcpPort"/>
@@ -297,55 +299,59 @@ namespace LUC.DiscoveryService
                 ForcingConcurrencyError.TryForce();
 
                 Boolean isTheSameNetwork = IpAddressFilter.IsIpAddressInTheSameNetwork( ipEndPoint.Address );
+
                 if ( isTheSameNetwork )
                 {
-                    Contact sendingContact = NetworkEventInvoker.OurContact;
-
-                    Random random = new Random();
-                    AcknowledgeTcpMessage tcpMessage = new AcknowledgeTcpMessage(
-                       messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
-                       MachineId,
-                       sendingContact.KadId.Value,
-                       RunningTcpPort,
-                       ProtocolVersion,
-                       groupsIds: SupportedBuckets()?.Keys?.ToList()
-                   );
-
-                    ForcingConcurrencyError.TryForce();
-                    Byte[] bytesToSend = tcpMessage.ToByteArray();
-
-                    IPEndPoint remoteEndPoint = new IPEndPoint( ipEndPoint.Address, (Int32)udpMessage.TcpPort );
-                    ConnectionPoolSocket client = null;
-                    try
+                    await m_locker.LockAsync( async () =>
                     {
-                        client = await m_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
-                           IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
+                        Contact sendingContact = NetworkEventInvoker.OurContact;
+
+                        Random random = new Random();
+                        AcknowledgeTcpMessage tcpMessage = new AcknowledgeTcpMessage(
+                           messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
+                           MachineId,
+                           sendingContact.KadId.Value,
+                           RunningTcpPort,
+                           ProtocolVersion,
+                           groupsIds: SupportedBuckets()?.Keys?.ToList()
+                       );
 
                         ForcingConcurrencyError.TryForce();
-                        client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,
-                           Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
-                        ForcingConcurrencyError.TryForce();
-                    }
-                    catch ( TimeoutException ex )
-                    {
-                        LoggingService.LogError( ex.ToString() );
-                    }
-                    catch ( SocketException ex )
-                    {
-                        LoggingService.LogError( ex.ToString() );
-                    }
-                    catch ( AggregateException ex )
-                    {
-                        LoggingService.LogError( ex.ToString() );
-                    }
-                    catch ( ObjectDisposedException ex )
-                    {
-                        LoggingService.LogError( ex.ToString() );
-                    }
-                    finally
-                    {
-                        client?.ReturnedToPool();
-                    }
+                        Byte[] bytesToSend = tcpMessage.ToByteArray();
+
+                        IPEndPoint remoteEndPoint = new IPEndPoint( ipEndPoint.Address, (Int32)udpMessage.TcpPort );
+                        ConnectionPoolSocket client = null;
+                        try
+                        {
+                            client = await m_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
+                               IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
+
+                            ForcingConcurrencyError.TryForce();
+                            client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,
+                               Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
+                            ForcingConcurrencyError.TryForce();
+                        }
+                        catch ( TimeoutException ex )
+                        {
+                            LoggingService.LogError( ex.ToString() );
+                        }
+                        catch ( SocketException ex )
+                        {
+                            LoggingService.LogError( ex.ToString() );
+                        }
+                        catch ( AggregateException ex )
+                        {
+                            LoggingService.LogError( ex.ToString() );
+                        }
+                        catch ( ObjectDisposedException ex )
+                        {
+                            LoggingService.LogError( ex.ToString() );
+                        }
+                        finally
+                        {
+                            client?.ReturnedToPool();
+                        }
+                    } ).ConfigureAwait( false );
                 }
             }
             else

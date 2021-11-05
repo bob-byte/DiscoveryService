@@ -30,7 +30,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <inheritdoc/>
         public RpcError Ping( Contact sender, Contact remoteContact )
         {
-            PingRequest request = new PingRequest( sender.KadId.Value );
+            PingRequest request = new PingRequest( sender.KadId.Value, sender.MachineId );
 
             request.GetResult<PingResponse>( remoteContact, m_protocolVersion, response: out _, out RpcError rpcError );
             return rpcError;
@@ -39,7 +39,7 @@ namespace LUC.DiscoveryService.Kademlia
         ///<inheritdoc/>
         public RpcError Store( Contact sender, KademliaId key, String val, Contact remoteContact, Boolean isCached = false, Int32 expirationTimeSec = 0 )
         {
-            StoreRequest request = new StoreRequest( sender.KadId.Value )
+            StoreRequest request = new StoreRequest( sender.KadId.Value, sender.MachineId )
             {
                 KeyToStore = key.Value,
                 Value = val,
@@ -54,7 +54,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <inheritdoc/>
         public (List<Contact> contacts, RpcError error) FindNode( Contact sender, KademliaId keyToFindContacts, Contact remoteContact )
         {
-            FindNodeRequest request = new FindNodeRequest( sender.KadId.Value )
+            FindNodeRequest request = new FindNodeRequest( sender.KadId.Value, sender.MachineId )
             {
                 KeyToFindCloseContacts = keyToFindContacts.Value,
             };
@@ -69,7 +69,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <inheritdoc/>
         public (List<Contact> contacts, String val, RpcError error) FindValue( Contact sender, KademliaId keyToFindContact, Contact remoteContact )
         {
-            FindValueRequest request = new FindValueRequest( sender.KadId.Value )
+            FindValueRequest request = new FindValueRequest( sender.KadId.Value, sender.MachineId )
             {
                 KeyToFindCloseContacts = keyToFindContact.Value,
             };

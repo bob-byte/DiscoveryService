@@ -106,7 +106,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                 {
                     if ( onlineContacts.Count() >= 1 )
                     {
-                        DownloadFileRequest initialRequest = new DownloadFileRequest( sender: m_ourContact.KadId.Value )
+                        DownloadFileRequest initialRequest = new DownloadFileRequest( m_ourContact.KadId.Value, m_ourContact.MachineId )
                         {
                             FullPathToFile = fullFileName,
                             FileOriginalName = localOriginalName,

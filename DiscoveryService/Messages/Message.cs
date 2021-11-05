@@ -22,6 +22,8 @@ namespace LUC.DiscoveryService.Messages
         /// </summary>
         public MessageOperation MessageOperation { get; protected set; }
 
+        public UInt32 MessageLength { get; protected set; }
+
         /// <summary>
         ///   Length in bytes of the object when serialised.
         /// </summary>
@@ -89,12 +91,20 @@ namespace LUC.DiscoveryService.Messages
             if ( reader != null )
             {
                 MessageOperation = (MessageOperation)reader.ReadByte();
+                MessageLength = reader.ReadUInt32();
                 return this;
             }
             else
             {
                 throw new ArgumentNullException( "ReaderNullException" );
             }
+        }
+
+        public virtual void Send( Socket sender )
+        {
+            sender.SendTimeout = (Int32)Constants.SendTimeout.TotalMilliseconds;
+            Byte[] buffer = ToByteArray();
+            sender.Send( buffer );
         }
 
         /// <summary>
@@ -105,11 +115,27 @@ namespace LUC.DiscoveryService.Messages
         /// </returns>
         public Byte[] ToByteArray()
         {
-            using ( MemoryStream stream = new MemoryStream() )
-            {
-                Write( stream );
-                return stream.ToArray();
-            }
+                using ( MemoryStream stream = new MemoryStream() )
+                {
+                    Write( stream );
+
+                    using ( MemoryStream streamToWriteMessLength = new MemoryStream() )
+                    {
+                        List<Byte> allMessage = stream.ToArray().ToList();
+
+                        Int32 bytesInInt = 4;
+                        MessageLength = (UInt32)( allMessage.Count + bytesInInt );
+
+                        WireWriter writer = new WireWriter( streamToWriteMessLength );
+                        writer.Write( MessageLength );
+
+                        Byte[] bytesOfMessageLength = streamToWriteMessLength.ToArray();
+
+                        allMessage.InsertRange( index: 1, bytesOfMessageLength );
+
+                        return allMessage.ToArray();
+                    }
+                }
         }
 
         /// <summary>

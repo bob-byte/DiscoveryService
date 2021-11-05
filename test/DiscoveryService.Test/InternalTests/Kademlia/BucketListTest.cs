@@ -23,15 +23,17 @@ namespace LUC.DiscoveryService.Test.InternalTests.Kademlia
         public void AddContact_AddKContacts_WithoutSplitBuckets()
         {
             DiscoveryService discoveryService = SetUpTests.DiscoveryService;
+            discoveryService.Start();
 
             BucketListBuilder bucketListBuilder = new BucketListBuilder( discoveryService, BuildBucketListRequest.Dummy );
             IBucketList bucketList = bucketListBuilder.Create<BucketList>();
 
-            ContactBuilder contactBuilder = new ContactBuilder( discoveryService, BuildContactRequest.Default );
             for ( Int32 i = 0; i < Constants.K; i++ )
             {
+                ContactBuilder contactBuilder = new ContactBuilder( discoveryService, KademliaId.RandomID, BuildContactRequest.Default );
+
                 Contact newContact = contactBuilder.Create<Contact>();
-                bucketList.AddContact( ref newContact );
+                bucketList.AddContact( newContact );
             }
 
             Assert.IsTrue( condition: bucketList.Buckets.Count == 1, message: "No split should have taken place" );

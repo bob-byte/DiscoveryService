@@ -37,18 +37,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             CanBeTakenFromPool = new AutoResetEvent( initialState: false );
             m_stateInPool = socketStateInPool;
             m_lockStateInPool = new Object();
-
-            CreatedTicks = unchecked((UInt32)Environment.TickCount);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="bytesToSend"></param>
-        /// <param name="timeoutToSend"></param>
-        /// <param name="timeoutToConnect"></param>
-        /// <param name="ioBehavior"></param>
-        /// <param name="client"></param>
         /// <returns>
         /// If <paramref name="bytesToSend"/> is immediately sent, method will return <paramref name="client"/>, else it will return new created <see cref="ConnectionPoolSocket"/>
         /// </returns>
@@ -73,10 +63,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             return sendingBytesSocket;
         }
-
-        public UInt32 CreatedTicks { get; }
-
-        public UInt32 LastReturnedTicks { get; private set; }
 
         public EndPoint Id { get; }
 
@@ -141,7 +127,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         //    //change state to connected if it is, otherwise to failed
         //}
 
-        public SocketHealth SocketHealth( ConnectionSettings connectionSettings )
+        public SocketHealth SocketHealth()
         {
             SocketHealth socketHealth;
 
@@ -156,12 +142,10 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
             catch(ObjectDisposedException)
             {
-                ;//do nothing, because check whether it is disposed is in ( m_stateInPool == SocketStateInPool.IsFailed )
+                ;//do nothing, because check whether it is disposed is in ( m_state >= SocketState.Failed )
             }
 
-            Boolean longAgoHasBeenCreated = unchecked((UInt32)Environment.TickCount) - CreatedTicks >= connectionSettings.ConnectionLifeTime;
-            if ( ( m_stateInPool == SocketStateInPool.IsFailed ) || 
-                 ( ( connectionSettings.ConnectionLifeTime > 0 ) && ( longAgoHasBeenCreated ) ) )
+            if ( ( m_stateInPool == SocketStateInPool.IsFailed ) || ( m_state >= SocketState.Failed ) )
             {
                 socketHealth = ClientPool.SocketHealth.Expired;
             }
@@ -180,7 +164,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 Log.LogInfo( $"Socket with id \"{Id}\" returning to Pool" );
             }
 #endif
-            LastReturnedTicks = unchecked((UInt32)Environment.TickCount);
 
             if ( Pool == null )
             {

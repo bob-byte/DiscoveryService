@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,6 +11,7 @@ using AutoFixture;
 using AutoFixture.Kernel;
 
 using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Kademlia.Exceptions;
 using LUC.DiscoveryService.Test.Builders;
 using LUC.DiscoveryService.Test.InternalTests.Requests;
 
@@ -66,7 +68,14 @@ namespace LUC.DiscoveryService.Test.InternalTests.Builders
                     {
                         DefineBasicParameters( out String machineId, out IEnumerable<String> bucketsSupported );
 
-                        if(m_contactId == null)
+                        try
+                        {
+                            if ( default( BigInteger ) == m_contactId )
+                            {
+                                m_contactId = KademliaId.RandomIDInKeySpace;
+                            }
+                        }
+                        catch(NullIDException)
                         {
                             m_contactId = KademliaId.RandomIDInKeySpace;
                         }

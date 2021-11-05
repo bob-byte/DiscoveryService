@@ -367,6 +367,26 @@ namespace LUC.DiscoveryService.Kademlia
             return a.Value == b;
         }
 
+        public static Boolean operator ==(BigInteger a, KademliaId b)
+        {
+            Boolean isEqual;
+            if(a == default && b == null)
+            {
+                isEqual = true;
+            }
+            else
+            {
+               isEqual = b == a;
+            }
+
+            return isEqual;
+        }
+
+        public static Boolean operator !=( BigInteger a, KademliaId b )
+        {
+            return !( a == b ); // Already have that
+        }
+
         public static Boolean operator !=( KademliaId a, KademliaId b )
         {
             return !( a == b ); // Already have that

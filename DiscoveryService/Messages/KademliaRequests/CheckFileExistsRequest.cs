@@ -11,8 +11,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     class CheckFileExistsRequest : AbstractFileRequest
     {
-        public CheckFileExistsRequest( BigInteger sender )
-            : base( sender )
+        public CheckFileExistsRequest( BigInteger senderKadId, String senderMachineId )
+            : base( senderKadId, senderMachineId )
         {
             DefaultInit();
         }

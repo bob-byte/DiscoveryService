@@ -57,10 +57,7 @@ namespace LUC.DiscoveryService.Kademlia
             m_ipAddresses = new List<IPAddress>();
             if ( ipAddresses != null )
             {
-                foreach ( IPAddress address in ipAddresses )
-                {
-                    TryAddIpAddress( address, isAdded: out _ );
-                }
+                AddIpAddressRange( ipAddresses );
             }
 
             InitBucketLocalNames( bucketLocalNames );
@@ -89,7 +86,7 @@ namespace LUC.DiscoveryService.Kademlia
             {
                 m_lastActiveIpAddress = value;
 
-                TryAddIpAddress( value, out _ );
+                TryAddIpAddress( value, isAdded: out _ );
             }
         }
 
@@ -133,6 +130,43 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
+        public void AddBucketRange(IEnumerable<String> buckets)
+        {
+            if(buckets != null)
+            {
+                lock(m_supportedBuckets)
+                {
+                    foreach ( String bucketName in buckets )
+                    {
+                        if(!m_supportedBuckets.Contains(bucketName))
+                        {
+                            m_supportedBuckets.Add( bucketName );
+                        }
+                    }
+                }
+            }
+        }
+
+        public void AddIpAddressRange( IEnumerable<IPAddress> ipAddresses )
+        {
+            if ( ipAddresses != null )
+            {
+                lock ( m_ipAddresses )
+                {
+                    foreach ( IPAddress address in ipAddresses )
+                    {
+                        //to put in the end last active IP address
+                        if ( m_ipAddresses.Contains( address ) )
+                        {
+                            m_ipAddresses.Remove( address );
+                        }
+
+                        AddNewIpAddresss( address );
+                    }
+                }
+            }
+        }
+
         public void TryAddIpAddress( IPAddress address, out Boolean isAdded )
         {
             if ( address != null )
@@ -147,29 +181,6 @@ namespace LUC.DiscoveryService.Kademlia
 
                     AddNewIpAddresss( address );
                     isAdded = true;
-                }
-            }
-            else
-            {
-                isAdded = false;
-            }
-        }
-
-        public void TryAddBucketLocalName(String bucketLocalName, out Boolean isAdded)
-        {
-            if ( bucketLocalName != null )
-            {
-                lock ( m_supportedBuckets )
-                {
-                    if ( !m_supportedBuckets.Contains( bucketLocalName ) )
-                    {
-                        m_supportedBuckets.Add( bucketLocalName );
-                        isAdded = true;
-                    }
-                    else
-                    {
-                        isAdded = false;
-                    }
                 }
             }
             else
@@ -199,6 +210,29 @@ namespace LUC.DiscoveryService.Kademlia
                 {
                     isRemoved = false;
                 }
+            }
+        }
+
+        public void TryAddBucketLocalName( String bucketLocalName, out Boolean isAdded )
+        {
+            if ( bucketLocalName != null )
+            {
+                lock ( m_supportedBuckets )
+                {
+                    if ( !m_supportedBuckets.Contains( bucketLocalName ) )
+                    {
+                        m_supportedBuckets.Add( bucketLocalName );
+                        isAdded = true;
+                    }
+                    else
+                    {
+                        isAdded = false;
+                    }
+                }
+            }
+            else
+            {
+                isAdded = false;
             }
         }
 

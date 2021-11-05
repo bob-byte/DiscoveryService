@@ -84,7 +84,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <summary>
         /// Replaces the contact with the new contact, thus updating the LastSeen and network addressinfo. 
         /// </summary>
-        public void ReplaceContact( ref Contact contact )
+        public void ReplaceContact( Contact contact )
         {
             String machineId = contact.MachineId;
             Contact contactInBucket = Contacts.Single( c => c.MachineId == machineId );
@@ -96,15 +96,10 @@ namespace LUC.DiscoveryService.Kademlia
             contactInBucket.KadId = contact.KadId;
 
             //contact can have new enumerable of buckets
-            foreach ( var bucketLocalName in contact.SupportedBuckets() )
-            {
-                contactInBucket.TryAddBucketLocalName( bucketLocalName, isAdded: out _ );
-            }
-
-            //TODO: to get older IP-addresses, use method Contact.TryAddIpAddress
+            contactInBucket.AddBucketRange( contact.SupportedBuckets() );
 
             //to get all older IP-addresses
-            contact = contactInBucket;
+            contact.AddIpAddressRange( contactInBucket.IpAddresses() );
         }
 
         /// <summary>

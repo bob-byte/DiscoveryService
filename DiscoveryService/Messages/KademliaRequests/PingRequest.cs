@@ -10,8 +10,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     class PingRequest : Request
     {
-        public PingRequest( BigInteger sender )
-            : base( sender )
+        public PingRequest( BigInteger senderKadId, String senderMachineId )
+            : base( senderKadId, senderMachineId )
         {
             DefaultInit();
         }

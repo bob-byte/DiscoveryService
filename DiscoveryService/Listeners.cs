@@ -219,6 +219,7 @@ namespace LUC.DiscoveryService
                     //using tasks provides unblocking event calls
                     _ = task.ContinueWith( taskReceiving =>
                     {
+                        //TODO: change to using GetAwaiter().GetResult or await
                         TcpMessageEventArgs eventArgs = taskReceiving.Result;
                         LoggingService.LogInfo( $"Received {eventArgs.Buffer.Length} bytes" );
 
@@ -237,6 +238,11 @@ namespace LUC.DiscoveryService
                     LoggingService.LogError( $"Failed to listen on TCP port.\n" +
                          $"{e}" );
                     return;
+                }
+                //Too big message received or message is not from IPEndpoint
+                catch ( InvalidOperationException )
+                {
+                    ListenTcp( tcpServer );
                 }
                 catch ( TimeoutException e )
                 {

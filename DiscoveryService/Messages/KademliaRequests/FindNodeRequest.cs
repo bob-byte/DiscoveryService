@@ -14,8 +14,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     class FindNodeRequest : Request
     {
-        public FindNodeRequest( BigInteger sender )
-            : base( sender )
+        public FindNodeRequest( BigInteger senderKadId, String senderMachineId )
+            : base( senderKadId, senderMachineId )
         {
             DefaultInit();
         }

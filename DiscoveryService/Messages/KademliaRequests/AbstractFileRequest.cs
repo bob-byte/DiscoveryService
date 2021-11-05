@@ -13,8 +13,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     abstract class AbstractFileRequest : Request
     {
-        public AbstractFileRequest( BigInteger sender )
-            : base( sender )
+        public AbstractFileRequest( BigInteger senderKadId, String senderMachineId )
+            : base( senderKadId, senderMachineId )
         {
             ;//do nothing
         }

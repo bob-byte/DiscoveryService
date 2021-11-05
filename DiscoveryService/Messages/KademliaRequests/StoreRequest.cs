@@ -13,8 +13,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     class StoreRequest : Request
     {
-        public StoreRequest( BigInteger sender )
-            : base( sender )
+        public StoreRequest( BigInteger senderKadId, String senderMachineId )
+            : base( senderKadId, senderMachineId )
         {
             DefaultInit();
         }

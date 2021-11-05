@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService
         /// </summary>
         public static void Create(out String machineId)
         {
-#if ( RECEIVE_TCP_FROM_OURSELF ) || ( INTEGRATION_TESTS )
+#if DEBUG
             String fullFileNameWithMachineId = FullFileNameWithMachineId();
 
             if (File.Exists(fullFileNameWithMachineId))
@@ -35,7 +35,7 @@ namespace LUC.DiscoveryService
 
                 machineId = $"{motherboard}-{Guid.NewGuid()}";
 
-#if ( RECEIVE_TCP_FROM_OURSELF ) || ( INTEGRATION_TESTS )
+#if DEBUG
                 using ( StreamWriter streamWriter = new StreamWriter( fullFileNameWithMachineId ) )
                 {
                     streamWriter.Write( machineId );
@@ -44,7 +44,7 @@ namespace LUC.DiscoveryService
 #endif
         }
 
-#if ( RECEIVE_TCP_FROM_OURSELF ) || ( INTEGRATION_TESTS )
+#if DEBUG
         private static String FullFileNameWithMachineId()
         {
             String fullExeName = Assembly.GetExecutingAssembly().Location;

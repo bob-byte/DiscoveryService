@@ -52,7 +52,7 @@ namespace LUC.DiscoveryService.Test
             IPEndPoint endPoint = AvailableIpAddress( discoveryService, client.AddressFamily );
             client.DsConnect( endPoint, Constants.ConnectTimeout );
 
-            PingRequest pingRequest = new PingRequest( KademliaId.RandomIDInKeySpace.Value );
+            PingRequest pingRequest = new PingRequest( KademliaId.RandomIDInKeySpace.Value, discoveryService.MachineId );
 
             client.DsSend( pingRequest.ToByteArray(), Constants.SendTimeout );
 

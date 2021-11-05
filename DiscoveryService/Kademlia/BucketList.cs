@@ -80,7 +80,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// Add a contact if possible, based on the algorithm described
         /// in sections 2.2, 2.4 and 4.2
         /// </summary>
-        public void AddContact( ref Contact contact )
+        public void AddContact( Contact contact )
         {
 #if !RECEIVE_TCP_FROM_OURSELF
             Validate.IsFalse<OurNodeCannotBeAContactException>(OurContact.MachineId == contact.MachineId, "Cannot add ourselves as a contact!");
@@ -96,7 +96,7 @@ namespace LUC.DiscoveryService.Kademlia
                 if ( kbucket.Contains( contact.MachineId ) )
                 {
                     // Replace the existing contact, updating the network info and LastSeen timestamp.
-                    kbucket.ReplaceContact( ref contact );
+                    kbucket.ReplaceContact( contact );
                 }
                 else if ( kbucket.IsBucketFull )
                 {
@@ -109,7 +109,7 @@ namespace LUC.DiscoveryService.Kademlia
                         Buckets.Insert( idx + 1, k2 );
                         Buckets[ idx ].Touch();
                         Buckets[ idx + 1 ].Touch();
-                        AddContact( ref contact );
+                        AddContact( contact );
                     }
                     else
                     {

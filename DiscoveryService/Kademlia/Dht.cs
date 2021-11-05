@@ -97,12 +97,23 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         public Contact OurContact { get; set; }
 
-        public List<Contact> OnlineContacts => Node.BucketList.Buckets.SelectMany( c => c.Contacts ).ToList();
+        public List<Contact> OnlineContacts
+        {
+            get
+            {
+                lock ( Node.BucketList )
+                {
+                    List<Contact> onlineContacts = Node.BucketList.Buckets.SelectMany( c => c.Contacts ).ToList();
 
-        /// <summary>
-        /// Returns a JSON string of the serialized DHT.
-        /// </summary>
-        public String Save()
+                    return onlineContacts;
+                }
+            }
+        }
+
+                /// <summary>
+                /// Returns a JSON string of the serialized DHT.
+                /// </summary>
+                public String Save()
         {
             JsonSerializerSettings settings = new JsonSerializerSettings();
             settings.TypeNameHandling = TypeNameHandling.Auto;
@@ -141,12 +152,12 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         public RpcError Bootstrap( Contact knownPeer )
         {
-            Node.BucketList.AddContact( ref knownPeer );
+            Node.BucketList.AddContact( knownPeer );
             (List<Contact> contacts, RpcError error) = m_clientKadOperation.FindNode( OurContact, OurContact.KadId, knownPeer );
 
             if ( !error.HasError )
             {
-                contacts.ForEach( c => Node.BucketList.AddContact( ref c ) );
+                contacts.ForEach( c => Node.BucketList.AddContact( c ) );
 
                 KBucket knownPeerBucket = Node.BucketList.GetKBucket( knownPeer.KadId );
                 // Resolve the list now, so we don't include additional contacts as we add to our bucket additional contacts.
@@ -208,6 +219,21 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
+        public void UpdateSenderByMachineId( String machineId )
+        {
+            Contact sender = OnlineContacts.SingleOrDefault( c => c.MachineId == machineId );
+
+            UpdateSender( sender );
+        }
+
+        public void UpdateSender(Contact sender)
+        {
+            if ( sender != null )
+            {
+                Node.BucketList.AddContact( sender );
+            }
+        }
+        
 #if DEBUG       // For demo and unit testing.
         public void PerformBucketRefresh()
         {
@@ -530,7 +556,7 @@ namespace LUC.DiscoveryService.Kademlia
                      (List<Contact> newContacts, RpcError timeoutError) = m_clientKadOperation.FindNode( OurContact, rndId, contact );
                      HandleError( timeoutError, contact );
 
-                     newContacts?.ForEach( otherContact => Node.BucketList.AddContact( ref otherContact ) );
+                     newContacts?.ForEach( otherContact => Node.BucketList.AddContact( otherContact ) );
                  });
             }
         }

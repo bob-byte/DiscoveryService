@@ -39,9 +39,10 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
 
             if ( request != null )
             {
+                AbstactFileResponse checkFileResponse = FileResponse( request );
+
                 try
                 {
-                    AbstactFileResponse checkFileResponse = FileResponse( request );
                     DownloadFileResponse downloadFileResponse = new DownloadFileResponse( request.RandomID )
                     {
                         FileExists = checkFileResponse.FileExists,
@@ -89,6 +90,10 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
 
                     ErrorResponse errorResponse = new ErrorResponse( request.RandomID, ex.Message );
                     errorResponse.Send( eventArgs.AcceptedSocket );
+                }
+                finally
+                {
+                    m_distributedHashTable.UpdateSenderByMachineId( request.SenderMachineId );
                 }
             }
         }

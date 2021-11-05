@@ -13,8 +13,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
 {
     class FindValueRequest : Request
     {
-        public FindValueRequest( BigInteger sender )
-            : base( sender )
+        public FindValueRequest( BigInteger senderKadId, String senderMachineId )
+            : base( senderKadId, senderMachineId )
         {
             DefaultInit();
         }
