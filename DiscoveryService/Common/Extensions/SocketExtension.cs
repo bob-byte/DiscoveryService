@@ -20,46 +20,53 @@ namespace LUC.DiscoveryService.Common.Extensions
         public async static Task<Byte[]> ReadAllAvailableBytesAsync( this Socket socket, EventWaitHandle receiveDone, UInt16 chunkSizeToReadPerOneTime, Int32 maxReadBytes, CancellationToken cancellationToken )
         {
             List<Byte> allMessage = new List<Byte>();
-            Int32 availableDataToRead = socket.Available;
 
-            UInt32 messageLength = 0;
-            Int32 chunkSize;
-            Int32 readTimesCount = 0;
-            do
+            await Task.Run( async () =>
             {
-                if ( cancellationToken.IsCancellationRequested )
+                UInt32 messageLength = 0;
+                Int32 chunkSize;
+                Int32 readTimesCount = 0;
+
+                //read first time
+                //if messageLength > countReadBytes
+                //create ActionBlock
+                //
+                do
                 {
-                    break;
-                }
-
-                chunkSize = ChunkSize( availableDataToRead, chunkSizeToReadPerOneTime );
-                Boolean isTooBigMessage = ( maxReadBytes < chunkSize + allMessage.Count );
-
-                if ( (!isTooBigMessage) && ( availableDataToRead != 0 ) )
-                {
-                    ArraySegment<Byte> buffer = new ArraySegment<Byte>( new Byte[ chunkSize ] );
-                    await socket.ReceiveAsync( buffer, SocketFlags.None ).ConfigureAwait( continueOnCapturedContext: false );
-                    allMessage.AddRange( buffer );
-
-                    availableDataToRead = socket.Available;
-
-                    readTimesCount++;
-
-                    if(readTimesCount == 1)
+                    if ( cancellationToken.IsCancellationRequested )
                     {
-                        Message message = new Message();
-                        message.Read( buffer.Array );
+                        break;
+                    }
 
-                        messageLength = message.MessageLength;
+                    chunkSize = ChunkSize( socket.Available, chunkSizeToReadPerOneTime );
+                    Boolean isTooBigMessage = ( maxReadBytes < chunkSize + allMessage.Count );
+
+                    if ( ( !isTooBigMessage ) && ( chunkSize != 0 ) )
+                    {
+                        ArraySegment<Byte> buffer = new ArraySegment<Byte>( new Byte[ chunkSize ] );
+                        Int32 readBytes = await socket.ReceiveAsync( buffer, SocketFlags.None ).ConfigureAwait( continueOnCapturedContext: false );
+
+                        AbstractService.LoggingService.LogInfo( $"Read {readBytes} bytes" );
+
+                        allMessage.AddRange( buffer );
+                        readTimesCount++;
+
+                        if ( readTimesCount == 1 )
+                        {
+                            Message message = new Message();
+                            message.Read( buffer.Array );
+
+                            messageLength = message.MessageLength;
+                        }
+                    }
+                    else if ( isTooBigMessage )
+                    {
+                        throw new InvalidOperationException( "Received too big message" );
                     }
                 }
-                else if( isTooBigMessage )
-                {
-                    throw new InvalidOperationException( "Received too big message" );
-                }
-            }
-            while ( allMessage.Count < messageLength );
-
+                while ( allMessage.Count < messageLength );
+            } );
+            
             receiveDone.SafeSet(isSet: out _);
 
             return allMessage.ToArray();

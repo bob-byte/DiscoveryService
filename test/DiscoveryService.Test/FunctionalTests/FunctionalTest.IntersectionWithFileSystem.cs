@@ -56,6 +56,8 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             SetUpTests.LoggingService.SettingsService = s_settingsService;
             s_settingsService.WriteUserRootFolderPath( downloadTestFolderFullName );
 
+            Console.WriteLine($"Full root folder name is updated to {downloadTestFolderFullName}");
+
             if ( apiClient != null )
             {
                 apiClient.CurrentUserProvider.RootFolderPath = downloadTestFolderFullName;
@@ -70,7 +72,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             //to signal that file was changed in Constants.DOWNLOAD_TEST_NAME_FOLDER
             Console.Beep();
 
-            Boolean whetherTryUpload = NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to upload on server file {eventArgs.Name}. It was {Enum.GetName( typeof( WatcherChangeTypes ), eventArgs.ChangeType )}" );
+            Boolean whetherTryUpload = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to upload on server file {eventArgs.Name}. It was {Enum.GetName( typeof( WatcherChangeTypes ), eventArgs.ChangeType )}" );
             if ( whetherTryUpload )
             {
                 try

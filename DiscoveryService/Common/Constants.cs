@@ -33,8 +33,8 @@ namespace LUC.DiscoveryService.Common
 
 #if DEBUG       // For unit tests
         public const Int32 ALPHA = 20;
-        public const Double BUCKET_REFRESH_INTERVAL = 30 * 60 * 1000;       // every half-hour.
-        public const Double KEY_VALUE_REPUBLISH_INTERVAL = 60 * 60 * 1000;       // every hour.
+        public const Double BUCKET_REFRESH_INTERVAL = 30 * 60 * 1000 /*10000*/;       // every half-hour.
+        public const Double KEY_VALUE_REPUBLISH_INTERVAL = 60 * 60 * 1000/*10000*/;       // every hour.
         public const Double KEY_VALUE_EXPIRE_INTERVAL = 60 * 60 * 1000;       // every hour.
         public const Double ORIGINATOR_REPUBLISH_INTERVAL = 24 * 60 * 60 * 1000;       // every 24 hours in milliseconds.
         public const Int32 EXPIRATION_TIME_SECONDS = 24 * 60 * 60;                // every 24 hours in seconds.

@@ -115,27 +115,27 @@ namespace LUC.DiscoveryService.Messages
         /// </returns>
         public Byte[] ToByteArray()
         {
-                using ( MemoryStream stream = new MemoryStream() )
+            using ( MemoryStream stream = new MemoryStream() )
+            {
+                Write( stream );
+
+                using ( MemoryStream streamToWriteMessLength = new MemoryStream() )
                 {
-                    Write( stream );
+                    List<Byte> allMessage = stream.ToArray().ToList();
 
-                    using ( MemoryStream streamToWriteMessLength = new MemoryStream() )
-                    {
-                        List<Byte> allMessage = stream.ToArray().ToList();
+                    Int32 bytesInInt = 4;
+                    MessageLength = (UInt32)( allMessage.Count + bytesInInt );
 
-                        Int32 bytesInInt = 4;
-                        MessageLength = (UInt32)( allMessage.Count + bytesInInt );
+                    WireWriter writer = new WireWriter( streamToWriteMessLength );
+                    writer.Write( MessageLength );
 
-                        WireWriter writer = new WireWriter( streamToWriteMessLength );
-                        writer.Write( MessageLength );
+                    Byte[] bytesOfMessageLength = streamToWriteMessLength.ToArray();
 
-                        Byte[] bytesOfMessageLength = streamToWriteMessLength.ToArray();
+                    allMessage.InsertRange( index: 1, bytesOfMessageLength );
 
-                        allMessage.InsertRange( index: 1, bytesOfMessageLength );
-
-                        return allMessage.ToArray();
-                    }
+                    return allMessage.ToArray();
                 }
+            }
         }
 
         /// <summary>

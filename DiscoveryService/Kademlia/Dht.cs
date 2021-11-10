@@ -445,13 +445,16 @@ namespace LUC.DiscoveryService.Kademlia
 
         protected void BucketRefreshTimerElapsed( Object sender, ElapsedEventArgs e )
         {
-            DateTime now = DateTime.UtcNow;
+            lock(m_bucketRefreshTimer)
+            {
+                DateTime now = DateTime.UtcNow;
 
-            // Put into a separate list as bucket collections may be modified.
-            List<KBucket> currentBuckets = new List<KBucket>( Node.BucketList.Buckets.
-                Where( b => ( now - b.TimeStamp ).TotalMilliseconds >= Constants.BUCKET_REFRESH_INTERVAL ) );
+                // Put into a separate list as bucket collections may be modified.
+                List<KBucket> currentBuckets = new List<KBucket>( Node.BucketList.Buckets.
+                    Where( b => ( now - b.TimeStamp ).TotalMilliseconds >= Constants.BUCKET_REFRESH_INTERVAL ) );
 
-            currentBuckets.ForEach( b => RefreshBucket( b ) );
+                currentBuckets.ForEach( b => RefreshBucket( b ) );
+            }
         }
 
         /// <summary>
@@ -544,21 +547,17 @@ namespace LUC.DiscoveryService.Kademlia
             bucket.Touch();
 
             KademliaId rndId = KademliaId.RandomIDWithinBucket( bucket );
-            Boolean whetherContains = bucket.Contacts.Any( c => c.KadId == rndId );
 
-            if ( whetherContains )
+            // Isolate in a separate list as contacts collection for this bucket might change.
+            List<Contact> contacts = bucket.Contacts.ToList();
+
+            contacts.ForEach( contact =>
             {
-                // Isolate in a separate list as contacts collection for this bucket might change.
-                List<Contact> contacts = bucket.Contacts.ToList();
+                (List<Contact> newContacts, RpcError timeoutError) = m_clientKadOperation.FindNode( OurContact, rndId, contact );
+                HandleError( timeoutError, contact );
 
-                contacts.ForEach( contact =>
-                 {
-                     (List<Contact> newContacts, RpcError timeoutError) = m_clientKadOperation.FindNode( OurContact, rndId, contact );
-                     HandleError( timeoutError, contact );
-
-                     newContacts?.ForEach( otherContact => Node.BucketList.AddContact( otherContact ) );
-                 });
-            }
+                newContacts?.ForEach( otherContact => Node.BucketList.AddContact( otherContact ) );
+            } );
         }
     }
 }

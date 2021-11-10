@@ -50,7 +50,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         private void UpdateRecoveryPars()
         {
-            //use lock, because method TryCancelRecoverConnections want to cancel m_cancellationRecover
+            //use lock, because method TryCancelRecoverConnections cancels m_cancellationRecover
             lock ( m_cancellationRecover )
             {
                 m_cancellationRecover = new CancellationTokenSource();

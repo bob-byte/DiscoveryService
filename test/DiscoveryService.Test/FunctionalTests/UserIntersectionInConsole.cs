@@ -9,31 +9,71 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
     static class UserIntersectionInConsole
     {
         public const ConsoleKey KEY_TO_CONTINUE_PROGRAM = ConsoleKey.Enter;
+
         public const String IS_TRUE = "1";
         public const String IS_FALSE = "2";
+
+        private readonly static Object s_lock;
+
+        static UserIntersectionInConsole()
+        {
+            s_lock = new Object();
+        }        
 
         public static String ValidValueInputtedByUser( String requestToUser, Predicate<String> tryPredicateUserInput )
         {
             String userInput;
             Boolean isRightInput = false;
 
-            do
+            lock(s_lock)
             {
-                Console.Write( requestToUser );
-                userInput = Console.ReadLine();
+                do
+                {
+                    Console.Write( requestToUser );
+                    userInput = Console.ReadLine();
 
-                try
-                {
-                    isRightInput = tryPredicateUserInput( userInput );
+                    try
+                    {
+                        isRightInput = tryPredicateUserInput( userInput );
+                    }
+                    catch ( Exception ex )
+                    {
+                        Console.WriteLine( ex.Message );
+                    }
                 }
-                catch(Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
+                while ( !isRightInput );
             }
-            while ( !isRightInput );
 
             return userInput;
+        }
+
+        public static Boolean NormalResposeFromUserAtClosedQuestion( String closedQuestion )
+        {
+            lock ( s_lock )
+            {
+                Boolean userResponse = false;
+                String readLine;
+
+                do
+                {
+                    Console.WriteLine( $"{closedQuestion}\n" +
+                    $"{IS_TRUE} - yes\n" +
+                    $"{IS_FALSE} - no" );
+                    readLine = Console.ReadLine().Trim();
+
+                    if ( readLine == IS_TRUE )
+                    {
+                        userResponse = true;
+                    }
+                    else if ( readLine == IS_FALSE )
+                    {
+                        userResponse = false;
+                    }
+                }
+                while ( ( readLine != IS_TRUE ) && ( readLine != IS_FALSE ) );
+
+                return userResponse;
+            }
         }
 
         public static T ValidValueInputtedByUser<T>( String requestToUser, Predicate<T> tryPredicateUserInput, Func<String, T> convert )
@@ -41,20 +81,23 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
         {
             T value = default;
 
-            do
+            lock ( s_lock )
             {
-                try
+                do
                 {
-                    Console.Write( requestToUser );
-                    String userInput = Console.ReadLine();
-                    value = convert( userInput );
+                    try
+                    {
+                        Console.Write( requestToUser );
+                        String userInput = Console.ReadLine();
+                        value = convert( userInput );
+                    }
+                    catch
+                    {
+                        ;//do nothing
+                    }
                 }
-                catch
-                {
-                    ;//do nothing
-                }
+                while ( ( value.Equals( default( T ) ) ) || ( !tryPredicateUserInput( value ) ) );
             }
-            while ( ( value.Equals( default( T ) ) ) || ( !tryPredicateUserInput( value ) ) );
 
             return value;
         }
@@ -64,28 +107,31 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
         {
             T value = default;
 
-            do
+            lock ( s_lock )
             {
-                try
+                do
                 {
-                    if(userInputsInNewLine)
+                    try
                     {
-                        Console.WriteLine(requestToUser);
-                    }
-                    else
-                    {
-                        Console.Write( requestToUser );
-                    }
+                        if ( userInputsInNewLine )
+                        {
+                            Console.WriteLine( requestToUser );
+                        }
+                        else
+                        {
+                            Console.Write( requestToUser );
+                        }
 
-                    String userInput = Console.ReadLine();
-                    value = convert( userInput );
+                        String userInput = Console.ReadLine();
+                        value = convert( userInput );
+                    }
+                    catch
+                    {
+                        ;//do nothing
+                    }
                 }
-                catch
-                {
-                    ;//do nothing
-                }
+                while ( !tryPredicateUserInput( value ) );
             }
-            while ( !tryPredicateUserInput( value ) );
 
             return value;
         }

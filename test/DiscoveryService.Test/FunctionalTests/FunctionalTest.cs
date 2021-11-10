@@ -115,7 +115,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             ConcurrentDictionary<String, String> bucketsSupported = new ConcurrentDictionary<String, String>();
 
 #if DEBUG
-            Boolean deleteMachineId = NormalResposeFromUserAtClosedQuestion( $"Do you want to update Machine ID (it is always needed if you run firstly container)?" );
+            Boolean deleteMachineId = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to update Machine ID (it is always needed if you run firstly container)?" );
             if(deleteMachineId)
             {
                 String pathToExeFile = PathExtensions.PathToExeFile();
@@ -126,7 +126,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 File.Delete( fullFileNameWithMachineId );
             }
 
-            Boolean wantToObserveChageInDownloadTestFolder = NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to observe changes in {Constants.DOWNLOAD_TEST_NAME_FOLDER} folder" );
+            Boolean wantToObserveChageInDownloadTestFolder = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( $"Do you want to observe changes in {Constants.DOWNLOAD_TEST_NAME_FOLDER} folder" );
 
             if ( wantToObserveChageInDownloadTestFolder )
             {
@@ -175,7 +175,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 };
             };
 
-            Boolean isCountConnectionsAvailableTest = NormalResposeFromUserAtClosedQuestion( "Do you want to test count available connections?" );
+            Boolean isCountConnectionsAvailableTest = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( "Do you want to test count available connections?" );
 
             Contact contact = null;
             Boolean isFirstTest = true;
@@ -191,7 +191,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                     }
                     else
                     {
-                        Boolean isTesterOnlyInNetwork = NormalResposeFromUserAtClosedQuestion( "Are you only on the local network?" );
+                        Boolean isTesterOnlyInNetwork = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( "Are you only on the local network?" );
                         if ( ( contact == null ) || ( !isTesterOnlyInNetwork ) )
                         {
                             //in order to GetRemoteContact can send multicasts messages
@@ -200,8 +200,11 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                             GetRemoteContact( s_discoveryService, ref contact );
                         }
 
-                        ShowAvailableUserOptions();
-                        pressedKey = Console.ReadKey().Key;
+                        lock(s_ttyLock)
+                        {
+                            ShowAvailableUserOptions();
+                            pressedKey = Console.ReadKey().Key;
+                        }
                     }
 
                     Console.WriteLine();
@@ -296,34 +299,6 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 FindValueRequest message = e.Message<FindValueRequest>( whetherReadMessage: false );
                 Console.WriteLine( message.ToString() );
             }
-        }
-
-        private static Boolean NormalResposeFromUserAtClosedQuestion(String closedQuestion)
-        {
-            Boolean userResponse = false;
-            String readLine;
-            String isTrue = "1";
-            String isFalse = "2";
-
-            do
-            {
-                Console.WriteLine( $"{closedQuestion}\n" +
-                "1 - yes\n" +
-                "2 - no" );
-                readLine = Console.ReadLine().Trim();
-
-                if ( readLine == isTrue )
-                {
-                    userResponse = true;
-                }
-                else if ( readLine == isFalse )
-                {
-                    userResponse = false;
-                }
-            }
-            while ( ( readLine != isTrue ) && ( readLine != isFalse ) );
-
-            return userResponse;
         }
 
         private static void ShowAvailableUserOptions() =>
