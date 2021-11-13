@@ -302,8 +302,8 @@ namespace LUC.DiscoveryService
 
                 if ( isTheSameNetwork )
                 {
-                    await m_locker.LockAsync( async () =>
-                    {
+                    //await m_locker.LockAsync( async () =>
+                    //{
                         Contact sendingContact = NetworkEventInvoker.OurContact;
 
                         Random random = new Random();
@@ -351,7 +351,7 @@ namespace LUC.DiscoveryService
                         {
                             client?.ReturnedToPool();
                         }
-                    } ).ConfigureAwait( false );
+                    //} ).ConfigureAwait( false );
                 }
             }
             else

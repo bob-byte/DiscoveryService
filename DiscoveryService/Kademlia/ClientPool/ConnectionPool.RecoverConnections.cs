@@ -72,14 +72,30 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 //recover leased sockets
                 Parallel.ForEach( m_leasedSockets, parallelOptions, ( socket ) =>
                  {
-                     //socket can be returned to pool before we receive it by another thread and place, so takenSocket can be null
-                     Boolean isTaken = TryTakeLeasedSocket( socket.Key, timeWaitToReturnToPool, out ConnectionPoolSocket takenSocket );
-
-                     if ( isTaken )
+                     Boolean isTaken = false;
+                     try
                      {
-                         BackgroundConnectionResetHelper.AddSocket( takenSocket, cancellationToken );
+                         //socket can be returned to pool before we receive it by another thread and place, so takenSocket can be null
+                         isTaken = TryTakeLeasedSocket( socket.Key, out ConnectionPoolSocket takenSocket );
 
-                         socketsWithRecoveredConnection.Add( socket.Key );
+                         if ( isTaken )
+                         {
+                             AddLeasedSocket( socket.Key, socket.Value );
+                             BackgroundConnectionResetHelper.AddSocket( takenSocket, cancellationToken );
+
+                             socketsWithRecoveredConnection.Add( socket.Key );
+                         }
+                     }
+                     catch ( OperationCanceledException )
+                     {
+                         if ( ( isTaken ) && ( socket.Value.StateInPool != SocketStateInPool.IsInPool ) )
+                         {
+                             socket.Value.ReturnedToPool();
+                         }
+
+                         ReleaseSocketSemaphore();
+
+                         throw;
                      }
                  } );
 
@@ -89,6 +105,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             return socketsWithRecoveredConnection.GetConsumingEnumerable();
         }
 
+        
+
         private async Task RecoverPoolSocketsAsync(IEnumerable<EndPoint> idsOfRecoveredConnection, TimeSpan timeWaitToReturnToPool, CancellationToken cancellationToken)
         {
             ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
@@ -96,16 +114,32 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             //here we call async method, so we cannot use Parallel.ForEach(in this case it will be ended before all iterations)
             ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>> recoverSockets = new ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>>( async socket =>
             {
+                Boolean isAddedToLeasedSocket = false;
                 //wait while any socket returns to pool
-                _ = await CanSocketBeTakenFromPoolAsync( IOBehavior.Asynchronous, m_socketSemaphore, 
-                    timeWaitToReturnToPool ).ConfigureAwait(continueOnCapturedContext: false);
+                try
+                {
+                    _ = await CanSocketBeTakenFromPoolAsync( IOBehavior.Asynchronous, m_socketSemaphore,
+                    timeWaitToReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
 
-                socket.Value.StateInPool = SocketStateInPool.TakenFromPool;
-                m_leasedSockets.TryAdd( socket.Key, socket.Value );
+                    socket.Value.StateInPool = SocketStateInPool.TakenFromPool;
+                    AddLeasedSocket( socket.Key, socket.Value );
+                    isAddedToLeasedSocket = true;
 
-                m_sockets.TryRemove( socket.Key, out _ );
+                    m_sockets.TryRemove( socket.Key, out _ );
 
-                BackgroundConnectionResetHelper.AddSocket( socket.Value, cancellationToken );
+                    BackgroundConnectionResetHelper.AddSocket( socket.Value, cancellationToken );
+                }
+                catch(OperationCanceledException)
+                {
+                    if ( ( isAddedToLeasedSocket ) && ( socket.Value.StateInPool != SocketStateInPool.IsInPool ) )
+                    {
+                        socket.Value.ReturnedToPool();
+                    }
+
+                    ReleaseSocketSemaphore();
+
+                    throw;
+                }
             }, parallelOptions );
 
             foreach ( KeyValuePair<EndPoint, ConnectionPoolSocket> socket in m_sockets )

@@ -100,13 +100,9 @@ namespace LUC.DiscoveryService.CodingData
         /// </exception>
         public BigInteger ReadBigInteger()
         {
-            UInt32 countOfBytes = ReadUInt32();
+            Byte countOfBytes = ReadByte();
 
-            Byte[] bytes = new Byte[ countOfBytes ];
-            for ( Int32 numByte = 0; numByte < countOfBytes; numByte++ )
-            {
-                bytes[ numByte ] = ReadByte();
-            }
+            Byte[] bytes = ReadBytes( countOfBytes );
 
             BigInteger bigInt = new BigInteger( bytes );
             return bigInt;
@@ -196,7 +192,8 @@ namespace LUC.DiscoveryService.CodingData
 
         public String ReadUtf32String()
         {
-            Byte[] bytes = ReadByteLengthPrefixedBytes();
+            UInt32 bytesCount = ReadUInt32();
+            Byte[] bytes = ReadBytes( (Int32)bytesCount );
 
             return Encoding.UTF32.GetString( bytes );
         }

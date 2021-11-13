@@ -15,15 +15,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-//
-// Client socket, maintained by the Connection Pool
-//
 namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
-    ///<inheritdoc/>
+    /// <summary>
+    /// Client socket, maintained by the Connection Pool
+    /// </summary>
     class ConnectionPoolSocket : AsyncSocket
     {
         private readonly Object m_lockStateInPool;
+
+        private readonly AutoResetEvent m_canBeTakenFromPool;
 
         private SocketStateInPool m_stateInPool;
 
@@ -34,9 +35,14 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             Id = remoteEndPoint;
             Pool = belongPool;
 
-            CanBeTakenFromPool = new AutoResetEvent( initialState: false );
-            m_stateInPool = socketStateInPool;
+            m_canBeTakenFromPool = new AutoResetEvent( initialState: false );
+
+            //to always allow init ConnectionPoolSocket.StateInPool without waiting(see method StateInPool.set)
+            m_stateInPool = SocketStateInPool.NeverWasInPool;
+
+            //it should be initialized before StateInPool property
             m_lockStateInPool = new Object();
+            StateInPool = socketStateInPool;
         }
 
         /// <returns>
@@ -79,21 +85,32 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
             set
             {
-                SocketStateInPool previousState;
-                lock (m_lockStateInPool)
+                lock ( m_lockStateInPool )
                 {
-                    previousState = m_stateInPool;
-                    m_stateInPool = value;
+                    SocketStateInPool previousState = m_stateInPool;
 
-                    if ( previousState == SocketStateInPool.NeverWasInPool )
+                    //if socket was created in pool and taken from there
+                    //((previousState == SocketStateInPool.NeverWasInPool) && (value == SocketStateInPool.TakenFromPool)),
+                    //then of course we don't have to wait for it to come back to the pool
+                    if ( previousState == SocketStateInPool.NeverWasInPool || value != SocketStateInPool.TakenFromPool )
                     {
-                        return;
+                        m_stateInPool = value;
+
+                        if ( previousState == SocketStateInPool.NeverWasInPool )
+                        {
+                            return;
+                        }
                     }
                 }
 
-                if ( (value == SocketStateInPool.TakenFromPool) && (previousState != SocketStateInPool.IsInPool) )
+                if ( value == SocketStateInPool.TakenFromPool )
                 {
-                    Boolean isReturned = CanBeTakenFromPool.WaitOne( Constants.TimeWaitReturnToPool );
+                    Boolean isReturned = m_canBeTakenFromPool.WaitOne( Constants.TimeWaitReturnToPool );
+                    lock ( m_lockStateInPool )
+                    {
+                        m_stateInPool = value;
+                    }
+
                     if ( isReturned )
                     {
                         Log.LogInfo( logRecord: Display.StringWithAttention( $"Socket with id {Id} successfully taken from pool" ) );
@@ -103,18 +120,16 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 #if DEBUG
                         ThrowConcurrencyException.ThrowWithConnectionPoolSocketDescr( this );
 #else
-                        Log.LogError( Display.StringWithAttention( logRecord: $"Socket with id {Id} isn\'t returned to pool by some thread" );
+                            Log.LogError( Display.StringWithAttention( logRecord: $"Socket with id {Id} isn\'t returned to pool by some thread" );
 #endif
                     }
                 }
                 else if ( value != SocketStateInPool.NeverWasInPool )//it is additional test to make this method absolutely thread-safe if logic will be changed
                 {
-                    CanBeTakenFromPool.Set();
+                    m_canBeTakenFromPool.Set();
                 }
             }
         }
-
-        public AutoResetEvent CanBeTakenFromPool { get; }
 
         //public async Task ConnectAsync()
         //{

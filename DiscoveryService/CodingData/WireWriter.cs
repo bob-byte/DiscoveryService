@@ -40,7 +40,7 @@ namespace LUC.DiscoveryService.CodingData
         /// <param name="value">
         /// Value to write
         /// </param>
-        public void WriteByte( Byte value )
+        public void Write( Byte value )
         {
             m_stream.WriteByte( value );
             ++Position;
@@ -96,16 +96,9 @@ namespace LUC.DiscoveryService.CodingData
         public void Write( BigInteger value )
         {
             Byte[] bytes = value.ToByteArray();
-            Int32 numByte = 0;
-            Write( (UInt32)bytes.Length );
 
-            Write( countOfBits: bytes.Length * BITS_IN_ONE_BYTE, ( m_byte ) =>
-             {
-                 Byte shiftValue = bytes[ numByte ];
-                 numByte++;
-
-                 return shiftValue;
-             } );
+            Write( (Byte)bytes.Length );
+            WriteBytes( bytes );
 
             Position += bytes.Length;
         }
@@ -158,7 +151,7 @@ namespace LUC.DiscoveryService.CodingData
                 Int32 length = bytes.Length;
                 if ( length <= Byte.MaxValue )
                 {
-                    WriteByte( (Byte)length );
+                    Write( (Byte)length );
                     WriteBytes( bytes );
                 }
                 else
@@ -224,7 +217,15 @@ namespace LUC.DiscoveryService.CodingData
             if ( value != null )
             {
                 Byte[] bytes = Encoding.UTF32.GetBytes( value );
-                WriteByteLengthPrefixedBytes( bytes );
+
+                UInt32 bytesCount = (UInt32)bytes.Length;
+                if(bytesCount > Int32.MaxValue)
+                {
+                    throw new ArgumentException( $"Length can\'t exceed {Int32.MaxValue}", nameof( bytes ) );
+                }
+
+                Write( bytesCount );
+                WriteBytes( bytes );
             }
             else
             {

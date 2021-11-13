@@ -145,12 +145,10 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
                 {
                     response.Send( eventArgs.AcceptedSocket );
 
-                    m_distributedHashTable.UpdateSender( sender );
                     kadServerOp( sender );
                 }
                 else if ( priority == PriorityHandleKadRequest.FirstExecuteKadServerOp )
                 {
-                    m_distributedHashTable.UpdateSender( sender );
                     kadServerOp( sender );
 
                     response.Send( eventArgs.AcceptedSocket );

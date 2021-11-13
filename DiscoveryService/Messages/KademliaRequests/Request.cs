@@ -158,7 +158,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                     Byte[] bytesOfRequest = ToByteArray();
 
                     client = await s_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
-                        ioBehavior, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
+                        ioBehavior, Constants.TimeWaitReturnToPool )/*.ConfigureAwait( continueOnCapturedContext: false )*/;
 
                     await CleanExtraBytesAsync( client, ioBehavior ).ConfigureAwait(continueOnCapturedContext: false);
 

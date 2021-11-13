@@ -170,7 +170,7 @@ namespace LUC.DiscoveryService.Messages
         {
             if ( writer != null )
             {
-                writer.WriteByte( (Byte)MessageOperation );
+                writer.Write( (Byte)MessageOperation );
             }
             else
             {

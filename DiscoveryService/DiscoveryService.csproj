@@ -81,6 +81,7 @@
     <Compile Include="Common\ThrowingConcurrencyException.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.RecoverConnections.cs" />
     <Compile Include="Kademlia\ClientPool\SocketStateInPool.cs" />
+    <Compile Include="Kademlia\Downloads\FileDownloadedEventArgs.cs" />
     <Compile Include="Kademlia\Exceptions\NotEnoughDriveSpaceException.cs" />
     <Compile Include="UdpSenders.cs" />
     <Compile Include="Kademlia\Downloads\Download.CheckFileExists.cs" />

@@ -25,7 +25,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
         /// <summary>
         /// Event argument is full path to downloaded file
         /// </summary>
-        public event EventHandler<String> FileIsDownloaded;
+        public event EventHandler<FileDownloadedEventArgs> FileDownloaded;
 
         /// <summary>
         /// Event argument is full path to downloaded file
@@ -127,7 +127,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                             await DownloadBigFileAsync( contactsWithFile, initialRequest, cancellationToken, downloadProgress ).ConfigureAwait( false );
                         }
 
-                        FileIsDownloaded?.Invoke( sender: this, fullFileName );
+                        FileDownloaded?.Invoke( sender: this, new FileDownloadedEventArgs( fullFileName, fileVersion ) );
                     }
                 }
                 catch ( OperationCanceledException ex )

@@ -12,6 +12,7 @@ using LUC.DiscoveryService.Kademlia;
 using LUC.DiscoveryService.Kademlia.Downloads;
 using LUC.DiscoveryService.Test.Extensions;
 using LUC.Interfaces;
+using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Models;
 using LUC.Interfaces.OutputContracts;
 
@@ -26,11 +27,11 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             ICurrentUserProvider currentUserProvider, Contact remoteContact )
         {
             Download download = new Download( s_discoveryService, IOBehavior.Asynchronous );
-            download.FileIsDownloaded += ( sender, eventArgs ) => Console.WriteLine( "If you have not pressed any button, do so to continue testing" );
+            download.FileDownloaded += OnFileDownloaded;
 
             String filePrefix = UserIntersectionInConsole.ValidValueInputtedByUser( requestToUser: "Input file prefix where new file can exist on the server: ", ( userInput ) =>
             {
-                Boolean isValidInput = ( PathExtensions.IsValidPath( userInput ) ) && ( !userInput.Contains( ":" ) );
+                Boolean isValidInput = ( Extensions.PathExtensions.IsValidPath( userInput ) ) && ( !userInput.Contains( ":" ) );
                 return isValidInput;
             } );
 
@@ -63,6 +64,12 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             await downloadTask;
 
             s_cancellationTokenSource = new CancellationTokenSource();
+        }
+
+        private static void OnFileDownloaded(Object sender, FileDownloadedEventArgs eventArgs)
+        {
+            Console.WriteLine( "If you have not pressed any button, do so to continue testing" );
+            AdsExtensions.TryWriteLastSeenVersion( eventArgs.FullFileName, eventArgs.Version );
         }
 
         private async static Task<(ObjectDescriptionModel randomFileToDownload, String serverBucketName, String localFolderPath)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String filePrefix )
