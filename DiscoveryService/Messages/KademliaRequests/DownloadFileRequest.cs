@@ -27,7 +27,8 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             DefaultInit();
         }
 
-        public ChunkRange ChunkRange { get; set; }
+        //It is internal to not show all bytes in log(see method Display.ObjectToString)
+        internal ChunkRange ChunkRange { get; set; }
 
         public UInt64 CountDownloadedBytes { get; set; }
 
@@ -74,15 +75,14 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         /// <summary>
         /// Also it removes first chunk from Range.NumsUndownloadedChunk
         /// </summary>
-        public async ValueTask<(DownloadFileResponse response, RpcError rpcError)> ResultAsyncWithCountDownloadedBytesUpdate( Contact remoteContact,
+        public async ValueTask<(DownloadFileResponse response, RpcError rpcError, Boolean isRightResponse)> ResultAsyncWithCountDownloadedBytesUpdate( Contact remoteContact,
             IOBehavior ioBehavior, UInt16 protocolVersion )
         {
             (DownloadFileResponse downloadResponse, RpcError error) = await ResultAsync<DownloadFileResponse>( remoteContact,
             ioBehavior, protocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
-            if ( ( !error.HasError ) &&
-               ( downloadResponse?.Chunk?.Length > 0 ) &&
-               ( downloadResponse.FileVersion == FileVersion ) )
+            Boolean isRightResponse = IsRightDownloadFileResponse( downloadResponse, error, remoteContact );
+            if ( isRightResponse )
             {
                 CountDownloadedBytes += (UInt64)downloadResponse.Chunk.Length;
 
@@ -93,7 +93,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                 }
             }
 
-            return (downloadResponse, error);
+            return (downloadResponse, error, isRightResponse);
         }
 
         /// <summary>
@@ -110,12 +110,46 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return clone;
         }
 
+        public override String ToString()
+        {
+            String requestAsStrWithoutChunkRange = base.ToString();
+
+            StringBuilder stringBuilder = new StringBuilder( requestAsStrWithoutChunkRange );
+
+            String chunkRangeAsStr = Display.ObjectToString( ChunkRange, initialTabulation: Display.TABULATION );
+            stringBuilder.AppendLine( chunkRangeAsStr );
+
+            return stringBuilder.ToString();
+        }
+
         protected override void DefaultInit( params Object[] args )
         {
             base.DefaultInit();
 
             MessageOperation = MessageOperation.DownloadFile;
             CountDownloadedBytes = 0;
+        }
+
+        private Boolean IsRightDownloadFileResponse( DownloadFileResponse response, RpcError rpcError, Contact remoteContact )
+        {
+            Boolean isReceivedRequiredRange = ( !rpcError.HasError ) && ( response != null ) && ( response.IsRightBucket ) &&
+                ( response.FileExists ) && ( response.Chunk != null ) && ( (Int32)( ChunkRange.End - ChunkRange.Start ) == response.Chunk.Length - 1 );
+
+            //file can be changed in remote contact during download process
+            Boolean isTheSameFileInRemoteContact;
+            if ( isReceivedRequiredRange )
+            {
+                isTheSameFileInRemoteContact = ( response.FileVersion == FileVersion );
+            }
+            else
+            {
+                String logRecord = Display.StringWithAttention( $"File already doesn't exist in {remoteContact.MachineId}" );
+                AbstractService.LoggingService.LogInfo( logRecord );
+
+                isTheSameFileInRemoteContact = false;
+            }
+
+            return ( isReceivedRequiredRange ) && ( isTheSameFileInRemoteContact );
         }
     }
 }

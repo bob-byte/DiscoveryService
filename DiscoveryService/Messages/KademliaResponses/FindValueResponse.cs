@@ -25,8 +25,10 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             DefaultInit();
         }
 
-        public ICollection<Contact> CloseContacts { get; set; }
         public String ValueInResponsingPeer { get; set; }
+
+        //It is internal to not show all bytes in log(see method Display.ObjectToString)
+        internal ICollection<Contact> CloseContacts { get; set; }
 
         public override void Send( Socket sender )
         {
@@ -95,6 +97,9 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
                 throw new ArgumentNullException( "WriterNullException" );
             }
         }
+
+        public override String ToString() =>
+            Display.ResponseWithCloseContacts( this, CloseContacts );
 
         protected override void DefaultInit( params Object[] args )
         {

@@ -79,13 +79,16 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
         static async Task Main(String[] args)
         {
             String containerId = String.Empty;
-            String argName = "containerId";
+            String argName = "-containerId";
 
             if (args.Length > 0)
             {
                 if ( ( args.Length == 2 ) && ( args[ 0 ] == argName ) && ( !String.IsNullOrWhiteSpace( args[ 1 ] ) ) )
                 {
-                    containerId = args[ 1 ];
+                    StringBuilder builderContainerId = new StringBuilder( argName );
+                    builderContainerId.Append( args[ 1 ] );
+
+                    containerId = builderContainerId.ToString();
                 }
                 else
                 {
@@ -127,7 +130,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
             String fileNameWithMachineId = $"{Constants.FILE_WITH_MACHINE_ID}{containerId}{Constants.FILE_WITH_MACHINE_ID_EXTENSION}";
 
-            Boolean deleteMachineId = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to update Machine ID (it is always needed if you run container)?");
+            Boolean deleteMachineId = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to update Machine ID (it is always needed if you run firstly container)?");
             if ( deleteMachineId )
             {
                 File.Delete( fileNameWithMachineId );
@@ -337,7 +340,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 {
                     contact = RandomContact( discoveryService );
                 }
-                catch ( IndexOutOfRangeException ) //if knowContacts.Count == 0
+                catch ( ArgumentOutOfRangeException ) //if knowContacts.Count == 0
                 {
                     ;//do nothing
                 }

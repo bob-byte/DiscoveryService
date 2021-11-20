@@ -113,9 +113,6 @@ namespace LUC.DiscoveryService.Common
         /// <summary>
         ///   Returns true if provided port value is in range between MinValueTcpPort and MaxValueTcpPort.
         /// </summary>
-        /// <value>
-        ///   Integer.
-        /// </value>
         protected Boolean IsInPortRange( Int32? tcpPort ) =>
             ( MinValueTcpPort <= tcpPort ) && ( tcpPort <= MaxValueTcpPort );
     }

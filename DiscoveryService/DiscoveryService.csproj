@@ -243,11 +243,11 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\LucWithNewUpload\dubstack-win\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
+    <ProjectReference Include="..\..\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win-UploadAsync\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
       <Project>{0f5f0967-f62a-4099-a6d7-2687cba9e4df}</Project>
       <Name>LUC.Interfaces</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\LucWithNewUpload\dubstack-win\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
+    <ProjectReference Include="..\..\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win-UploadAsync\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
       <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
       <Name>LUC.Services.Implementation</Name>
     </ProjectReference>

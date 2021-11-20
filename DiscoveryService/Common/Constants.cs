@@ -8,7 +8,7 @@ namespace LUC.DiscoveryService.Common
     static class Constants
     {
 #if DEBUG
-        public const String FILE_WITH_MACHINE_ID = "current machine id";
+        public const String FILE_WITH_MACHINE_ID = "CurrentMachineId";
         public const String FILE_WITH_MACHINE_ID_EXTENSION = ".txt";
 #endif
 
@@ -54,7 +54,7 @@ namespace LUC.DiscoveryService.Common
         public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds( value: 3 );
         public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds( 3 );
         public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds( 3 );
-        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds( 3 );
+        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds( 20 );
 
         /// <summary>
         /// it's max of execution Kademlia operation (first we connect to new contact, then if it is failed, we will be failed to send, 

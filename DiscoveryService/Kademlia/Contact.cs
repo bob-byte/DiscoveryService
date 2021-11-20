@@ -9,6 +9,7 @@ using System.IO;
 using LUC.DiscoveryService.Kademlia.Exceptions;
 using LUC.DiscoveryService.Common;
 using LUC.Interfaces.Models;
+using System.Text;
 
 namespace LUC.DiscoveryService.Kademlia
 {
@@ -259,26 +260,24 @@ namespace LUC.DiscoveryService.Kademlia
 
         public override String ToString()
         {
-            using ( StringWriter writer = new StringWriter() )
+            String contactAsStrWithoutAddresses = Display.ObjectToString( this );
+
+            StringBuilder stringBuilder = new StringBuilder( contactAsStrWithoutAddresses );
+
+            stringBuilder.AppendLine( $"{Display.TABULATION}{nameof( m_ipAddresses )}:" );
+            for ( Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++ )
             {
-                writer.WriteLine( $"{Display.VariableWithValue( nameof( KadId ), KadId )};\n" +
-                                 $"{Display.VariableWithValue( nameof( LastSeen ), LastSeen )};" );
-
-                writer.WriteLine( $"{Display.TABULATION}{nameof( m_ipAddresses )}:" );
-                for ( Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++ )
+                if ( numAddress == IpAddressesCount - 1 )
                 {
-                    if ( numAddress == IpAddressesCount - 1 )
-                    {
-                        writer.Write( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]}" );
-                    }
-                    else
-                    {
-                        writer.WriteLine( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]};" );
-                    }
+                    stringBuilder.Append( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]}" );
                 }
-
-                return writer.ToString();
+                else
+                {
+                    stringBuilder.AppendLine( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]};" );
+                }
             }
+
+            return stringBuilder.ToString();
         }
 
         public static Boolean operator ==( Contact a, Contact b )

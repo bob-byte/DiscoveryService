@@ -58,6 +58,10 @@ namespace LUC.DiscoveryService.Test.Extensions
                 {
                     continue;
                 }
+                catch(DirectoryNotFoundException)
+                {
+                    continue;
+                }
 
                 foreach ( String directoryFullName in directoriesInOneDir )
                 {

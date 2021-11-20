@@ -1,4 +1,5 @@
-﻿using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryService.Common;
+using LUC.DiscoveryService.Kademlia;
 
 using System;
 using System.Collections.Generic;
@@ -34,13 +35,24 @@ namespace LUC.DiscoveryService.Messages
         /// <summary>
         /// For debugging only
         /// </summary>
-        public List<Int32> NumsUndownloadedChunk { get; }
+        public List<Int32> NumsUndownloadedChunk { get; set; }
 
-        public Object Clone() =>
-            MemberwiseClone();
+        public Object Clone()
+        {
+            ChunkRange clone = (ChunkRange)MemberwiseClone();
+
+            if(NumsUndownloadedChunk?.Count != 0)
+            {
+                Int32[] numsUndownloadedChunk = new Int32[ NumsUndownloadedChunk.Count ];
+                NumsUndownloadedChunk.CopyTo( numsUndownloadedChunk );
+                clone.NumsUndownloadedChunk = numsUndownloadedChunk.ToList();
+            }
+
+            return clone;
+        }
 
         public override String ToString() =>
-            $"{Start}-{End}/{Total}";
+            Display.ObjectToString( this );
 
         public override Boolean Equals( Object obj )
         {

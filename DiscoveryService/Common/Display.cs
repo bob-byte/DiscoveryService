@@ -9,6 +9,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
+using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryService.Messages.KademliaResponses;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 
@@ -29,17 +31,45 @@ namespace LUC.DiscoveryService.Common
             };
         }
 
-        public static String ObjectToString( Object objectToConvert, String memberName = "" ) 
+        public static String ObjectToString( Object objectToConvert, String memberName = "" ) =>
+            ObjectToString( objectToConvert, initialTabulation: String.Empty, memberName );
+
+        public static String ResponseWithCloseContacts(Response response, ICollection<Contact> contacts)
+        {
+            String responseAsStrWithoutContacts = ObjectToString( response );
+
+            StringBuilder stringBuilder = new StringBuilder( responseAsStrWithoutContacts );
+
+            if ( contacts != null )
+            {
+                String countCloseContacts = VariableWithValue(nameProp: "CountCloseContacts", contacts.Count );
+                stringBuilder.AppendLine( countCloseContacts );
+
+                if(contacts.Count > 0)
+                {
+                    stringBuilder.AppendLine( $"{TABULATION}CloseContacts:" );
+                    foreach ( Contact closeContact in contacts )
+                    {
+                        String contactAsStr = ObjectToString( closeContact, initialTabulation: $"{TABULATION}{TABULATION}" );
+                        stringBuilder.AppendLine( contactAsStr );
+                    }
+                }
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        public static String ObjectToString( Object objectToConvert, String initialTabulation, String memberName = "" )
         {
             if ( objectToConvert != null )
             {
-                if(memberName == "")
+                if ( memberName == "" )
                 {
                     memberName = objectToConvert.GetType().Name;
                 }
 
                 StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.Append( $"{memberName}:\n" );
+                stringBuilder.Append( $"{initialTabulation}{memberName}:\n" );
 
                 foreach ( PropertyInfo prop in objectToConvert.GetType().
                     GetProperties().
@@ -47,19 +77,19 @@ namespace LUC.DiscoveryService.Common
                 {
                     if ( ( prop.PropertyType != typeof( String ) ) && ( typeof( IEnumerable ).IsAssignableFrom( prop.PropertyType ) ) )
                     {
-                        stringBuilder.Append( $"{TABULATION}{prop.Name}:\n" );
+                        stringBuilder.Append( $"{initialTabulation}{TABULATION}{prop.Name}:\n" );
 
-                        if (prop.GetValue( objectToConvert ) is IEnumerable enumerable )
+                        if ( prop.GetValue( objectToConvert ) is IEnumerable enumerable )
                         {
                             foreach ( Object item in enumerable )
                             {
-                                stringBuilder.Append( $"{TABULATION}{TABULATION}{item};\n" );
+                                stringBuilder.Append( $"{initialTabulation}{TABULATION}{TABULATION}{item};\n" );
                             }
                         }
                     }
                     else
                     {
-                        stringBuilder.Append( $"{VariableWithValue( prop.Name, prop.GetValue( objectToConvert, index: null ) )};\n" );
+                        stringBuilder.Append( $"{initialTabulation}{VariableWithValue( prop.Name, prop.GetValue( objectToConvert, index: null ) )};\n" );
                     }
                 }
 

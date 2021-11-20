@@ -25,7 +25,8 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             DefaultInit();
         }
 
-        public ICollection<Contact> CloseSenderContacts { get; set; }
+        //It is internal to not show all bytes in log(see method Display.ObjectToString)
+        internal ICollection<Contact> CloseSenderContacts { get; set; }
 
         /// <inheritdoc/>
         public override IWireSerialiser Read( WireReader reader )
@@ -57,27 +58,13 @@ namespace LUC.DiscoveryService.Messages.KademliaResponses
             }
         }
 
-        //public override String ToString()
-        //{
-        //    using ( StringWriter writer = new StringWriter() )
-        //    {
-        //        writer.WriteLine( $"{GetType().Name}:\n" +
-        //                         $"{PropertyWithValue( nameof( RandomID ), RandomID )};\n" +
-        //                         $"{nameof( CloseSenderContacts )}:" );
+        public override String ToString() =>
+            Display.ResponseWithCloseContacts( this, CloseSenderContacts );
 
-        //        if ( CloseSenderContacts != null )
-        //        {
-        //            foreach ( Contact closeContact in CloseSenderContacts )
-        //            {
-        //                writer.WriteLine( $"Close contact: {closeContact}\n" );
-        //            }
-        //        }
-
-        //        return writer.ToString();
-        //    }
-        //}
-
-        protected override void DefaultInit( params Object[] args ) => 
+        protected override void DefaultInit( params Object[] args )
+        {
             MessageOperation = MessageOperation.FindNodeResponse;
+            CloseSenderContacts = new List<Contact>();
+        }
     }
 }

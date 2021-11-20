@@ -67,12 +67,11 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             Boolean isWritenInFile = false;
             DownloadFileRequest lastRequest = (DownloadFileRequest)downloadFileRequest.Clone();
 
-            (DownloadFileResponse response, RpcError rpcError) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate
+            (DownloadFileResponse response, RpcError rpcError, Boolean isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate
                     ( remoteContact, IOBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            Boolean isRightResponse = IsRightDownloadFileResponse( lastRequest, response, rpcError );
             if ( isRightResponse )
             {
                 //if it is small file, we won't need to use seek, because we need to write from 0 position
@@ -104,25 +103,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             start >= end;
 
         //TODO replace in DownloadFileRequest
-        private Boolean IsRightDownloadFileResponse( DownloadFileRequest request, DownloadFileResponse response, RpcError rpcError )
-        {
-            Boolean isReceivedRequiredRange = ( !rpcError.HasError ) && ( response.IsRightBucket ) &&
-                ( response.FileExists ) && ( (Int32)( request.ChunkRange.End - request.ChunkRange.Start ) == response.Chunk.Length - 1 );
-
-            //file can be changed in remote contact during download process
-            Boolean isTheSameFileInRemoteContact;
-            if ( isReceivedRequiredRange )
-            {
-                isTheSameFileInRemoteContact = ( response.FileVersion == request.FileVersion );
-            }
-            else
-            {
-                //TODO add log if file doesn't exist
-                isTheSameFileInRemoteContact = false;
-            }
-
-            return ( isReceivedRequiredRange ) && ( isTheSameFileInRemoteContact );
-        }
+        
 
         private async ValueTask DownloadBigFileAsync( IEnumerable<Contact> contactsWithFile, DownloadFileRequest initialRequest, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
         {
@@ -185,10 +166,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                                 dictContactsWithRequest.AddOrUpdate( contactWithRequest.Key, updatedRequest, ( contact, oldRequest ) => updatedRequest );
                             }, parallelOptions );
 
-                            foreach ( KeyValuePair<Contact, DownloadFileRequest> contactWithRequest in dictContactsWithRequest )
-                            {
-                                downloadProcess.Post( contactWithRequest );
-                            }
+                            Parallel.ForEach( dictContactsWithRequest, ( contactWithRequest ) => downloadProcess.Post( contactWithRequest ) );
 
                             //Signals that we will not post more contactWithRequest. 
                             //downloadProcess.Completion will never be completed without this calling
@@ -197,8 +175,10 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                             //await completion of download all file
                             await downloadProcess.Completion.ConfigureAwait( false );
 
-                            isDownloadedFile = IsDownloadedFile( tempFullPath, (UInt64)bytesStreamCount,
-                                downloadedBytesByEachContact: dictContactsWithRequest.Values.Select( c => c.CountDownloadedBytes ) );
+                            UInt64 bytesCountWhichShouldBeDownloaded = (UInt64)dictContactsWithRequest.Values.Select( c => (Int64)c.ChunkRange.TotalPerContact ).Sum();
+                            IEnumerable<UInt64> downloadedBytesByEachContact = dictContactsWithRequest.Values.Select( c => c.CountDownloadedBytes );
+
+                            isDownloadedFile = IsDownloadedFile( tempFullPath, bytesCountWhichShouldBeDownloaded, downloadedBytesByEachContact );
                             if ( !isDownloadedFile )
                             {
                                 //get new contacts and requests considering the previous download
@@ -236,6 +216,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 
             if ( request.ChunkRange.TotalPerContact <= Constants.MAX_CHUNK_SIZE )
             {
+                request.ChunkRange.End = request.ChunkRange.Start + request.ChunkRange.TotalPerContact - 1;
                 (_, updatedRequest) = await DownloadProcessSmallChunkAsync( contact, request, fileStream, cancellationToken, downloadProgress ).ConfigureAwait( continueOnCapturedContext: false );
             }
             else
@@ -253,21 +234,24 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             UInt32 maxChunkSize = Constants.MAX_CHUNK_SIZE;
             ChunkRange initialContantRange = sampleRequest.ChunkRange;
             DownloadFileRequest lastRequest = (DownloadFileRequest)sampleRequest.Clone();
+            UInt64 finallyEnd = initialContantRange.TotalPerContact - 1 + initialContantRange.Start;
             UInt64 start = lastRequest.ChunkRange.Start;
             Boolean isRightResponse = true;
 
+            DownloadFileResponse response;
+            RpcError rpcError;
             for ( UInt64 end = start + maxChunkSize - 1;
                  ( !IsFinishedDownload( start, end ) ) && ( isRightResponse );
-                 start = end + 1, end = ( ( end + maxChunkSize ) < initialContantRange.TotalPerContact ) ? ( end + maxChunkSize ) : initialContantRange.TotalPerContact - 1 )
+                 start = end + 1, end = ( ( end + maxChunkSize ) <= finallyEnd ) ? ( end + maxChunkSize ) : finallyEnd )
             {
                 lastRequest.ChunkRange.Start = start;
                 lastRequest.ChunkRange.End = end;
 
-                (DownloadFileResponse response, RpcError rpcError) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate( remoteContact, IOBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( false );
+
+                (response, rpcError, isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate( remoteContact, IOBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( false );
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                isRightResponse = IsRightDownloadFileResponse( lastRequest, response, rpcError );
                 if ( isRightResponse )
                 {
                     //we use lock, because method fileStream.Write can be invoked from wrong position 
@@ -328,7 +312,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                 lastPartBytesOfContact = request.ChunkRange.Start + request.ChunkRange.TotalPerContact;
 
                 List<Int32> numsUndownloadedChunk = NumsChunk( request.ChunkRange.Start, lastPartBytesOfContact, maxChunkSize, ref numChunk );
-                request.ChunkRange.NumsUndownloadedChunk.AddRange( numsUndownloadedChunk );
+                request.ChunkRange.NumsUndownloadedChunk = numsUndownloadedChunk;
 
                 contactsAndRequests.TryAdd( contactsWithFile[ (Int32)numContact ], request );
             }
@@ -350,16 +334,8 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 
         private Boolean IsDownloadedFile( String fullPathToFile, UInt64 countOfBytes, IEnumerable<UInt64> downloadedBytesByEachContact )
         {
-            Boolean isRightDownloaded;
-
-            if ( countOfBytes == (UInt64)downloadedBytesByEachContact.Sum( c => (Int64)c ) && File.Exists( fullPathToFile ) )
-            {
-                isRightDownloaded = true;
-            }
-            else
-            {
-                isRightDownloaded = false;
-            }
+            UInt64 downloadedBytesCount = (UInt64)downloadedBytesByEachContact.Sum( c => (Int64)c );
+            Boolean isRightDownloaded = ( countOfBytes == downloadedBytesCount ) && ( File.Exists( fullPathToFile ) );
 
             return isRightDownloaded;
         }
