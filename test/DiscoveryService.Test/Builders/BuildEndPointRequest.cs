@@ -9,6 +9,7 @@ namespace LUC.DiscoveryService.Test.Builders
     enum BuildEndPointRequest
     {
         RandomEndPoint,
-        ReachableDsEndPoint
+        ReachableDsEndPoint,
+        AllReachableDsEndPoints
     }
 }

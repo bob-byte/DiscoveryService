@@ -84,6 +84,19 @@ namespace LUC.DiscoveryService.Test.InternalTests.Builders
 
                         break;
                     }
+
+                    case ( BuildContactRequest.OurContactWithIpAddresses ):
+                    {
+                        m_discoveryService.Start();
+
+                        EndPointsBuilder endPointBuilder = new EndPointsBuilder( BuildEndPointRequest.AllReachableDsEndPoints );
+                        List<IPEndPoint> endPoints = endPointBuilder.Create<List<IPEndPoint>>();
+
+                        m_discoveryService.NetworkEventInvoker.OurContact.AddIpAddressRange( endPoints.Select( c => c.Address ) );
+                        createdObject = m_discoveryService.NetworkEventInvoker.OurContact;
+
+                        break;
+                    }
                 }
             }
 

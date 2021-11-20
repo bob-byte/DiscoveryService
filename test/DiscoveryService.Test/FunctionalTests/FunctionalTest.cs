@@ -125,8 +125,6 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             SetUpTests.CurrentUserProvider = s_settingsService.CurrentUserProvider;
             ConcurrentDictionary<String, String> bucketsSupported = new ConcurrentDictionary<String, String>();
 
-            Console.WriteLine( $"Answer the next few questions before make some changes with another container until {nameof( DiscoveryService )} is started" );
-
             String fileNameWithMachineId = $"{Constants.FILE_WITH_MACHINE_ID}{containerId}{Constants.FILE_WITH_MACHINE_ID_EXTENSION}";
 
             Boolean deleteMachineId = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to update Machine ID (it is always needed if you run container)?");

@@ -99,6 +99,7 @@
     <Compile Include="InternalTests\Kademlia\BucketListTest.cs" />
     <Compile Include="InternalTests\Requests\BuildContactRequest.cs" />
     <Compile Include="InternalTests\Requests\CreateBucketListRequest.cs" />
+    <Compile Include="InternalTests\RequestTest.cs" />
     <Compile Include="MulticastMessageTest.cs" />
     <Compile Include="Extensions\RandomExtension.cs" />
     <Compile Include="RecentMessagesTest.cs" />

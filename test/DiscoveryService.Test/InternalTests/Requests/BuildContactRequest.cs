@@ -10,6 +10,7 @@ namespace LUC.DiscoveryService.Test.InternalTests.Requests
     {
         Dummy,
         RandomOnlineContact,
-        Default
+        Default,
+        OurContactWithIpAddresses
     }
 }

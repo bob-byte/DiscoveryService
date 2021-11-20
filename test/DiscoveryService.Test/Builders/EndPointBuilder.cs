@@ -14,9 +14,9 @@ using System.Net.NetworkInformation;
 
 namespace LUC.DiscoveryService.Test.Builders
 {
-    class EndPointBuilder : AbstractSeededBuilder<BuildEndPointRequest>
+    class EndPointsBuilder : AbstractSeededBuilder<BuildEndPointRequest>
     {
-        public EndPointBuilder(BuildEndPointRequest request)
+        public EndPointsBuilder(BuildEndPointRequest request)
             : base(request)
         {
             ;//do nothing
@@ -41,30 +41,14 @@ namespace LUC.DiscoveryService.Test.Builders
 
                     case ( BuildEndPointRequest.ReachableDsEndPoint ):
                     {
-                        IEnumerable<NetworkInterface> networkInterfaces = NetworkEventInvoker.NetworkInterfaces();
-                        List<IPAddress> runningIpAddresses = Listeners.IpAddressesOfInterfaces(
-                            networkInterfaces,
-                            SetUpTests.UseIpv4,
-                            SetUpTests.UseIpv6
-                        );
+                        createdObject = AllReachableDsEndPoints().First();
 
-                        foreach ( IPAddress ipAddress in runningIpAddresses )
-                        {
-                            Boolean isReacheable;
-                            try
-                            {
-                                isReacheable = IpAddressFilter.IsIpAddressInTheSameNetwork( ipAddress, networkInterfaces.ToList() );
-                            }
-                            catch ( Win32Exception )
-                            {
-                                continue;
-                            }
+                        break;
+                    }
 
-                            if ( isReacheable )
-                            {
-                                createdObject = new IPEndPoint( ipAddress, DiscoveryService.DEFAULT_PORT );
-                            }
-                        }
+                    case ( BuildEndPointRequest.AllReachableDsEndPoints ):
+                    {
+                        createdObject = AllReachableDsEndPoints().ToList();
 
                         break;
                     }
@@ -79,11 +63,40 @@ namespace LUC.DiscoveryService.Test.Builders
             return createdObject;
         }
 
+        private IEnumerable<IPEndPoint> AllReachableDsEndPoints()
+        {
+            IEnumerable<NetworkInterface> networkInterfaces = NetworkEventInvoker.NetworkInterfaces();
+            List<IPAddress> runningIpAddresses = Listeners.IpAddressesOfInterfaces(
+                networkInterfaces,
+                SetUpTests.UseIpv4,
+                SetUpTests.UseIpv6
+            );
+
+            foreach ( IPAddress ipAddress in runningIpAddresses )
+            {
+                Boolean isReacheable;
+                try
+                {
+                    isReacheable = IpAddressFilter.IsIpAddressInTheSameNetwork( ipAddress, networkInterfaces.ToList() );
+                }
+                catch ( Win32Exception )
+                {
+                    continue;
+                }
+
+                if ( isReacheable )
+                {
+                    IPEndPoint reacheableEndPoint = new IPEndPoint( ipAddress, DiscoveryService.DEFAULT_PORT );
+                    yield return reacheableEndPoint;
+                }
+            }
+        }
+
         protected override Boolean IsRightRequest( Object request )
         {
             Type requestType = base.RequestType( request );
 
-            Boolean isRightRequest = requestType == typeof( IPEndPoint );
+            Boolean isRightRequest = requestType == typeof( IPEndPoint ) || requestType == typeof( List<IPEndPoint> );
             return isRightRequest;
         }
     }

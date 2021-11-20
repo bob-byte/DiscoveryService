@@ -20,8 +20,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 {
     sealed partial class ConnectionPool
     {
-        private const UInt32 POOL_RECOVERY_FREQUENCY_IN_TICKS = 1000;
-        
         private static ConnectionPool s_instance;
 
         private readonly ILoggingService m_log;
@@ -29,10 +27,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         private readonly SemaphoreSlim m_cleanSemaphore;
         private readonly SemaphoreSlim m_socketSemaphore;
         private readonly SemaphoreLocker m_lockTakeSocket;
-        private readonly Object m_lockLastRecoveryTime;
 
-        //We use ConcurrentDictionary and lockers, because sometimes we have intermidiate steps 
-        //between using these dictionaries and we use this type for more security
         private readonly ConcurrentDictionary<EndPoint, ConnectionPoolSocket> m_sockets;
         private readonly ConcurrentDictionary<EndPoint, ConnectionPoolSocket> m_leasedSockets;
 
@@ -52,7 +47,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             m_cleanSemaphore = new SemaphoreSlim( initialCount: 1 );
             m_socketSemaphore = new SemaphoreSlim( connectionSettings.MaximumPoolSize );
 
-            m_lockLastRecoveryTime = new Object();
             m_lockTakeSocket = new SemaphoreLocker();
 
             m_sockets = new ConcurrentDictionary<EndPoint, ConnectionPoolSocket>();
@@ -171,7 +165,6 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
             if ( takenSocket )
             {
-                //change to setting TakenFromPool
                 desiredSocket.StateInPool = SocketStateInPool.TakenFromPool;
                 AddLeasedSocket( remoteEndPoint, desiredSocket );
             }

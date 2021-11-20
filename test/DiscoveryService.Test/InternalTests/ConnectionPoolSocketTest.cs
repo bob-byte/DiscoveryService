@@ -120,7 +120,7 @@ namespace LUC.DiscoveryService.Test.InternalTests
             Fixture specimens = new Fixture();
             ConnectionPool connectionPool = specimens.Create<ConnectionPool>();
 
-            EndPointBuilder endPointBuilder = new EndPointBuilder( BuildEndPointRequest.ReachableDsEndPoint );
+            EndPointsBuilder endPointBuilder = new EndPointsBuilder( BuildEndPointRequest.ReachableDsEndPoint );
             EndPoint socketId = endPointBuilder.Create<IPEndPoint>();
 
             var socket = await connectionPool.SocketAsync( socketId, Constants.ConnectTimeout, IOBehavior.Synchronous, Constants.TimeWaitSocketReturnedToPool ).

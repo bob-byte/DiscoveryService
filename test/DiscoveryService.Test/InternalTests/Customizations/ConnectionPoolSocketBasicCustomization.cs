@@ -28,7 +28,7 @@ namespace LUC.DiscoveryService.Test.InternalTests.Customizations
             fixture.Customize<ConnectionPoolSocket>( c => c.OmitAutoProperties() );
             fixture.Customizations.Add( new TypeRelay( from: typeof( EndPoint ), to: typeof( IPEndPoint ) ) );
 
-            EndPointBuilder endPointBuilder = new EndPointBuilder( m_endPointRequest );
+            EndPointsBuilder endPointBuilder = new EndPointsBuilder( m_endPointRequest );
             IPEndPoint endPoint = endPointBuilder.Create<IPEndPoint>();
             if ( endPoint != null )
             {
