@@ -92,15 +92,34 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
             else
             {
-                desiredSocket = await m_lockTakeSocket.LockAsync( async () =>
+                if ( ioBehavior == IOBehavior.Asynchronous )
                 {
-                    return await CreatedOrTakenSocketAsync(
-                        remoteEndPoint,
-                        timeoutToConnect,
-                        ioBehavior
-                    ).ConfigureAwait( false );
+                    desiredSocket = await m_lockTakeSocket.LockAsync( async () =>
+                    {
+                        return await CreatedOrTakenSocketAsync(
+                            remoteEndPoint,
+                            timeoutToConnect,
+                            ioBehavior
+                        ).ConfigureAwait( false );
 
-                } ).ConfigureAwait( false );
+                    } ).ConfigureAwait( false );
+                }
+                else if ( ioBehavior == IOBehavior.Synchronous )
+                {
+                    desiredSocket = await m_lockTakeSocket.Lock( async () =>
+                    {
+                        return await CreatedOrTakenSocketAsync(
+                            remoteEndPoint,
+                            timeoutToConnect,
+                            ioBehavior
+                        ).ConfigureAwait( false );
+
+                    } ).ConfigureAwait( false );
+                }
+                else
+                {
+                    throw new ArgumentException( $"{nameof( ioBehavior )} has incorrect value" );
+                }
             }            
 
             return desiredSocket;

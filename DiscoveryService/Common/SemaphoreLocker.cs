@@ -13,30 +13,60 @@ namespace LUC.DiscoveryService.Common
 
         public void Lock( Action procedure )
         {
-            m_semaphoreSlim.Wait();
+            Boolean isTaken = false;
 
             try
             {
+                do
+                {
+                    try
+                    {
+                    }
+                    finally
+                    {
+                        isTaken = m_semaphoreSlim.Wait( TimeSpan.FromSeconds( value: 1 ) );
+                    }
+                }
+                while ( !isTaken );
+
                 procedure();
             }
             finally
             {
-                m_semaphoreSlim.Release();
+                if ( isTaken )
+                {
+                    m_semaphoreSlim.Release();
+                }
             }
         }
 
         public T Lock<T>( Func<T> func )
         {
-            m_semaphoreSlim.Wait();
+            Boolean isTaken = false;
 
             try
             {
+                do
+                {
+                    try
+                    {
+                    }
+                    finally
+                    {
+                        isTaken = m_semaphoreSlim.Wait( TimeSpan.FromSeconds( 1 ) );
+                    }
+                }
+                while ( !isTaken );
+
                 T result = func();
                 return result;
             }
             finally
             {
-                m_semaphoreSlim.Release();
+                if ( isTaken )
+                {
+                    m_semaphoreSlim.Release();
+                }
             }
         }
 
