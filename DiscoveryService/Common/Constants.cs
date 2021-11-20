@@ -8,7 +8,8 @@ namespace LUC.DiscoveryService.Common
     static class Constants
     {
 #if DEBUG
-        public const String FILE_WITH_MACHINE_ID = "current machine id.txt";
+        public const String FILE_WITH_MACHINE_ID = "current machine id";
+        public const String FILE_WITH_MACHINE_ID_EXTENSION = ".txt";
 #endif
 
 #if DEBUG
@@ -50,19 +51,22 @@ namespace LUC.DiscoveryService.Common
 #endif
 
         //TODO return from TimeSpan.FromSeconds to TimeSpan.FromMinutes
-        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds( value: 30 );
-        public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds( 30 );
-        public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds( 30 );
-        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds( 30 );
+        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds( value: 3 );
+        public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds( 3 );
+        public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds( 3 );
+        public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds( 3 );
 
         /// <summary>
         /// it's max of execution Kademlia operation (first we connect to new contact, then if it is failed, we will be failed to send, 
-        /// then we will try to connect and send again. If we send actually, we will try to receive 
+        /// then we will try to connect and send again. If we send actually, we will try to receive.
         /// </summary>
+        /// <remarks>
+        /// We also add 3 seconds is in order to only one thread always uses socket
+        /// </remarks>
         /// <value>
-        /// <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ReceiveTimeout"/>
+        /// 3 seconds + <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ConnectTimeout"/> + <see cref="SendTimeout"/> + <see cref="ReceiveTimeout"/>
         /// </value>
-        public static readonly TimeSpan TimeWaitReturnToPool = ConnectTimeout + ReceiveTimeout + SendTimeout + ConnectTimeout + SendTimeout + ReceiveTimeout;
+        public static readonly TimeSpan TimeWaitSocketReturnedToPool = TimeSpan.FromSeconds( 3 ) + ConnectTimeout + ReceiveTimeout + SendTimeout + ConnectTimeout + SendTimeout + ReceiveTimeout;
 
         public static readonly TimeSpan TimeCheckDataToRead = TimeSpan.FromSeconds( 1 );
 

@@ -202,7 +202,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             {
                 MaxDegreeOfParallelism = Constants.MAX_THREADS,
                 CancellationToken = cancellationToken,
-                BoundedCapacity = DataflowBlockOptions.Unbounded,//try to delete this row
+                BoundedCapacity = DataflowBlockOptions.Unbounded,//set explicitly available data which can be posted
                 MaxMessagesPerTask = 1,
                 EnsureOrdered = false
             };

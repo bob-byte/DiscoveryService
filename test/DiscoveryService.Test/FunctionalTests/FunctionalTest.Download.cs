@@ -37,31 +37,34 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
             (ObjectDescriptionModel fileDescription, String bucketName, String localFolderPath) = await RandomFileToDownloadAsync( apiClient, currentUserProvider, remoteContact, filePrefix ).ConfigureAwait( false );
 
-            Console.WriteLine( "Press any key to start download process. \n" +
+            lock( UserIntersectionInConsole.Lock)
+            {
+                Console.WriteLine( "Press any key to start download process. \n" +
                 "After that if you want to cancel download, press C key. If you do not want to cancel, press any other button." );
-            Console.ReadKey( intercept: true );//true says that pressed key will not show in console
+                Console.ReadKey( intercept: true );//true says that pressed key will not show in console
 
-            ConfiguredTaskAwaitable downloadTask = Task.Run( async () =>
-            {
-                await download.DownloadFileAsync(
-                    localFolderPath,
-                    bucketName,
-                    filePrefix,
-                    fileDescription.OriginalName,
-                    fileDescription.Bytes,
-                    fileDescription.Version,
-                    s_cancellationTokenSource.Token
-                ).ConfigureAwait( false );
-            } ).ConfigureAwait( false );
+                ConfiguredTaskAwaitable downloadTask = Task.Run( async () =>
+                {
+                    await download.DownloadFileAsync(
+                        localFolderPath,
+                        bucketName,
+                        filePrefix,
+                        fileDescription.OriginalName,
+                        fileDescription.Bytes,
+                        fileDescription.Version,
+                        s_cancellationTokenSource.Token
+                    ).ConfigureAwait( false );
+                } ).ConfigureAwait( false );
 
-            ConsoleKey pressedKey = Console.ReadKey().Key;
-            Console.WriteLine();
-            if ( pressedKey == ConsoleKey.C )
-            {
-                s_cancellationTokenSource.Cancel();
+                ConsoleKey pressedKey = Console.ReadKey().Key;
+                Console.WriteLine();
+                if ( pressedKey == ConsoleKey.C )
+                {
+                    s_cancellationTokenSource.Cancel();
+                }
+
+                downloadTask.GetAwaiter().GetResult();
             }
-
-            await downloadTask;
 
             s_cancellationTokenSource = new CancellationTokenSource();
         }
@@ -132,7 +135,6 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             }
             else
             {
-
                 Console.WriteLine( $"You should put few files in {bucketPath} and using WpfClient, upload it" );
                 throw new InvalidOperationException();
             }

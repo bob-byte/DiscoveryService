@@ -12,20 +12,20 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
         public const String IS_TRUE = "1";
         public const String IS_FALSE = "2";
-
-        private readonly static Object s_lock;
-
+        
         static UserIntersectionInConsole()
         {
-            s_lock = new Object();
-        }        
+            Lock = new Object();
+        }
+
+        public static Object Lock { get; }
 
         public static String ValidValueInputtedByUser( String requestToUser, Predicate<String> tryPredicateUserInput )
         {
             String userInput;
             Boolean isRightInput = false;
 
-            lock(s_lock)
+            lock(Lock)
             {
                 do
                 {
@@ -49,7 +49,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
         public static Boolean NormalResposeFromUserAtClosedQuestion( String closedQuestion )
         {
-            lock ( s_lock )
+            lock ( Lock )
             {
                 Boolean userResponse = false;
                 String readLine;
@@ -81,7 +81,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
         {
             T value = default;
 
-            lock ( s_lock )
+            lock ( Lock )
             {
                 do
                 {
@@ -107,7 +107,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
         {
             T value = default;
 
-            lock ( s_lock )
+            lock ( Lock )
             {
                 do
                 {

@@ -72,7 +72,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             return contactsWithFile.GetConsumingEnumerable( cancellationToken );
         }
 
-        private async Task<Boolean> IsFileExistsInContactAsync( DownloadFileRequest sampleRequest, Contact contact )
+        private async ValueTask<Boolean> IsFileExistsInContactAsync( DownloadFileRequest sampleRequest, Contact contact )
         {
             CheckFileExistsRequest request = new CheckFileExistsRequest( m_ourContact.KadId.Value, m_ourContact.MachineId )
             {

@@ -90,6 +90,7 @@
     <Compile Include="InternalTests\Builders\ConnectionPoolSocketBuilder.cs" />
     <Compile Include="Builders\EndPointBuilder.cs" />
     <Compile Include="InternalTests\Builders\ContactBuilder.cs" />
+    <Compile Include="InternalTests\ConnectionPoolTest.cs" />
     <Compile Include="InternalTests\Customizations\ConnectionPoolSocketBasicCustomization.cs" />
     <Compile Include="DiscoveryServiceSocketTest.cs" />
     <Compile Include="FunctionalTests\FunctionalTest.cs" />

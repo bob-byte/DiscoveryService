@@ -101,10 +101,10 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         public void GetResult<TResponse>( Contact remoteContact, UInt16 protocolVersion, out TResponse response, out RpcError rpcError )
             where TResponse : Response => (response, rpcError) = ResultAsync<TResponse>( remoteContact, IOBehavior.Synchronous, protocolVersion ).GetAwaiter().GetResult();
 
-        public async Task<(TResponse, RpcError)> ResultAsync<TResponse>( Contact remoteContact, UInt16 protocolVersion )
+        public async ValueTask<(TResponse, RpcError)> ResultAsync<TResponse>( Contact remoteContact, UInt16 protocolVersion )
             where TResponse : Response => await ResultAsync<TResponse>( remoteContact, IOBehavior.Asynchronous, protocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
-        public async Task<(TResponse, RpcError)> ResultAsync<TResponse>( Contact remoteContact, IOBehavior ioBehavior, UInt16 protocolVersion )
+        public async ValueTask<(TResponse, RpcError)> ResultAsync<TResponse>( Contact remoteContact, IOBehavior ioBehavior, UInt16 protocolVersion )
             where TResponse : Response
         {
             Boolean isTimeoutSocketOp = false;
@@ -139,7 +139,10 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             return (response, rpcError);
         }
 
-        private async Task<(Boolean isTimeoutSocketOp, ErrorResponse nodeError, TResponse response, Boolean isTheSameNetwork)> ClientStartAsync<TResponse>( IPEndPoint remoteEndPoint, IOBehavior ioBehavior )
+        private async ValueTask<(Boolean isTimeoutSocketOp, ErrorResponse nodeError, TResponse response, Boolean isTheSameNetwork)> ClientStartAsync<TResponse>( 
+            IPEndPoint remoteEndPoint, 
+            IOBehavior ioBehavior 
+        )
             where TResponse : Response
         {
             Boolean isTimeoutSocketOp = false;
@@ -158,7 +161,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
                     Byte[] bytesOfRequest = ToByteArray();
 
                     client = await s_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
-                        ioBehavior, Constants.TimeWaitReturnToPool )/*.ConfigureAwait( continueOnCapturedContext: false )*/;
+                        ioBehavior, Constants.TimeWaitSocketReturnedToPool )/*.ConfigureAwait( continueOnCapturedContext: false )*/;
 
                     await CleanExtraBytesAsync( client, ioBehavior ).ConfigureAwait(continueOnCapturedContext: false);
 
@@ -251,7 +254,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
             }
         }
 
-        private async Task WaitAsync( IOBehavior ioBehavior, TimeSpan timeToWait )
+        private async ValueTask WaitAsync( IOBehavior ioBehavior, TimeSpan timeToWait )
         {
             if ( ioBehavior == IOBehavior.Asynchronous )
             {

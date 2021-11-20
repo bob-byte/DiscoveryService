@@ -26,18 +26,24 @@ namespace LUC.DiscoveryService
         /// <summary>
         ///   Creates a new instance of the <see cref="ServiceProfile"/> class.
         /// </summary>
+        public ServiceProfile( String machineId, Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion,
+            ConcurrentDictionary<String, String> groupsSupported = null )
+        {
+            MachineId = machineId;
+
+            DefaultInit( useIpv4, useIpv6, protocolVersion, groupsSupported );
+        }
+
+        /// <summary>
+        ///   Creates a new instance of the <see cref="ServiceProfile"/> class.
+        /// </summary>
         public ServiceProfile( Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion,
             ConcurrentDictionary<String, String> groupsSupported = null )
         {
-            LUC.DiscoveryService.MachineId.Create(out String machineId);
+            LUC.DiscoveryService.MachineId.Create( out String machineId );
             MachineId = machineId;
 
-            GroupsSupported = groupsSupported ?? new ConcurrentDictionary<String, String>();
-
-            ProtocolVersion = protocolVersion;
-
-            UseIpv4 = useIpv4;
-            UseIpv6 = useIpv6;
+            DefaultInit(useIpv4, useIpv6, protocolVersion, groupsSupported);
         }
 
         public ConcurrentDictionary<String, String> GroupsSupported { get; protected set; }
@@ -46,5 +52,16 @@ namespace LUC.DiscoveryService
         /// Known network interfaces
         /// </summary>
         public IList<NetworkInterface> KnownNetworkInterfaces => NetworkEventInvoker.NetworkInterfaces().ToList();
+
+        private void DefaultInit( Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion,
+            ConcurrentDictionary<String, String> groupsSupported = null )
+        {
+            GroupsSupported = groupsSupported ?? new ConcurrentDictionary<String, String>();
+
+            ProtocolVersion = protocolVersion;
+
+            UseIpv4 = useIpv4;
+            UseIpv6 = useIpv6;
+        }
     }
 }

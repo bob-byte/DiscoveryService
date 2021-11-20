@@ -84,6 +84,8 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
 
         protected String FullFileName( AbstractFileRequest request )
         {
+            Console.WriteLine( $"Full root folder name: {m_currentUserProvider.RootFolderPath}" );
+
             IList<String> bucketDirectoryPathes = m_currentUserProvider.ProvideBucketDirectoryPathes();
             String localBucketDirectoryPath = bucketDirectoryPathes.SingleOrDefault( bucketFullName =>
              {

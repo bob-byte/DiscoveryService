@@ -221,7 +221,9 @@ namespace LUC.DiscoveryService
                     {
                         //TODO: change to using GetAwaiter().GetResult or await
                         TcpMessageEventArgs eventArgs = taskReceiving.Result;
-                        LoggingService.LogInfo( $"Received {eventArgs.Buffer.Length} bytes" );
+
+                        String endPoint = Display.VariableWithValue( nameof( tcpServer.Endpoint ), tcpServer.Endpoint, useTab: false );
+                        LoggingService.LogInfo( $"Received {eventArgs.Buffer.Length} bytes by {nameof(TcpServer)} with {endPoint}" );
 
                         TcpMessageReceived?.Invoke( tcpServer, eventArgs );
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously );
@@ -302,8 +304,6 @@ namespace LUC.DiscoveryService
                     }
                 }
                 m_tcpServers.Clear();
-
-                GC.Collect();//maybe it should be deleted
 
                 m_disposedValue = true;
             }

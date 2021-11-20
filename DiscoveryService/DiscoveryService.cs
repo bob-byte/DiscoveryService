@@ -26,6 +26,7 @@ using Castle.Core.Internal;
 using System.Reflection;
 using LUC.Services.Implementation;
 using System.Security.Cryptography.X509Certificates;
+using System.Diagnostics;
 
 //access permission to internal members in current project for DiscoveryService.Test
 [assembly: InternalsVisibleTo( assemblyName: "DiscoveryService.Test" )]
@@ -232,6 +233,8 @@ namespace LUC.DiscoveryService
         {
             if ( !IsRunning )
             {
+                LoggingService.LogInfo( "DS (Discovery Service) is starting" );
+
                 if ( NetworkEventInvoker == null )
                 {
                     InitNetworkEventInvoker();
@@ -240,6 +243,8 @@ namespace LUC.DiscoveryService
                 NetworkEventInvoker.Start();
 
                 IsRunning = true;
+
+                LoggingService.LogInfo( "DS is started" );
             }
         }
 
@@ -276,8 +281,6 @@ namespace LUC.DiscoveryService
                 IsRunning = false;
             }
         }
-
-        SemaphoreLocker m_locker = new SemaphoreLocker();
 
         //TODO: check SSL certificate with SNI
         /// <summary>
@@ -324,7 +327,7 @@ namespace LUC.DiscoveryService
                         try
                         {
                             client = await m_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
-                               IOBehavior.Asynchronous, Constants.TimeWaitReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
+                               IOBehavior.Asynchronous, Constants.TimeWaitSocketReturnedToPool ).ConfigureAwait( continueOnCapturedContext: false );
 
                             ForcingConcurrencyError.TryForce();
                             client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,

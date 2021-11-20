@@ -19,9 +19,9 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 {
     public partial class Download
     {
-        private const Int32 MIN_CONTACT_FOR_RETRY_DOWNLOAD = 2;
+        private const Int32 MIN_CONTACT_COUNT_FOR_RETRY_DOWNLOAD = 2;
 
-        private async Task DownloadSmallFileAsync( IEnumerable<Contact> onlineContacts, DownloadFileRequest initialRequest, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
+        private async ValueTask DownloadSmallFileAsync( IEnumerable<Contact> onlineContacts, DownloadFileRequest initialRequest, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
         {
             //we need to cancel requesting another contacts whether they have file when we have downloaded it
             CancellationTokenSource cancelSource = new CancellationTokenSource();
@@ -61,7 +61,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
         /// <returns>
         /// First value returns whether <see cref="DownloadFileRequest.CountDownloadedBytes"/> is writen in <paramref name="fileStream"/>. The second returns <paramref name="downloadFileRequest"/> with updated <see cref="DownloadFileRequest.CountDownloadedBytes"/>, <paramref name="downloadFileRequest"/> will not be changed
         /// </returns>
-        private async Task<(Boolean, DownloadFileRequest)> DownloadProcessSmallChunkAsync( Contact remoteContact,
+        private async ValueTask<(Boolean, DownloadFileRequest)> DownloadProcessSmallChunkAsync( Contact remoteContact,
             DownloadFileRequest downloadFileRequest, Stream fileStream, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
         {
             Boolean isWritenInFile = false;
@@ -124,7 +124,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             return ( isReceivedRequiredRange ) && ( isTheSameFileInRemoteContact );
         }
 
-        private async Task DownloadBigFileAsync( IEnumerable<Contact> contactsWithFile, DownloadFileRequest initialRequest, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
+        private async ValueTask DownloadBigFileAsync( IEnumerable<Contact> contactsWithFile, DownloadFileRequest initialRequest, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
         {
             //create temp file in order to another contacts don't download it
             String tempFullPath = m_downloadedFile.TempFullFileName( initialRequest.FullPathToFile );
@@ -230,7 +230,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             }
         }
 
-        private async Task<DownloadFileRequest> DownloadProcessBigFileAsync( Contact contact, DownloadFileRequest request, Stream fileStream, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
+        private async ValueTask<DownloadFileRequest> DownloadProcessBigFileAsync( Contact contact, DownloadFileRequest request, Stream fileStream, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
         {
             DownloadFileRequest updatedRequest;
 
@@ -248,7 +248,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             return updatedRequest;
         }
 
-        private async Task<DownloadFileRequest> DownloadBigTotalPerContactBytesAsync( Contact remoteContact, DownloadFileRequest sampleRequest, Stream fileStream, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
+        private async ValueTask<DownloadFileRequest> DownloadBigTotalPerContactBytesAsync( Contact remoteContact, DownloadFileRequest sampleRequest, Stream fileStream, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
         {
             UInt32 maxChunkSize = Constants.MAX_CHUNK_SIZE;
             ChunkRange initialContantRange = sampleRequest.ChunkRange;
@@ -459,7 +459,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                     return shouldCommunicateInDownload;
                 } );
 
-                if ( contactsForRetryDownload.Count() < MIN_CONTACT_FOR_RETRY_DOWNLOAD )
+                if ( contactsForRetryDownload.Count() < MIN_CONTACT_COUNT_FOR_RETRY_DOWNLOAD )
                 {
                     contactsForRetryDownload = contactsInSameBucket;
                 }

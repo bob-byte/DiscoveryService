@@ -303,7 +303,9 @@ namespace LUC.DiscoveryService
                     ConnectionPool connectionPool = ConnectionPool.Instance();
                     connectionPool.TryCancelRecoverConnections();
 
-                    connectionPool.TryRecoverAllConnectionsAsync( Constants.TimeWaitReturnToPool ).GetAwaiter().GetResult();
+#pragma warning disable CS4014 // Так как этот вызов не ожидается, выполнение существующего метода продолжается до тех пор, пока вызов не будет завершен
+                    connectionPool.TryRecoverAllConnectionsAsync();
+#pragma warning restore CS4014 // Так как этот вызов не ожидается, выполнение существующего метода продолжается до тех пор, пока вызов не будет завершен
                 }
 
                 if ( newNics.Any() )

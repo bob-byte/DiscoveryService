@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using AutoFixture;
 
+using LUC.DiscoveryService.Common;
 using LUC.Interfaces;
 using LUC.Interfaces.OutputContracts;
 using LUC.Services.Implementation;
@@ -112,6 +113,9 @@ namespace LUC.DiscoveryService.Test
             };
 
             LoginResponse loginResponse = await apiClient.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
+
+            String loggedUserAsStr = Display.ObjectToString( currentUserProvider.LoggedUser );
+            LoggingService.LogInfo( loggedUserAsStr );
 
             return (apiClient, loginResponse, currentUserProvider);
         }

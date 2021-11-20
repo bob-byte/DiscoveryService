@@ -80,15 +80,7 @@ namespace LUC.DiscoveryService.Common
         [MethodImpl( MethodImplOptions.AggressiveInlining )]
         internal static String VariableWithValue<T>( String nameProp, T value, Boolean useTab = true )
         {
-            String tab;
-            if(useTab)
-            {
-                tab = TABULATION;
-            }
-            else
-            {
-                tab = String.Empty;
-            }
+            String tab = useTab ? TABULATION : String.Empty;
 
             String propertyWithValue = $"{tab}{nameProp} = {value}";
             return propertyWithValue;

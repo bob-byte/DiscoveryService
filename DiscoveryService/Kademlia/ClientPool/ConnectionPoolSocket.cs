@@ -76,13 +76,8 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
         public SocketStateInPool StateInPool
         {
-            get
-            {
-                lock(m_lockStateInPool)
-                {
-                    return m_stateInPool;
-                }
-            }
+            get => m_stateInPool;
+
             set
             {
                 lock ( m_lockStateInPool )
@@ -105,7 +100,13 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
 
                 if ( value == SocketStateInPool.TakenFromPool )
                 {
-                    Boolean isReturned = m_canBeTakenFromPool.WaitOne( Constants.TimeWaitReturnToPool );
+                    Boolean isReturned;
+                    //every thread should wait the same time from point when socket is taken(e.g. if two threads wait to take socket when anyone did that, the next one will keep waiting and it will be less than Constants.TimeWaitSocketReturnedToPool)
+                    lock ( m_canBeTakenFromPool)
+                    {
+                        isReturned = m_canBeTakenFromPool.WaitOne( Constants.TimeWaitSocketReturnedToPool );
+                    }
+
                     lock ( m_lockStateInPool )
                     {
                         m_stateInPool = value;
@@ -141,6 +142,24 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
         //    //call ConnectAsync with timeout
         //    //change state to connected if it is, otherwise to failed
         //}
+
+        public override Boolean Equals( Object obj )
+        {
+            Boolean isEqual;
+            if(obj is ConnectionPoolSocket socket)
+            {
+                isEqual = Id.Equals( socket.Id );
+            }
+            else
+            {
+                isEqual = false;
+            }
+
+            return isEqual;
+        }
+
+        public override Int32 GetHashCode() => 
+            Id.GetHashCode();
 
         public SocketHealth SocketHealth()
         {

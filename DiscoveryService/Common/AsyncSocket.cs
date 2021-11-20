@@ -142,13 +142,14 @@ namespace LUC.DiscoveryService.Common
             finally
             {
                 cancelSource.Cancel();
+                cancelSource.Dispose();
+
                 taskDone.Close();
             }
 
             (Byte[] readBytes, SocketException socketException) = taskReadBytes.GetAwaiter().GetResult();
             HandleSocketOperationResult( isTaskEnded, socketException );
 
-            cancelSource.Dispose();
             return readBytes;
         }
         

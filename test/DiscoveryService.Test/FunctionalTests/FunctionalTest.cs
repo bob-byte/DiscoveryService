@@ -31,14 +31,12 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 {
     partial class FunctionalTest
     {
-        private static readonly Object s_ttyLock;
         private static DiscoveryService s_discoveryService;
         private static readonly SettingsService s_settingsService;
         private static CancellationTokenSource s_cancellationTokenSource;
 
         static FunctionalTest()
         {
-            s_ttyLock = new Object();
             s_settingsService = new SettingsService();
             s_cancellationTokenSource = new CancellationTokenSource();
         }
@@ -78,18 +76,31 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
         /// </remarks>
         public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
 
-        public static String DownloadTestFolderFullName( String downloadTestFolderName )
+        static async Task Main(String[] args)
         {
-            String fullDllFileName = Assembly.GetEntryAssembly().Location;
-            String pathToDllFileName = Path.GetDirectoryName( fullDllFileName );
+            String containerId = String.Empty;
+            String argName = "containerId";
 
-            String downloadTestFolderFullName = Path.Combine( pathToDllFileName, downloadTestFolderName );
+            if (args.Length > 0)
+            {
+                if ( ( args.Length == 2 ) && ( args[ 0 ] == argName ) && ( !String.IsNullOrWhiteSpace( args[ 1 ] ) ) )
+                {
+                    containerId = args[ 1 ];
+                }
+                else
+                {
+                    Console.WriteLine($"Only 1 command line argument is available: {argName}");
+                    return;
+                }
+            }
 
-            return downloadTestFolderFullName;
-        }
+            String warning = Display.StringWithAttention( "Before test DS(Discovery Service) with container you should run DS.Test.ext without them or \n" +
+                "set DS.Test/bin/integrationTests/DownloadTest/{anyname} as LUC root folder and\n" +
+                "put there all directories (files isn't required) from previous LUC root folder.\n" +
+                "If you did that you can test with all options, if not, you can't normally observe changes in root folder and\n" +
+                "set bytes of files which another contacts want to download" );
+            Console.WriteLine( warning );
 
-        static async Task Main()
-        {
             ApiClient.ApiClient apiClient;
 
             String login = "integration1";
@@ -114,42 +125,32 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             SetUpTests.CurrentUserProvider = s_settingsService.CurrentUserProvider;
             ConcurrentDictionary<String, String> bucketsSupported = new ConcurrentDictionary<String, String>();
 
-#if DEBUG
-            Boolean deleteMachineId = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to update Machine ID (it is always needed if you run firstly container)?" );
-            if(deleteMachineId)
+            Console.WriteLine( $"Answer the next few questions before make some changes with another container until {nameof( DiscoveryService )} is started" );
+
+            String fileNameWithMachineId = $"{Constants.FILE_WITH_MACHINE_ID}{containerId}{Constants.FILE_WITH_MACHINE_ID_EXTENSION}";
+
+            Boolean deleteMachineId = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to update Machine ID (it is always needed if you run container)?");
+            if ( deleteMachineId )
             {
-                String pathToExeFile = PathExtensions.PathToExeFile();
-
-                String fullFileNameWithMachineId = Path.Combine( pathToExeFile, Constants.FILE_WITH_MACHINE_ID );
-
-                //it will be generated in DS
-                File.Delete( fullFileNameWithMachineId );
+                File.Delete( fileNameWithMachineId );
             }
+
+            MachineId.Create( fileNameWithMachineId, out String machineId );
 
             Boolean wantToObserveChageInDownloadTestFolder = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( $"Do you want to observe changes in {Constants.DOWNLOAD_TEST_NAME_FOLDER} folder" );
 
             if ( wantToObserveChageInDownloadTestFolder )
             {
-                Console.WriteLine( Display.StringWithAttention( $"When you hear deep, then folder {Constants.DOWNLOAD_TEST_NAME_FOLDER} is changed. \n" +
-                    $"And if you press {UserIntersectionInConsole.IS_TRUE} and " +
-                    $"{UserIntersectionInConsole.KEY_TO_CONTINUE_PROGRAM}, certain file will be uploaded to server. \n" +
-                    $"If you press {UserIntersectionInConsole.IS_FALSE} and " +
-                    $"{UserIntersectionInConsole.KEY_TO_CONTINUE_PROGRAM}, it will not be uploaded" ) );
-
-                Console.WriteLine( "If you have read this, press any button to continue" );
-                Console.ReadKey();
-
-                InitWatcherForIntegrationTests( apiClient );
+                InitWatcherForIntegrationTests( apiClient, machineId );
             }
             else
             {
-                apiClient.CurrentUserProvider.RootFolderPath = s_settingsService.ReadUserRootFolderPath();
+                UpdateLucRootFolder( apiClient, machineId, newLucFullFolderName: out _ );
             }
-#endif
 
             DsBucketsSupported.Define( s_settingsService.CurrentUserProvider, out bucketsSupported );
 
-            s_discoveryService = new DiscoveryService( new ServiceProfile( useIpv4: true, useIpv6: true, protocolVersion: 1, bucketsSupported ), s_settingsService.CurrentUserProvider );
+            s_discoveryService = new DiscoveryService( new ServiceProfile( machineId, useIpv4: true, useIpv6: true, protocolVersion: 1, bucketsSupported ), s_settingsService.CurrentUserProvider );
             Console.WriteLine($"Your machine Id: {s_discoveryService.MachineId}");
 
             s_discoveryService.Start();
@@ -191,16 +192,21 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                     }
                     else
                     {
-                        Boolean isTesterOnlyInNetwork = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( "Are you only on the local network?" );
-                        if ( ( contact == null ) || ( !isTesterOnlyInNetwork ) )
+                        if ( ( isFirstTest ) || ( contact == null ) )
                         {
-                            //in order to GetRemoteContact can send multicasts messages
-                            contact = null;
+                            GetContact( s_discoveryService, out contact );
+                        }
+                        else
+                        {
+                            Boolean whetherFindAnyContacts = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( "Do you want to find any new contacts?" );
 
-                            GetRemoteContact( s_discoveryService, ref contact );
+                            if ( whetherFindAnyContacts )
+                            {
+                                GetContact( s_discoveryService, out contact );
+                            }
                         }
 
-                        lock(s_ttyLock)
+                        lock(UserIntersectionInConsole.Lock)
                         {
                             ShowAvailableUserOptions();
                             pressedKey = Console.ReadKey().Key;
@@ -223,7 +229,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
         private static void OnGoodTcpMessage( Object sender, TcpMessageEventArgs e )
         {
-            lock ( s_ttyLock )
+            lock ( UserIntersectionInConsole.Lock )
             {
                 Console.WriteLine( "=== TCP {0:O} ===", DateTime.Now );
                 AcknowledgeTcpMessage tcpMessage = e.Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
@@ -247,7 +253,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
         private static void OnGoodUdpMessage( Object sender, UdpMessageEventArgs e )
         {
-            lock ( s_ttyLock )
+            lock ( UserIntersectionInConsole.Lock )
             {
                 Console.WriteLine( "=== UDP {0:O} ===", DateTime.Now );
 
@@ -259,7 +265,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
         private static void OnPingReceived( Object sender, TcpMessageEventArgs e )
         {
-            lock ( s_ttyLock )
+            lock ( UserIntersectionInConsole.Lock )
             {
                 Console.WriteLine( "=== Kad PING received {0:O} ===", DateTime.Now );
 
@@ -270,7 +276,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
         private static void OnStoreReceived( Object sender, TcpMessageEventArgs e )
         {
-            lock ( s_ttyLock )
+            lock ( UserIntersectionInConsole.Lock )
             {
                 Console.WriteLine( "=== Kad STORE received {0:O} ===", DateTime.Now );
 
@@ -281,7 +287,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
         private static void OnFindNodeReceived( Object sender, TcpMessageEventArgs e )
         {
-            lock ( s_ttyLock )
+            lock ( UserIntersectionInConsole.Lock )
             {
                 Console.WriteLine( "=== Kad FindNode received {0:O} ===", DateTime.Now );
 
@@ -292,7 +298,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
         private static void OnFindValueReceived( Object sender, TcpMessageEventArgs e )
         {
-            lock ( s_ttyLock )
+            lock ( UserIntersectionInConsole.Lock )
             {
                 Console.WriteLine( "=== Kad FindValue received {0:O} ===", DateTime.Now );
 
@@ -313,22 +319,25 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                                $"8 - download random file from another contact(-s)\n" +
                                $"9 - create file with random bytes" );
 
-        private static void GetRemoteContact( DiscoveryService discoveryService, ref Contact remoteContact )
+        private static void GetContact( DiscoveryService discoveryService, out Contact contact )
         {
-            while ( remoteContact == null )
+            contact = null;
+
+            while ( contact == null )
             {
                 discoveryService.QueryAllServices();//to get any contacts
                 AutoResetEvent receivedFindNodeRequest = new AutoResetEvent( initialState: false );
 
                 discoveryService.NetworkEventInvoker.FindNodeReceived += ( sender, eventArgs ) => receivedFindNodeRequest.Set();
 
-                receivedFindNodeRequest.WaitOne(TimeSpan.FromSeconds(value: 400));
+                TimeSpan timeExecutionKadOp = Constants.TimeWaitSocketReturnedToPool;
+                receivedFindNodeRequest.WaitOne(timeExecutionKadOp);
 
                 //wait again, because contact should be added to NetworkEventInvoker.Dht.Node.BucketList after Find Node Kademlia operation
                 Thread.Sleep( TimeSpan.FromSeconds( value: 5 ) );
                 try
                 {
-                    remoteContact = RandomContact( discoveryService );
+                    contact = RandomContact( discoveryService );
                 }
                 catch ( IndexOutOfRangeException ) //if knowContacts.Count == 0
                 {
@@ -339,10 +348,10 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
         private static Contact RandomContact( DiscoveryService discoveryService )
         {
-            Contact[] contacts = discoveryService.OnlineContacts().Where( c => c.LastActiveIpAddress != null ).ToArray();
+            List<Contact> contacts = discoveryService.OnlineContacts();
 
             Random random = new Random();
-            Contact randomContact = contacts[ random.Next( contacts.Length ) ];
+            Contact randomContact = contacts[ random.Next( maxValue: contacts.Count ) ];
 
             return randomContact;
         }
@@ -355,7 +364,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             while ( true )
             {
                 ClientKadOperation kadOperation = new ClientKadOperation( s_discoveryService.ProtocolVersion );
-                TimeSpan timeExecutionKadOp = Constants.TimeWaitReturnToPool;
+                TimeSpan timeExecutionKadOp = Constants.TimeWaitSocketReturnedToPool;
 
                 switch ( pressedKey )
                 {
@@ -449,6 +458,9 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                     case ConsoleKey.D9:
                     {
                         CreateFileWithRndBytes();
+
+                        //wait while FileSystemWatcher is recognising file 
+                        await Task.Delay( TimeSpan.FromSeconds( 2 ) );
 
                         return;
                     }

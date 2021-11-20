@@ -17,7 +17,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
     {
         private CancellationTokenSource m_cancellationRecover;
 
-        public async Task TryRecoverAllConnectionsAsync( TimeSpan timeWaitToReturnToPool )
+        public async Task TryRecoverAllConnectionsAsync()
         {
             if ( ( m_sockets.Count > 0 ) || ( m_leasedSockets.Count > 0 ) )
             {
@@ -26,8 +26,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 IEnumerable<EndPoint> idsOfRecoveredConnection = null;
                 if ( m_leasedSockets.Count > 0 )
                 {
-                    idsOfRecoveredConnection = IdsOfRecoveredConnectionInLeasedSockets( timeWaitToReturnToPool,
-                        m_cancellationRecover.Token );
+                    idsOfRecoveredConnection = IdsOfRecoveredConnectionInLeasedSockets( m_cancellationRecover.Token );
                 }
 
                 if ( m_cancellationRecover.IsCancellationRequested )
@@ -35,7 +34,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     return;
                 }
 
-                await RecoverPoolSocketsAsync( idsOfRecoveredConnection, timeWaitToReturnToPool, 
+                await RecoverPoolSocketsAsync( idsOfRecoveredConnection, 
                         m_cancellationRecover.Token ).ConfigureAwait( false );
             }
         }
@@ -57,7 +56,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
             }
         }
 
-        private IEnumerable<EndPoint> IdsOfRecoveredConnectionInLeasedSockets( TimeSpan timeWaitToReturnToPool, CancellationToken cancellationToken )
+        private IEnumerable<EndPoint> IdsOfRecoveredConnectionInLeasedSockets( CancellationToken cancellationToken )
         {
             BlockingCollection<EndPoint> socketsWithRecoveredConnection = new BlockingCollection<EndPoint>();
 
@@ -69,77 +68,85 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                     CancellationToken = cancellationToken
                 };
 
-                //recover leased sockets
-                Parallel.ForEach( m_leasedSockets, parallelOptions, ( socket ) =>
-                 {
-                     Boolean isTaken = false;
-                     try
-                     {
-                         //socket can be returned to pool before we receive it by another thread and place, so takenSocket can be null
-                         isTaken = TryTakeLeasedSocket( socket.Key, out ConnectionPoolSocket takenSocket );
-
-                         if ( isTaken )
-                         {
-                             AddLeasedSocket( socket.Key, socket.Value );
-                             BackgroundConnectionResetHelper.AddSocket( takenSocket, cancellationToken );
-
-                             socketsWithRecoveredConnection.Add( socket.Key );
-                         }
-                     }
-                     catch ( OperationCanceledException )
-                     {
-                         if ( ( isTaken ) && ( socket.Value.StateInPool != SocketStateInPool.IsInPool ) )
-                         {
-                             socket.Value.ReturnedToPool();
-                         }
-
-                         ReleaseSocketSemaphore();
-
-                         throw;
-                     }
-                 } );
-
-                socketsWithRecoveredConnection.CompleteAdding();
-            } );
-
-            return socketsWithRecoveredConnection.GetConsumingEnumerable();
-        }
-
-        
-
-        private async Task RecoverPoolSocketsAsync(IEnumerable<EndPoint> idsOfRecoveredConnection, TimeSpan timeWaitToReturnToPool, CancellationToken cancellationToken)
-        {
-            ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
-
-            //here we call async method, so we cannot use Parallel.ForEach(in this case it will be ended before all iterations)
-            ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>> recoverSockets = new ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>>( async socket =>
-            {
-                Boolean isAddedToLeasedSocket = false;
-                //wait while any socket returns to pool
+                ConcurrentBag<ConnectionPoolSocket> receivedSockets = new ConcurrentBag<ConnectionPoolSocket>();
                 try
                 {
-                    _ = await CanSocketBeTakenFromPoolAsync( IOBehavior.Asynchronous, m_socketSemaphore,
-                    timeWaitToReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
-
-                    socket.Value.StateInPool = SocketStateInPool.TakenFromPool;
-                    AddLeasedSocket( socket.Key, socket.Value );
-                    isAddedToLeasedSocket = true;
-
-                    m_sockets.TryRemove( socket.Key, out _ );
-
-                    BackgroundConnectionResetHelper.AddSocket( socket.Value, cancellationToken );
-                }
-                catch(OperationCanceledException)
-                {
-                    if ( ( isAddedToLeasedSocket ) && ( socket.Value.StateInPool != SocketStateInPool.IsInPool ) )
+                    //recover leased sockets
+                    Parallel.ForEach( m_leasedSockets, parallelOptions, ( socket ) =>
                     {
-                        socket.Value.ReturnedToPool();
-                    }
-
-                    ReleaseSocketSemaphore();
-
-                    throw;
+                        Boolean isTaken = false;
+                    
+                        //socket can be returned to pool before we receive it by another thread and place, so takenSocket can be null
+                        isTaken = TryTakeLeasedSocket( socket.Key, out ConnectionPoolSocket takenSocket );
+                    
+                        if ( isTaken )
+                        {
+                            //this row should be before the next one to avoid concurrency bugs
+                            receivedSockets.Add( takenSocket );
+                            BackgroundConnectionResetHelper.AddSocket( takenSocket, cancellationToken );
+                    
+                            socketsWithRecoveredConnection.Add( socket.Key );
+                        }
+                    } );
                 }
+                catch ( OperationCanceledException ex )
+                {
+                    HandleCancellationException( receivedSockets, ex );
+                }
+                finally
+                {
+                    socketsWithRecoveredConnection.CompleteAdding();
+                }
+            } );
+
+            return socketsWithRecoveredConnection.GetConsumingEnumerable(cancellationToken);
+        }
+
+        private void HandleCancellationException(ConcurrentBag<ConnectionPoolSocket> sockets, OperationCanceledException exception)
+        {
+            ParallelOptions options = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Constants.MAX_THREADS
+            };
+
+            Parallel.ForEach( sockets, options, ( takenSocket ) =>
+            {
+                try
+                {
+                    if ( ( takenSocket.StateInPool != SocketStateInPool.IsInPool ) )
+                    {
+                        takenSocket.ReturnedToPool();
+                    }
+                }
+                catch(ObjectDisposedException)
+                {
+                    ;//ignore exception, try return the next one to pool
+                }
+            } );
+
+            throw exception;
+        }
+
+        private async ValueTask RecoverPoolSocketsAsync( IEnumerable<EndPoint> idsOfRecoveredConnection, CancellationToken cancellationToken )
+        {
+            ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
+            ConcurrentBag<ConnectionPoolSocket> receivedSockets = new ConcurrentBag<ConnectionPoolSocket>();
+
+            //TODO: change to using Parallel.ForEach
+            ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>> recoverSockets = new ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>>( socket =>
+            {
+                //don't change way of the next operations
+                m_sockets.TryRemove( socket.Key, out _ );
+
+                socket.Value.StateInPool = SocketStateInPool.TakenFromPool;
+
+                //this row should be before the next one to avoid concurrency bugs(we can add socket to m_leasedSockets,
+                //but don't return to pool and another thread will wait while it is returned)
+                receivedSockets.Add( socket.Value );
+                AddLeasedSocket( socket.Key, socket.Value );
+
+                BackgroundConnectionResetHelper.AddSocket( socket.Value, cancellationToken );
+
             }, parallelOptions );
 
             foreach ( KeyValuePair<EndPoint, ConnectionPoolSocket> socket in m_sockets )
@@ -147,12 +154,20 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 Boolean isConnAlreadyRecovered = idsOfRecoveredConnection != null && idsOfRecoveredConnection.Contains( socket.Key );
                 if ( !isConnAlreadyRecovered )
                 {
-                    recoverSockets.Post( socket );
+                    await recoverSockets.SendAsync( socket );
                 }
             }
 
             recoverSockets.Complete();
-            await recoverSockets.Completion.ConfigureAwait( continueOnCapturedContext: false );
+
+            try
+            {
+                await recoverSockets.Completion.ConfigureAwait( continueOnCapturedContext: false );
+            }
+            catch ( OperationCanceledException ex )
+            {
+                HandleCancellationException( receivedSockets, ex );
+            }
         }
 
         private ExecutionDataflowBlockOptions ParallelOptions( CancellationToken cancellationToken ) =>
@@ -163,7 +178,7 @@ namespace LUC.DiscoveryService.Kademlia.ClientPool
                 MaxMessagesPerTask = 1
             };
 
-        private async Task<ConnectionPoolSocket> TakenSocketWithRecoveredConnectionAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, ConnectionPoolSocket takenSocket )
+        private async ValueTask<ConnectionPoolSocket> TakenSocketWithRecoveredConnectionAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IOBehavior ioBehavior, ConnectionPoolSocket takenSocket )
         {
             ConnectionPoolSocket recoveredSocket = takenSocket;
             try

@@ -15,12 +15,15 @@ namespace LUC.DiscoveryService
         /// <summary>
         /// Get unique machine identifier
         /// </summary>
-        public static void Create(out String machineId)
+        public static void Create(out String machineId) =>
+            Create( fileName: $"{Constants.FILE_WITH_MACHINE_ID}{Constants.FILE_WITH_MACHINE_ID_EXTENSION}", out machineId );
+
+        internal static void Create( String fileName, out String machineId )
         {
 #if DEBUG
-            String fullFileNameWithMachineId = FullFileNameWithMachineId();
+            String fullFileNameWithMachineId = FullFileNameWithMachineId( fileName );
 
-            if (File.Exists(fullFileNameWithMachineId))
+            if ( File.Exists( fullFileNameWithMachineId ) )
             {
                 using ( StreamReader streamReader = new StreamReader( fullFileNameWithMachineId ) )
                 {
@@ -45,12 +48,12 @@ namespace LUC.DiscoveryService
         }
 
 #if DEBUG
-        private static String FullFileNameWithMachineId()
+        private static String FullFileNameWithMachineId( String fileName )
         {
             String fullExeName = Assembly.GetExecutingAssembly().Location;
             String pathToExeFile = Path.GetDirectoryName( fullExeName );
 
-            String fullFileNameWithMachineId = $"{pathToExeFile}\\{Constants.FILE_WITH_MACHINE_ID}";
+            String fullFileNameWithMachineId = $"{pathToExeFile}\\{fileName}";
 
             return fullFileNameWithMachineId;
         }

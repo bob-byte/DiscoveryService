@@ -74,7 +74,7 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         /// <summary>
         /// Also it removes first chunk from Range.NumsUndownloadedChunk
         /// </summary>
-        public async Task<(DownloadFileResponse response, RpcError rpcError)> ResultAsyncWithCountDownloadedBytesUpdate( Contact remoteContact,
+        public async ValueTask<(DownloadFileResponse response, RpcError rpcError)> ResultAsyncWithCountDownloadedBytesUpdate( Contact remoteContact,
             IOBehavior ioBehavior, UInt16 protocolVersion )
         {
             (DownloadFileResponse downloadResponse, RpcError error) = await ResultAsync<DownloadFileResponse>( remoteContact,
