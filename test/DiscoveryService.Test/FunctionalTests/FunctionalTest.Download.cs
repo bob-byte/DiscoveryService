@@ -32,10 +32,11 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             String filePrefix = UserIntersectionInConsole.ValidValueInputtedByUser( requestToUser: "Input file prefix where new file can exist on the server: ", ( userInput ) =>
             {
                 Boolean isValidInput = ( Extensions.PathExtensions.IsValidPath( userInput ) ) && ( !userInput.Contains( ":" ) );
+
                 return isValidInput;
             } );
 
-            (ObjectDescriptionModel fileDescription, String bucketName, String localFolderPath) = await RandomFileToDownloadAsync( apiClient, currentUserProvider, remoteContact, filePrefix ).ConfigureAwait( false );
+            (ObjectDescriptionModel fileDescription, String bucketName, String localFolderPath, String hexFilePrefix) = await RandomFileToDownloadAsync( apiClient, currentUserProvider, remoteContact, filePrefix ).ConfigureAwait( false );
 
             lock( UserIntersectionInConsole.Lock)
             {
@@ -48,7 +49,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                     await download.DownloadFileAsync(
                         localFolderPath,
                         bucketName,
-                        filePrefix,
+                        hexFilePrefix,
                         fileDescription.OriginalName,
                         fileDescription.Bytes,
                         fileDescription.Version,
@@ -75,7 +76,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             AdsExtensions.TryWriteLastSeenVersion( eventArgs.FullFileName, eventArgs.Version );
         }
 
-        private async static Task<(ObjectDescriptionModel randomFileToDownload, String serverBucketName, String localFolderPath)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String filePrefix )
+        private async static Task<(ObjectDescriptionModel randomFileToDownload, String serverBucketName, String localFolderPath, String hexFilePrefix)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, Contact remoteContact, String filePrefix )
         {
             IList<String> bucketDirectoryPathes = currentUserProvider.ProvideBucketDirectoryPathes();
 
@@ -90,8 +91,9 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             );
 
             String serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath( bucketPath ).ServerName;
+            String hexFilePrefix = filePrefix.ToHexPrefix();
 
-            ObjectsListResponse objectsListResponse = await apiClient.ListAsync( serverBucketName, filePrefix ).ConfigureAwait( continueOnCapturedContext: false );
+            ObjectsListResponse objectsListResponse = await apiClient.ListAsync( serverBucketName, hexFilePrefix ).ConfigureAwait( continueOnCapturedContext: false );
             ObjectsListModel objectsListModel = objectsListResponse.ToObjectsListModel();
             ObjectDescriptionModel[] undeletedObjectsListModel = objectsListModel.ObjectDescriptions.Where( c => !c.IsDeleted ).ToArray();
 
@@ -123,7 +125,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 //TODO add possibility to upload file to server and run this method again
 #if RECEIVE_TCP_FROM_OURSELF
                 randomFileToDownload = undeletedObjectsListModel[ random.Next( undeletedObjectsListModel.Length ) ];
-                await apiClient.DownloadFileAsync( serverBucketName, filePrefix, bucketPath, randomFileToDownload.OriginalName, randomFileToDownload ).ConfigureAwait( false );
+                await apiClient.DownloadFileAsync( serverBucketName, hexFilePrefix, bucketPath, randomFileToDownload.OriginalName, randomFileToDownload ).ConfigureAwait( false );
 #else
                 Console.WriteLine( $"You should put few files in {bucketPath} and using WpfClient, upload it" );
                 throw new InvalidOperationException();
@@ -139,7 +141,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 throw new InvalidOperationException();
             }
 
-            return (randomFileToDownload, serverBucketName, bucketPath);
+            return (randomFileToDownload, serverBucketName, bucketPath, hexFilePrefix);
         }
     }
 }

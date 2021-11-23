@@ -33,6 +33,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
         public event EventHandler<String> FilePartiallyDownloaded;
 
         private const String MESS_IF_FILE_DOESNT_EXIST_IN_ANY_NODE = "This file doesn't exist in any node";
+        private const Int32 CONTACT_COUNT_WITH_FILE_CAPACITY = 20;
 
         private readonly Object m_lockWriteFile;
         private readonly DownloadedFile m_downloadedFile;
@@ -100,11 +101,11 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 
             if ( isRightInputParameters )
             {
-                IEnumerable<Contact> onlineContacts = ContactsInSameBucket(localBucketName);
+                List<Contact> onlineContacts = ContactsInSameBucket(localBucketName).ToList();
 
                 try
                 {
-                    if ( onlineContacts.Count() >= 1 )
+                    if ( onlineContacts.Count >= 1 )
                     {
                         DownloadFileRequest initialRequest = new DownloadFileRequest( m_ourContact.KadId.Value, m_ourContact.MachineId )
                         {
@@ -118,11 +119,11 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 
                         if ( bytesCount <= Constants.MAX_CHUNK_SIZE )
                         {
-                            await DownloadSmallFileAsync( onlineContacts, initialRequest, cancellationToken, downloadProgress ).ConfigureAwait( false );
+                            await DownloadSmallFileAsync( onlineContacts, initialRequest, cancellationToken, downloadProgress ).ConfigureAwait( continueOnCapturedContext: false );
                         }
                         else
                         {
-                            IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, initialRequest, cancellationToken );
+                            IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, initialRequest, cancellationToken, CONTACT_COUNT_WITH_FILE_CAPACITY );
 
                             await DownloadBigFileAsync( contactsWithFile, initialRequest, cancellationToken, downloadProgress ).ConfigureAwait( false );
                         }

@@ -99,8 +99,11 @@ namespace LUC.DiscoveryService.Messages.KademliaRequests
         /// <summary>
         /// Use it after downloaded all bytes per <see cref="Contact"/>
         /// </summary>
-        public void Update() =>
+        public void Update()
+        {
             ChunkRange.TotalPerContact -= CountDownloadedBytes;
+            CountDownloadedBytes = 0;
+        }
 
         public Object Clone()
         {

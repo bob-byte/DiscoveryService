@@ -91,16 +91,8 @@ namespace LUC.DiscoveryService.Kademlia
             }
         }
 
-        public Int32 IpAddressesCount
-        {
-            get
-            {
-                lock ( m_ipAddresses )
-                {
-                    return m_ipAddresses.Count;
-                }
-            }
-        }
+        public Int32 IpAddressesCount =>
+            m_ipAddresses.Count;
 
         /// <summary>
         /// Update the fact that we've just seen this contact.
@@ -112,24 +104,14 @@ namespace LUC.DiscoveryService.Kademlia
         /// <returns>
         /// Copy of IP-addresses of contact
         /// </returns>
-        public List<IPAddress> IpAddresses()
-        {
-            lock ( m_ipAddresses )
-            {
-                return m_ipAddresses.ToList();
-            }
-        }
+        public List<IPAddress> IpAddresses() =>
+            m_ipAddresses.ToList();
 
         /// <returns>
         /// Copy of bucket local names of contact
         /// </returns>
-        public List<String> SupportedBuckets()
-        {
-            lock(m_supportedBuckets)
-            {
-                return m_supportedBuckets.ToList();
-            }
-        }
+        public List<String> SupportedBuckets() =>
+            m_supportedBuckets.ToList();
 
         public void AddBucketRange(IEnumerable<String> buckets)
         {
@@ -265,15 +247,19 @@ namespace LUC.DiscoveryService.Kademlia
             StringBuilder stringBuilder = new StringBuilder( contactAsStrWithoutAddresses );
 
             stringBuilder.AppendLine( $"{Display.TABULATION}{nameof( m_ipAddresses )}:" );
-            for ( Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++ )
+
+            lock ( m_ipAddresses )
             {
-                if ( numAddress == IpAddressesCount - 1 )
+                for ( Int32 numAddress = 0; numAddress < IpAddressesCount; numAddress++ )
                 {
-                    stringBuilder.Append( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]}" );
-                }
-                else
-                {
-                    stringBuilder.AppendLine( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]};" );
+                    if ( numAddress == IpAddressesCount - 1 )
+                    {
+                        stringBuilder.Append( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]}" );
+                    }
+                    else
+                    {
+                        stringBuilder.AppendLine( $"{Display.TABULATION}{Display.TABULATION}{m_ipAddresses[ numAddress ]};" );
+                    }
                 }
             }
 

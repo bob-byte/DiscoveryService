@@ -16,7 +16,6 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 {
     partial class FunctionalTest
     {
-#if DEBUG
         private static FileSystemWatcher s_fileSystemWatcher;
 
         private static String DownloadTestFolderFullName( String downloadTestFolderName )
@@ -74,20 +73,13 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                     //excluded value
                     String pathFromBin = rootFolder.Substring( startIndex, length: rootFolder.Length - startIndex );
 
-                    //Int32 indexOfConfFolder = pathFromBin.IndexOf( "\\" ) + 1;
-
-                    ////included value
-                    //String pathFromConfFolder = pathFromBin.Substring( indexOfConfFolder, pathFromBin.Length - indexOfConfFolder );//conf folder is IntegrationTests or Debug for example
-
                     String pathToExeFile = PathExtensions.PathToExeFile();
                     Int32 previousIndexOfCurrentConfFolder = pathToExeFile.LastIndexOf( "\\" );
-                    String pathToConfFolder = pathToExeFile.Substring( startIndex: 0, previousIndexOfCurrentConfFolder + 1 );//excluded value
+
+                    //excluded value
+                    String pathToConfFolder = pathToExeFile.Substring( startIndex: 0, previousIndexOfCurrentConfFolder + 1 );
 
                     rootFolder = Path.Combine( pathToConfFolder, pathFromBin );
-                    //substring to this index and after this index
-
-                    //String logRecordNewRootFullFolderName = Display.VariableWithValue( nameof( newLucFullFolderName ), newLucFullFolderName, useTab: false );
-                    //Console.WriteLine(logRecordNewRootFullFolderName);
                 }
             }
 
@@ -157,6 +149,5 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 }
             }
         }
-#endif
     }
 }

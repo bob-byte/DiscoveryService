@@ -17,12 +17,13 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 {
     public partial class Download
     {
-        private IEnumerable<Contact> ContactsWithFile( 
-            IEnumerable<Contact> onlineContacts, 
-            DownloadFileRequest sampleRequest, 
-            CancellationToken cancellationToken )
+        private IEnumerable<Contact> ContactsWithFile(
+            IEnumerable<Contact> onlineContacts,
+            DownloadFileRequest sampleRequest,
+            CancellationToken cancellationToken,
+            Int32 contactCountWithFileCapacity )
         {
-            BlockingCollection<Contact> contactsWithFile = new BlockingCollection<Contact>( onlineContacts.Count() );
+            BlockingCollection<Contact> contactsWithFile = new BlockingCollection<Contact>( contactCountWithFileCapacity );
 
             //we need parallel execution. Task.Run is async
             Task.Factory.StartNew( async () =>

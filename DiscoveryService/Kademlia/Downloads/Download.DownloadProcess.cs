@@ -25,7 +25,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
         {
             //we need to cancel requesting another contacts whether they have file when we have downloaded it
             CancellationTokenSource cancelSource = new CancellationTokenSource();
-            IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, initialRequest, cancelSource.Token );
+            IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, initialRequest, cancelSource.Token, CONTACT_COUNT_WITH_FILE_CAPACITY );
 
             DownloadFileRequest request = (DownloadFileRequest)initialRequest.Clone();
             request.ChunkRange.End = request.ChunkRange.Total - 1;
@@ -161,7 +161,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                                     fileStream,
                                     cancellationToken,
                                     downloadProgress
-                                );
+                                ).ConfigureAwait(false);
 
                                 dictContactsWithRequest.AddOrUpdate( contactWithRequest.Key, updatedRequest, ( contact, oldRequest ) => updatedRequest );
                             }, parallelOptions );
@@ -203,14 +203,18 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                 }
             }
 
-            if ( !cancellationToken.IsCancellationRequested )
-            {
-                m_downloadedFile.RenameFile( tempFullPath, initialRequest.FullPathToFile );
-                File.SetAttributes( initialRequest.FullPathToFile, FileAttributes.Normal );
-            }
+            cancellationToken.ThrowIfCancellationRequested();
+
+            m_downloadedFile.RenameFile( tempFullPath, initialRequest.FullPathToFile );
+            File.SetAttributes( initialRequest.FullPathToFile, FileAttributes.Normal );
         }
 
-        private async ValueTask<DownloadFileRequest> DownloadProcessBigFileAsync( Contact contact, DownloadFileRequest request, Stream fileStream, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
+        private async ValueTask<DownloadFileRequest> DownloadProcessBigFileAsync( 
+            Contact contact, 
+            DownloadFileRequest request, 
+            Stream fileStream, 
+            CancellationToken cancellationToken, 
+            IProgress<ChunkRange> downloadProgress )
         {
             DownloadFileRequest updatedRequest;
 
@@ -229,17 +233,24 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             return updatedRequest;
         }
 
-        private async ValueTask<DownloadFileRequest> DownloadBigTotalPerContactBytesAsync( Contact remoteContact, DownloadFileRequest sampleRequest, Stream fileStream, CancellationToken cancellationToken, IProgress<ChunkRange> downloadProgress )
+        private async ValueTask<DownloadFileRequest> DownloadBigTotalPerContactBytesAsync( 
+            Contact remoteContact, 
+            DownloadFileRequest sampleRequest, 
+            Stream fileStream, 
+            CancellationToken cancellationToken, 
+            IProgress<ChunkRange> downloadProgress )
         {
             UInt32 maxChunkSize = Constants.MAX_CHUNK_SIZE;
+
             ChunkRange initialContantRange = sampleRequest.ChunkRange;
             DownloadFileRequest lastRequest = (DownloadFileRequest)sampleRequest.Clone();
+
             UInt64 finallyEnd = initialContantRange.TotalPerContact - 1 + initialContantRange.Start;
             UInt64 start = lastRequest.ChunkRange.Start;
+
             Boolean isRightResponse = true;
 
             DownloadFileResponse response;
-            RpcError rpcError;
             for ( UInt64 end = start + maxChunkSize - 1;
                  ( !IsFinishedDownload( start, end ) ) && ( isRightResponse );
                  start = end + 1, end = ( ( end + maxChunkSize ) <= finallyEnd ) ? ( end + maxChunkSize ) : finallyEnd )
@@ -247,8 +258,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                 lastRequest.ChunkRange.Start = start;
                 lastRequest.ChunkRange.End = end;
 
-
-                (response, rpcError, isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate( remoteContact, IOBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( false );
+                (response, _, isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate( remoteContact, IOBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -279,7 +289,10 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             return lastRequest;
         }
 
-        private ConcurrentDictionary<Contact, DownloadFileRequest> ContactsAndRequestsToDownload( DownloadFileRequest sampleRequest, IList<Contact> contactsWithFile, CancellationToken cancellationToken )
+        private ConcurrentDictionary<Contact, DownloadFileRequest> ContactsAndRequestsToDownload( 
+            DownloadFileRequest sampleRequest, 
+            IList<Contact> contactsWithFile, 
+            CancellationToken cancellationToken )
         {
             ConcurrentDictionary<Contact, DownloadFileRequest> contactsAndRequests = new ConcurrentDictionary<Contact, DownloadFileRequest>();
 
@@ -343,7 +356,9 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
         /// <returns>
         /// <see cref="Contact"/>s with <see cref="DownloadFileRequest"/>s with <see cref="ChunkRange"/>s which aren't download before
         /// </returns>
-        private ConcurrentDictionary<Contact, DownloadFileRequest> ContactsWithRequestToDownload( ConcurrentDictionary<Contact, DownloadFileRequest> contactsWithRequest, CancellationToken cancellationToken )
+        private ConcurrentDictionary<Contact, DownloadFileRequest> ContactsWithRequestToDownload( 
+            ConcurrentDictionary<Contact, DownloadFileRequest> contactsWithRequest, 
+            CancellationToken cancellationToken )
         {
             List<DownloadFileRequest> oldRequests = contactsWithRequest.Values.ToList();
 
@@ -368,11 +383,10 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             else
             {
                 ConcurrentDictionary<Contact, DownloadFileRequest> newContactsWithRequest = new ConcurrentDictionary<Contact, DownloadFileRequest>();
-                UInt32 maxChunkSize = Constants.MAX_CHUNK_SIZE;
                 DownloadFileRequest sampleRequest = oldRequests.First();
 
                 List<Contact> contactsForRetryDownload = ContactsForRetryDownload( sampleRequest.BucketId ).ToList();
-                List<Contact> contactsWithFile = ContactsWithFile( contactsForRetryDownload, sampleRequest, cancellationToken ).ToList();
+                List<Contact> contactsWithFile = ContactsWithFile( contactsForRetryDownload, sampleRequest, cancellationToken, CONTACT_COUNT_WITH_FILE_CAPACITY ).ToList();
 
                 for ( Int32 numContact = 0, numRequest = 0;
                      ( numRequest < oldRequests.Count ) && ( сountUndistributedBytes > 0 );
@@ -398,12 +412,8 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                     //maybe it should be call of method DownloadFileAsync in this if
                     if ( ( сountUndistributedBytes - request.ChunkRange.TotalPerContact > 0 ) && ( numContact == contactsWithFile.Count - 1 ) )
                     {
+                        //we don't know exactly which chunks aren't downloaded
                         throw new FilePartiallyDownloadedException( "Contacts have strange behavior. Cannot normally download file" );
-                    }
-
-                    if ( request.ChunkRange.TotalPerContact <= maxChunkSize )
-                    {
-                        request.ChunkRange.End = request.ChunkRange.Start + request.ChunkRange.TotalPerContact;
                     }
 
                     newContactsWithRequest.TryAdd( contactsWithFile[ numContact ], request );
@@ -416,7 +426,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
         /// <returns>
         /// Contact which is the same bucket and answered last request
         /// </returns>
-        private IEnumerable<Contact> ContactsForRetryDownload(String localBucketName)
+        private IEnumerable<Contact> ContactsForRetryDownload( String localBucketName )
         {
             IEnumerable<Contact> contactsForRetryDownload;
             try
