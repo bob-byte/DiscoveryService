@@ -385,7 +385,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                 ConcurrentDictionary<Contact, DownloadFileRequest> newContactsWithRequest = new ConcurrentDictionary<Contact, DownloadFileRequest>();
                 DownloadFileRequest sampleRequest = oldRequests.First();
 
-                List<Contact> contactsForRetryDownload = ContactsForRetryDownload( sampleRequest.BucketId ).ToList();
+                List<Contact> contactsForRetryDownload = ContactsForRetryDownload( sampleRequest.LocalBucketId ).ToList();
                 List<Contact> contactsWithFile = ContactsWithFile( contactsForRetryDownload, sampleRequest, cancellationToken, CONTACT_COUNT_WITH_FILE_CAPACITY ).ToList();
 
                 for ( Int32 numContact = 0, numRequest = 0;

@@ -111,7 +111,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                         {
                             FullPathToFile = fullFileName,
                             FileOriginalName = localOriginalName,
-                            BucketId = localBucketName,
+                            LocalBucketId = localBucketName,
                             ChunkRange = new ChunkRange { Start = 0, Total = (UInt64)bytesCount },
                             HexPrefix = hexPrefix,
                             FileVersion = fileVersion

@@ -77,7 +77,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
         {
             CheckFileExistsRequest request = new CheckFileExistsRequest( m_ourContact.KadId.Value, m_ourContact.MachineId )
             {
-                BucketId = sampleRequest.BucketId,
+                LocalBucketId = sampleRequest.LocalBucketId,
                 FileOriginalName = sampleRequest.FileOriginalName,
                 HexPrefix = sampleRequest.HexPrefix,
             };

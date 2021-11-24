@@ -62,7 +62,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
         {
             CheckFileExistsResponse response = new CheckFileExistsResponse( request.RandomID )
             {
-                IsRightBucket = m_discoveryService.SupportedBuckets().Any( c => c.Key == request.BucketId ),
+                IsRightBucket = m_discoveryService.SupportedBuckets().Any( c => c.Key == request.LocalBucketId ),
             };
 
             if ( response.IsRightBucket )
@@ -90,18 +90,12 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             String localBucketDirectoryPath = bucketDirectoryPathes.SingleOrDefault( bucketFullName =>
              {
                  String bucketDirectoryName = Path.GetFileName( bucketFullName );
-                 return request.BucketId.ToLowerInvariant().Contains( bucketDirectoryName.ToLowerInvariant() );
+
+                 return request.LocalBucketId.ToLowerInvariant() == bucketDirectoryName.ToLowerInvariant();
              } );
 
             if ( localBucketDirectoryPath != null )
             {
-//#if INTEGRATION_TESTS
-//                String fullDllFileName = Assembly.GetEntryAssembly().Location;
-//                String directoryName = Path.GetFileName( localBucketDirectoryPath );
-
-//                localBucketDirectoryPath = Path.Combine( fullDllFileName, directoryName );
-//#endif
-
                 String filePrefix = request.HexPrefix.FromHexString();
 
                 String fullFileName = Path.Combine( localBucketDirectoryPath, filePrefix, request.FileOriginalName );
@@ -109,7 +103,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
             }
             else
             {
-                StringBuilder messageException = new StringBuilder( $"Server bucket name {request.BucketId} doesn't match to:\n" );
+                StringBuilder messageException = new StringBuilder( $"Server bucket name {request.LocalBucketId} doesn't match to:\n" );
                 foreach ( String bucketFullName in bucketDirectoryPathes )
                 {
                     messageException.Append( $"{bucketFullName}; " );

@@ -47,35 +47,6 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             s_cancellationTokenSource.Cancel();
         }
 
-        /// <summary>
-        ///   User Groups with their SSL certificates.
-        ///   SSL should have SNI ( Server Name Indication ) feature enabled
-        ///   This allows us to tell which group we are trying to connect to, so that the server knows which certificate to use.
-        ///
-        ///   We generate SSL and key/certificate pairs for every group. These are distributed from server to user’s computers 
-        ///   which are authenticated for the buckets later.
-        ///
-        ///   These are rotated any time membership changes e.g., when someone is removed from a group/shared folder. 
-        ///   We can require both ends of the HTTPS connection to authenticate with the same certificate (the certificate for the group).
-        ///   This proves that both ends of the connection are authenticated.
-        /// </summary>
-        /// <value>
-        ///   Some unique value.
-        /// </value>
-        public static ConcurrentDictionary<String, String> OurSupportedGroups { get; set; } = new ConcurrentDictionary<String, String>();
-
-        public static ConcurrentDictionary<String, String> GroupsDiscovered { get; set; } = new ConcurrentDictionary<String, String>();
-
-        /// <summary>
-        /// IP address of groups which were discovered.
-        /// Key is a network in a format "IP-address:port"
-        /// Value is the list of groups, which peer supports.
-        /// </summary>
-        /// <remarks>
-        /// This property is populated when OnGoodTcpMessage event arrives.
-        /// </remarks>
-        public static ConcurrentDictionary<String, String> KnownIps { get; set; } = new ConcurrentDictionary<String, String>();
-
         static async Task Main(String[] args)
         {
             String containerId = String.Empty;
@@ -96,6 +67,8 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                     return;
                 }
             }
+
+            Console.CancelKeyPress += StopDs;
 
             String warning = Display.StringWithAttention( "Before test DS(Discovery Service) with container you should run DS.Test.ext without them or \n" +
                 "set DS.Test/bin/integrationTests/DownloadTest/{anyname} as LUC root folder and\n" +
@@ -228,27 +201,19 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
             }
         }
 
+        private static void StopDs(Object sender, ConsoleCancelEventArgs eventArgs)
+        {
+            s_discoveryService?.Stop();
+        }
+
         private static void OnGoodTcpMessage( Object sender, TcpMessageEventArgs e )
         {
             lock ( UserIntersectionInConsole.Lock )
             {
                 Console.WriteLine( "=== TCP {0:O} ===", DateTime.Now );
+
                 AcknowledgeTcpMessage tcpMessage = e.Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
                 Console.WriteLine( tcpMessage.ToString() );
-
-                if ( ( tcpMessage != null ) && ( e.RemoteEndPoint is IPEndPoint endPoint ) )
-                {
-                    String realEndPoint = $"{endPoint.Address}:{tcpMessage.TcpPort}";
-
-                    foreach ( String group in tcpMessage.GroupIds )
-                    {
-                        if ( !GroupsDiscovered.TryAdd( realEndPoint, group ) )
-                        {
-                            GroupsDiscovered.TryRemove( realEndPoint, out _ );
-                            GroupsDiscovered.TryAdd( realEndPoint, group );
-                        }
-                    }
-                }
             }
         }
 
@@ -260,7 +225,6 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
                 UdpMessage message = e.Message<UdpMessage>( whetherReadMessage: false );
                 Console.WriteLine( message.ToString() );
-                // do nothing, this is for debugging only
             }
         }
 
@@ -318,7 +282,8 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                                $"6 - send {typeof( AcknowledgeTcpMessage ).Name}\n" +
                                $"7 - test count available connections\n" +
                                $"8 - download random file from another contact(-s)\n" +
-                               $"9 - create file with random bytes" );
+                               $"9 - create file with random bytes\n" +
+                               $"S - stop DS and close app" );
 
         private static void GetContact( DiscoveryService discoveryService, out Contact contact )
         {
