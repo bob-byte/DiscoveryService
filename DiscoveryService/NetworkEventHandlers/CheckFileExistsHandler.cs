@@ -62,7 +62,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
         {
             CheckFileExistsResponse response = new CheckFileExistsResponse( request.RandomID )
             {
-                IsRightBucket = m_discoveryService.SupportedBuckets().Any( c => c.Key == request.LocalBucketId ),
+                IsRightBucket = m_discoveryService.SupportedBuckets().Any( c => c.Key.Equals( request.LocalBucketId, StringComparison.OrdinalIgnoreCase ) ),
             };
 
             if ( response.IsRightBucket )
@@ -91,7 +91,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
              {
                  String bucketDirectoryName = Path.GetFileName( bucketFullName );
 
-                 return request.LocalBucketId.ToLowerInvariant() == bucketDirectoryName.ToLowerInvariant();
+                 return request.LocalBucketId.Equals( bucketDirectoryName, StringComparison.OrdinalIgnoreCase );
              } );
 
             if ( localBucketDirectoryPath != null )

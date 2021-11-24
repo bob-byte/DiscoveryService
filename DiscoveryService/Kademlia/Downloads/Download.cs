@@ -195,8 +195,8 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             }
         }
 
-        private IEnumerable<Contact> ContactsInSameBucket(String serverBucketName) =>
-            m_discoveryService.OnlineContacts().Where( c => c.SupportedBuckets().Any( b => b == serverBucketName ) );
+        private IEnumerable<Contact> ContactsInSameBucket( String serverBucketName ) =>
+            m_discoveryService.OnlineContacts().Where( c => c.SupportedBuckets().Any( b => b.Equals( serverBucketName, StringComparison.OrdinalIgnoreCase ) ) );
 
         private ExecutionDataflowBlockOptions ParallelOptions(CancellationToken cancellationToken) =>
             new ExecutionDataflowBlockOptions
