@@ -6,11 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
 
-using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     /// TCP session is used to read and write data from the connected TCP client

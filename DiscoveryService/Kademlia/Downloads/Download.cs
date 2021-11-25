@@ -1,8 +1,8 @@
-﻿using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Exceptions;
-using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Messages.KademliaRequests;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.Interfaces;
 
 using System;
@@ -13,7 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace LUC.DiscoveryService.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     /// <summary>
     /// Thread safe class for download files
@@ -130,6 +130,10 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
 
                         FileDownloaded?.Invoke( sender: this, new FileDownloadedEventArgs( fullFileName, fileVersion ) );
                     }
+                    else
+                    {
+                        throw new InvalidOperationException( $"{nameof( DiscoveryService )} didn\'t find any node" );
+                    }
                 }
                 catch ( OperationCanceledException ex )
                 {
@@ -196,7 +200,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
         }
 
         private IEnumerable<Contact> ContactsInSameBucket( String serverBucketName ) =>
-            m_discoveryService.OnlineContacts().Where( c => c.SupportedBuckets().Any( b => b.Equals( serverBucketName, StringComparison.OrdinalIgnoreCase ) ) );
+            m_discoveryService.OnlineContacts().Where( c => c.Buckets().Any( b => b.Equals( serverBucketName, StringComparison.OrdinalIgnoreCase ) ) );
 
         private ExecutionDataflowBlockOptions ParallelOptions(CancellationToken cancellationToken) =>
             new ExecutionDataflowBlockOptions

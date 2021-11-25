@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace LUC.DiscoveryService.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     public static class Validate
     {

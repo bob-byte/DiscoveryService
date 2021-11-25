@@ -1,5 +1,5 @@
-﻿using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages;
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 
-namespace LUC.DiscoveryService.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     ///   The event data for <see cref="NetworkEventInvoker.QueryReceived"/> or

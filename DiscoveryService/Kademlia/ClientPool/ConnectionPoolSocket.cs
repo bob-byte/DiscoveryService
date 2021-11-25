@@ -1,5 +1,5 @@
-﻿using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces;
 
 using System;
@@ -15,7 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Kademlia.ClientPool
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     /// <summary>
     /// Client socket, maintained by the Connection Pool

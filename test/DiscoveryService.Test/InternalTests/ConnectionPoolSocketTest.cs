@@ -14,12 +14,12 @@ using AutoFixture.Kernel;
 
 using FluentAssertions;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.ClientPool;
-using LUC.DiscoveryService.Messages.KademliaRequests;
-using LUC.DiscoveryService.Test.Builders;
-using LUC.DiscoveryService.Test.InternalTests.Attributes;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Attributes;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 
@@ -27,7 +27,7 @@ using Moq;
 
 using NUnit.Framework;
 
-namespace LUC.DiscoveryService.Test.InternalTests
+namespace LUC.DiscoveryServices.Test.InternalTests
 {
     [TestFixture]
     class ConnectionPoolSocketTest

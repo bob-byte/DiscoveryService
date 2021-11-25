@@ -1,4 +1,4 @@
-namespace LUC.DiscoveryService.Common
+namespace LUC.DiscoveryServices.Common
 {
     /// <summary>
     /// Specifies whether to perform synchronous or asynchronous I/O.

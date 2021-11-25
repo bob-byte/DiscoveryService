@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace LUC.DiscoveryService.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     /// <b>Abstract</b> class for messages

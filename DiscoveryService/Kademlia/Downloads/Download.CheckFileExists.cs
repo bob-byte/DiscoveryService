@@ -1,6 +1,6 @@
-﻿using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Messages.KademliaRequests;
-using LUC.DiscoveryService.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 
 using System;
 using System.Collections.Generic;
@@ -11,9 +11,9 @@ using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 using Nito.AsyncEx;
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Common;
 
-namespace LUC.DiscoveryService.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     public partial class Download
     {
@@ -23,6 +23,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
             CancellationToken cancellationToken,
             Int32 contactCountWithFileCapacity )
         {
+            //try change to using AsyncCollection
             BlockingCollection<Contact> contactsWithFile = new BlockingCollection<Contact>( contactCountWithFileCapacity );
 
             //we need parallel execution. Task.Run is async

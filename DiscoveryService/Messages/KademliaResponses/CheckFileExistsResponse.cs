@@ -1,6 +1,6 @@
-﻿using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Messages.KademliaRequests;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Helpers;
 
@@ -13,7 +13,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Messages.KademliaResponses
+namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {
     class CheckFileExistsResponse : AbstactFileResponse
     {

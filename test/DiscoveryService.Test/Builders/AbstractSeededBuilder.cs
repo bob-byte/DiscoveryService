@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using AutoFixture.Kernel;
 
-namespace LUC.DiscoveryService.Test.Builders
+namespace LUC.DiscoveryServices.Test.Builders
 {
     abstract class AbstractSeededBuilder<T> : ISpecimenBuilder
         where T: struct

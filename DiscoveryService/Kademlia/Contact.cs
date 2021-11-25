@@ -6,12 +6,12 @@ using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Collections;
 using System.IO;
-using LUC.DiscoveryService.Kademlia.Exceptions;
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Common;
 using LUC.Interfaces.Models;
 using System.Text;
 
-namespace LUC.DiscoveryService.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     public class Contact : IComparable
     {
@@ -110,7 +110,7 @@ namespace LUC.DiscoveryService.Kademlia
         /// <returns>
         /// Copy of bucket local names of contact
         /// </returns>
-        public List<String> SupportedBuckets() =>
+        public List<String> Buckets() =>
             m_supportedBuckets.ToList();
 
         public void AddBucketRange(IEnumerable<String> buckets)

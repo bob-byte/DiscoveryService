@@ -9,12 +9,12 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Messages.KademliaResponses;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 
-namespace LUC.DiscoveryService.Common
+namespace LUC.DiscoveryServices.Common
 {
     class Display
     {

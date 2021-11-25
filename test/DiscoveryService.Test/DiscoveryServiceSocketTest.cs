@@ -1,8 +1,8 @@
-﻿using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Messages.KademliaRequests;
-using LUC.DiscoveryService.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 
 using NUnit.Framework;
 
@@ -16,7 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Test
+namespace LUC.DiscoveryServices.Test
 {
     [TestFixture]
     class DiscoveryServiceSocketTest

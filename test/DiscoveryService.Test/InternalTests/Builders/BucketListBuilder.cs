@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 using AutoFixture.Kernel;
 using AutoFixture;
 
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Test.Builders;
-using LUC.DiscoveryService.Test.InternalTests.Requests;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Requests;
 
-namespace LUC.DiscoveryService.Test.InternalTests.Builders
+namespace LUC.DiscoveryServices.Test.InternalTests.Builders
 {
     class BucketListBuilder : AbstractSeededBuilder<BuildBucketListRequest>
     {

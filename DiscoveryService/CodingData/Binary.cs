@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.CodingData
+namespace LUC.DiscoveryServices.CodingData
 {
     abstract class Binary
     {

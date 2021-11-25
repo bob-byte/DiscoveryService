@@ -7,10 +7,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Messages;
+using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Messages;
 
-namespace LUC.DiscoveryService.Common.Extensions
+namespace LUC.DiscoveryServices.Common.Extensions
 {
     static class SocketExtension
     {

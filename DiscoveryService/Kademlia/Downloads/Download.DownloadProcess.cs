@@ -1,9 +1,9 @@
-﻿using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Exceptions;
-using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Messages.KademliaRequests;
-using LUC.DiscoveryService.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 
 using System;
 using System.Collections.Concurrent;
@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace LUC.DiscoveryService.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     public partial class Download
     {
@@ -90,7 +90,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                     }
 
                     fileStream.Write( response.Chunk, offset: 0, response.Chunk.Length );
-                    downloadProgress?.Report( lastRequest.ChunkRange );
+                    downloadProgress?.Report( (ChunkRange)lastRequest.ChunkRange.Clone() );
                 }
 
                 isWritenInFile = true;
@@ -281,7 +281,7 @@ namespace LUC.DiscoveryService.Kademlia.Downloads
                         }
 
                         fileStream.Write( response.Chunk, offset: 0, response.Chunk.Length );
-                        downloadProgress?.Report( lastRequest.ChunkRange );
+                        downloadProgress?.Report( (ChunkRange)lastRequest.ChunkRange.Clone() );
                     }
                 }
             }

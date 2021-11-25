@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace LUC.DiscoveryService.Kademlia.Exceptions
+namespace LUC.DiscoveryServices.Kademlia.Exceptions
 {
     public class NotContactException : Exception
     {

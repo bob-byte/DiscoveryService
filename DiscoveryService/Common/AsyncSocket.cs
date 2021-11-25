@@ -1,7 +1,7 @@
-﻿using LUC.DiscoveryService.Common.Extensions;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.ClientPool;
-using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryServices.Common.Extensions;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces;
 
 using System;
@@ -15,7 +15,7 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Common
+namespace LUC.DiscoveryServices.Common
 {
     /// <summary>
     /// New socket methods are marked <a href="Ds"/> in the front of the name, so only there <see cref="State"/> will be changed

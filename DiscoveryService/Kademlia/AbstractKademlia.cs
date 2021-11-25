@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     abstract class AbstractKademlia
     {

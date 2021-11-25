@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Numerics;
 
-namespace LUC.DiscoveryService.Kademlia.Interfaces
+namespace LUC.DiscoveryServices.Kademlia.Interfaces
 {
     interface IStorage
     {

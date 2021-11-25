@@ -5,10 +5,10 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Interfaces;
+using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Interfaces;
 
-namespace LUC.DiscoveryService.Messages.KademliaResponses
+namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {
     class ErrorResponse : Response
     {

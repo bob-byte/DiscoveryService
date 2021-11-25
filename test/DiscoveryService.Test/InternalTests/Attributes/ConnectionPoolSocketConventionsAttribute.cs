@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 using AutoFixture;
 using AutoFixture.NUnit3;
 
-using LUC.DiscoveryService.Test.Builders;
-using LUC.DiscoveryService.Test.InternalTests.Customizations;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Customizations;
 
-namespace LUC.DiscoveryService.Test.InternalTests.Attributes
+namespace LUC.DiscoveryServices.Test.InternalTests.Attributes
 {
     internal class ConnectionPoolSocketConventionsAttribute : AutoDataAttribute
     {

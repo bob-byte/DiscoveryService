@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 using AutoFixture;
 using AutoFixture.Kernel;
 
-using LUC.DiscoveryService.Kademlia.ClientPool;
-using LUC.DiscoveryService.Test.Builders;
-using LUC.DiscoveryService.Test.InternalTests.Builders;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Builders;
 
-namespace LUC.DiscoveryService.Test.InternalTests.Customizations
+namespace LUC.DiscoveryServices.Test.InternalTests.Customizations
 {
     class ConnectionPoolSocketBasicCustomization : ICustomization
     {

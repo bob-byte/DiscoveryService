@@ -1,6 +1,6 @@
-﻿using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Interfaces;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Messages.KademliaRequests
+namespace LUC.DiscoveryServices.Messages.KademliaRequests
 {
     class FindNodeRequest : Request
     {

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Common.Extensions
+namespace LUC.DiscoveryServices.Common.Extensions
 {
     static class EventWaitHandleExtension
     {

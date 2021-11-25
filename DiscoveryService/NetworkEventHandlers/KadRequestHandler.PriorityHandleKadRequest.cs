@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.NetworkEventHandlers
+namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
     partial class KadOperationRequestHandler
     {

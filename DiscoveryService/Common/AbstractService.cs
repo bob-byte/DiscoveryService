@@ -1,4 +1,4 @@
-﻿using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryServices.Kademlia;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 
@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Common
+namespace LUC.DiscoveryServices.Common
 {
     /// <summary>
     /// Contains a basic info about a Service Discovery

@@ -1,6 +1,6 @@
-﻿using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Interfaces;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
 
 using System;
 using System.Collections.Generic;
@@ -13,7 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     class Message : IWireSerialiser
     {

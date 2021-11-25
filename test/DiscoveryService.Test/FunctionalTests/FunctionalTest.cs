@@ -1,11 +1,11 @@
 ﻿using LUC.ApiClient;
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.ClientPool;
-using LUC.DiscoveryService.Kademlia.Downloads;
-using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Messages.KademliaRequests;
-using LUC.DiscoveryService.Test.Extensions;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Kademlia.Downloads;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Test.Extensions;
 using LUC.Interfaces;
 using LUC.Interfaces.Models;
 using LUC.Interfaces.OutputContracts;
@@ -27,7 +27,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     partial class FunctionalTest
     {
@@ -273,17 +273,18 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
         }
 
         private static void ShowAvailableUserOptions() =>
-            Console.WriteLine( $"Select an operation:\n" +
-                               $"1 - send multicast\n" +
-                               $"2 - send {typeof( PingRequest ).Name}\n" +
-                               $"3 - send {typeof( StoreRequest ).Name}\n" +
-                               $"4 - send {typeof( FindNodeRequest ).Name}\n" +
-                               $"5 - send {typeof( FindValueRequest ).Name}\n" +
-                               $"6 - send {typeof( AcknowledgeTcpMessage ).Name}\n" +
-                               $"7 - test count available connections\n" +
-                               $"8 - download random file from another contact(-s)\n" +
-                               $"9 - create file with random bytes\n" +
-                               $"S - stop DS and close app" );
+            Console.WriteLine( 
+                $"Select an operation:\n" +
+                $"1 - send multicast\n" +
+                $"2 - send {typeof( PingRequest ).Name}\n" +
+                $"3 - send {typeof( StoreRequest ).Name}\n" +
+                $"4 - send {typeof( FindNodeRequest ).Name}\n" +
+                $"5 - send {typeof( FindValueRequest ).Name}\n" +
+                $"6 - send {typeof( AcknowledgeTcpMessage ).Name}\n" +
+                $"7 - test count available connections\n" +
+                $"8 - download random file from another contact(-s)\n" +
+                $"9 - create file with random bytes"
+            );
 
         private static void GetContact( DiscoveryService discoveryService, out Contact contact )
         {

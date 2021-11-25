@@ -1,9 +1,9 @@
-﻿using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Interfaces;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Messages.KademliaRequests;
-using LUC.DiscoveryService.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Helpers;
@@ -16,7 +16,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.NetworkEventHandlers
+namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
     class DownloadFileHandler : CheckFileExistsHandler
     {

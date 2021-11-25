@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Common;
 
-namespace LUC.DiscoveryService.Kademlia.Routers
+namespace LUC.DiscoveryServices.Kademlia.Routers
 {
     class ParallelRouter : BaseRouter
     {

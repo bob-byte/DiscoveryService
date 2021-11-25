@@ -1,5 +1,5 @@
-﻿using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     public class ChunkRange : ICloneable
     {

@@ -1,4 +1,4 @@
-﻿using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryServices.Messages;
 
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Interfaces
+namespace LUC.DiscoveryServices.Interfaces
 {
     interface INetworkEventHandler
     {

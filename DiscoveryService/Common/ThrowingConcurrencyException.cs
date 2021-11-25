@@ -5,9 +5,9 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
 
-namespace LUC.DiscoveryService.Common
+namespace LUC.DiscoveryServices.Common
 {
     class ThrowConcurrencyException
     {

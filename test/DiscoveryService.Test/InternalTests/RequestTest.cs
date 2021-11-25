@@ -4,17 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 using AutoFixture;
-using LUC.DiscoveryService.Messages.KademliaResponses;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Common;
 using FluentAssertions;
 using NUnit.Framework;
-using LUC.DiscoveryService.Test.InternalTests.Builders;
-using LUC.DiscoveryService.Test.InternalTests.Requests;
+using LUC.DiscoveryServices.Test.InternalTests.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Requests;
 
-namespace LUC.DiscoveryService.Test.InternalTests
+namespace LUC.DiscoveryServices.Test.InternalTests
 {
     class RequestTest
     {

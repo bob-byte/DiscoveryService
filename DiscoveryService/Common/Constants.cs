@@ -1,20 +1,16 @@
 ﻿using System;
 using System.Net;
 
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Common;
 
-namespace LUC.DiscoveryService.Common
+namespace LUC.DiscoveryServices.Common
 {
     static class Constants
     {
-#if DEBUG
         public const String FILE_WITH_MACHINE_ID = "CurrentMachineId";
         public const String FILE_WITH_MACHINE_ID_EXTENSION = ".txt";
-#endif
 
-#if DEBUG
         public const String DOWNLOAD_TEST_NAME_FOLDER = "DownloadTest";
-#endif
 
         public const Int32 MAX_CHUNK_SIZE = 2000000;
         public const UInt16 MAX_CHUNK_READ_PER_ONE_TIME = UInt16.MaxValue;

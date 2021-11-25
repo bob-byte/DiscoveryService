@@ -1,5 +1,5 @@
-﻿using LUC.DiscoveryService.Kademlia.ClientPool;
-using LUC.DiscoveryService.Messages.KademliaRequests;
+﻿using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Messages.KademliaResponses
+namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {
     class StoreResponse : Response
     {

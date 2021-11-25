@@ -11,16 +11,16 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.ClientPool;
-using LUC.DiscoveryService.Kademlia.Routers;
-using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Kademlia.Routers;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     ///   LightUpon.Cloud Service.
@@ -37,16 +37,14 @@ namespace LUC.DiscoveryService
     public class NetworkEventInvoker : AbstractService
     {
         /// <summary>
-        ///   Raised when any service sends a query.
+        ///   Raised when any service sends a query (see <seealso cref="DiscoveryService.QueryAllServices"/>).
         /// </summary>
         /// <value>
-        ///   Contains the query <see cref="DiscoveryServiceMessage"/>.
+        ///   Contains the query <see cref="UdpMessage"/>.
         /// </value>
         /// <remarks>
-        ///   Any exception throw by the event handler is simply logged and
-        ///   then forgotten.
+        ///   Any exception throw by the event handler is simply forgotten.
         /// </remarks>
-        /// <seealso cref="SendQuery(DiscoveryServiceMessage)"/>
         public event EventHandler<UdpMessageEventArgs> QueryReceived;
 
         /// <summary>
@@ -58,8 +56,8 @@ namespace LUC.DiscoveryService
         public event EventHandler<NetworkInterfaceEventArgs> NetworkInterfaceDiscovered;
 
         /// <summary>
-        ///   Raised when any link-local service responds to a query ( MessageOperation.Acknowledge ).
-        ///   This is an answer to UDP multicast.
+        ///   Raised when any link-local service responds to a query by message <seealso cref="AcknowledgeTcpMessage"/>.
+        ///   This is an answer to UDP multicast (<seealso cref="UdpMessage"/>).
         /// </summary>
         /// <value>
         ///   Contains the answer <see cref="AcknowledgeTcpMessage"/>.
@@ -71,29 +69,28 @@ namespace LUC.DiscoveryService
         public event EventHandler<TcpMessageEventArgs> AnswerReceived;
 
         /// <summary>
-        ///   Raised when any link-local service sends PING ( MessageOperation.Ping ).
-        ///   This is a Kadamilia ping request.
+        ///   Raised we any receive valid <seealso cref="FindNodeRequest"/> RPC
         /// </summary>
         public event EventHandler<TcpMessageEventArgs> PingReceived;
 
         /// <summary>
-        ///   Raised when any link-local service sends STORE ( MessageOperation.Store ).
-        ///   This is a Kadamilia STORE RPC call.
+        /// Raised we any receive valid <seealso cref="FindNodeRequest"/> RPC
         /// </summary>
         public event EventHandler<TcpMessageEventArgs> StoreReceived;
 
         /// <summary>
-        ///   Raised when any link-local service sends FindNode node request ( MessageOperation.FindNode ).
-        ///   This is a Kadamilia's FindNode RPC call.
+        /// Raised we any receive valid <seealso cref="FindNodeRequest"/> RPC
         /// </summary>
         public event EventHandler<TcpMessageEventArgs> FindNodeReceived;
 
         /// <summary>
-        ///   Raised when any link-local service asends FindValue RPC ( MessageOperation.FindValue ).
-        ///   This is a Kadamilia's FindValue RPC call.
+        /// Raised we any receive valid <seealso cref="FindNodeRequest"/> RPC
         /// </summary>
         public event EventHandler<TcpMessageEventArgs> FindValueReceived;
 
+        /// <summary>
+        /// Raised we any receive valid <seealso cref="CheckFileExistsRequest"/> RPC
+        /// </summary>
         public event EventHandler<TcpMessageEventArgs> CheckFileExistsReceived;
 
         public event EventHandler<TcpMessageEventArgs> DownloadFileReceived;
@@ -303,9 +300,9 @@ namespace LUC.DiscoveryService
                     ConnectionPool connectionPool = ConnectionPool.Instance();
                     connectionPool.TryCancelRecoverConnections();
 
-#pragma warning disable CS4014 // Так как этот вызов не ожидается, выполнение существующего метода продолжается до тех пор, пока вызов не будет завершен
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed. Consider applying the 'await' operator to the result of the call
                     connectionPool.TryRecoverAllConnectionsAsync();
-#pragma warning restore CS4014 // Так как этот вызов не ожидается, выполнение существующего метода продолжается до тех пор, пока вызов не будет завершен
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed. Consider applying the 'await' operator to the result of the call
                 }
 
                 if ( newNics.Any() )

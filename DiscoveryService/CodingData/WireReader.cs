@@ -1,7 +1,7 @@
-﻿using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.ClientPool;
-using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Messages.KademliaRequests;
+﻿using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Net;
 using System.Numerics;
 using System.Text;
 
-namespace LUC.DiscoveryService.CodingData
+namespace LUC.DiscoveryServices.CodingData
 {
     /// <summary>
     /// Methods to read and wire formatted data items.

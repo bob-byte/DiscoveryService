@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace LUC.DiscoveryService.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     ///   The requested operation of a <see cref="DiscoveryServiceMessage"/>.

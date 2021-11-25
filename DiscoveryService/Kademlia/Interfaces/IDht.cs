@@ -1,4 +1,4 @@
-﻿namespace LUC.DiscoveryService.Kademlia.Interfaces
+﻿namespace LUC.DiscoveryServices.Kademlia.Interfaces
 {
     interface IDht
     {

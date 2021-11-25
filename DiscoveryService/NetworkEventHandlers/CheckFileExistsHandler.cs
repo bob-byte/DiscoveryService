@@ -1,8 +1,8 @@
-﻿using LUC.DiscoveryService.Interfaces;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Messages.KademliaRequests;
-using LUC.DiscoveryService.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Helpers;
@@ -16,7 +16,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.NetworkEventHandlers
+namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
     class CheckFileExistsHandler : INetworkEventHandler
     {
@@ -62,7 +62,7 @@ namespace LUC.DiscoveryService.NetworkEventHandlers
         {
             CheckFileExistsResponse response = new CheckFileExistsResponse( request.RandomID )
             {
-                IsRightBucket = m_discoveryService.SupportedBuckets().Any( c => c.Key.Equals( request.LocalBucketId, StringComparison.OrdinalIgnoreCase ) ),
+                IsRightBucket = m_discoveryService.LocalBuckets().Any( c => c.Key.Equals( request.LocalBucketId, StringComparison.OrdinalIgnoreCase ) ),
             };
 
             if ( response.IsRightBucket )

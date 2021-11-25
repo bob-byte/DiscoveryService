@@ -10,12 +10,12 @@ using System.Threading.Tasks;
 using AutoFixture;
 using AutoFixture.Kernel;
 
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Exceptions;
-using LUC.DiscoveryService.Test.Builders;
-using LUC.DiscoveryService.Test.InternalTests.Requests;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Requests;
 
-namespace LUC.DiscoveryService.Test.InternalTests.Builders
+namespace LUC.DiscoveryServices.Test.InternalTests.Builders
 {
     class ContactBuilder : AbstractSeededBuilder<BuildContactRequest>
     {

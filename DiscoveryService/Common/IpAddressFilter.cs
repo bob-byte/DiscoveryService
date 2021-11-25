@@ -1,4 +1,4 @@
-﻿using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryServices.Kademlia;
 
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Common
+namespace LUC.DiscoveryServices.Common
 {
     partial class IpAddressFilter
     {

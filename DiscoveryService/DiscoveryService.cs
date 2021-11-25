@@ -1,16 +1,14 @@
-﻿//#define IS_IN_LUC
-
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using LUC.DiscoveryService.Messages;
+using LUC.DiscoveryServices.Messages;
 using System.Linq;
 using System.Collections.Concurrent;
-using LUC.DiscoveryService.Messages.KademliaRequests;
-using LUC.DiscoveryService.Messages.KademliaResponses;
-using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
+using LUC.DiscoveryServices.Kademlia;
 using System.Collections.Generic;
-using LUC.DiscoveryService.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
 using System.Threading;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -18,25 +16,27 @@ using System.IO;
 using LUC.Services.Implementation.Models;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces;
-using LUC.DiscoveryService.NetworkEventHandlers;
+using LUC.DiscoveryServices.NetworkEventHandlers;
 using System.Runtime.CompilerServices;
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Common;
 using System.ComponentModel.Composition;
 using Castle.Core.Internal;
 using System.Reflection;
 using LUC.Services.Implementation;
 using System.Security.Cryptography.X509Certificates;
 using System.Diagnostics;
+using LUC.DiscoveryServices.Interfaces;
 
 //access permission to internal members in current project for DiscoveryService.Test
 [assembly: InternalsVisibleTo( assemblyName: "DiscoveryService.Test" )]
 [assembly: InternalsVisibleTo( InternalsVisible.ToDynamicProxyGenAssembly2 )]
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     ///   LightUpon.Cloud Service Discovery maintens the list of IP addresses in LAN
     /// </summary>
-    public class DiscoveryService : AbstractService
+    [Export(typeof(IDiscoveryService))]
+    public class DiscoveryService : AbstractService, IDiscoveryService
     {
         /// <summary>
         ///   Raised when a servive instance is shutting down.
@@ -63,8 +63,37 @@ namespace LUC.DiscoveryService
         private readonly ICurrentUserProvider m_currentUserProvider;
 
         /// <summary>
-        /// For functional tests
+        /// Creates a new instance of the <see cref="DiscoveryService"/> class.
         /// </summary>
+        /// <param name="profile">
+        /// <seealso cref="DiscoveryService"/> settings
+        /// </param>
+        public DiscoveryService( ServiceProfile profile )
+        {
+            if ( profile != null )
+            {
+                InitDiscoveryService( profile );
+
+                InitNetworkEventInvoker();
+            }
+            else
+            {
+                throw new ArgumentNullException( nameof( profile ) );
+            }
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="DiscoveryService"/> class.
+        /// </summary>
+        /// <remarks>
+        /// It is only for functional tests
+        /// </remarks>
+        /// <param name="profile">
+        /// <seealso cref="DiscoveryService"/> settings
+        /// </param>
+        /// <param name="currentUserProvider">
+        /// Logged user to LUC app
+        /// </param>
         internal DiscoveryService( ServiceProfile profile, ICurrentUserProvider currentUserProvider )
         {
             if ( profile != null )
@@ -74,7 +103,6 @@ namespace LUC.DiscoveryService
                 m_currentUserProvider = currentUserProvider;
                 InitNetworkEventInvoker();
 
-#if !IS_IN_LUC
                 SettingsService = new SettingsService
                 {
                     CurrentUserProvider = m_currentUserProvider
@@ -84,21 +112,6 @@ namespace LUC.DiscoveryService
                 {
                     SettingsService = SettingsService
                 };
-#endif
-            }
-            else
-            {
-                throw new ArgumentNullException( nameof( profile ) );
-            }
-        }
-
-        public DiscoveryService( ServiceProfile profile )
-        {
-            if(profile != null)
-            {
-                InitDiscoveryService( profile );
-
-                InitNetworkEventInvoker();
             }
             else
             {
@@ -114,9 +127,17 @@ namespace LUC.DiscoveryService
             Stop();
         }
 
-        public Boolean IsRunning { get; private set; }
+        /// <inheritdoc/>
+        public ConcurrentDictionary<EndPoint, String> KnownIps { get; protected set; } =
+            new ConcurrentDictionary<EndPoint, String>();
 
-        public KademliaId ContactId
+        /// <inheritdoc/>
+        public ConcurrentDictionary<String, String> LocalBuckets() =>
+            new ConcurrentDictionary<String, String>( m_supportedBuckets );
+
+        internal Boolean IsRunning { get; private set; }
+
+        internal KademliaId ContactId
         {
             get
             {
@@ -132,38 +153,19 @@ namespace LUC.DiscoveryService
         }
 
         /// <summary>
-        /// IP address of peers which were discovered.
-        /// Key is a network in a format "IP-address:port".
-        /// Value is a list of group names, which peer supports
-        /// </summary>
-        public ConcurrentDictionary<EndPoint, String> KnownIps { get; protected set; } =
-            new ConcurrentDictionary<EndPoint, String>();
-
-        /// <summary>
-        ///   LightUpon.Cloud Discovery Service.
+        /// LightUpon.Cloud Network Event Invoker.
         /// </summary>
         /// <remarks>
-        ///   Sends UDP queries via the multicast mechachism
-        ///   defined in <see href="https://tools.ietf.org/html/rfc6762"/>.
-        ///   Receives UDP queries and answers with TCP/IP/SSL responses.
-        ///   <para>
-        ///   One of the events, <see cref="QueryReceived"/> or <see cref="AnswerReceived"/>, is
-        ///   raised when a <see cref="DiscoveryServiceMessage"/> is received.
-        ///   </para>
+        /// Sends UDP queries via the multicast mechachism
+        /// defined in <see href="https://tools.ietf.org/html/rfc6762"/>.
+        /// Receives UDP queries and answers with TCP/IP/SSL responses.
         /// </remarks>
-        public NetworkEventInvoker NetworkEventInvoker { get; private set; }
+        internal NetworkEventInvoker NetworkEventInvoker { get; private set; }
 
-        /// <summary>
-        /// Groups which current peer supports.
-        /// Key is a name of group, which current peer supports.
-        /// Value is path to a SSL certificate of group
-        /// </summary>
-        public ConcurrentDictionary<String, String> SupportedBuckets() =>
-            new ConcurrentDictionary<String, String>( m_supportedBuckets );
-
-        public void TryAddNewBucket(String bucketLocalName, String pathToSslCert, out Boolean isAdded)
+        ///<inheritdoc/>
+        public void TryAddNewBucketLocalName( String bucketLocalName, String pathToSslCert, out Boolean isAdded)
         {
-            if(!String.IsNullOrWhiteSpace(bucketLocalName) && String.IsNullOrWhiteSpace(pathToSslCert))
+            if(!String.IsNullOrWhiteSpace(bucketLocalName) && !String.IsNullOrWhiteSpace(pathToSslCert))
             {
                 isAdded = m_supportedBuckets.TryAdd( bucketLocalName, pathToSslCert );
                 if(isAdded)
@@ -182,6 +184,7 @@ namespace LUC.DiscoveryService
             }
         }
 
+        /// <inheritdoc/>
         public void TryRemoveBucket(String bucketLocalName, out Boolean isRemoved )
         {
             if ( ( bucketLocalName != null ) && ( m_supportedBuckets.ContainsKey( bucketLocalName ) ) )
@@ -204,31 +207,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        public List<Contact> OnlineContacts() => m_distributedHashTable.OnlineContacts;
-
-        public void AddEndpoint( Object sender, TcpMessageEventArgs e )
-        {
-            AcknowledgeTcpMessage tcpMessage = e.Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
-            if ( ( tcpMessage != null ) && ( e.RemoteEndPoint is IPEndPoint ipEndPoint ) )
-            {
-                foreach ( String groupId in tcpMessage.GroupIds )
-                {
-                    if ( !KnownIps.TryAdd( ipEndPoint, groupId ) )
-                    {
-                        KnownIps.TryRemove( ipEndPoint, out _ );
-                        KnownIps.TryAdd( ipEndPoint, groupId );
-                    }
-                }
-            }
-            else
-            {
-                throw new ArgumentException( $"Bad format of {nameof( e )}" );
-            }
-        }
-
-        /// <summary>
-        ///    Start listening TCP, UDP messages and sending them
-        /// </summary>
+        /// <inheritdoc/>
         public void Start()
         {
             if ( !IsRunning )
@@ -248,9 +227,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        /// <summary>
-        /// Sends multicast message
-        /// </summary>
+        /// <inheritdoc/>
         public void QueryAllServices()
         {
             if ( IsRunning )
@@ -263,9 +240,7 @@ namespace LUC.DiscoveryService
             }
         }
 
-        /// <summary>
-        ///    Stop listening and sending TCP and UDP messages
-        /// </summary>
+        /// <inheritdoc/>
         public void Stop()
         {
             if ( IsRunning )
@@ -281,6 +256,9 @@ namespace LUC.DiscoveryService
                 IsRunning = false;
             }
         }
+
+        internal List<Contact> OnlineContacts() =>
+            m_distributedHashTable.OnlineContacts;
 
         //TODO: check SSL certificate with SNI
         /// <summary>
@@ -305,61 +283,78 @@ namespace LUC.DiscoveryService
 
                 if ( isTheSameNetwork )
                 {
-                    //await m_locker.LockAsync( async () =>
-                    //{
-                        Contact sendingContact = NetworkEventInvoker.OurContact;
+                    Contact sendingContact = NetworkEventInvoker.OurContact;
 
-                        Random random = new Random();
-                        AcknowledgeTcpMessage tcpMessage = new AcknowledgeTcpMessage(
-                           messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
-                           MachineId,
-                           sendingContact.KadId.Value,
-                           RunningTcpPort,
-                           ProtocolVersion,
-                           groupsIds: SupportedBuckets()?.Keys?.ToList()
-                       );
+                    Random random = new Random();
+                    AcknowledgeTcpMessage tcpMessage = new AcknowledgeTcpMessage(
+                       messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
+                       MachineId,
+                       sendingContact.KadId.Value,
+                       RunningTcpPort,
+                       ProtocolVersion,
+                       groupsIds: LocalBuckets()?.Keys?.ToList()
+                   );
+
+                    ForcingConcurrencyError.TryForce();
+                    Byte[] bytesToSend = tcpMessage.ToByteArray();
+
+                    IPEndPoint remoteEndPoint = new IPEndPoint( ipEndPoint.Address, (Int32)udpMessage.TcpPort );
+                    ConnectionPoolSocket client = null;
+                    try
+                    {
+                        client = await m_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
+                           IOBehavior.Asynchronous, Constants.TimeWaitSocketReturnedToPool ).ConfigureAwait( continueOnCapturedContext: false );
 
                         ForcingConcurrencyError.TryForce();
-                        Byte[] bytesToSend = tcpMessage.ToByteArray();
-
-                        IPEndPoint remoteEndPoint = new IPEndPoint( ipEndPoint.Address, (Int32)udpMessage.TcpPort );
-                        ConnectionPoolSocket client = null;
-                        try
-                        {
-                            client = await m_connectionPool.SocketAsync( remoteEndPoint, Constants.ConnectTimeout,
-                               IOBehavior.Asynchronous, Constants.TimeWaitSocketReturnedToPool ).ConfigureAwait( continueOnCapturedContext: false );
-
-                            ForcingConcurrencyError.TryForce();
-                            client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,
-                               Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
-                            ForcingConcurrencyError.TryForce();
-                        }
-                        catch ( TimeoutException ex )
-                        {
-                            LoggingService.LogError( ex.ToString() );
-                        }
-                        catch ( SocketException ex )
-                        {
-                            LoggingService.LogError( ex.ToString() );
-                        }
-                        catch ( AggregateException ex )
-                        {
-                            LoggingService.LogError( ex.ToString() );
-                        }
-                        catch ( ObjectDisposedException ex )
-                        {
-                            LoggingService.LogError( ex.ToString() );
-                        }
-                        finally
-                        {
-                            client?.ReturnedToPool();
-                        }
-                    //} ).ConfigureAwait( false );
+                        client = await client.DsSendWithAvoidErrorsInNetworkAsync( bytesToSend, Constants.SendTimeout,
+                           Constants.ConnectTimeout, IOBehavior.Asynchronous ).ConfigureAwait( false );
+                        ForcingConcurrencyError.TryForce();
+                    }
+                    catch ( TimeoutException ex )
+                    {
+                        LoggingService.LogError( ex.ToString() );
+                    }
+                    catch ( SocketException ex )
+                    {
+                        LoggingService.LogError( ex.ToString() );
+                    }
+                    catch ( AggregateException ex )
+                    {
+                        LoggingService.LogError( ex.ToString() );
+                    }
+                    catch ( ObjectDisposedException ex )
+                    {
+                        LoggingService.LogError( ex.ToString() );
+                    }
+                    finally
+                    {
+                        client?.ReturnedToPool();
+                    }
                 }
             }
             else
             {
                 throw new ArgumentException( $"Bad format of {nameof( eventArgs )}" );
+            }
+        }
+
+        private void AddEndpoint( Object sender, TcpMessageEventArgs e )
+        {
+            AcknowledgeTcpMessage tcpMessage = e.Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
+            if ( ( tcpMessage != null ) && ( e.RemoteEndPoint is IPEndPoint ipEndPoint ) )
+            {
+                foreach ( String groupId in tcpMessage.GroupIds )
+                {
+                    if ( !KnownIps.TryAdd( ipEndPoint, groupId ) )
+                    {
+                        KnownIps.TryRemove( ipEndPoint, out _ );
+                        KnownIps.TryAdd( ipEndPoint, groupId );
+                    }
+                }
+            }
+            else
+            {
+                throw new ArgumentException( $"Bad format of {nameof( e )}" );
             }
         }
 
@@ -376,7 +371,7 @@ namespace LUC.DiscoveryService
 
         private void InitNetworkEventInvoker()
         {
-            NetworkEventInvoker = new NetworkEventInvoker( MachineId, UseIpv4, UseIpv6, ProtocolVersion, SupportedBuckets().Keys );
+            NetworkEventInvoker = new NetworkEventInvoker( MachineId, UseIpv4, UseIpv6, ProtocolVersion, LocalBuckets().Keys );
 
             m_networkEventHandler = new NetworkEventHandler( this, NetworkEventInvoker, m_currentUserProvider );//puts in events of NetworkEventInvoker sendings response
             NetworkEventInvoker.QueryReceived += async ( invokerEvent, eventArgs ) => await SendTcpMessageAsync( invokerEvent, eventArgs );

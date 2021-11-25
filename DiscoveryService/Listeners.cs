@@ -8,12 +8,12 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.ClientPool;
-using LUC.DiscoveryService.Messages;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Messages;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     ///   Allows sending and receiving datagrams over multicast sockets.

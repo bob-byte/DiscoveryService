@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Test.Extensions;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Test.Extensions;
 
-namespace LUC.DiscoveryService.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     partial class FunctionalTest
     {

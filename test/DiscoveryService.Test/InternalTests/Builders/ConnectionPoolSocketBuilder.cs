@@ -6,7 +6,7 @@ using AutoFixture.Kernel;
 
 using LUC.Interfaces;
 
-namespace LUC.DiscoveryService.Test.InternalTests.Builders
+namespace LUC.DiscoveryServices.Test.InternalTests.Builders
 {
     class ConnectionPoolSocketBuilder : ISpecimenBuilder
     {

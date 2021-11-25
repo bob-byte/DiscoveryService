@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 using AutoFixture.Kernel;
 using AutoFixture;
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Common;
 using System.ComponentModel;
 using System.Reflection;
 using System.Net.NetworkInformation;
 
-namespace LUC.DiscoveryService.Test.Builders
+namespace LUC.DiscoveryServices.Test.Builders
 {
     class EndPointsBuilder : AbstractSeededBuilder<BuildEndPointRequest>
     {

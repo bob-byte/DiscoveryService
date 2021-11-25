@@ -4,12 +4,12 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
 
 using Newtonsoft.Json;
 
-namespace LUC.DiscoveryService.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     public class KademliaId : IComparable
     {

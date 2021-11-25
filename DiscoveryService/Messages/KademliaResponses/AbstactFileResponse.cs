@@ -1,7 +1,7 @@
-﻿using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Interfaces;
-using LUC.DiscoveryService.Messages.KademliaRequests;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Messages.KademliaResponses
+namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {
     abstract class AbstactFileResponse : Response, ICloneable
     {

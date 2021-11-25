@@ -7,13 +7,13 @@ using System.Timers;
 
 using Newtonsoft.Json;
 
-using LUC.DiscoveryService.Kademlia.Routers;
+using LUC.DiscoveryServices.Kademlia.Routers;
 using LUC.Interfaces;
-using LUC.DiscoveryService.Kademlia.Exceptions;
-using LUC.DiscoveryService.Kademlia.Interfaces;
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Kademlia.Interfaces;
+using LUC.DiscoveryServices.Common;
 
-namespace LUC.DiscoveryService.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     /// <summary>
     /// DHT - distributed hash table. It minimize settings count of messages, which <seealso cref="Contact"/>s should send to learn each other 
@@ -261,12 +261,15 @@ namespace LUC.DiscoveryService.Kademlia
         /// </summary>
         public void HandleError( RpcError error, Contact contact )
         {
-            // For all errors:
-            Int32 count = AddContactToEvict( contact.KadId.Value );
-
-            if ( count == Constants.EVICTION_LIMIT )
+            if(error.HasError)
             {
-                ReplaceContact( contact );
+                // For all errors:
+                Int32 count = AddContactToEvict( contact.KadId.Value );
+
+                if ( count == Constants.EVICTION_LIMIT )
+                {
+                    ReplaceContact( contact );
+                }
             }
         }
 

@@ -9,9 +9,9 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Common;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryServices
 {
     class UdpSenders : IDisposable
     {

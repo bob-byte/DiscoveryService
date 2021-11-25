@@ -1,7 +1,7 @@
-﻿using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Common.Extensions;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Extensions;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 
@@ -16,7 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     /// TCP server is used to connect, disconnect and manage TCP sessions

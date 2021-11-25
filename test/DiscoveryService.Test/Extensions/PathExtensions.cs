@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Test.Extensions
+namespace LUC.DiscoveryServices.Test.Extensions
 {
     class PathExtensions
     {

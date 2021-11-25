@@ -9,9 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Common;
 
-namespace LUC.DiscoveryService.Kademlia.ClientPool
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     sealed partial class ConnectionPool
     {

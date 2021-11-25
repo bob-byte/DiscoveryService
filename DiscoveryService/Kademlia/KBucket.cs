@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
 
 using Newtonsoft.Json;
 
-namespace LUC.DiscoveryService.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     public class KBucket
     {
@@ -96,10 +96,10 @@ namespace LUC.DiscoveryService.Kademlia
             contactInBucket.KadId = contact.KadId;
 
             //contact can have new enumerable of buckets
-            contactInBucket.AddBucketRange( contact.SupportedBuckets() );
+            contactInBucket.AddBucketRange( contact.Buckets() );
 
             //to get all older IP-addresses
-            contact.AddIpAddressRange( contactInBucket.IpAddresses() );
+            //contact.AddIpAddressRange( contactInBucket.IpAddresses() );
         }
 
         /// <summary>

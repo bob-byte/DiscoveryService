@@ -4,16 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Interfaces;
-using LUC.DiscoveryService.Test.InternalTests.Builders;
-using LUC.DiscoveryService.Test.InternalTests.Requests;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.Interfaces;
+using LUC.DiscoveryServices.Test.InternalTests.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Requests;
 
 using NUnit.Framework;
 using AutoFixture;
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Common;
 
-namespace LUC.DiscoveryService.Test.InternalTests.Kademlia
+namespace LUC.DiscoveryServices.Test.InternalTests.Kademlia
 {
     class BucketListTest
     {

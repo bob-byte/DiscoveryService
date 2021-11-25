@@ -1,4 +1,4 @@
-﻿using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryServices.Kademlia;
 
 using Microsoft.Win32.SafeHandles;
 
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     public partial class Download
     {

@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-using LUC.DiscoveryService.Messages;
+using LUC.DiscoveryServices.Messages;
 
-namespace LUC.DiscoveryService.Interfaces
+namespace LUC.DiscoveryServices.Interfaces
 {
     interface IWireSerialiser
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     static class UserIntersectionInConsole
     {

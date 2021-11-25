@@ -7,7 +7,7 @@
     <ProjectGuid>{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>LUC.DiscoveryService</RootNamespace>
+    <RootNamespace>LUC.DiscoveryServices</RootNamespace>
     <AssemblyName>DiscoveryService</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -79,6 +79,7 @@
     <Compile Include="Common\IpAddressFilter.SockAddrIn6.cs" />
     <Compile Include="Common\ForcingConcurrencyError.cs" />
     <Compile Include="Common\ThrowingConcurrencyException.cs" />
+    <Compile Include="Interfaces\IDiscoveryService.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.RecoverConnections.cs" />
     <Compile Include="Kademlia\ClientPool\SocketStateInPool.cs" />
     <Compile Include="Kademlia\Downloads\FileDownloadedEventArgs.cs" />
@@ -224,7 +225,7 @@
       <Version>4.3.1</Version>
     </PackageReference>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe">
-      <Version>4.5.3</Version>
+      <Version>5.0.0</Version>
     </PackageReference>
     <PackageReference Include="System.Security.Cryptography.Algorithms">
       <Version>4.3.1</Version>
@@ -243,11 +244,11 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win-UploadAsync\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
+    <ProjectReference Include="..\..\MyCarrierAsProgrammer\Xentime\dubstack-win\WpfClient\LUC.Interfaces\LUC.Interfaces.csproj">
       <Project>{0f5f0967-f62a-4099-a6d7-2687cba9e4df}</Project>
       <Name>LUC.Interfaces</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\MyCarrierAsProgrammer\Xentime\LucWithNewUpload\dubstack-win-UploadAsync\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
+    <ProjectReference Include="..\..\MyCarrierAsProgrammer\Xentime\dubstack-win\WpfClient\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
       <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
       <Name>LUC.Services.Implementation</Name>
     </ProjectReference>

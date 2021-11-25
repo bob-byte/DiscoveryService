@@ -1,7 +1,7 @@
-﻿using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Interfaces;
-using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
 using LUC.Interfaces.Models;
 
 using System;
@@ -13,7 +13,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     /// Allows to write and read TCP message to/from <see cref="Stream"/>

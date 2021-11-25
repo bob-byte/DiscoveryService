@@ -2,10 +2,10 @@
 
 using FluentAssertions;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Messages;
-using LUC.DiscoveryService.Test.Extensions;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Test.Extensions;
 
 using NUnit.Framework;
 
@@ -18,7 +18,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Test
+namespace LUC.DiscoveryServices.Test
 {
     [TestFixture]
     public class DiscoveryServiceTest
@@ -38,9 +38,9 @@ namespace LUC.DiscoveryService.Test
             String randomBucketLocalName = specimens.Create<String>();
             String randomSslCert = specimens.Create<String>();
 
-            m_discoveryService.SupportedBuckets().TryAdd( randomBucketLocalName, randomSslCert );
+            m_discoveryService.LocalBuckets().TryAdd( randomBucketLocalName, randomSslCert );
 
-            m_discoveryService.SupportedBuckets().ContainsKey( randomBucketLocalName ).Should().BeFalse();
+            m_discoveryService.LocalBuckets().ContainsKey( randomBucketLocalName ).Should().BeFalse();
         }
 
         [Test]

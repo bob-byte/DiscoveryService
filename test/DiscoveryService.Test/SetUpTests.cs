@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 using AutoFixture;
 
-using LUC.DiscoveryService.Common;
+using LUC.DiscoveryServices.Common;
 using LUC.Interfaces;
 using LUC.Interfaces.OutputContracts;
 using LUC.Services.Implementation;
@@ -14,7 +14,7 @@ using Moq;
 
 using NUnit.Framework;
 
-namespace LUC.DiscoveryService.Test
+namespace LUC.DiscoveryServices.Test
 {
     [SetUpFixture]
     static class SetUpTests

@@ -1,12 +1,12 @@
-﻿using LUC.DiscoveryService.CodingData;
-using LUC.DiscoveryService.Interfaces;
-using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
 
 using System;
 using System.IO;
 using System.Numerics;
 
-namespace LUC.DiscoveryService.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     /// Allows to write and read multicast message to/from <see cref="Stream"/>

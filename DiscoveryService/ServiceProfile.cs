@@ -1,7 +1,7 @@
 ﻿using DeviceId;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
 
 using System;
 using System.Collections.Concurrent;
@@ -10,7 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 
-namespace LUC.DiscoveryService
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     ///   Contains info about current peer
@@ -40,7 +40,7 @@ namespace LUC.DiscoveryService
         public ServiceProfile( Boolean useIpv4, Boolean useIpv6, UInt16 protocolVersion,
             ConcurrentDictionary<String, String> groupsSupported = null )
         {
-            LUC.DiscoveryService.MachineId.Create( out String machineId );
+            LUC.DiscoveryServices.MachineId.Create( out String machineId );
             MachineId = machineId;
 
             DefaultInit(useIpv4, useIpv6, protocolVersion, groupsSupported);

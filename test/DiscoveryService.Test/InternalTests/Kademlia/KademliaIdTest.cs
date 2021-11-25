@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 using FluentAssertions;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
 
 using NUnit.Framework;
 
-namespace LUC.DiscoveryService.Test.InternalTests.Kademlia
+namespace LUC.DiscoveryServices.Test.InternalTests.Kademlia
 {
     class KademliaIdTest
     {

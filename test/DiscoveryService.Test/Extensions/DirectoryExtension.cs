@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Test.Extensions
+namespace LUC.DiscoveryServices.Test.Extensions
 {
     static class DirectoryExtension
     {

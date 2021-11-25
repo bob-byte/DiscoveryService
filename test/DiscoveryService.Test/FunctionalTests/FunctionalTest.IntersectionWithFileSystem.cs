@@ -8,11 +8,11 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Test.Extensions;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Test.Extensions;
 using LUC.Interfaces;
 
-namespace LUC.DiscoveryService.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     partial class FunctionalTest
     {
@@ -128,10 +128,9 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
         {
             lock ( UserIntersectionInConsole.Lock )
             {
-                Boolean whetherTryUpload = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to upload on server file {eventArgs.Name}. It was {Enum.GetName( typeof( WatcherChangeTypes ), eventArgs.ChangeType )}" );
+                Boolean whetherTryUpload = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( closedQuestion: $"Do you want to upload on server file {eventArgs.Name}. It was {Enum.GetName( typeof( WatcherChangeTypes ), eventArgs.ChangeType ).ToLowerInvariant()}" );
                 if ( whetherTryUpload )
                 {
-
                     try
                     {
                         apiClient.TryUploadAsync( new FileInfo( eventArgs.FullPath ) ).GetAwaiter().GetResult();

@@ -1,4 +1,4 @@
-﻿using LUC.DiscoveryService.Common;
+﻿using LUC.DiscoveryServices.Common;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.Kademlia.ClientPool
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     static class BackgroundConnectionResetHelper
     {

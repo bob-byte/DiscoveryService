@@ -1,4 +1,4 @@
-﻿using LUC.DiscoveryService.Common;
+﻿using LUC.DiscoveryServices.Common;
 using LUC.Interfaces;
 using LUC.Services.Implementation;
 
@@ -16,7 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace LUC.DiscoveryService.Kademlia.ClientPool
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     sealed partial class ConnectionPool
     {

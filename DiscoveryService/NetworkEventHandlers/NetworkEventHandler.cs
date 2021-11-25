@@ -1,5 +1,5 @@
-﻿using LUC.DiscoveryService.Interfaces;
-using LUC.DiscoveryService.Kademlia;
+﻿using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
 using LUC.Interfaces;
 
 using System;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryService.NetworkEventHandlers
+namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
     class NetworkEventHandler
     {

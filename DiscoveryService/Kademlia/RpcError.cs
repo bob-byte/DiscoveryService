@@ -1,12 +1,12 @@
-﻿using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Messages;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Messages;
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace LUC.DiscoveryService.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     class RpcError
     {

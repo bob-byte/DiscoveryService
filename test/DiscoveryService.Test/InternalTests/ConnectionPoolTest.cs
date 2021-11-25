@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using NUnit.Framework;
 
-namespace LUC.DiscoveryService.Test.InternalTests
+namespace LUC.DiscoveryServices.Test.InternalTests
 {
     class ConnectionPoolTest
     {

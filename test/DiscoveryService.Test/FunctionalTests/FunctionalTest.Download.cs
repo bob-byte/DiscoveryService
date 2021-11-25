@@ -7,16 +7,17 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using LUC.DiscoveryService.Common;
-using LUC.DiscoveryService.Kademlia;
-using LUC.DiscoveryService.Kademlia.Downloads;
-using LUC.DiscoveryService.Test.Extensions;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.Downloads;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Test.Extensions;
 using LUC.Interfaces;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Models;
 using LUC.Interfaces.OutputContracts;
 
-namespace LUC.DiscoveryService.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     partial class FunctionalTest
     {
@@ -46,6 +47,9 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
 
                 ConfiguredTaskAwaitable downloadTask = Task.Run( async () =>
                 {
+                    List<ChunkRange> downloadedChunks = new List<ChunkRange>();
+                    IProgress<ChunkRange> downloadProgress = new Progress<ChunkRange>( ( chunkRange ) => downloadedChunks.Add( chunkRange ) );
+
                     await download.DownloadFileAsync(
                         localFolderPath,
                         bucketName,
@@ -53,8 +57,15 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                         fileDescription.OriginalName,
                         fileDescription.Bytes,
                         fileDescription.Version,
-                        s_cancellationTokenSource.Token
+                        s_cancellationTokenSource.Token,
+                        downloadProgress
                     ).ConfigureAwait( false );
+
+                    Console.WriteLine("Downloaded chunks: ");
+                    foreach ( ChunkRange chunk in downloadedChunks )
+                    {
+                        Console.WriteLine(chunk.ToString());
+                    }
                 } ).ConfigureAwait( false );
 
                 ConsoleKey pressedKey = Console.ReadKey().Key;
@@ -90,7 +101,9 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 }
             );
 
-            String serverBucketName = currentUserProvider.GetBucketNameByDirectoryPath( bucketPath ).ServerName;
+            IBucketName bucketName = currentUserProvider.GetBucketNameByDirectoryPath( bucketPath );
+            String serverBucketName = bucketName.ServerName;
+
             String hexFilePrefix = filePrefix.ToHexPrefix();
 
             ObjectsListResponse objectsListResponse = await apiClient.ListAsync( serverBucketName, hexFilePrefix ).ConfigureAwait( continueOnCapturedContext: false );
@@ -141,7 +154,7 @@ namespace LUC.DiscoveryService.Test.FunctionalTests
                 throw new InvalidOperationException();
             }
 
-            return (randomFileToDownload, serverBucketName, bucketPath, hexFilePrefix);
+            return (randomFileToDownload, bucketName.LocalName, bucketPath, hexFilePrefix);
         }
     }
 }
