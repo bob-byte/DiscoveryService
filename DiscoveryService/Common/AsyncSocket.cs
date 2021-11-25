@@ -234,6 +234,7 @@ namespace LUC.DiscoveryServices.Common
                 {
                     VerifyWorkState();
                     State = SocketState.Connecting;
+                    Log.LogInfo( $"Start connection" );
 
                     break;
                 }
@@ -250,6 +251,7 @@ namespace LUC.DiscoveryServices.Common
                 {
                     VerifyConnected();
                     State = SocketState.Disconnecting;
+                    Log.LogInfo( $"Start disconnection" );
 
                     break;
                 }
@@ -353,6 +355,8 @@ namespace LUC.DiscoveryServices.Common
                     case SocketAsyncOperation.Connect:
                     {
                         socket.EndConnect( asyncResult );
+                        Log.LogInfo( $"Connection successfully made" );
+
                         State = SocketState.Connected;
 
                         break;
@@ -369,6 +373,8 @@ namespace LUC.DiscoveryServices.Common
                     case SocketAsyncOperation.Disconnect:
                     {
                         socket.EndDisconnect( asyncResult );
+                        Log.LogInfo( $"Disconnection successfully made" );
+
                         State = SocketState.Disconnected;
 
                         break;

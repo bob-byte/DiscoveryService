@@ -68,7 +68,6 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                     CancellationToken = cancellationToken
                 };
 
-                ConcurrentBag<ConnectionPoolSocket> receivedSockets = new ConcurrentBag<ConnectionPoolSocket>();
                 try
                 {
                     //recover leased sockets
@@ -81,17 +80,15 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                     
                         if ( isTaken )
                         {
-                            //this row should be before the next one to avoid concurrency bugs
-                            receivedSockets.Add( takenSocket );
                             BackgroundConnectionResetHelper.AddSocket( takenSocket, cancellationToken );
                     
                             socketsWithRecoveredConnection.Add( socket.Key );
                         }
                     } );
                 }
-                catch ( OperationCanceledException ex )
+                catch(OperationCanceledException)
                 {
-                    HandleCancellationException( receivedSockets, ex );
+                    ;//do nothing
                 }
                 finally
                 {
@@ -102,35 +99,9 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             return socketsWithRecoveredConnection.GetConsumingEnumerable(cancellationToken);
         }
 
-        private void HandleCancellationException(ConcurrentBag<ConnectionPoolSocket> sockets, OperationCanceledException exception)
-        {
-            ParallelOptions options = new ParallelOptions
-            {
-                MaxDegreeOfParallelism = Constants.MAX_THREADS
-            };
-
-            Parallel.ForEach( sockets, options, ( takenSocket ) =>
-            {
-                try
-                {
-                    if ( ( takenSocket.StateInPool != SocketStateInPool.IsInPool ) )
-                    {
-                        takenSocket.ReturnedToPool();
-                    }
-                }
-                catch(ObjectDisposedException)
-                {
-                    ;//ignore exception, try return the next one to pool
-                }
-            } );
-
-            throw exception;
-        }
-
         private async ValueTask RecoverPoolSocketsAsync( IEnumerable<EndPoint> idsOfRecoveredConnection, CancellationToken cancellationToken )
         {
             ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
-            ConcurrentBag<ConnectionPoolSocket> receivedSockets = new ConcurrentBag<ConnectionPoolSocket>();
 
             //TODO: change to using Parallel.ForEach
             ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>> recoverSockets = new ActionBlock<KeyValuePair<EndPoint, ConnectionPoolSocket>>( socket =>
@@ -139,10 +110,6 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 m_sockets.TryRemove( socket.Key, out _ );
 
                 socket.Value.StateInPool = SocketStateInPool.TakenFromPool;
-
-                //this row should be before the next one to avoid concurrency bugs(we can add socket to m_leasedSockets,
-                //but don't return to pool and another thread will wait while it is returned)
-                receivedSockets.Add( socket.Value );
                 AddLeasedSocket( socket.Key, socket.Value );
 
                 BackgroundConnectionResetHelper.AddSocket( socket.Value, cancellationToken );
@@ -164,9 +131,9 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             {
                 await recoverSockets.Completion.ConfigureAwait( continueOnCapturedContext: false );
             }
-            catch ( OperationCanceledException ex )
+            catch ( OperationCanceledException )
             {
-                HandleCancellationException( receivedSockets, ex );
+                ;//do nothing
             }
         }
 

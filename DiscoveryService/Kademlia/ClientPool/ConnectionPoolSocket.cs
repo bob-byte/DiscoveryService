@@ -210,8 +210,8 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             return isReturned;
         }
 
-        public async Task<Boolean> TryRecoverConnectionAsync( Boolean returnToPool, Boolean reuseSocket, 
-            IOBehavior ioBehavior, CancellationToken cancellationToken = default )
+        public async Task<Boolean> TryRecoverConnectionAsync( Boolean returnToPool, Boolean reuseSocket, TimeSpan disconnectTimeout, 
+            TimeSpan connectTimeout, IOBehavior ioBehavior, CancellationToken cancellationToken = default )
         {
             Boolean isRecoveredConnection = false;
 
@@ -219,7 +219,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             {
                 VerifyConnected();
 
-                await DsDisconnectAsync( ioBehavior, reuseSocket, Constants.DisconnectTimeout, cancellationToken );
+                await DsDisconnectAsync( ioBehavior, reuseSocket, disconnectTimeout, cancellationToken );
             }
             catch(SocketException)
             {
@@ -240,7 +240,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 {
                     newSocket = new ConnectionPoolSocket( Id, Pool, Log, SocketStateInPool.TakenFromPool );
 
-                    await newSocket.DsConnectAsync( Id, Constants.ConnectTimeout, ioBehavior, cancellationToken ).ConfigureAwait( false );
+                    await newSocket.DsConnectAsync( Id, connectTimeout, ioBehavior, cancellationToken ).ConfigureAwait( false );
 
                     //if we don't recovered connection, we will have an exception
                     isRecoveredConnection = true;
@@ -259,13 +259,34 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 }
                 finally
                 {
-                    if ( ( !cancellationToken.IsCancellationRequested ) && ( returnToPool ) )
+                    if ( ( returnToPool ) && ( !cancellationToken.IsCancellationRequested ) )
                     {
                         newSocket?.ReturnedToPool();
                     }
                     else if ( cancellationToken.IsCancellationRequested )
                     {
                         StateInPool = SocketStateInPool.IsFailed;
+                        try
+                        {
+                            newSocket.VerifyConnected();
+                            await newSocket.DsDisconnectAsync( reuseSocket, disconnectTimeout, cancellationToken ).ConfigureAwait(false);
+                        }
+                        catch ( SocketException )
+                        {
+                            ;//do nothing
+                        }
+                        catch ( TimeoutException )
+                        {
+                            ;//do nothing
+                        }
+                        catch ( ObjectDisposedException )
+                        {
+                            ;//do nothing
+                        }
+                        finally
+                        {
+                            ReturnedToPool();
+                        }
                     }
                 }
             }

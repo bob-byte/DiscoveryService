@@ -114,8 +114,11 @@ namespace LUC.DiscoveryServices.Test
 
             LoginResponse loginResponse = await apiClient.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
 
-            String loggedUserAsStr = Display.ObjectToString( currentUserProvider.LoggedUser );
-            LoggingService.LogInfo( loggedUserAsStr );
+            if(currentUserProvider.LoggedUser != null)
+            {
+                String loggedUserAsStr = Display.ObjectToString( currentUserProvider.LoggedUser );
+                LoggingService.LogInfo( loggedUserAsStr );
+            }
 
             return (apiClient, loginResponse, currentUserProvider);
         }
