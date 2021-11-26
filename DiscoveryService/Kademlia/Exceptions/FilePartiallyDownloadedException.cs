@@ -10,18 +10,26 @@ namespace LUC.DiscoveryServices.Kademlia.Exceptions
 {
     class FilePartiallyDownloadedException : Exception
     {
-        public FilePartiallyDownloadedException()
-            : base()
-        {
-            ;//do nothing
-        }
-
         public FilePartiallyDownloadedException( String messageException )
             : base( messageException )
         {
-            ;//do nothing
+            Ranges = new List<ChunkRange>();
         }
 
+        public FilePartiallyDownloadedException( IEnumerable<ChunkRange> ranges )
+        {
+            Ranges = ranges.ToList();
+        }
+
+        public FilePartiallyDownloadedException( IEnumerable<ChunkRange> ranges, String messageException )
+            : base( messageException )
+        {
+            Ranges = ranges.ToList();
+        }
+
+        /// <summary>
+        /// Ranges which should be downloaded
+        /// </summary>
         public List<ChunkRange> Ranges { get; set; }
     }
 }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
-    public class FileDownloadedEventArgs
+    public class FileDownloadedEventArgs : EventArgs
     {
         /// <summary>
         /// Creates a new instance of the <see cref="FileDownloadedEventArgs"/> class

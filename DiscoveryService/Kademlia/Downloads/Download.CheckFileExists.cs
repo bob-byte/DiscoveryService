@@ -21,8 +21,33 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             IEnumerable<Contact> onlineContacts,
             DownloadFileRequest sampleRequest,
             CancellationToken cancellationToken,
-            Int32 contactCountWithFileCapacity )
+            Int64 undownloadedfileBytesCount
+        ){
+            Int32 contactCountWithFileCapacity = ContactCountWithFileCapacity( sampleRequest, undownloadedfileBytesCount );
+
+            IEnumerable<Contact> contactsWithFile = ContactsWithFile( onlineContacts, sampleRequest, cancellationToken, contactCountWithFileCapacity );
+            return contactsWithFile;
+        }
+
+        private Int32 ContactCountWithFileCapacity(DownloadFileRequest downloadFileRequest, Int64 undownloadedfileBytesCount )
         {
+            //get total bytes / default capacity. if it is > max chunk size then contactCountWithFileCapacity = default capacity, else undownloaded bytes / maxChunkSize
+            Int64 bytesPerContact = (Int64)Math.Ceiling( downloadFileRequest.ChunkRange.Total / (Double)CONTACT_COUNT_WITH_FILE_CAPACITY );
+
+            Int32 maxChunkSize = Constants.MAX_CHUNK_SIZE;
+            Int32 contactCountWithFileCapacity = bytesPerContact > maxChunkSize ? 
+                CONTACT_COUNT_WITH_FILE_CAPACITY : 
+                (Int32)Math.Ceiling( (Double)undownloadedfileBytesCount / maxChunkSize );
+
+            return contactCountWithFileCapacity;
+        }
+
+        private IEnumerable<Contact> ContactsWithFile(
+            IEnumerable<Contact> onlineContacts,
+            DownloadFileRequest sampleRequest,
+            CancellationToken cancellationToken,
+            Int32 contactCountWithFileCapacity 
+        ){
             //try change to using AsyncCollection
             BlockingCollection<Contact> contactsWithFile = new BlockingCollection<Contact>( contactCountWithFileCapacity );
 
@@ -30,7 +55,6 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             Task.Factory.StartNew( async () =>
              {
                  ExecutionDataflowBlockOptions parallelOptions = ParallelOptions(cancellationToken);
-
                  try
                  {
                      var checkFileExistsInContact = new ActionBlock<Contact>( async ( contact ) =>
@@ -42,7 +66,11 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                              return;
                          }
 
-                         if ( isExistInContact )
+                         if( contactsWithFile.Count < contactCountWithFileCapacity )
+                         {
+                             contactsWithFile.CompleteAdding();
+                         }
+                         else if ( isExistInContact )
                          {
                              contactsWithFile.Add( contact );
                          }
@@ -61,6 +89,11 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                      await checkFileExistsInContact.Completion.ConfigureAwait( false );
                  }
                  catch(OperationCanceledException)
+                 {
+                     ;//do nothing
+                 }
+                 //added too many contactsWithFile (called contactsWithFile.Add( contact ) after contactsWithFile.CompleteAdding() (thread race))
+                 catch ( InvalidOperationException)
                  {
                      ;//do nothing
                  }

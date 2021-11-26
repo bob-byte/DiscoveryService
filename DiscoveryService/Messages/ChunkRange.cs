@@ -24,6 +24,8 @@ namespace LUC.DiscoveryServices.Messages
             NumsUndownloadedChunk = new List<Int32>();
         }
 
+        public Boolean IsDownloaded { get; set; }
+
         public UInt64 Start { get; set; }
 
         public UInt64 End { get; set; }
@@ -60,7 +62,8 @@ namespace LUC.DiscoveryServices.Messages
             if ( obj is ChunkRange range )
             {
                 isEqual = ( range.Start == Start ) && ( range.End == End ) &&
-                    ( range.TotalPerContact == TotalPerContact ) && ( range.Total == Total );
+                    ( range.TotalPerContact == TotalPerContact ) && ( range.Total == Total ) && 
+                    ( range.IsDownloaded == IsDownloaded );
             }
             else
             {
@@ -72,7 +75,7 @@ namespace LUC.DiscoveryServices.Messages
 
         public override Int32 GetHashCode()
         {
-            Int32 hash = HashCode.Combine( Start, End, TotalPerContact, Total );
+            Int32 hash = HashCode.Combine( Start, End, TotalPerContact, Total, IsDownloaded );
 
             return hash;
         }

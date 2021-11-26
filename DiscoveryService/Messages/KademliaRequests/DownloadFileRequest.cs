@@ -34,7 +34,7 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
 
         public String FileVersion { get; set; }
 
-        public String FullPathToFile { get; set; }
+        public String FullFileName { get; set; }
 
         /// <summary>
         /// Whether <see cref="Contact"/> has downloaded all the bytes for which it is responsible
@@ -82,6 +82,8 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
             ioBehavior, protocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
             Boolean isRightResponse = IsRightDownloadFileResponse( downloadResponse, error, remoteContact );
+            ChunkRange.IsDownloaded = isRightResponse;
+
             if ( isRightResponse )
             {
                 CountDownloadedBytes += (UInt64)downloadResponse.Chunk.Length;

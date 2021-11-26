@@ -28,7 +28,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             ICurrentUserProvider currentUserProvider, Contact remoteContact )
         {
             Download download = new Download( s_discoveryService, IOBehavior.Asynchronous );
-            download.FileDownloaded += OnFileDownloaded;
+            download.FileSuccessfullyDownloaded += OnFileDownloaded;
 
             String filePrefix = UserIntersectionInConsole.ValidValueInputtedByUser( requestToUser: "Input file prefix where new file can exist on the server: ", ( userInput ) =>
             {
