@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<doc>
+	<assembly>
+		<name>LightClientLibrary</name>
+	</assembly>
+	<members>
+		<member name="P:LightClientLibrary.UploadSettings.AppSettingsFilePath">
+			<summary>
+				Path to the file with progress of upload
+			</summary>
+		</member>
+		<member name="T:LightClientLibrary.LightClient">
+			<summary>
+				Main class
+			</summary>
+		</member>
+		<member name="F:LightClientLibrary.LightClient.FILE_UPLOAD_CHUNK_SIZE">
+			<summary>
+				If this size is exceeded, the file will be split into parts
+			</summary>
+		</member>
+		<member name="P:LightClientLibrary.LightClient.Host">
+			<summary>
+				Server Url
+			</summary>
+		</member>
+		<member name="M:LightClientLibrary.LightClient.LoginAsync(System.String,System.String,System.String)">
+			<summary>
+				Provides authorization to server with login, password and Url of server
+			</summary>
+			<param name="login">Login for authorization to server</param>
+			<param name="password">Password for authorization to server</param>
+			<param name="host">Server Url</param>
+			<returns>HttpResponseMessage from server</returns>
+		</member>
+		<member name="M:LightClientLibrary.LightClient.Upload(System.String,System.String,System.String,System.String,System.String,System.String,System.String)">
+			<summary>
+				Uploads file to server.
+			</summary>
+			<param name = "host" > Server Url.</param>
+			<param name = "token" > Authorization token from server.</param>
+			<param name = "userId" > User identificator from server.</param>
+			<param name = "bucketId"> Bucket from server.</param>
+			<param name = "fullPath"> Full path to the file</param>
+			<param name = "filePrefix"> Prefix from server, need if file located in the subdirectory, can be empty</param>
+			<param name = "lastseenversion"> Vector clock version from server (optional parameter)</param>
+			<returns>HttpResponseMessage from server</returns>
+		</member>
+	</members>
+</doc>

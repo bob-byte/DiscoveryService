@@ -1,0 +1,39 @@
+﻿<UserControl x:Class="LUC.WpfClient.Views.SelectActionWithOfflineAddedFolder"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:LUC.WpfClient.Views"
+             xmlns:glob="clr-namespace:LUC.Globalization;assembly=LUC.Globalization"
+             mc:Ignorable="d" 
+             d:DesignHeight="200" 
+             d:DesignWidth="300">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="{glob:GlobBinding Message_CreatedFolderOffline}"
+                   TextWrapping="WrapWithOverflow"
+                   Margin="10"
+                   x:Name="MessageContainer"/>
+
+        <StackPanel x:Name="ButtonContainer"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="10"
+                    Grid.Row="1">
+            <Button Content="{glob:GlobBinding Label_DeleteFolder}"
+            Command=""/>
+            <Button>
+                <TextBlock Text="{glob:GlobBinding Label_UploadServerDeletedFolder}"
+                           TextWrapping="WrapWithOverflow" />
+            </Button>
+            <Button>
+                <TextBlock TextWrapping="WrapWithOverflow"
+                           Text="{glob:GlobBinding Label_AddToIgnoreFolders}" />
+            </Button>
+        </StackPanel>
+    </Grid>
+</UserControl>
