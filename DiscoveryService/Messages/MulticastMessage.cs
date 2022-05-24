@@ -1,20 +1,33 @@
-﻿using LUC.DiscoveryService.CodingData;
+﻿using DiscoveryServices.CodingData;
+using DiscoveryServices.Interfaces;
+
 using System;
 using System.IO;
 
-namespace LUC.DiscoveryService.Messages
+namespace DiscoveryServices.Messages
 {
     /// <summary>
     /// Allows to write and read multicast message to/from <see cref="Stream"/>
     /// </summary>
-    public class MulticastMessage : Message
+    class MulticastMessage : DiscoveryMessage
     {
+        /// <summary>
+        /// Maximum bytes of a message.
+        /// </summary>
+#if !DEBUG
+        public const Int32 MAX_LENGTH = 46;
+#else
+        //Machine ID can be with guid in DS.Test 
+        public const Int32 MAX_LENGTH = 85;
+#endif
+
         /// <summary>
         /// Create a new instance of the <see cref="MulticastMessage"/> class. This constructor is often used to read message
         /// </summary>
-        public MulticastMessage()
+        public MulticastMessage( Byte[] receivedBytes )
+            : base( receivedBytes )
         {
-            ;
+            ;//do nothing
         }
 
         /// <summary>
@@ -23,75 +36,60 @@ namespace LUC.DiscoveryService.Messages
         /// <param name="messageId">
         /// Unique message identifier. It is used to detect duplicate messages.
         /// </param>
-        /// <param name="machineId">
-        /// Id of machine which is sending this messege
-        /// </param>
         /// <param name="tcpPort">
         /// TCP port which is being run in machine with <see cref="MachineId"/>
         /// </param>
-        public MulticastMessage(UInt32 messageId, UInt32 tcpPort, String machineId)
-            : base(messageId)
+        /// <param name="machineId">
+        /// Id of machine which is sending this messege
+        /// </param>
+        public MulticastMessage( UInt32 messageId, UInt16 protocolVersion, UInt16 tcpPort, String machineId )
+            : base( messageId, machineId, protocolVersion )
         {
+            DefaultInit();
             TcpPort = tcpPort;
-            MachineId = machineId;
         }
 
-        /// <summary>
-        /// Id of machine which is sending this messege
-        /// </summary>
-        public String MachineId { get; set; }
-
-        /// <summary>
-        /// TCP port which is being run in machine with machineId
-        /// </summary>
-        public UInt32 TcpPort { get; set; }
-
         /// <inheritdoc/>
-        public override IWireSerialiser Read(WireReader reader)
+        public override IWireSerialiser Read( WireReader reader )
         {
-            if (reader != null)
+            if ( reader != null )
             {
+                base.Read( reader );
+
                 MessageId = reader.ReadUInt32();
-                VersionOfProtocol = reader.ReadUInt32();
-                TcpPort = reader.ReadUInt32();
-                MachineId = reader.ReadString();
+                MachineId = reader.ReadAsciiString();
+
+                ProtocolVersion = reader.ReadUInt16();
+                TcpPort = reader.ReadUInt16();
 
                 return this;
             }
             else
             {
-                throw new ArgumentNullException("ReaderNullException");
+                throw new ArgumentNullException( "ReaderNullException" );
             }
         }
 
         /// <inheritdoc/>
-        public override void Write(WireWriter writer)
+        public override void Write( WireWriter writer )
         {
-            if(writer != null)
+            if ( writer != null )
             {
-                writer.Write(MessageId);
-                writer.Write(VersionOfProtocol);
-                writer.Write(TcpPort);
-                writer.WriteString(MachineId);
+                base.Write( writer );
+
+                writer.Write( MessageId );
+                writer.WriteAsciiString( MachineId );
+
+                writer.Write( ProtocolVersion );
+                writer.Write( TcpPort );
             }
             else
             {
-                throw new ArgumentNullException("WriterNullException");
+                throw new ArgumentNullException( "WriterNullException" );
             }
         }
 
-        /// <inheritdoc/>
-        public override String ToString()
-        {
-            using(var writer = new StringWriter())
-            {
-                writer.WriteLine("Multicast message:");
-                writer.WriteLine($"{base.ToString()};");
-                writer.WriteLine($"TCP port = {TcpPort};\n" +
-                                 $"MachineId = {MachineId}");
-
-                return writer.ToString();
-            }
-        }
+        protected override void DefaultInit( params Object[] args ) =>
+            MessageOperation = MessageOperation.Multicast;
     }
 }
