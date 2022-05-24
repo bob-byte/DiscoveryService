@@ -1,6 +1,5 @@
 ﻿#define SINGLETON_PATTERN_PER_PROTOCOL_VERSION
 #define IS_IN_LUC
-#define DS_TEST
 
 using Castle.Core.Internal;
 
