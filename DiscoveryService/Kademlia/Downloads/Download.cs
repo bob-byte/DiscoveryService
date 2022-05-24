@@ -217,7 +217,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
 
                 //file shouldn't exist before download
                 isRightInputParameters = isRightInputParameters && !File.Exists( fullFileFile );
-                if ( isRightInputParameters )
+                if ( !isRightInputParameters )
                 {
                     String record = $"File {fullFileFile} already exists";
 

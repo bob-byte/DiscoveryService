@@ -39,7 +39,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
             (ObjectDescriptionModel fileDescription, String bucketName, String localFolderPath, String hexFilePrefix) = await RandomFileToDownloadAsync( apiClient, currentUserProvider, remoteContact, filePrefix ).ConfigureAwait( false );
 
-            lock( UserIntersectionInConsole.Lock)
+            lock ( UserIntersectionInConsole.Lock )
             {
                 Console.WriteLine( "Press any key to start download process. \n" +
                 "After that if you want to cancel download, press C key. If you do not want to cancel, press any other button." );
@@ -48,23 +48,30 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                 ConfiguredTaskAwaitable downloadTask = Task.Run( async () =>
                 {
                     List<ChunkRange> downloadedChunks = new List<ChunkRange>();
-                    IProgress<ChunkRange> downloadProgress = new Progress<ChunkRange>( ( chunkRange ) => downloadedChunks.Add( chunkRange ) );
+                    IProgress<FileDownloadProgressArgs> downloadProgress = new Progress<FileDownloadProgressArgs>( ( progressArgs ) => downloadedChunks.Add( progressArgs.ChunkRange ) );
 
-                    await download.DownloadFileAsync(
-                        localFolderPath,
-                        bucketName,
-                        hexFilePrefix,
-                        fileDescription.OriginalName,
-                        fileDescription.Bytes,
-                        fileDescription.Version,
-                        s_cancellationTokenSource.Token,
-                        downloadProgress
-                    ).ConfigureAwait( false );
+                    try
+                    {
+                        await download.DownloadFileAsync(
+                            localFolderPath,
+                            bucketName,
+                            hexFilePrefix,
+                            fileDescription.OriginalName,
+                            fileDescription.Bytes,
+                            fileDescription.Version,
+                            s_cancellationTokenSource.Token,
+                            downloadProgress
+                        ).ConfigureAwait( false );
+                    }
+                    catch ( Exception ex )
+                    {
+                        Console.WriteLine( ex.ToString() );
+                    }
 
-                    Console.WriteLine("Downloaded chunks: ");
+                    Console.WriteLine( "Downloaded chunks: " );
                     foreach ( ChunkRange chunk in downloadedChunks )
                     {
-                        Console.WriteLine(chunk.ToString());
+                        Console.WriteLine( chunk.ToString() );
                     }
                 } ).ConfigureAwait( false );
 
@@ -81,7 +88,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             s_cancellationTokenSource = new CancellationTokenSource();
         }
 
-        private static void OnFileDownloaded(Object sender, FileDownloadedEventArgs eventArgs)
+        private static void OnFileDownloaded( Object sender, FileDownloadedEventArgs eventArgs )
         {
             Console.WriteLine( "If you have not pressed any button, do so to continue testing" );
             AdsExtensions.TryWriteLastSeenVersion( eventArgs.FullFileName, eventArgs.Version );

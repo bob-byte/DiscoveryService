@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Test.Extensions;
 using LUC.Interfaces;
+using LUC.Interfaces.Extensions;
+using LUC.Interfaces.OutputContracts;
 
 namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
@@ -73,7 +75,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                     //excluded value
                     String pathFromBin = rootFolder.Substring( startIndex, length: rootFolder.Length - startIndex );
 
-                    String pathToExeFile = PathExtensions.PathToExeFile();
+                    String pathToExeFile = Extensions.PathExtensions.PathToExeFile();
                     Int32 previousIndexOfCurrentConfFolder = pathToExeFile.LastIndexOf( "\\" );
 
                     //excluded value
