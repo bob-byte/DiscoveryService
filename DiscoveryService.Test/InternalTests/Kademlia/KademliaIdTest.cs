@@ -10,7 +10,7 @@ using LUC.Interfaces.Discoveries;
 
 using NUnit.Framework;
 
-namespace DiscoveryServices.Test.InternalTests.Kademlia
+namespace LUC.DiscoveryServices.Test.InternalTests.Kademlia
 {
     class KademliaIdTest
     {

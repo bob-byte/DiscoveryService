@@ -1,16 +1,16 @@
 ﻿using System;
 
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Kademlia.Interfaces;
-using DiscoveryServices.Test.InternalTests.Builders;
-using DiscoveryServices.Test.InternalTests.Requests;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.Interfaces;
+using LUC.DiscoveryServices.Test.InternalTests.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Requests;
 
 using NUnit.Framework;
 using AutoFixture;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 
-namespace DiscoveryServices.Test.InternalTests.Kademlia
+namespace LUC.DiscoveryServices.Test.InternalTests.Kademlia
 {
     class BucketListTest
     {

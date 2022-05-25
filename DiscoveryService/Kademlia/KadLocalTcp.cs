@@ -1,14 +1,14 @@
-﻿using DiscoveryServices.Common;
-using DiscoveryServices.Kademlia.Interfaces;
-using DiscoveryServices.Messages.KademliaRequests;
-using DiscoveryServices.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.Interfaces;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Discoveries;
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     /// <summary>
     /// Kademlia TCP in local networks

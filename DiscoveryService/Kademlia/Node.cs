@@ -3,14 +3,14 @@ using System.Linq;
 
 using Newtonsoft.Json;
 using System;
-using DiscoveryServices.Kademlia.Interfaces;
+using LUC.DiscoveryServices.Kademlia.Interfaces;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces;
-using DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     class Node : AbstractKademlia, INode
     {

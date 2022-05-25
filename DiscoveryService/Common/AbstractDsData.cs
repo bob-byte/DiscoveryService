@@ -2,7 +2,7 @@
 
 using System;
 
-namespace DiscoveryServices.Common
+namespace LUC.DiscoveryServices.Common
 {
     /// <summary>
     /// Contains a basic info about a Service Discovery

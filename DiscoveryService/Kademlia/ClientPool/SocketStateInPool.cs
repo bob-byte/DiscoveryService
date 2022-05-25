@@ -1,4 +1,4 @@
-﻿namespace DiscoveryServices.Kademlia.ClientPool
+﻿namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     public enum SocketStateInPool
     {

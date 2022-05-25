@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Common
+namespace LUC.DiscoveryServices.Common
 {
     public sealed class ForcingConcurrencyError : IDisposable
     {

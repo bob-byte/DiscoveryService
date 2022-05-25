@@ -1,6 +1,6 @@
-﻿using DiscoveryServices.Common;
-using DiscoveryServices.Common.Extensions;
-using DiscoveryServices.Messages;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Extensions;
+using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Constants;
 
 using Nito.AsyncEx;
@@ -15,7 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     /// TCP server is used to connect, disconnect and manage TCP sessions

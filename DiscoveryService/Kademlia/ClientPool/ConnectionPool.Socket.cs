@@ -1,5 +1,5 @@
-﻿using DiscoveryServices.Common;
-using DiscoveryServices.Common.Extensions;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Extensions;
 using LUC.Interfaces.Extensions;
 
 using Nito.AsyncEx;
@@ -10,7 +10,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Kademlia.ClientPool
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     /// <summary>
     /// Client socket, maintained by the Connection Pool

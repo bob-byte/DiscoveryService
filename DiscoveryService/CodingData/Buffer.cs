@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace DiscoveryServices.CodingData
+namespace LUC.DiscoveryServices.CodingData
 {
     /// <summary>
     /// Dynamic byte buffer

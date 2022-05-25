@@ -1,4 +1,4 @@
-﻿using DiscoveryServices.Messages;
+﻿using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Discoveries;
 
 using System;
@@ -9,7 +9,7 @@ using System.Net;
 using System.Numerics;
 using System.Text;
 
-namespace DiscoveryServices.CodingData
+namespace LUC.DiscoveryServices.CodingData
 {
     /// <summary>
     /// Methods to write wire formatted data items.

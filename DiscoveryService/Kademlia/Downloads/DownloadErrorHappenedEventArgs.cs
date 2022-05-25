@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DiscoveryServices.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     public class DownloadErrorHappenedEventArgs : EventArgs
     {

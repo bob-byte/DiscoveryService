@@ -6,7 +6,7 @@ using LUC.Services.Implementation;
 
 using System;
 
-namespace DiscoveryServices.Test.Extensions
+namespace LUC.DiscoveryServices.Test.Extensions
 {
     internal static class MachineIdExtensions
     {

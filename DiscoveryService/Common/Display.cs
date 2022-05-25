@@ -5,10 +5,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-using DiscoveryServices.Messages.KademliaResponses;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Discoveries;
 
-namespace DiscoveryServices.Common
+namespace LUC.DiscoveryServices.Common
 {
     internal static class Display
     {

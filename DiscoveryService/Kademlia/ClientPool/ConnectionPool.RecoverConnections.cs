@@ -8,10 +8,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-using DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common;
 using LUC.Interfaces.Constants;
 
-namespace DiscoveryServices.Kademlia.ClientPool
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     partial class ConnectionPool
     {

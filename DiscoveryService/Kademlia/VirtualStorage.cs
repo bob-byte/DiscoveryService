@@ -3,12 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Numerics;
 
-using DiscoveryServices.Kademlia.Interfaces;
+using LUC.DiscoveryServices.Kademlia.Interfaces;
 using LUC.Interfaces.Discoveries;
 
 using Newtonsoft.Json;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     /// <summary>
     /// In-memory storage, used for node cache store if not explicitly specified.

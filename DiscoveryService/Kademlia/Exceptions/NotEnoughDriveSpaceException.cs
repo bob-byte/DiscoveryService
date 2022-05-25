@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace DiscoveryServices.Kademlia.Exceptions
+namespace LUC.DiscoveryServices.Kademlia.Exceptions
 {
     public class NotEnoughDriveSpaceException : IOException
     {

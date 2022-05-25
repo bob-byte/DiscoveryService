@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     public class ContactQueueItem
     {

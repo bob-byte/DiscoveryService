@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using AutoFixture;
 
-using DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common;
 using LUC.Interfaces;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Models;
@@ -21,7 +21,7 @@ using NUnit.Framework;
 using Unity;
 using Unity.Lifetime;
 
-namespace DiscoveryServices.Test
+namespace LUC.DiscoveryServices.Test
 {
     [SetUpFixture]
     class DsSetUpTests : SetUpTests

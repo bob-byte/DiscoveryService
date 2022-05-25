@@ -1,9 +1,9 @@
-﻿using DiscoveryServices.Common;
+﻿using LUC.DiscoveryServices.Common;
 
 using System;
 using System.IO;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     public class RpcError
     {

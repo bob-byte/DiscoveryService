@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using System.Threading;
 
-namespace DiscoveryServices.Common
+namespace LUC.DiscoveryServices.Common
 {
     public sealed class StateObjectForAccept : IDisposable
     {

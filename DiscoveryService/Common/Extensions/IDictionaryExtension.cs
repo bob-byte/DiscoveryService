@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DiscoveryServices.Common.Extensions
+namespace LUC.DiscoveryServices.Common.Extensions
 {
     public static class IDictionaryExtension
     {

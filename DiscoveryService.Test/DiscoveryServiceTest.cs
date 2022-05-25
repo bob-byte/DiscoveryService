@@ -2,10 +2,10 @@
 
 using FluentAssertions;
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Kademlia.ClientPool;
-using DiscoveryServices.Messages;
-using DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Test.Builders;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 using LUC.Services.Implementation;
@@ -18,7 +18,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Test
+namespace LUC.DiscoveryServices.Test
 {
     [TestFixture]
     partial class DiscoveryServiceTest

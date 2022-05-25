@@ -1,8 +1,8 @@
-﻿using DiscoveryServices.Interfaces;
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Messages;
-using DiscoveryServices.Messages.KademliaRequests;
-using DiscoveryServices.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Models;
@@ -13,7 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace DiscoveryServices.NetworkEventHandlers
+namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
     class CheckFileExistsRequestHandler : INetworkEventHandler
     {

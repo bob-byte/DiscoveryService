@@ -4,11 +4,11 @@ using System.Net;
 using AutoFixture;
 using AutoFixture.Kernel;
 
-using DiscoveryServices.Kademlia.ClientPool;
-using DiscoveryServices.Test.Builders;
-using DiscoveryServices.Test.InternalTests.Builders;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Builders;
 
-namespace DiscoveryServices.Test.InternalTests.Customizations
+namespace LUC.DiscoveryServices.Test.InternalTests.Customizations
 {
     class SocketBasicCustomization : ICustomization
     {

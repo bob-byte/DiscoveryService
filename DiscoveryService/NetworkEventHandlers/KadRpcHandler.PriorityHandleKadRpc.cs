@@ -1,4 +1,4 @@
-﻿namespace DiscoveryServices.NetworkEventHandlers
+﻿namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
     partial class KadRpcHandler
     {

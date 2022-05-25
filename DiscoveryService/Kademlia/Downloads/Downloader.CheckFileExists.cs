@@ -1,5 +1,5 @@
-﻿using DiscoveryServices.Messages.KademliaRequests;
-using DiscoveryServices.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Constants;
 
-namespace DiscoveryServices.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     public partial class DsDownloader
     {
@@ -52,66 +52,66 @@ namespace DiscoveryServices.Kademlia.Downloads
             CancellationToken cancellationToken
         )
         {
-            var contactsWithFile = new BlockingCollection<IContact>( contactCountWithFileCapacity );
+            var contactsWithFile = new BlockingCollection<IContact>(contactCountWithFileCapacity);
 
             //we need parallel execution. Task.Run is async
-            Task.Factory.StartNew( async () =>
-             {
-                 ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
+            Task.Factory.StartNew(async () =>
+            {
+                ExecutionDataflowBlockOptions parallelOptions = ParallelOptions(cancellationToken);
 
-                 Int32 countContactsWithFile = 0;
+                Int32 countContactsWithFile = 0;
 
-                 try
-                 {
-                     var checkFileExistsInContact = new ActionBlock<IContact>( async ( contact ) =>
-                     {
-                         Boolean isExistInContact = await IsFileExistsInContactAsync( sampleRequest, contact, bytesFileCount ).ConfigureAwait( continueOnCapturedContext: false );
+                try
+                {
+                    var checkFileExistsInContact = new ActionBlock<IContact>(async (contact) =>
+                    {
+                        Boolean isExistInContact = await IsFileExistsInContactAsync(sampleRequest, contact, bytesFileCount).ConfigureAwait(continueOnCapturedContext: false);
 
-                         if ( cancellationToken.IsCancellationRequested )
-                         {
-                             return;
-                         }
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            return;
+                        }
 
-                         if ( countContactsWithFile >= contactCountWithFileCapacity )
-                         {
-                             contactsWithFile.CompleteAdding();
-                         }
-                         else if ( isExistInContact )
-                         {
-                             contactsWithFile.Add( contact );
-                             countContactsWithFile++;
-                         }
-                     }, parallelOptions );
+                        if (countContactsWithFile >= contactCountWithFileCapacity)
+                        {
+                            contactsWithFile.CompleteAdding();
+                        }
+                        else if (isExistInContact)
+                        {
+                            contactsWithFile.Add(contact);
+                            countContactsWithFile++;
+                        }
+                    }, parallelOptions);
 
-                     foreach ( IContact contact in onlineContacts )
-                     {
-                         checkFileExistsInContact.Post( contact );
-                     }
+                    foreach (IContact contact in onlineContacts)
+                    {
+                        checkFileExistsInContact.Post(contact);
+                    }
 
-                     //Signals that we will not post more IContact.
-                     //checkFileExistsInContact.Completion will never be completed without this
-                     checkFileExistsInContact.Complete();
+                        //Signals that we will not post more IContact.
+                        //checkFileExistsInContact.Completion will never be completed without this
+                        checkFileExistsInContact.Complete();
 
-                     //await getting all contactsWithFile
-                     await checkFileExistsInContact.Completion.ConfigureAwait( false );
-                 }
-                 catch ( OperationCanceledException )
-                 {
-                     ;//do nothing
-                 }
-                 //added too many contactsWithFile (called contactsWithFile.Add( contact ) after contactsWithFile.CompleteAdding() (thread race))
-                 catch ( InvalidOperationException )
-                 {
-                     ;//do nothing
-                 }
-                 finally
-                 {
-                     //contactsWithFile.GetConsumingEnumerable will never be completed without this
-                     contactsWithFile.CompleteAdding();
-                 }
-             } );
+                        //await getting all contactsWithFile
+                        await checkFileExistsInContact.Completion.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    ;//do nothing
+                    }
+                    //added too many contactsWithFile (called contactsWithFile.Add( contact ) after contactsWithFile.CompleteAdding() (thread race))
+                    catch (InvalidOperationException)
+                {
+                    ;//do nothing
+                    }
+                finally
+                {
+                        //contactsWithFile.GetConsumingEnumerable will never be completed without this
+                        contactsWithFile.CompleteAdding();
+                }
+            });
 
-            return contactsWithFile.GetConsumingEnumerable( cancellationToken );
+            return contactsWithFile.GetConsumingEnumerable(cancellationToken);
         }
 
         private async Task<Boolean> IsFileExistsInContactAsync( DownloadChunkRequest sampleRequest, IContact contact, UInt64 bytesFileCount )

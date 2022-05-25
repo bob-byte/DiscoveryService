@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     public class StoreValue
     {

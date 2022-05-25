@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace DiscoveryServices.Common.Extensions
+namespace LUC.DiscoveryServices.Common.Extensions
 {
     public static class RandomExtension
     {

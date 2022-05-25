@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-using DiscoveryServices.Kademlia.Exceptions;
-using DiscoveryServices.Kademlia.Interfaces;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Kademlia.Interfaces;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 
 using Newtonsoft.Json;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     class BucketList : AbstractKademlia, IBucketList
     {

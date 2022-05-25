@@ -8,15 +8,15 @@ using System.Numerics;
 using AutoFixture;
 using AutoFixture.Kernel;
 
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Kademlia.Exceptions;
-using DiscoveryServices.Test.Builders;
-using DiscoveryServices.Test.Extensions;
-using DiscoveryServices.Test.InternalTests.Requests;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.Extensions;
+using LUC.DiscoveryServices.Test.InternalTests.Requests;
 using LUC.Interfaces.Discoveries;
 using LUC.Services.Implementation;
 
-namespace DiscoveryServices.Test.InternalTests.Builders
+namespace LUC.DiscoveryServices.Test.InternalTests.Builders
 {
     class ContactBuilder : AbstractSeededBuilder<BuildContactRequest>
     {

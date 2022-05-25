@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Numerics;
 
-namespace DiscoveryServices.Messages.KademliaRequests
+namespace LUC.DiscoveryServices.Messages.KademliaRequests
 {
     class PingRequest : Request
     {

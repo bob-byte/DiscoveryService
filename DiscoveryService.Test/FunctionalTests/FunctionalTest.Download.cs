@@ -6,16 +6,16 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Kademlia.Downloads;
-using DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.Downloads;
+using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Models;
 using LUC.Interfaces.OutputContracts;
 
-namespace DiscoveryServices.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     partial class FunctionalTest
     {

@@ -1,8 +1,8 @@
-﻿using DiscoveryServices.CodingData;
-using DiscoveryServices.Common;
-using DiscoveryServices.Interfaces;
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Extensions;
 
@@ -13,7 +13,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Messages.KademliaRequests
+namespace LUC.DiscoveryServices.Messages.KademliaRequests
 {
     internal sealed class DownloadChunkRequest : AbstractFileRequest, ICloneable
     {

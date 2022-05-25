@@ -1,6 +1,6 @@
-﻿using DiscoveryServices.Common;
-using DiscoveryServices.Kademlia.Exceptions;
-using DiscoveryServices.Messages.KademliaRequests;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
@@ -16,7 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace DiscoveryServices.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     /// <summary>
     /// Thread safe class for download files
@@ -73,7 +73,7 @@ namespace DiscoveryServices.Kademlia.Downloads
             m_minFreeDriveSpace = minFreeDriveSpace;
         }
 
-        public IoBehavior IOBehavior { get; }
+        public IoBehavior IOBehavior { get; set; }
 
         public Int64 MinFreeDriveSpace
         {
@@ -128,15 +128,69 @@ namespace DiscoveryServices.Kademlia.Downloads
         /// <exception cref="UnauthorizedAccessException">
         /// Current instance does not have the required permission or folder <paramref name="localFolderPath"/> is readonly
         /// </exception>
-        public async Task DownloadFileAsync(
+        public Task DownloadFileAsync(
             DownloadingFileInfo downloadingFileInfo,
             IFileChangesQueue fileChangesQueue = null,
             EventWaitHandle downloadedAnyChunk = null,
             IProgress<FileDownloadProgressArgs> downloadProgress = null
         )
         {
-            downloadingFileInfo.CancellationToken.ThrowIfCancellationRequested();
+            //Because of the way async/await methods are rewritten by the compiler, any exceptions
+            //thrown during the parameters check will happen only when the task is observed.
+            //It is the reason why is DownloadFileInternalAsync created
+            if (downloadingFileInfo != null)
+            {
+                Task downloadTask = DownloadFileInternalAsync(downloadingFileInfo, fileChangesQueue, downloadedAnyChunk, downloadProgress);
+                return downloadTask;
+            }
+            else
+            {
+                throw new ArgumentNullException(paramName: nameof(downloadingFileInfo));
+            }
+        }
 
+        public void TryGetTempFullFileNameFromException(Exception exception, out String tempFullFileName, out Boolean isInExceptionData)
+        {
+            isInExceptionData = exception.Data.Contains(TEMP_FULL_FILE_NAME_KEY);
+            tempFullFileName = isInExceptionData ? (String)exception.Data[TEMP_FULL_FILE_NAME_KEY] : null;
+        }
+
+        public void VerifyAbilityToDownloadFile(String fullFileName, Int64 bytesCountOfFile, out String bestPlaceWhereDownloadFile)
+        {
+            String driveName = fullFileName[0].ToString();
+            var driveInfo = new DriveInfo(driveName);
+
+            Int64 freeDiskSpaceAfterDownload = driveInfo.AvailableFreeSpace - (bytesCountOfFile + MinFreeDriveSpace);//free disk space after download process, except MinFreeDriveSpace
+
+            Boolean isEnoughFreeDiskSpace = freeDiskSpaceAfterDownload >= 0;
+            if (isEnoughFreeDiskSpace)
+            {
+                bestPlaceWhereDownloadFile = fullFileName;
+            }
+            else
+            {
+                bestPlaceWhereDownloadFile = PathExtensions.TargetDownloadedFullFileName(fullFileName, m_currentUserProvider.RootFolderPath);
+                var fileInfo = new FileInfo(bestPlaceWhereDownloadFile);
+                if (fileInfo.Exists)
+                {
+                    freeDiskSpaceAfterDownload = driveInfo.AvailableFreeSpace - (bytesCountOfFile - fileInfo.Length + MinFreeDriveSpace);
+                    isEnoughFreeDiskSpace = freeDiskSpaceAfterDownload >= 0;
+                }
+
+                if (!isEnoughFreeDiskSpace)
+                {
+                    String pathAfterSyncFolder = m_downloadingFile.FileNameFromSyncFolder(m_currentUserProvider.RootFolderPath, fullFileName);
+                    throw new NotEnoughDriveSpaceException(fullFileName, message: $"You need to free {-freeDiskSpaceAfterDownload} to download {pathAfterSyncFolder}");
+                }
+            }
+        }
+
+        private async Task DownloadFileInternalAsync(
+            DownloadingFileInfo downloadingFileInfo,
+            IFileChangesQueue fileChangesQueue = null,
+            EventWaitHandle downloadedAnyChunk = null,
+            IProgress<FileDownloadProgressArgs> downloadProgress = null
+        ){
             List<IContact> onlineContacts = m_discoveryService.OnlineContacts();
 
             String onlineContactsAsStr = onlineContacts.ToString(showAllPropsOfItems: true, initialTabulation: String.Empty, nameOfEnumerable: "Online Contacts");
@@ -227,42 +281,6 @@ namespace DiscoveryServices.Kademlia.Downloads
 
                 FilePartiallyDownloaded?.Invoke(sender: this, new FilePartiallyDownloadedEventArgs(ex.UndownloadedRanges));
                 throw;
-            }
-        }
-
-        public void TryGetTempFullFileNameFromException(Exception exception, out String tempFullFileName, out Boolean isInExceptionData)
-        {
-            isInExceptionData = exception.Data.Contains(TEMP_FULL_FILE_NAME_KEY);
-            tempFullFileName = isInExceptionData ? (String)exception.Data[TEMP_FULL_FILE_NAME_KEY] : null;
-        }
-
-        public void VerifyAbilityToDownloadFile(String fullFileName, Int64 bytesCountOfFile, out String bestPlaceWhereDownloadFile)
-        {
-            String driveName = fullFileName[0].ToString();
-            var driveInfo = new DriveInfo(driveName);
-
-            Int64 freeDiskSpaceAfterDownload = driveInfo.AvailableFreeSpace - (bytesCountOfFile + MinFreeDriveSpace);//free disk space after download process, except MinFreeDriveSpace
-
-            Boolean isEnoughFreeDiskSpace = freeDiskSpaceAfterDownload >= 0;
-            if (isEnoughFreeDiskSpace)
-            {
-                bestPlaceWhereDownloadFile = fullFileName;
-            }
-            else
-            {
-                bestPlaceWhereDownloadFile = PathExtensions.TargetDownloadedFullFileName(fullFileName, m_currentUserProvider.RootFolderPath);
-                var fileInfo = new FileInfo(bestPlaceWhereDownloadFile);
-                if (fileInfo.Exists)
-                {
-                    freeDiskSpaceAfterDownload = driveInfo.AvailableFreeSpace - (bytesCountOfFile - fileInfo.Length + MinFreeDriveSpace);
-                    isEnoughFreeDiskSpace = freeDiskSpaceAfterDownload >= 0;
-                }
-
-                if (!isEnoughFreeDiskSpace)
-                {
-                    String pathAfterSyncFolder = m_downloadingFile.FileNameFromSyncFolder(m_currentUserProvider.RootFolderPath, fullFileName);
-                    throw new NotEnoughDriveSpaceException(fullFileName, message: $"You need to free {-freeDiskSpaceAfterDownload} to download {pathAfterSyncFolder}");
-                }
             }
         }
 

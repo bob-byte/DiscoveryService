@@ -7,15 +7,15 @@ using System.Timers;
 
 using Newtonsoft.Json;
 
-using DiscoveryServices.Kademlia.Routers;
-using DiscoveryServices.Kademlia.Exceptions;
-using DiscoveryServices.Kademlia.Interfaces;
+using LUC.DiscoveryServices.Kademlia.Routers;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Kademlia.Interfaces;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Constants;
-using DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     /// <summary>
     /// DHT - distributed hash table. It minimize settings count of messages, which <seealso cref="IContact"/>s should send to learn each other 

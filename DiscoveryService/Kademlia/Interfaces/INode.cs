@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DiscoveryServices.Kademlia.Interfaces
+namespace LUC.DiscoveryServices.Kademlia.Interfaces
 {
     interface INode
     {

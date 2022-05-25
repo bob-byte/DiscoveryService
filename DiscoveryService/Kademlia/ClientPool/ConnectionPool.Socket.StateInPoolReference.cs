@@ -1,9 +1,9 @@
-﻿using DiscoveryServices.Common;
+﻿using LUC.DiscoveryServices.Common;
 
 using System;
 using System.Threading;
 
-namespace DiscoveryServices.Kademlia.ClientPool
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     partial class ConnectionPool
     {

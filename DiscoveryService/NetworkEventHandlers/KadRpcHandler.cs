@@ -1,10 +1,10 @@
-﻿using DiscoveryServices.Common;
-using DiscoveryServices.Interfaces;
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Kademlia.Exceptions;
-using DiscoveryServices.Messages;
-using DiscoveryServices.Messages.KademliaRequests;
-using DiscoveryServices.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
@@ -17,7 +17,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.NetworkEventHandlers
+namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
     partial class KadRpcHandler : INetworkEventHandler
     {

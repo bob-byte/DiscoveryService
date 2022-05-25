@@ -1,19 +1,19 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-using DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 using AutoFixture;
-using DiscoveryServices.Messages.KademliaResponses;
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Common;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Common;
 using FluentAssertions;
 using NUnit.Framework;
-using DiscoveryServices.Test.InternalTests.Builders;
-using DiscoveryServices.Test.InternalTests.Requests;
+using LUC.DiscoveryServices.Test.InternalTests.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Requests;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Constants;
 
-namespace DiscoveryServices.Test.InternalTests
+namespace LUC.DiscoveryServices.Test.InternalTests
 {
     class RequestTest
     {

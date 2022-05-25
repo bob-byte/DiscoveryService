@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace DiscoveryServices.Kademlia.Interfaces
+namespace LUC.DiscoveryServices.Kademlia.Interfaces
 {
     interface IStorage
     {

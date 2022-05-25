@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Numerics;
 
-using DiscoveryServices.CodingData;
-using DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Interfaces;
 
-namespace DiscoveryServices.Messages.KademliaResponses
+namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {
     class ErrorResponse : Response
     {

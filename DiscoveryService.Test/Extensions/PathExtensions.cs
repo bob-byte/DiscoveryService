@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
-namespace DiscoveryServices.Test.Extensions
+namespace LUC.DiscoveryServices.Test.Extensions
 {
     internal static class PathExtensions
     {

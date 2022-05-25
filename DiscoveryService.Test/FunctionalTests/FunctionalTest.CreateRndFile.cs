@@ -1,10 +1,10 @@
 ﻿using System;
 using System.IO;
 
-using DiscoveryServices.Test.Extensions;
+using LUC.DiscoveryServices.Test.Extensions;
 using LUC.Interfaces.Constants;
 
-namespace DiscoveryServices.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     partial class FunctionalTest
     {

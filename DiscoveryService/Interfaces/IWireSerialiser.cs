@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 
-using DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages;
 
-namespace DiscoveryServices.Interfaces
+namespace LUC.DiscoveryServices.Interfaces
 {
     interface IWireSerialiser
     {

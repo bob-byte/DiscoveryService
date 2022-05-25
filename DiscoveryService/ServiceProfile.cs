@@ -1,5 +1,5 @@
 ﻿
-using DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common;
 using LUC.Interfaces;
 
 using System;
@@ -10,7 +10,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Windows;
 
-namespace DiscoveryServices
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     ///   Contains info about current peer

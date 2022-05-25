@@ -5,7 +5,7 @@ using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Common.Extensions
+namespace LUC.DiscoveryServices.Common.Extensions
 {
     internal static class NetworkInterfaceExtension
     {

@@ -1,6 +1,6 @@
 ﻿using LUC.Interfaces.Discoveries;
 
-namespace DiscoveryServices.Kademlia.Interfaces
+namespace LUC.DiscoveryServices.Kademlia.Interfaces
 {
     interface IDht
     {

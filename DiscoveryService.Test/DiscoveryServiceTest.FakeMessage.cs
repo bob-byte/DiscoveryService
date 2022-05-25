@@ -1,10 +1,10 @@
-﻿using DiscoveryServices.CodingData;
-using DiscoveryServices.Interfaces;
-using DiscoveryServices.Messages;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Messages;
 
 using System;
 
-namespace DiscoveryServices.Test
+namespace LUC.DiscoveryServices.Test
 {
     partial class DiscoveryServiceTest
     {

@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 
-using DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
 using LUC.Interfaces;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Extensions;
 
 using Newtonsoft.Json;
 
-namespace DiscoveryServices.Kademlia.Routers
+namespace LUC.DiscoveryServices.Kademlia.Routers
 {
     internal abstract class BaseRouter : AbstractKademlia
     {

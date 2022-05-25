@@ -4,19 +4,19 @@ using System.Threading.Tasks;
 
 using FluentAssertions;
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Kademlia.ClientPool;
-using DiscoveryServices.Messages.KademliaRequests;
-using DiscoveryServices.Test.Builders;
-using DiscoveryServices.Test.InternalTests.Attributes;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Attributes;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 
 using NUnit.Framework;
 
-using static DiscoveryServices.Kademlia.ClientPool.ConnectionPool;
+using static LUC.DiscoveryServices.Kademlia.ClientPool.ConnectionPool;
 
-namespace DiscoveryServices.Test.InternalTests
+namespace LUC.DiscoveryServices.Test.InternalTests
 {
     [TestFixture]
     class SocketTest

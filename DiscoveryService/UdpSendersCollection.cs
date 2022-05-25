@@ -7,10 +7,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
-using DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common;
 using LUC.Interfaces.Constants;
 
-namespace DiscoveryServices
+namespace LUC.DiscoveryServices
 {
     class UdpSendersCollection : IDisposable
     {

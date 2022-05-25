@@ -1,9 +1,9 @@
-﻿using DiscoveryServices.Common;
-using DiscoveryServices.Kademlia.ClientPool;
-using DiscoveryServices.Kademlia.Exceptions;
-using DiscoveryServices.Messages;
-using DiscoveryServices.Messages.KademliaRequests;
-using DiscoveryServices.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Extensions;
 
@@ -20,7 +20,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     internal class RemoteProcedureCaller
     {

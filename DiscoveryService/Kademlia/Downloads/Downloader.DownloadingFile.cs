@@ -1,5 +1,5 @@
 ﻿
-using DiscoveryServices.Common.Extensions;
+using LUC.DiscoveryServices.Common.Extensions;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Extensions;
 using LUC.Services.Implementation;
@@ -11,7 +11,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace DiscoveryServices.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     public partial class DsDownloader
     {
@@ -25,8 +25,8 @@ namespace DiscoveryServices.Kademlia.Downloads
 
             public void SetTempFileAttributes( String fullPathToTempFile, SafeFileHandle fileHandle )
             {
-                FileAttributes tempFileAttributes = FileAttributes.Hidden | FileAttributes.ReadOnly;
-                File.SetAttributes( fullPathToTempFile, tempFileAttributes );
+                //FileAttributes tempFileAttributes = FileAttributes.Hidden | FileAttributes.ReadOnly;
+                //File.SetAttributes( fullPathToTempFile, tempFileAttributes );
 
                 MarkAsSparseFile( fileHandle, fullPathToTempFile );
             }

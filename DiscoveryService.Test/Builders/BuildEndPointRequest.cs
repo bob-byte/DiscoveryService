@@ -1,4 +1,4 @@
-﻿namespace DiscoveryServices.Test.Builders
+﻿namespace LUC.DiscoveryServices.Test.Builders
 {
     enum BuildEndPointRequest
     {

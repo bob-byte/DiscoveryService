@@ -1,10 +1,10 @@
 ﻿using AutoFixture;
 using AutoFixture.NUnit3;
 
-using DiscoveryServices.Test.Builders;
-using DiscoveryServices.Test.InternalTests.Customizations;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Customizations;
 
-namespace DiscoveryServices.Test.InternalTests.Attributes
+namespace LUC.DiscoveryServices.Test.InternalTests.Attributes
 {
     class EndPointConventionsAttribute : AutoDataAttribute
     {

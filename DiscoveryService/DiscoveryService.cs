@@ -1,11 +1,11 @@
 ﻿//#define IS_IN_LUC
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Common.Extensions;
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Kademlia.ClientPool;
-using DiscoveryServices.Messages;
-using DiscoveryServices.NetworkEventHandlers;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Extensions;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.NetworkEventHandlers;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
@@ -29,7 +29,7 @@ using System.Threading.Tasks;
 
 //access permission to internal members in current project for DiscoveryService.Test
 [assembly: InternalsVisibleTo(assemblyName: "DiscoveryService.Test")]
-namespace DiscoveryServices
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     ///   LightUpon.Cloud Service Discovery maintens the list of IP addresses in LAN. 
@@ -284,9 +284,12 @@ namespace DiscoveryServices
         }
 
         /// <inheritdoc/>
-        public void Stop()
+        public void Stop() =>
+            Stop(allowReuseService: true);
+
+        public void Stop(Boolean allowReuseService)
         {
-            if ( IsRunning )
+            if (IsRunning)
             {
                 IsRunning = false;
 
@@ -295,12 +298,13 @@ namespace DiscoveryServices
                 NetworkEventInvoker?.Stop();
                 NetworkEventInvoker = null;
 
-                ServiceInstanceShutdown?.Invoke( sender: this, new TcpMessageEventArgs() );
+                ServiceInstanceShutdown?.Invoke(sender: this, new TcpMessageEventArgs());
 
-                m_connectionPool.ClearPoolAsync( IoBehavior.Synchronous, respectMinPoolSize: false, CancellationToken.None ).ConfigureAwait( continueOnCapturedContext: false );
+                m_connectionPool.ClearPoolAsync(IoBehavior.Synchronous, respectMinPoolSize: false, allowReuseService, CancellationToken.None).ConfigureAwait(continueOnCapturedContext: false);
                 m_forceConcurrencyError?.Dispose();
             }
         }
+
 
         public List<IContact> OnlineContacts() =>
             m_distributedHashTable.OnlineContacts;
@@ -480,7 +484,7 @@ namespace DiscoveryServices
             var assembly = Assembly.GetEntryAssembly();
 
 #if IS_IN_LUC
-            String dsTestAssebmlyName = "LUC.DiscoveryServices.Test";
+            String dsTestAssebmlyName = "LUC.LUC.DiscoveryServices.Test";
 #else
             String dsTestAssebmlyName = "DiscoveryService.Test";
 #endif

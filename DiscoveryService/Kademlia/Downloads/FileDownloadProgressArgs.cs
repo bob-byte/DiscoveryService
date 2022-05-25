@@ -1,8 +1,8 @@
 ﻿using System;
 
-using DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages;
 
-namespace DiscoveryServices.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     public class FileDownloadProgressArgs
     {

@@ -1,4 +1,4 @@
-﻿namespace DiscoveryServices.Test.InternalTests.Requests
+﻿namespace LUC.DiscoveryServices.Test.InternalTests.Requests
 {
     enum BuildContactRequest
     {

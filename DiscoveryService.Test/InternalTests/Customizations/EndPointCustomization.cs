@@ -1,8 +1,8 @@
 ﻿using AutoFixture;
 
-using DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.Builders;
 
-namespace DiscoveryServices.Test.InternalTests.Customizations
+namespace LUC.DiscoveryServices.Test.InternalTests.Customizations
 {
     class EndPointCustomization : ICustomization
     {

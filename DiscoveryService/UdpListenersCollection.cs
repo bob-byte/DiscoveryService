@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Interfaces;
-using DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Models;
 
@@ -15,7 +15,7 @@ using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices
+namespace LUC.DiscoveryServices
 {
     internal class UdpListenersCollection : ListenersCollection<UdpMessageEventArgs, UdpClient>
     {

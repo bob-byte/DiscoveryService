@@ -1,4 +1,4 @@
-﻿using DiscoveryServices.CodingData;
+﻿using LUC.DiscoveryServices.CodingData;
 
 using NUnit.Framework;
 
@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace DiscoveryServices.Test
+namespace LUC.DiscoveryServices.Test
 {
     /// <summary>
     /// Testing Wire Read/Write

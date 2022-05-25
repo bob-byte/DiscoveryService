@@ -5,11 +5,11 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-using DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages;
 
 using Nito.AsyncEx;
 
-namespace DiscoveryServices.Common.Extensions
+namespace LUC.DiscoveryServices.Common.Extensions
 {
     static class SocketExtension
     {

@@ -1,10 +1,10 @@
-﻿using DiscoveryServices.CodingData;
-using DiscoveryServices.Common;
-using DiscoveryServices.Interfaces;
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Kademlia.ClientPool;
-using DiscoveryServices.Kademlia.Exceptions;
-using DiscoveryServices.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 using LUC.Services.Implementation;
@@ -21,7 +21,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace DiscoveryServices.Messages.KademliaRequests
+namespace LUC.DiscoveryServices.Messages.KademliaRequests
 {
     internal abstract class Request : Message
     {

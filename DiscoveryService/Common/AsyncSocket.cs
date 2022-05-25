@@ -1,4 +1,4 @@
-﻿using DiscoveryServices.Common.Extensions;
+﻿using LUC.DiscoveryServices.Common.Extensions;
 using LUC.Interfaces.Constants;
 
 using Nito.AsyncEx;
@@ -12,7 +12,7 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Common
+namespace LUC.DiscoveryServices.Common
 {
     /// <summary>
     /// Async socket with cancellable operations.

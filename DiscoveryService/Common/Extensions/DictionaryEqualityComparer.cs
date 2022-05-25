@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace DiscoveryServices.Common.Extensions
+namespace LUC.DiscoveryServices.Common.Extensions
 {
     class DictionaryEqualityComparer<TKey, TValue> : IEqualityComparer<KeyValuePair<TKey, TValue>>
     {

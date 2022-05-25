@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DiscoveryServices.Kademlia.Exceptions
+namespace LUC.DiscoveryServices.Kademlia.Exceptions
 {
     public class ValueCannotBeNullException : Exception
     {

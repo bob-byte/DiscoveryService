@@ -8,7 +8,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace DiscoveryServices.Common
+namespace LUC.DiscoveryServices.Common
 {
     static partial class IpAddressExtension
     {

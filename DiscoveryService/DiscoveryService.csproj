@@ -151,11 +151,11 @@
     <Compile Include="Kademlia\RemoteProcedureCaller.cs" />
     <Compile Include="TcpListenersCollection.cs" />
     <Compile Include="UdpSendersCollection.cs" />
-    <Compile Include="Kademlia\Downloads\DsDownloader.CheckFileExists.cs" />
-    <Compile Include="Kademlia\Downloads\DsDownloader.cs" />
+    <Compile Include="Kademlia\Downloads\Downloader.CheckFileExists.cs" />
+    <Compile Include="Kademlia\Downloads\Downloader.cs" />
     <Compile Include="Common\AsyncSocket.cs" />
-    <Compile Include="Kademlia\Downloads\DsDownloader.DownloadProcess.cs" />
-    <Compile Include="Kademlia\Downloads\DsDownloader.DownloadingFile.cs" />
+    <Compile Include="Kademlia\Downloads\Downloader.DownloadProcess.cs" />
+    <Compile Include="Kademlia\Downloads\Downloader.DownloadingFile.cs" />
     <Compile Include="Interfaces\INetworkEventHandler.cs" />
     <Compile Include="Interfaces\IWireSerialiser.cs" />
     <Compile Include="Kademlia\AbstractKademlia.cs" />

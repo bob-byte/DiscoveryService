@@ -1,10 +1,10 @@
-﻿using DiscoveryServices.CodingData;
-using DiscoveryServices.Interfaces;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Interfaces;
 
 using System;
 using System.Numerics;
 
-namespace DiscoveryServices.Messages.KademliaResponses
+namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {
     abstract class AbstractFileResponse : Response, ICloneable
     {

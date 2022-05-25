@@ -11,19 +11,19 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Common.Extensions;
-using DiscoveryServices.Interfaces;
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Kademlia.Routers;
-using DiscoveryServices.Messages;
-using DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Extensions;
+using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Kademlia.Routers;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 
 using Nito.AsyncEx;
 
-namespace DiscoveryServices
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     ///   Invoker of receiving specific messages, discovering connected network interface

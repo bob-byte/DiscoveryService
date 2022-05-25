@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Linq;
-using DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common;
 using System.Text;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Constants;
 using System.Threading;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     internal class Contact : IContact
     {

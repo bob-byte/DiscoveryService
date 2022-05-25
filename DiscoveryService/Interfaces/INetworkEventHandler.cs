@@ -1,8 +1,8 @@
-﻿using DiscoveryServices.Messages;
+﻿using LUC.DiscoveryServices.Messages;
 
 using System;
 
-namespace DiscoveryServices.Interfaces
+namespace LUC.DiscoveryServices.Interfaces
 {
     interface INetworkEventHandler
     {

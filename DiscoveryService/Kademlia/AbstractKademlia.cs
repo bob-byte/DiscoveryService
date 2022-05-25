@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     internal abstract class AbstractKademlia
     {

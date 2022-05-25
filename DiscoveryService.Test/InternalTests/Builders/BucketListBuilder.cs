@@ -3,12 +3,12 @@
 using AutoFixture.Kernel;
 using AutoFixture;
 
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Test.Builders;
-using DiscoveryServices.Test.InternalTests.Requests;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Requests;
 using LUC.Interfaces.Discoveries;
 
-namespace DiscoveryServices.Test.InternalTests.Builders
+namespace LUC.DiscoveryServices.Test.InternalTests.Builders
 {
     class BucketListBuilder : AbstractSeededBuilder<BuildBucketListRequest>
     {

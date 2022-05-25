@@ -1,6 +1,6 @@
-﻿using DiscoveryServices.Common;
-using DiscoveryServices.Messages.KademliaRequests;
-using DiscoveryServices.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 
@@ -12,10 +12,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace DiscoveryServices.Test
+namespace LUC.DiscoveryServices.Test
 {
     [TestFixture]
-    class DiscoveryServiceSocketTest
+    class AsyncSocketTest
     {
         [Test]
         public void Connect_RemoteEndPointIsNull_GetException()

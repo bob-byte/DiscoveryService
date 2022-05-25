@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DiscoveryServices.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     static class UserIntersectionInConsole
     {

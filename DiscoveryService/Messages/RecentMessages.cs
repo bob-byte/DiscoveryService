@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace DiscoveryServices.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     ///   Maintains a sequence of recent messages.

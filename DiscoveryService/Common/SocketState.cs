@@ -1,4 +1,4 @@
-﻿namespace DiscoveryServices.Common
+﻿namespace LUC.DiscoveryServices.Common
 {
     public enum SocketState
     {

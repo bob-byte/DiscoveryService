@@ -1,8 +1,8 @@
-﻿using DiscoveryServices.Common;
-using DiscoveryServices.Common.Extensions;
-using DiscoveryServices.Kademlia;
-using DiscoveryServices.Messages;
-using DiscoveryServices.Messages.KademliaRequests;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Extensions;
+using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 using Unity;
 
-namespace DiscoveryServices.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     partial class FunctionalTest
     {

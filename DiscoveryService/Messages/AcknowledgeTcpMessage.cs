@@ -1,5 +1,5 @@
-﻿using DiscoveryServices.CodingData;
-using DiscoveryServices.Interfaces;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Interfaces;
 
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     /// Allows to write and read TCP message to/from <see cref="Stream"/>

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace DiscoveryServices.CodingData
+namespace LUC.DiscoveryServices.CodingData
 {
     public abstract class Binary
     {

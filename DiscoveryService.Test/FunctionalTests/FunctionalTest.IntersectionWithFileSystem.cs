@@ -4,14 +4,14 @@ using System.Reflection;
 using System.Security.Permissions;
 using System.Threading;
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Test.Extensions;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Test.Extensions;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Models;
 using LUC.Interfaces.OutputContracts;
 
-namespace DiscoveryServices.Test.FunctionalTests
+namespace LUC.DiscoveryServices.Test.FunctionalTests
 {
     partial class FunctionalTest
     {

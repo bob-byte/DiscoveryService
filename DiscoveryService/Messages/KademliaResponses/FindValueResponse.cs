@@ -1,6 +1,6 @@
-﻿using DiscoveryServices.CodingData;
-using DiscoveryServices.Common;
-using DiscoveryServices.Interfaces;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 
@@ -10,7 +10,7 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Messages.KademliaResponses
+namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {
     class FindValueResponse : Response
     {

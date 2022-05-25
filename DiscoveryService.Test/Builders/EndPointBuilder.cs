@@ -5,14 +5,14 @@ using System.Net;
 
 using AutoFixture.Kernel;
 using AutoFixture;
-using DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common;
 using System.ComponentModel;
 using System.Net.NetworkInformation;
 
 using System.Reflection;
 using LUC.Interfaces.Constants;
 
-namespace DiscoveryServices.Test.Builders
+namespace LUC.DiscoveryServices.Test.Builders
 {
     class EndPointsBuilder : AbstractSeededBuilder<BuildEndPointRequest>
     {

@@ -10,12 +10,12 @@ using System.Threading.Tasks;
 
 using AutoMapper;
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Models;
 
-namespace DiscoveryServices
+namespace LUC.DiscoveryServices
 {
     /// <summary>
     ///   Allows sending and receiving datagrams over multicast sockets.

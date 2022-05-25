@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Kademlia.Exceptions
+namespace LUC.DiscoveryServices.Kademlia.Exceptions
 {
     internal class MalfactorAttackException : RpcException
     {

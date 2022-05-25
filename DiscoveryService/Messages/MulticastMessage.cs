@@ -1,10 +1,10 @@
-﻿using DiscoveryServices.CodingData;
-using DiscoveryServices.Interfaces;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Interfaces;
 
 using System;
 using System.IO;
 
-namespace DiscoveryServices.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     /// Allows to write and read multicast message to/from <see cref="Stream"/>

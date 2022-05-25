@@ -1,7 +1,8 @@
-﻿using DiscoveryServices.Kademlia.Exceptions;
-using DiscoveryServices.Messages;
-using DiscoveryServices.Messages.KademliaRequests;
-using DiscoveryServices.Messages.KademliaResponses;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Extensions;
@@ -17,7 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
-namespace DiscoveryServices.Kademlia.Downloads
+namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
     public partial class DsDownloader
     {
@@ -208,7 +209,10 @@ namespace DiscoveryServices.Kademlia.Downloads
                                 {
                                     if (isRemoved)
                                     {
-                                        Boolean isPostedInActionBlock = await downloadProcess.SendAsync(contactWithRequest).ConfigureAwait(false);
+                                        Boolean isPostedInActionBlock = IOBehavior == IoBehavior.Asynchronous
+                                            ? await downloadProcess.SendAsync(contactWithRequest).ConfigureAwait(false)
+                                            : downloadProcess.Post(contactWithRequest);
+
                                         if (!isPostedInActionBlock)
                                         {
                                             bagContactsWithRequest.Add(contactWithRequest);
@@ -228,7 +232,15 @@ namespace DiscoveryServices.Kademlia.Downloads
                             downloadProcess.Complete();
 
                             //await completion of download all file
-                            await downloadProcess.Completion.ConfigureAwait(false);
+                            Task taskDownloadProcess = downloadProcess.Completion;
+                            if(IOBehavior == IoBehavior.Asynchronous)
+                            {
+                                await taskDownloadProcess.ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                AsyncContext.Run(() => taskDownloadProcess);
+                            }
 
                             UInt64 bytesCountWhichShouldBeDownloaded = (UInt64)bagContactsWithRequest.Select(c => (Int64)c.request.ChunkRange.TotalPerContact).Sum();
                             IEnumerable<UInt64> downloadedBytesByEachContact = bagContactsWithRequest.Select(c => c.request.CountDownloadedBytes);

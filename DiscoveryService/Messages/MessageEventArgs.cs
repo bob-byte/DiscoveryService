@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace DiscoveryServices.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     public class MessageEventArgs : EventArgs
     {

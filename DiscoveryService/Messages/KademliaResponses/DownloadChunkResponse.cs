@@ -1,12 +1,12 @@
-﻿using DiscoveryServices.CodingData;
-using DiscoveryServices.Common;
-using DiscoveryServices.Interfaces;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Interfaces;
 
 using System;
 using System.Numerics;
 using System.Text;
 
-namespace DiscoveryServices.Messages.KademliaResponses
+namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {
     class DownloadChunkResponse : AbstractFileResponse
     {

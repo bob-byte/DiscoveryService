@@ -1,7 +1,7 @@
 ﻿using LUC.Interfaces;
 using LUC.Services.Implementation;
 
-namespace DiscoveryServices.Common
+namespace LUC.DiscoveryServices.Common
 {
     internal static class DsLoggerSet
     {

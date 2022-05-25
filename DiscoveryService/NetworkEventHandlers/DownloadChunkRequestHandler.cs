@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Messages;
-using DiscoveryServices.Messages.KademliaRequests;
-using DiscoveryServices.Messages.KademliaResponses;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Messages.KademliaRequests;
+using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Models;
@@ -11,7 +11,7 @@ using LUC.Interfaces.Models;
 using System;
 using System.IO;
 
-namespace DiscoveryServices.NetworkEventHandlers
+namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
     class DownloadChunkRequestHandler : CheckFileExistsRequestHandler
     {

@@ -1,8 +1,8 @@
-﻿using DiscoveryServices.Interfaces;
-using DiscoveryServices.Kademlia;
+﻿using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Kademlia;
 using LUC.Interfaces;
 
-namespace DiscoveryServices.NetworkEventHandlers
+namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
     class NetworkEventHandler
     {

@@ -1,5 +1,5 @@
-﻿using DiscoveryServices.Common;
-using DiscoveryServices.Common.Extensions;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Extensions;
 using LUC.Interfaces.Helpers;
 using LUC.Services.Implementation.Helpers;
 
@@ -13,7 +13,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Kademlia.ClientPool
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     /// <summary>
     /// Implements <a href="https://csharpindepth.com/Articles/Singleton">singleton pattern</a>

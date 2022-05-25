@@ -1,5 +1,5 @@
-using DiscoveryServices;
-using DiscoveryServices.Common.Extensions;
+using LUC.DiscoveryServices;
+using LUC.DiscoveryServices.Common.Extensions;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices
+namespace LUC.DiscoveryServices
 {
     public static class DiscoveryServiceFacade
     {

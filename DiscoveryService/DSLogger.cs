@@ -11,7 +11,7 @@ using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Helpers;
 using System.ComponentModel.Composition;
 
-namespace DiscoveryServices
+namespace LUC.DiscoveryServices
 {
     sealed class DsLogger : ConsoleLogger
     {

@@ -7,7 +7,7 @@ using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Constants;
 
-namespace DiscoveryServices.Kademlia.Routers
+namespace LUC.DiscoveryServices.Kademlia.Routers
 {
     class ParallelRouter : BaseRouter
     {

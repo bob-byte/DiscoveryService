@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace DiscoveryServices.Test.Extensions
+namespace LUC.DiscoveryServices.Test.Extensions
 {
     static class DirectoryExtension
     {

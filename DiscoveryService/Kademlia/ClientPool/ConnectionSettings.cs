@@ -2,7 +2,7 @@ using LUC.Interfaces.Constants;
 
 using System;
 
-namespace DiscoveryServices.Kademlia.ClientPool
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     sealed class ConnectionSettings
     {

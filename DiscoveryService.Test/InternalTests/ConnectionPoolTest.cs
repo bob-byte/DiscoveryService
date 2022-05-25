@@ -1,9 +1,9 @@
 ﻿using AutoFixture;
 
-using DiscoveryServices.Common;
-using DiscoveryServices.Kademlia.ClientPool;
-using DiscoveryServices.Test.Builders;
-using DiscoveryServices.Test.InternalTests.Attributes;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia.ClientPool;
+using LUC.DiscoveryServices.Test.Builders;
+using LUC.DiscoveryServices.Test.InternalTests.Attributes;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Helpers;
 
@@ -13,7 +13,7 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace DiscoveryServices.Test.InternalTests
+namespace LUC.DiscoveryServices.Test.InternalTests
 {
     class ConnectionPoolTest
     {

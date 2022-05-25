@@ -1,5 +1,5 @@
-﻿using DiscoveryServices.Kademlia;
-using DiscoveryServices.Messages;
+﻿using LUC.DiscoveryServices.Kademlia;
+using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Discoveries;
 
 using System;
@@ -10,7 +10,7 @@ using System.Net;
 using System.Numerics;
 using System.Text;
 
-namespace DiscoveryServices.CodingData
+namespace LUC.DiscoveryServices.CodingData
 {
     /// <summary>
     /// Methods to read and wire formatted data items.

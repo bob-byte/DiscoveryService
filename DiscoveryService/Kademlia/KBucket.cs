@@ -5,7 +5,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-using DiscoveryServices.Kademlia.Exceptions;
+using LUC.DiscoveryServices.Kademlia.Exceptions;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
@@ -13,7 +13,7 @@ using LUC.Interfaces.Extensions;
 
 using Newtonsoft.Json;
 
-namespace DiscoveryServices.Kademlia
+namespace LUC.DiscoveryServices.Kademlia
 {
     public class KBucket
     {

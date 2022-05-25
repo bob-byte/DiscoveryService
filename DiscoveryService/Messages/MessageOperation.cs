@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DiscoveryServices.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     ///   The requested operation of a <see cref="DiscoveryMessage"/>.

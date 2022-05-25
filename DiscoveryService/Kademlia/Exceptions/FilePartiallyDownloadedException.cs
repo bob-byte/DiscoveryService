@@ -1,9 +1,9 @@
-﻿using DiscoveryServices.Messages;
+﻿using LUC.DiscoveryServices.Messages;
 
 using System;
 using System.Collections.Generic;
 
-namespace DiscoveryServices.Kademlia.Exceptions
+namespace LUC.DiscoveryServices.Kademlia.Exceptions
 {
     public class FilePartiallyDownloadedException : Exception
     {

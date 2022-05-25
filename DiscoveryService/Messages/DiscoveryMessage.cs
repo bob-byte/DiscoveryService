@@ -1,8 +1,8 @@
-﻿using DiscoveryServices.Common;
+﻿using LUC.DiscoveryServices.Common;
 
 using System;
 
-namespace DiscoveryServices.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     /// <b>Abstract</b> class for messages

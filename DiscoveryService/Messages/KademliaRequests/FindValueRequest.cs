@@ -1,10 +1,10 @@
-﻿using DiscoveryServices.CodingData;
-using DiscoveryServices.Interfaces;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Interfaces;
 
 using System;
 using System.Numerics;
 
-namespace DiscoveryServices.Messages.KademliaRequests
+namespace LUC.DiscoveryServices.Messages.KademliaRequests
 {
     class FindValueRequest : Request
     {

@@ -2,7 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace DiscoveryServices.Messages
+namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
     ///   The event data for <see cref="NetworkEventInvoker.QueryReceived"/> or

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace DiscoveryServices.Common.Extensions
+namespace LUC.DiscoveryServices.Common.Extensions
 {
     static class EventWaitHandleExtension
     {
