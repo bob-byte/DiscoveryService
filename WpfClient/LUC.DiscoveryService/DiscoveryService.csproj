@@ -240,9 +240,6 @@
     <Compile Include="UdpListenersCollection.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Castle.Core">
-      <Version>4.4.1</Version>
-    </PackageReference>
     <PackageReference Include="DeviceId">
       <Version>5.2.0</Version>
     </PackageReference>

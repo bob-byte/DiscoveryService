@@ -1,8 +1,6 @@
 ﻿#define SINGLETON_PATTERN_PER_PROTOCOL_VERSION
 #define IS_IN_LUC
 
-using Castle.Core.Internal;
-
 using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Common.Extensions;
 using LUC.DiscoveryServices.Kademlia;
@@ -33,7 +31,6 @@ using System.Windows.Threading;
 
 //access permission to internal members in current project for DiscoveryService.Test
 [assembly: InternalsVisibleTo(assemblyName: "DiscoveryService.Test")]
-[assembly: InternalsVisibleTo(InternalsVisible.ToDynamicProxyGenAssembly2)]
 namespace LUC.DiscoveryServices
 {
     /// <summary>
