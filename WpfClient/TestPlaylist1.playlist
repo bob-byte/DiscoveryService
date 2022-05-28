@@ -1,0 +1,14 @@
+<Playlist Version="1.0"><Add Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.CheckIsServerEmpty" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.CreateSmallFileTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.RenameFileTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.ReplaceFileTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.MoveToFolderFileTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.CopyUpFileTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.CopyDownFileTest" /><Add Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.CopytoSameFileTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.MoveToBucketFileTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.ReplaceInFolderFileTest" /><Add
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.CreateDirectoryTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.DeleteDirectoryTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.CreateTreeDirectoryTest" /><Add 
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.RenameTreeDirectoryTest" /><Add
+Test="IntegrationTests.Online_OneUser_OneAction_IntegrationTests.MoveTreeDirectoryTest" /></Playlist>

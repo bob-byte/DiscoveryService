@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<item>
+    <version>1.2.33.0</version>
+    <url>https://lightupon.cloud/media/release/LightUponCloudInstaller1.2.33.exe</url>
+    <changelog>https://lightupon.cloud/media/release/last_changelog.txt</changelog>
+    <mandatory mode="2">true</mandatory>
+</item>

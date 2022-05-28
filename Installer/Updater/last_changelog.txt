@@ -1,0 +1,5 @@
+Change log 1.2:
+1) First thing.
+2) Second thing.
+
+Enjoy.

@@ -1,0 +1,336 @@
+﻿<Window 
+        x:Class="LUC.WpfClient.Views.ShellView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:prism="http://prismlibrary.com/"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:tb="http://www.hardcodet.net/taskbar"
+        xmlns:glob="clr-namespace:LUC.Globalization;assembly=LUC.Globalization"
+        mc:Ignorable="d"
+        ResizeMode="NoResize"
+        SizeToContent="Manual"
+        FontFamily="Franklin Gothic"
+        WindowStartupLocation="CenterScreen"
+        Height="300" Width="400">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../StylesDictionary.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    
+    <Window.Style>
+        <Style TargetType="{x:Type Window}">
+            <Setter Property="Background" Value="{StaticResource Main.Application.Background}" />
+            <Setter Property="Foreground" Value="Black" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#9c9c9c"/>
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="WindowChrome.WindowChrome">
+                <Setter.Value>
+                    <WindowChrome CaptionHeight="32"
+                              CornerRadius="0"
+                              GlassFrameThickness="0"
+                              NonClientFrameEdges="None"
+                              ResizeBorderThickness="5" />
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Window">
+                        <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="35" />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Margin="7 7 10 7" Source="{TemplateBinding Icon}" />
+                                    <TextBlock VerticalAlignment="Center"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           Text="{TemplateBinding Title}" />
+                                </StackPanel>
+                                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                                    <!--<Button x:Name="SomeButton"
+                                        Width="47"
+                                        Height="32"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        Padding="17.5 10"
+                                        WindowChrome.IsHitTestVisibleInChrome="True">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}">
+                                                    <Path Margin="{TemplateBinding Padding}"
+                              Data="M 0 0 1 1 M 1 0 0 1"
+                              Stretch="Uniform"
+                              Stroke="{TemplateBinding Foreground}"
+                              StrokeThickness="2" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#383C43" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter Property="Background" Value="#464b53" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsFocused" Value="True">
+                                                        <Setter Property="Background" Value="#383C43" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                    <Button x:Name="RestoreDownButton"
+                                        Width="47"
+                                        Height="32"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        Padding="17.5 10"
+                                        SnapsToDevicePixels="True"
+                                        Visibility="Collapsed"
+                                        WindowChrome.IsHitTestVisibleInChrome="True">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                                    <Grid>
+                                                        <Path Margin="2 0 0 2"
+                                                          Data="M 2 1 2 0 9 0 9 7 8 7"
+                                                          SnapsToDevicePixels="True"
+                                                          Stretch="Uniform"
+                                                          Stroke="{TemplateBinding Foreground}"
+                                                          StrokeThickness="1" />
+                                                        <Path Margin="0 2 2 0"
+                                                          Data="M 0 2 7 2 7 9 0 9 Z"
+                                                          SnapsToDevicePixels="True"
+                                                          Stretch="Uniform"
+                                                          Stroke="{TemplateBinding Foreground}"
+                                                          StrokeThickness="1" />
+
+                                                    </Grid>
+                                                </Border>
+
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#383C43" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter Property="Background" Value="#464b53" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsFocused" Value="True">
+                                                        <Setter Property="Background" Value="#383C43" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                    <Button x:Name="MaximizeButton"
+                                        Width="47"
+                                        Height="32"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        Padding="17.5 10"
+                                        SnapsToDevicePixels="True"
+                                        
+                                        WindowChrome.IsHitTestVisibleInChrome="True">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                                    <Path Data="M 0 2 7 2 7 9 0 9 Z"
+                                                      SnapsToDevicePixels="True"
+                                                      Stretch="Uniform"
+                                                      Stroke="{TemplateBinding Foreground}"
+                                                      StrokeThickness="1" />
+                                                </Border>
+
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#383C43" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter Property="Background" Value="#464b53" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsFocused" Value="True">
+                                                        <Setter Property="Background" Value="#383C43" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>-->
+
+                                    <Button Width="25"
+                                            Height="25"
+                                            FontSize="20"
+                                            Margin="0 0 5 0"
+                                            Command="{Binding MinimizeCommand}"
+                                            Background="Transparent"
+                                            Foreground="Gray"
+                                            WindowChrome.IsHitTestVisibleInChrome="True">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}">
+                                                    <Path x:Name="path"
+                                                          Margin="{TemplateBinding Padding}"
+                                                          Data="M 0 0 1 0"
+                                                          SnapsToDevicePixels="True"
+                                                          Stretch="Uniform"
+                                                          Stroke="{TemplateBinding Foreground}"
+                                                          StrokeThickness="2" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="path" Property="StrokeThickness" Value="3" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsPressed" Value="True">
+                                                        <Setter TargetName="path" Property="Stroke" Value="Black" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsFocused" Value="True">
+                                                        <Setter TargetName="path" Property="StrokeDashArray" Value="3 1" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                
+                                    </StackPanel>
+                                <ContentPresenter Grid.Row="1" />
+                                <Border x:Name="lockBorder"
+                                    Grid.Row="1"
+                                    Background="White"
+                                    Opacity=".5"
+                                    Visibility="Collapsed" />
+                            </Grid>
+                        </Border>
+                        <!--<ControlTemplate.Triggers>
+                            <Trigger Property="IsLocked" Value="True">
+                                <Setter TargetName="lockBorder" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="WindowState" Value="Maximized">
+                                <Setter TargetName="MaximizeButton" Property="Visibility" Value="Collapsed" />
+                                <Setter TargetName="RestoreDownButton" Property="Visibility" Value="Visible" />
+                                <Setter Property="Padding" Value="6 6 6 8" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>-->
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Style>
+    
+    <Grid x:Name="LayoutGrid">
+        <ListBox ItemsSource="{Binding StaticMessages}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 HorizontalAlignment="Center"
+                 HorizontalContentAlignment="Center"
+                 BorderThickness="0"
+                 Background="Transparent">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" 
+                               TextAlignment="Center"
+                               Foreground="#FFbc391b" 
+                               TextWrapping="Wrap"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="{x:Type ListBoxItem}">
+                    <Setter Property="SnapsToDevicePixels" Value="True"/>
+                    <Setter Property="Padding" Value="4,1"/>
+                    <Setter Property="HorizontalContentAlignment" Value="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
+                    <Setter Property="VerticalContentAlignment" Value="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
+                    <Setter Property="BorderThickness" Value="1"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                                <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}" 
+                                        Background="{TemplateBinding Background}" 
+                                        Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+                                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" 
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                </Border>
+                                <!--<ControlTemplate.Triggers>
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="IsMouseOver" Value="True"/>
+                                        </MultiTrigger.Conditions>
+                                        <Setter Property="Background" TargetName="Bd" Value="{StaticResource Item.MouseOver.Background}"/>
+                                        <Setter Property="BorderBrush" TargetName="Bd" Value="{StaticResource Item.MouseOver.Border}"/>
+                                    </MultiTrigger>
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="Selector.IsSelectionActive" Value="False"/>
+                                            <Condition Property="IsSelected" Value="True"/>
+                                        </MultiTrigger.Conditions>
+                                        <Setter Property="Background" TargetName="Bd" Value="{StaticResource Item.SelectedInactive.Background}"/>
+                                        <Setter Property="BorderBrush" TargetName="Bd" Value="{StaticResource Item.SelectedInactive.Border}"/>
+                                    </MultiTrigger>
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="Selector.IsSelectionActive" Value="True"/>
+                                            <Condition Property="IsSelected" Value="True"/>
+                                        </MultiTrigger.Conditions>
+                                        <Setter Property="Background" TargetName="Bd" Value="{StaticResource Item.SelectedActive.Background}"/>
+                                        <Setter Property="BorderBrush" TargetName="Bd" Value="{StaticResource Item.SelectedActive.Border}"/>
+                                    </MultiTrigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="TextElement.Foreground" TargetName="Bd" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>-->
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+        </ListBox>
+        <ContentControl x:Name="ShellRegionContentControl"
+                        prism:RegionManager.RegionName="ShellRegion"
+                        Background="Transparent"
+                        Focusable="False" />
+
+        <tb:TaskbarIcon x:Name="notifyIcon"
+                    ToolTipText="Double-click for window, right-click for menu"
+                    TrayMouseDoubleClick="NotifyIcon_MouseDoubleClick">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu Style="{StaticResource DefaultContextMenuStyle}"
+                             DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+                    <MenuItem x:Name="ChangeLanguageMenuItem"
+                              Header="{glob:GlobBinding Label_Language}">
+                        <MenuItem x:Name="eng"
+                                  Header="English (EN)"
+                                  PreviewMouseLeftButtonUp="Eng_PreviewMouseLeftButtonUp"
+                                  Style="{StaticResource DefaultMenuItemStyle}"/>
+                        <MenuItem x:Name="ukr"
+                                  Header="Українська (UA)"
+                                  PreviewMouseLeftButtonUp="Ukr_PreviewMouseLeftButtonUp"
+                                  Style="{StaticResource DefaultMenuItemStyle}"/>
+                        <MenuItem x:Name="rus"
+                                  Header="Русский (RU)"
+                                  PreviewMouseLeftButtonUp="Rus_PreviewMouseLeftButtonUp"
+                                  Style="{StaticResource DefaultMenuItemStyle}"/>
+                    </MenuItem>
+                    <MenuItem x:Name="ChangeFolderMenuItem"
+                              Style="{StaticResource DefaultMenuItemStyle}"
+                              Header="{glob:GlobBinding Label_ChangeFolder}"
+                              Visibility="Collapsed"
+                              PreviewMouseLeftButtonUp="ChangeFolderMenuItem_PreviewMouseLeftButtonUp"/>
+                    <MenuItem x:Name="LogoutMenuItem"
+                              Style="{StaticResource DefaultMenuItemStyle}"
+                              Header="{glob:GlobBinding Label_LogOut}"
+                              Visibility="Collapsed"
+                              PreviewMouseLeftButtonUp="LogoutMenuItem_PreviewMouseLeftButtonUp"/>
+                    <MenuItem x:Name="ExitMenuItem"
+                              Style="{StaticResource DefaultMenuItemStyle}"
+                              Header="{glob:GlobBinding Label_Exit}"
+                              PreviewMouseLeftButtonUp="ExitMenuItem_PreviewMouseLeftButtonUp"/>
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
+    </Grid>
+</Window>
