@@ -4,6 +4,8 @@ using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 
+using Nito.AsyncEx.Synchronous;
+
 using NUnit.Framework;
 
 using System;
@@ -23,7 +25,7 @@ namespace LUC.DiscoveryServices.Test
             AsyncSocket dsSocket = InitializedTcpSocket();
 
             Assert.That( () =>
-                     dsSocket.DsConnect( remoteEndPoint: null, TimeSpan.FromSeconds( 1 ) ),
+                    dsSocket.DsConnect( remoteEndPoint: null, TimeSpan.FromSeconds( 1 ) ),
                     Throws.TypeOf( typeof( ArgumentNullException ) ) );
         }
 
@@ -32,56 +34,9 @@ namespace LUC.DiscoveryServices.Test
         {
             AsyncSocket dsSocket = InitializedTcpSocket();
 
-            Assert.That( async () =>
-                     await dsSocket.DsConnectAsync( remoteEndPoint: null, TimeSpan.FromSeconds( 1 ) ),
+            Assert.That( () =>
+                    dsSocket.DsConnectAsync( remoteEndPoint: null, TimeSpan.FromSeconds( 1 ) ).WaitAndUnwrapException(),
                     Throws.TypeOf( typeof( ArgumentNullException ) ) );
-        }
-
-        [Test]
-        public void Receive_SendPingRequestAndReceiveResponse_NotFailed()
-        {
-            DiscoveryService discoveryService = DsSetUpTests.DiscoveryService;
-            discoveryService.Start();
-
-            AsyncSocket client = InitializedTcpSocket();
-
-            IPEndPoint endPoint = AvailableIpAddress( discoveryService, client.AddressFamily );
-            client.DsConnect( endPoint, DsConstants.ConnectTimeout );
-
-            var pingRequest = new PingRequest( KademliaId.RandomIDInKeySpace.Value, discoveryService.MachineId );
-
-            client.DsSend( pingRequest.ToByteArray(), DsConstants.SendTimeout );
-
-            Thread.Sleep( TimeSpan.FromSeconds( value: 5 ) );
-            if ( client.Available > 0 )
-            {
-                Byte[] receivedBytes = client.DsReceive( DsConstants.ReceiveTimeout );
-
-                Assert.IsTrue( receivedBytes.Length > 0 );
-            }
-            else
-            {
-                throw new TimeoutException( $"Timeout to receive {typeof( PingResponse ).Name} data" );
-            }
-        }
-
-        private AsyncSocket InitializedTcpSocket() =>
-            new AsyncSocket(
-                AddressFamily.InterNetwork,
-                SocketType.Stream,
-                ProtocolType.Tcp
-            );
-
-        private IPEndPoint AvailableIpAddress( DiscoveryService discoveryService, AddressFamily addressFamily )
-        {
-            IPAddress[] allPossibleIpAddresses = discoveryService.NetworkEventInvoker.ReachableIpAddresses.Where( c => c.AddressFamily == addressFamily ).ToArray();
-
-            var random = new Random();
-            IPAddress ipAddress = allPossibleIpAddresses[ 1/*random.Next(allPossibleIpAddresses.Count())*/];
-
-            var endPoint = new IPEndPoint( ipAddress, discoveryService.RunningTcpPort );
-
-            return endPoint;
         }
 
         [Test]
@@ -95,19 +50,26 @@ namespace LUC.DiscoveryServices.Test
 
             var waitIndefinitely = TimeSpan.FromMilliseconds( value: -1 );
             Assert.That(
-                async () => await socket.DsSendAsync( bytesToSend, waitIndefinitely ).ConfigureAwait( continueOnCapturedContext: false ),
+                () => socket.DsSendAsync( bytesToSend, waitIndefinitely ).WaitAndUnwrapException(),
                 Throws.TypeOf( typeof( SocketException ) )
             );
         }
 
-        //private EndPoint EndPointConnectedToInternet()
-        //{
-        //    var udpClient = new UdpClient(Dns.GetHostName(), discoveryService.RunningTcpPort);
-        //    var endPointConnectedToInternet = udpClient.Client.LocalEndPoint as IPEndPoint;
-        //    endPointConnectedToInternet.Port = discoveryService.RunningTcpPort;
+        private AsyncSocket InitializedTcpSocket() =>
+            new AsyncSocket(
+                AddressFamily.InterNetwork,
+                SocketType.Stream,
+                ProtocolType.Tcp
+            );
 
-        //    return endPointConnectedToInternet;
-        //}
+        private IPEndPoint AvailableIpAddress(DiscoveryService discoveryService, AddressFamily addressFamily)
+        {
+            IPAddress[] allPossibleIpAddresses = discoveryService.NetworkEventInvoker.ReachableIpAddresses.Where(c => c.AddressFamily == addressFamily).ToArray();
 
+            IPAddress ipAddress = allPossibleIpAddresses[0];
+
+            var endPoint = new IPEndPoint(ipAddress, discoveryService.RunningTcpPort);
+            return endPoint;
+        }
     }
 }

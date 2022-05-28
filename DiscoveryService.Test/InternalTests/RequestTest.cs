@@ -28,7 +28,7 @@ namespace LUC.DiscoveryServices.Test.InternalTests
             var contactBuilder = new ContactBuilder( DsSetUpTests.DiscoveryService, BuildContactRequest.OurContactWithIpAddresses );
             IContact ourContact = contactBuilder.Create<IContact>();
 
-            Int32 attemptCountToForceError = 10;
+            Int32 attemptCountToForceError = DsConstants.MAX_THREADS;
 
             var parallelOptions = new ParallelOptions
             {

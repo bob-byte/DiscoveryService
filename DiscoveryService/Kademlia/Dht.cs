@@ -392,9 +392,13 @@ namespace LUC.DiscoveryServices.Kademlia
         /// </summary>
         protected Int32 GetSeparatingNodesCount(IContact a, IContact b)
         {
-            // Sort of brutish way to do this.
-            // Get all the contacts, ordered by their ID.
-            var allContacts = Node.BucketList.Buckets.SelectMany(c => c.Contacts).OrderBy(c => c.KadId.Value).ToList();
+            List<IContact> allContacts;
+            lock (Node.BucketList)
+            {
+                // Sort of brutish way to do this.
+                // Get all the contacts, ordered by their ID.
+                allContacts = Node.BucketList.Buckets.SelectMany(c => c.Contacts).OrderBy(c => c.KadId.Value).ToList();
+            }
 
             Int32 idxa = allContacts.IndexOf(a);
             Int32 idxb = allContacts.IndexOf(b);
@@ -583,8 +587,12 @@ namespace LUC.DiscoveryServices.Kademlia
 
             KademliaId rndId = KademliaIdExtension.RandomIDWithinBucket(bucket);
 
-            // Isolate in a separate list as contacts collection for this bucket might change.
-            var contacts = bucket.Contacts.ToList();
+            List<IContact> contacts;
+            lock (Node.BucketList)
+            {
+                // Isolate in a separate list as contacts collection for this bucket might change.
+                contacts = bucket.Contacts.ToList();
+            }
 
             contacts.ForEach(contact =>
             {

@@ -5,6 +5,8 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
+using ConcurrentCollections;
+
 using LUC.DiscoveryServices.Kademlia.Exceptions;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
@@ -22,7 +24,7 @@ namespace LUC.DiscoveryServices.Kademlia
         /// </summary>
         public KBucket()
         {
-            Contacts = new SynchronizedCollection<IContact>();
+            Contacts = new List<IContact>();
             Low = 0;
             High = BigInteger.Pow( new BigInteger( 2 ), 160 );
         }
@@ -32,14 +34,14 @@ namespace LUC.DiscoveryServices.Kademlia
         /// </summary>
         public KBucket( BigInteger low, BigInteger high )
         {
-            Contacts = new SynchronizedCollection<IContact>();
+            Contacts = new List<IContact>();
             Low = low;
             High = high;
         }
 
         public DateTime TimeStamp { get; set; }
 
-        public IList<IContact> Contacts { get; set; }
+        public ICollection<IContact> Contacts { get; set; }
 
         public BigInteger Low { get; set; }
 
@@ -126,7 +128,7 @@ namespace LUC.DiscoveryServices.Kademlia
             if ( Contacts.Count > 0 )
             {
                 // Start with the first contact.
-                bits = Contacts[ 0 ].KadId.Bytes.Bits().ToArray();
+                bits = Contacts.FirstOrDefault()?.KadId.Bytes.Bits().ToArray();
 
                 Contacts.Skip( count: 1 ).ForEach( c => bits = SharedBits( bits, c.KadId ) );
             }

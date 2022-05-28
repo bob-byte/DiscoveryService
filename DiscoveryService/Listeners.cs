@@ -17,6 +17,28 @@ using LUC.Interfaces.Models;
 
 namespace LUC.DiscoveryServices
 {
+    abstract class A
+    {
+        public abstract void Aa();
+    }
+
+    class B : A
+    {
+        public override void Aa()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    class C : A
+    {
+        public override void Aa()
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
     /// <summary>
     ///   Allows sending and receiving datagrams over multicast sockets.
     ///

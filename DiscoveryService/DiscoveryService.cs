@@ -39,16 +39,9 @@ namespace LUC.DiscoveryServices
     public class DiscoveryService : AbstractDsData, IDiscoveryService
     {
         /// <summary>
-        ///   Raised when a service instance is shutting down.
+        ///   Raised when a service instance is shutted down.
         /// </summary>
-        /// <value>
-        ///   Contains the service instance ip.
-        /// </value>
-        /// <remarks>
-        ///   <see cref="DiscoveryService"/> passively monitors the network for any answers.
-        ///   When an answer containing type 1 received this event is raised.
-        /// </remarks>
-        public event EventHandler<TcpMessageEventArgs> ServiceInstanceShutdown;
+        public event EventHandler ServiceInstanceShutdown;
 
         private static readonly ConcurrentDictionary<UInt16, DiscoveryService> s_instances = new ConcurrentDictionary<UInt16, DiscoveryService>();
 
@@ -285,7 +278,7 @@ namespace LUC.DiscoveryServices
 
         /// <inheritdoc/>
         public void Stop() =>
-            Stop(allowReuseService: true);
+            Stop(allowReuseService: false);
 
         public void Stop(Boolean allowReuseService)
         {
@@ -298,7 +291,8 @@ namespace LUC.DiscoveryServices
                 NetworkEventInvoker?.Stop();
                 NetworkEventInvoker = null;
 
-                ServiceInstanceShutdown?.Invoke(sender: this, new TcpMessageEventArgs());
+                //EventArgs is empty event args
+                ServiceInstanceShutdown?.Invoke(sender: this, e: new EventArgs());
 
                 m_connectionPool.ClearPoolAsync(IoBehavior.Synchronous, respectMinPoolSize: false, allowReuseService, CancellationToken.None).ConfigureAwait(continueOnCapturedContext: false);
                 m_forceConcurrencyError?.Dispose();
@@ -320,7 +314,7 @@ namespace LUC.DiscoveryServices
         /// <param name="e">
         ///  Information about UDP contact, that we have received.
         /// </param>
-        internal async Task SendAcknowledgeTcpMessageAsync( Object sender, UdpMessageEventArgs eventArgs )
+        internal async ValueTask SendAcknowledgeTcpMessageAsync( UdpMessageEventArgs eventArgs, IoBehavior ioBehavior )
         {
             if(!IsRunning)
             {
@@ -355,7 +349,6 @@ namespace LUC.DiscoveryServices
 
                         var remoteEndPoint = new IPEndPoint( ipEndPoint.Address, (Int32)multicastMessage.TcpPort );
                         ConnectionPool.Socket client = null;
-                        IoBehavior ioBehavior = IoBehavior.Asynchronous;
 
                         try
                         {
@@ -395,7 +388,7 @@ namespace LUC.DiscoveryServices
                 }
                 else
                 {
-                    DsLoggerSet.DefaultLogger.LogFatal( message: $"Something is wrong with {nameof( eventArgs )} in {nameof( SendAcknowledgeTcpMessageAsync )}: " +
+                    throw new ArgumentException( message: $"Something is wrong with {nameof( eventArgs )} in {nameof( SendAcknowledgeTcpMessageAsync )}: " +
                         $"{Display.ToString( eventArgs )}\n{multicastMessage}" );
                 }
             }
@@ -406,13 +399,17 @@ namespace LUC.DiscoveryServices
             if ( serviceProfile != null )
             {
                 Boolean isAppreciateDsAlreadyCreated = s_instances.TryGetValue( serviceProfile.ProtocolVersion, out DiscoveryService takenDiscoveryService );
-                if ( !isAppreciateDsAlreadyCreated )
+                if ( isAppreciateDsAlreadyCreated )
+                {
+                    takenDiscoveryService.ReplaceAllBuckets(serviceProfile.GroupsSupported);
+                }
+                else
                 {
                     DiscoveryService newDs = creator();
-                    s_instances.AddOrUpdate( serviceProfile.ProtocolVersion, ( protocolVersion ) => newDs, ( protocolVersion, previousDs ) => newDs );
+                    s_instances.AddOrUpdate(serviceProfile.ProtocolVersion, (protocolVersion) => newDs, (protocolVersion, previousDs) => newDs);
 
                     //to get last initialized DS
-                    s_instances.TryGetValue( serviceProfile.ProtocolVersion, out takenDiscoveryService );
+                    s_instances.TryGetValue(serviceProfile.ProtocolVersion, out takenDiscoveryService);
                 }
 
                 return takenDiscoveryService;
@@ -553,8 +550,8 @@ namespace LUC.DiscoveryServices
             //puts in events of NetworkEventInvoker sendings response
             m_networkEventHandler = new NetworkEventHandler( this, NetworkEventInvoker, CurrentUserProvider );
 
-            NetworkEventInvoker.QueryReceived += async ( invokerEvent, eventArgs ) => 
-                await SendAcknowledgeTcpMessageAsync( invokerEvent, eventArgs ).ConfigureAwait( continueOnCapturedContext: false );
+            NetworkEventInvoker.QueryReceived += ( invokerEvent, eventArgs ) => 
+                SendAcknowledgeTcpMessageAsync( eventArgs, IoBehavior.Synchronous ).ConfigureAwait( continueOnCapturedContext: false );
 
             NetworkEventInvoker.AnswerReceived += AddEndpoint;
             NetworkEventInvoker.AnswerReceived += NetworkEventInvoker.Bootstrap;

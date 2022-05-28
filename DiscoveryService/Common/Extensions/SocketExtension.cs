@@ -74,6 +74,7 @@ namespace LUC.DiscoveryServices.Common.Extensions
                     }
                     else if (isTooBigMessage)
                     {
+                        receiveDone.Set();
                         throw new InvalidOperationException(message: "Received too big message");
                     }
                 }

@@ -484,7 +484,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
             eventArgs.SetMessage( new MulticastMessage( messageId, s_discoveryService.ProtocolVersion,
                 remoteContact.TcpPort, machineId: s_discoveryService.MachineId ) );
-            s_discoveryService.SendAcknowledgeTcpMessageAsync( s_discoveryService, eventArgs ).WaitAndUnwrapException();
+            s_discoveryService.SendAcknowledgeTcpMessageAsync( eventArgs, IoBehavior.Synchronous ).GetAwaiter().GetResult();
         }
 
         private static void CountAvailableConnectionsTest()

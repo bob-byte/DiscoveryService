@@ -17,38 +17,50 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
     {
         private CancellationTokenSource m_cancellationRecover;
 
-        public async ValueTask TryRecoverAllConnectionsAsync( TimeSpan timeWaitToReturnToPool )
+        public async ValueTask TryRecoverAllConnectionsAsync(TimeSpan timeWaitToReturnToPool)
         {
-            if ( ConnectionSettings.ConnectionBackgroundReset )
+            if (ConnectionSettings.ConnectionBackgroundReset)
             {
-                if ( ( m_sockets.Count > 0 ) || ( m_leasedSockets.Count > 0 ) )
+                if ((m_sockets.Count > 0) || (m_leasedSockets.Count > 0))
                 {
                     UpdateRecoveryPars();
 
                     //ID is socket ID, so remote endpoint
                     IEnumerable<EndPoint> idsOfRecoveredConnection = null;
-                    if ( m_leasedSockets.Count > 0 )
+                    if (m_leasedSockets.Count > 0)
                     {
-                        idsOfRecoveredConnection = await IdsOfRecoveredConnectionsInLeasedSockets( timeWaitToReturnToPool, m_cancellationRecover.Token ).ConfigureAwait( continueOnCapturedContext: false );
+                        idsOfRecoveredConnection = await IdsOfRecoveredConnectionsInLeasedSockets(timeWaitToReturnToPool, m_cancellationRecover.Token).ConfigureAwait(continueOnCapturedContext: false);
                     }
 
                     m_cancellationRecover.Token.ThrowIfCancellationRequested();
 
-                    await RecoverPoolSocketsAsync( timeWaitToReturnToPool, idsOfRecoveredConnection,
-                            m_cancellationRecover.Token ).ConfigureAwait( false );
+                    await RecoverPoolSocketsAsync(timeWaitToReturnToPool, idsOfRecoveredConnection,
+                            m_cancellationRecover.Token).ConfigureAwait(false);
                 }
             }
             else
             {
-                throw new InvalidOperationException( message: $"Connection reset is not supporting" );
+                throw new InvalidOperationException(message: $"Connection reset is not supporting");
             }
         }
 
-        public void CancelRecoverConnections() =>
-            m_cancellationRecover.Cancel();
+        public void CancelRecoverConnections()
+        {
+            try
+            {
+                m_cancellationRecover.Cancel();
+            }
+            catch(ObjectDisposedException)
+            {
+                ;//do nothing
+            }
+        }
 
-        private void UpdateRecoveryPars() =>
-            Interlocked.Exchange( ref m_cancellationRecover, value: new CancellationTokenSource() );
+        private void UpdateRecoveryPars()
+        {
+            m_cancellationRecover.Dispose();
+            Interlocked.Exchange(ref m_cancellationRecover, value: new CancellationTokenSource());
+        }
 
         private async ValueTask<ConcurrentBag<EndPoint>> IdsOfRecoveredConnectionsInLeasedSockets( TimeSpan timeWaitToReturnToPool, CancellationToken cancellationToken = default )
         {

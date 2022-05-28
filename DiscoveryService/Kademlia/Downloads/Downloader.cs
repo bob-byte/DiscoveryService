@@ -106,9 +106,8 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         /// <param name="downloadProgress">
         /// It is reported when certain chunk is downloaded. Remember that chunks are downloaded in unsorted order
         /// </param>
-        /// <exception cref="ArgumentException">
-        /// Any string parameter is null or whitespace or cannot using it 
-        /// check file exists or <paramref name="bytesCount"/> isn't more then 0
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="downloadingFileInfo"/> is null
         /// </exception>
         /// <exception cref="OperationCanceledException">
         /// If <paramref name="cancellationToken"/> is canceled 
@@ -124,9 +123,6 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         /// <exception cref="IOException">
         /// <a href="https://docs.microsoft.com/th-TH/dotnet/api/system.io.driveinfo.isready?view=net-6.0">Disk  isn't ready</a>
         /// or little free disk space or writing file or cannot seek or write downloaded file or too long path was created for downloaded file
-        /// </exception>
-        /// <exception cref="UnauthorizedAccessException">
-        /// Current instance does not have the required permission or folder <paramref name="localFolderPath"/> is readonly
         /// </exception>
         public Task DownloadFileAsync(
             DownloadingFileInfo downloadingFileInfo,
@@ -269,10 +265,6 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             {
                 downloadingFileInfo.LocalFilePath = FullFileNameAfterDownloadBigFileException(ex, downloadingFileInfo.LocalFilePath);
 
-                HandleException(ex, downloadingFileInfo.LocalFilePath);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
                 HandleException(ex, downloadingFileInfo.LocalFilePath);
             }
             catch (FilePartiallyDownloadedException ex)

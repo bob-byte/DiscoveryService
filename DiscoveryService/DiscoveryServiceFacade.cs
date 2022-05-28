@@ -33,32 +33,39 @@ namespace LUC.DiscoveryServices
 
         public static DiscoveryService FullyInitialized( ICurrentUserProvider currentUserProvider, ISettingsService settingsService )
         {
-            DiscoveryService discoveryService = InitWithoutForceToStart( currentUserProvider, settingsService );
+            DsBucketsSupported.Define(currentUserProvider, out ConcurrentDictionary<String, String> bucketsSupported);
 
-            DsBucketsSupported.Define( currentUserProvider, out ConcurrentDictionary<String, String> bucketsSupported );
+            DiscoveryService discoveryService = InternalInitWithoutForceToStart( currentUserProvider, bucketsSupported, settingsService.MachineId );
 
-            Boolean isReplacedBuckets;
-            if( !discoveryService.LocalBuckets.Equals<String, String>( bucketsSupported ) )
-            {
-                discoveryService.ReplaceAllBuckets( bucketsSupported );
-                isReplacedBuckets = true;
-            }
-            else
-            {
-                isReplacedBuckets = false;
-            }
-
-            if ( discoveryService.IsRunning && isReplacedBuckets )
+            if ( discoveryService.IsRunning )
             {
 #if DEBUG
-                discoveryService.TryFindAllNodes();
+                Boolean isReplacedBuckets = !bucketsSupported.SequenceEqual(discoveryService.LocalBuckets);
+
+                if ( isReplacedBuckets )
+                {
+                    discoveryService.TryFindAllNodes();
+                }
 #endif
             }
-            else if ( !discoveryService.IsRunning )
+            else
             {
                 discoveryService.Start();
             }
 
+            return discoveryService;
+        }
+
+        private static DiscoveryService InternalInitWithoutForceToStart(ICurrentUserProvider currentUserProvider, ConcurrentDictionary<String, String> bucketsSupported, String machineId)
+        {
+            var discoveryService = DiscoveryService.Instance(
+                new ServiceProfile(
+                    machineId,
+                    GeneralConstants.PROTOCOL_VERSION,
+                    bucketsSupported
+                ),
+                currentUserProvider
+            );
             return discoveryService;
         }
     }

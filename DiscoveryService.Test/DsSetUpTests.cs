@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using AutoFixture;
+
+using FluentAssertions;
 
 using LUC.DiscoveryServices.Common;
 using LUC.Interfaces;
@@ -96,14 +99,17 @@ namespace LUC.DiscoveryServices.Test
         {
             initTest();
 
-            var timeExecution = TimeSpan.FromMilliseconds( timeThreadSleep.TotalMilliseconds * countOfNewThreads );
             TimeSpan waitSecondsForThread = timeThreadSleep;
 
             var newThreads = new Thread[ countOfNewThreads ];
             var allThreadIsEnded = new AutoResetEvent( initialState: false );
             Object lockSetWaitSecondsForThread = new Object();
+            Int32 numIteration = 0;
 
-            Task.Factory.StartNew( () =>
+            Boolean isAnyThreadHasBadTimeToSet = false;
+            var messages = new List<String>();
+
+            Task.Run( () =>
             {
                 for ( Int32 numThread = 0; numThread < countOfNewThreads; numThread++ )
                 {
@@ -112,21 +118,25 @@ namespace LUC.DiscoveryServices.Test
                         DateTime start = DateTime.Now;
                         opWhichIsExecutedByThreadSet();
                         DateTime end = DateTime.Now;
+                        TimeSpan realTimeWaitToChangeState = end.Subtract(start);
 
                         lock ( lockSetWaitSecondsForThread )
                         {
-                            TimeSpan realTimeWaitToChangeState = end.Subtract( start );
                             waitSecondsForThread = TimeSpan.FromMilliseconds( waitSecondsForThread.TotalMilliseconds + timeThreadSleep.TotalMilliseconds );
-                            TimeSpan realPrecisionForThread = realTimeWaitToChangeState.Subtract( waitSecondsForThread );
+                            TimeSpan realPrecisionForThread = realTimeWaitToChangeState > waitSecondsForThread ? 
+                                realTimeWaitToChangeState.Subtract( waitSecondsForThread ) :
+                                waitSecondsForThread.Subtract(realTimeWaitToChangeState);
 
                             if ( realPrecisionForThread > precisionOfExecution )
                             {
-                                Assert.Fail( message: $"{nameof( realPrecisionForThread )} = {realPrecisionForThread}, but precision is {precisionOfExecution}" );
+                                isAnyThreadHasBadTimeToSet = true;
+                                messages.Add($"{nameof(realPrecisionForThread)} = {realPrecisionForThread}, but precision is {precisionOfExecution}");
                             }
                         }
 
-                        Boolean isLastIteration = ( ( timeExecution.TotalMilliseconds - precisionOfExecution.TotalMilliseconds ) <= waitSecondsForThread.TotalMilliseconds ) &&
-                               ( waitSecondsForThread.TotalMilliseconds <= ( timeExecution.TotalMilliseconds + precisionOfExecution.TotalMilliseconds ) );
+                        Interlocked.Increment(ref numIteration);
+
+                        Boolean isLastIteration = numIteration == countOfNewThreads;
                         if ( isLastIteration )
                         {
                             allThreadIsEnded.Set();
@@ -143,8 +153,12 @@ namespace LUC.DiscoveryServices.Test
                 opWhichMainThreadExecutes();
             }
 
-            Boolean isExecutedLastIterationInTime = allThreadIsEnded.WaitOne( (Int32)timeThreadSleep.TotalMilliseconds * ( countOfNewThreads + 2 ) );
-            //isExecutedLastIterationInTime.Should().BeTrue();
+            //include current thread and that, which runs another threads
+            Int32 countAdditionaThreads = 2;
+            Boolean isExecutedLastIterationInTime = allThreadIsEnded.WaitOne( (Int32)timeThreadSleep.TotalMilliseconds * ( countOfNewThreads + countAdditionaThreads ) );
+
+            isAnyThreadHasBadTimeToSet.Should().BeFalse(String.Join(separator: "\n", messages));
+            isExecutedLastIterationInTime.Should().BeTrue();
         }
 
         //DS is setup in functional tests or in DsSetUpTests.SetUpTests

@@ -1,5 +1,7 @@
 ﻿using AutoFixture;
 
+using FluentAssertions;
+
 using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Kademlia.ClientPool;
 using LUC.DiscoveryServices.Test.Builders;
@@ -11,27 +13,33 @@ using NUnit.Framework;
 
 using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LUC.DiscoveryServices.Test.InternalTests
 {
     class ConnectionPoolTest
     {
+        [SetUp]
+        public void SetupDs() =>
+            DsSetUpTests.DiscoveryService.Start();
+
         [Test, SocketConventions( BuildEndPointRequest.ReachableDsEndPoint )]
         public void SocketAsync_FewThreadsWantToTakeSocketAndOnlyOneDoesIt_WaitingOfTakingFromPoolIsGreaterThanFrequencySetItInPool( ConnectionPool.Socket socket )
         {
-            DsSetUpTests.DiscoveryService.Start();
             var connectionPool = ConnectionPool.Instance;
-            Action takeFromPool = () => AsyncHelper.RunSync( async () => await connectionPool.SocketAsync( socket.Id, DsConstants.ConnectTimeout, IoBehavior.Synchronous, DsConstants.TimeWaitSocketReturnedToPool ).ConfigureAwait( continueOnCapturedContext: false ) );
+            Action takeFromPool = () =>
+            {
+                Interlocked.Exchange(ref socket, connectionPool.SocketAsync(socket.Id, DsConstants.ConnectTimeout, IoBehavior.Synchronous, DsConstants.TimeWaitSocketReturnedToPool).GetAwaiter().GetResult());
+            };
 
             DsSetUpTests.TestOfChangingStateInTime(
-                countOfNewThreads: DsConstants.MAX_THREADS,
+                countOfNewThreads: 1,
                 initTest: takeFromPool,
                 opWhichIsExecutedByThreadSet: takeFromPool,
                 opWhichMainThreadExecutes: () =>
                 {
-                    connectionPool.ReturnToPoolAsync(
-                        socket,
+                    socket.ReturnToPoolAsync(
                         DsConstants.ConnectTimeout,
                         IoBehavior.Synchronous
                     ).GetAwaiter().GetResult();
@@ -42,12 +50,8 @@ namespace LUC.DiscoveryServices.Test.InternalTests
         }
 
         [Test]
-#pragma warning disable S2699 // Tests should include assertions
-        public async Task ReturnedToPool_TakeSocketFromPoolThenSetStateInPoolInIsFailedAndReturnToPool_ShouldntBeReturned()
-#pragma warning restore S2699 // Tests should include assertions
+        public async Task ReturnedToPool_TakeSocketFromPoolThenSetStateInPoolInIsFailedAndReturnToPool_ShouldBeReturned()
         {
-            DsSetUpTests.DiscoveryService.Start();
-
             var connectionPool = ConnectionPool.Instance;
 
             var endPointBuilder = new EndPointsBuilder( BuildEndPointRequest.ReachableDsEndPoint );
@@ -56,10 +60,10 @@ namespace LUC.DiscoveryServices.Test.InternalTests
             ConnectionPool.Socket socket = await connectionPool.SocketAsync( socketId, DsConstants.ConnectTimeout, IoBehavior.Synchronous, DsConstants.TimeWaitSocketReturnedToPool ).
                 ConfigureAwait( continueOnCapturedContext: false );
 
-            DsSetUpTests.DiscoveryService.Stop();
-
             socket.DisposeUnmanagedResources();
-            await socket.ReturnToPoolAsync( DsConstants.ConnectTimeout, IoBehavior.Asynchronous );
+            Boolean isReturned = await socket.ReturnToPoolAsync( DsConstants.ConnectTimeout, IoBehavior.Asynchronous ).ConfigureAwait(false);
+
+            isReturned.Should().BeTrue(because: "Pool recover Socket when it is not connected");
         }
     }
 }

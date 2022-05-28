@@ -28,7 +28,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
         private readonly ConcurrentDictionary<EndPoint, Socket> m_sockets;
         private readonly ConcurrentDictionary<EndPoint, Socket> m_leasedSockets;
 
-        private readonly ImmutableDictionary<Boolean, ValueTask<Boolean>> m_cachedValueTasks;
+        private readonly ImmutableDictionary<Boolean, ValueTask<Boolean>> m_booleanValueTasks;
 
         private ConnectionPool( ConnectionSettings connectionSettings )
         {
@@ -51,7 +51,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 ImmutableDictionary.CreateBuilder<Boolean, ValueTask<Boolean>>();
             builder.Add( key: true, value: new ValueTask<Boolean>( result: true ) );
             builder.Add( false, new ValueTask<Boolean>( false ) );
-            m_cachedValueTasks = builder.ToImmutableDictionary();
+            m_booleanValueTasks = builder.ToImmutableDictionary();
 
             m_cancellationRecover = new CancellationTokenSource();
         }
@@ -334,7 +334,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             else
             {
                 Boolean successWait = m_socketsSemaphore.Wait( waitTimeout );
-                return m_cachedValueTasks[ successWait ];
+                return m_booleanValueTasks[ successWait ];
             }
         }
     }

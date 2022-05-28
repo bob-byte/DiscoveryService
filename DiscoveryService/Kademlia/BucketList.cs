@@ -147,7 +147,7 @@ namespace LUC.DiscoveryServices.Kademlia
         {
             lock ( this )
             {
-                KBucket kBucket = Buckets.AsParallel().SingleOrDefault( c => c.Contains( contact ) );
+                KBucket kBucket = Buckets.SingleOrDefault( c => c.Contains( contact ) );
                 if ( kBucket == null )
                 {
                     kBucket = Buckets[ GetKBucketIndex( contact.KadId ) ];

@@ -47,7 +47,12 @@ namespace LUC.DiscoveryServices.Kademlia.Routers
         protected virtual KBucket FindClosestNonEmptyKBucket( KademliaId key )
 #endif
         {
-            KBucket closest = Node.BucketList.Buckets.Where( b => b.Contacts.Count > 0 ).OrderBy( b => b.Key ^ key ).FirstOrDefault();
+            KBucket closest;
+            lock (Node.BucketList)
+            {
+                closest = Node.BucketList.Buckets.Where(b => b.Contacts.Count > 0).OrderBy(b => b.Key ^ key).FirstOrDefault();
+            }
+
             Validate.IsTrue<NoNonEmptyBucketsException>( closest != null, "No non-empty buckets exist.  You must first register a peer and add that peer to your bucketlist." );
 
             return closest;
@@ -62,7 +67,10 @@ namespace LUC.DiscoveryServices.Kademlia.Routers
         protected List<IContact> GetClosestNodes( KademliaId key, KBucket bucket)
 #endif
         {
-            return bucket.Contacts.OrderBy( c => c.KadId ^ key ).ToList();
+            lock (Node.BucketList)
+            {
+                return bucket.Contacts.OrderBy(c => c.KadId ^ key).ToList();
+            }
         }
 
         public Boolean GetCloserNodes(

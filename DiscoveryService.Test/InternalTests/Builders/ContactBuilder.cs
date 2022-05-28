@@ -119,7 +119,7 @@ namespace LUC.DiscoveryServices.Test.InternalTests.Builders
 
         private void DefineBasicParameters( out String machineId, out IEnumerable<String> bucketsSupported )
         {
-            machineId = MachineIdExtensions.Create();
+            machineId = DsSetUpTests.Fixture.Create<String>();
 
             DsBucketsSupported.Define( DsSetUpTests.CurrentUserProvider, out ConcurrentDictionary<String, String> dictBucketsSupported );
             bucketsSupported = dictBucketsSupported.Keys;

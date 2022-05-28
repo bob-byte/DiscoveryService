@@ -383,20 +383,20 @@ namespace LUC.DiscoveryServices
 
                 try
                 {
-                    ConfiguredTaskAwaitable<Byte[]> taskReadBytes = clientToReadMessage.Socket.ReadMessageBytesAsync(
+                    Task<Byte[]> taskReadBytes = clientToReadMessage.Socket.ReadMessageBytesAsync(
                         receiveDone,
                         DsConstants.MAX_CHUNK_READ_PER_ONE_TIME,
                         DsConstants.MAX_AVAILABLE_READ_BYTES,
                         cancelSource.Token
-                    ).ConfigureAwait( false );
+                    );
 
-                    Boolean isReceivedInTime = await receiveDone.WaitAsync( timeoutToRead ).ConfigureAwait( false );
+                    Boolean isReceivedInTime = await receiveDone.WaitAsync( timeoutToRead ).ConfigureAwait( continueOnCapturedContext: false );
 
                     cancelSource.Cancel();
 
                     if ( isReceivedInTime )
                     {
-                        readBytes = await taskReadBytes;
+                        readBytes = await taskReadBytes.ConfigureAwait(false);
                     }
                     else
                     {

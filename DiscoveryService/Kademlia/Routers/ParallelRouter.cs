@@ -69,7 +69,12 @@ namespace LUC.DiscoveryServices.Kademlia.Routers
             fartherContacts.AddRange(allNodes.Skip(Constants.ALPHA).Take(Constants.K - Constants.ALPHA));
 #else
 #if TRACE
-            var allNodes = Node.BucketList.GetKBucket( key ).Contacts.Take( DsConstants.K ).ToList();
+            List<IContact> allNodes;
+            lock (Node.BucketList)
+            {
+                allNodes = Node.BucketList.GetKBucket(key).Contacts.Take(DsConstants.K).ToList();
+            }
+
 #else
             // For unit testing, this is a bad way to get a list of close contacts with virtual nodes because we're always going to get the closest nodes right at the get go.
             List<IContact> allNodes = node.BucketList.GetCloseContacts(key, node.OurContact.ID).Take(Constants.K).ToList(); 
