@@ -23,16 +23,16 @@ namespace LUC.DiscoveryServices.Test
     [TestFixture]
     partial class DiscoveryServiceTest
     {
-        private DiscoveryService m_discoveryService = DsSetUpTests.DiscoveryService;
+        private DiscoveryService m_discoveryService;
 
-        [SetUp]
-        public void SetupService()
+        public DiscoveryServiceTest()
         {
-            m_discoveryService.Start();
+            m_discoveryService = DsSetUpTests.DiscoveryService;
         }
 
-        [OneTimeTearDown]
-        public void TearDownService() => m_discoveryService?.Stop();
+        [SetUp]
+        public void SetupDs() =>
+            m_discoveryService.Start();
 
         [Test]
         public void BeforeCreatedInstance_CreateDifferentProtocolVersionAndTryToGetAccordingDs_ThrowsArgumentException()

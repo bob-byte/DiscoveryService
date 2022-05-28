@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -44,7 +45,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
                 ConfiguredTaskAwaitable downloadTask = Task.Run( async () =>
                  {
-                     var downloadedChunks = new List<ChunkRange>();
+                     var downloadedChunks = new ConcurrentBag<ChunkRange>();
                      IProgress<FileDownloadProgressArgs> downloadProgress = new Progress<FileDownloadProgressArgs>( ( progressArgs ) => downloadedChunks.Add( progressArgs.ChunkRange ) );
 
                      download.FilePartiallyDownloaded += ( sender, eventArgs ) =>

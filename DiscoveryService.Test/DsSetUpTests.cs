@@ -41,8 +41,6 @@ namespace LUC.DiscoveryServices.Test
 
             UseIpv4 = true;
             UseIpv6 = true;
-
-            AppSettings.AddNewMap<ObjectDescriptionModel, DownloadingFileInfo>();
         }
 
         //public static String Login { get; }
@@ -86,7 +84,7 @@ namespace LUC.DiscoveryServices.Test
         }
 
         [ OneTimeTearDown ]
-        public void TearDownTests() => DiscoveryService?.Stop();
+        public static void TearDownTests() => DiscoveryService?.Stop();
 
         public static void TestOfChangingStateInTime(
             Int32 countOfNewThreads,
