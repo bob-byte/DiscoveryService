@@ -19,7 +19,7 @@ using static LUC.DiscoveryServices.Kademlia.ClientPool.ConnectionPool;
 namespace LUC.DiscoveryServices.Test.InternalTests
 {
     [TestFixture]
-    class SocketTest
+    class ConnectionPoolSocketTest
     {
 //#if RECEIVE_UDP_FROM_OURSELF
 //        [Test, SocketConventions( BuildEndPointRequest.ReachableDsEndPoint )]
@@ -48,7 +48,7 @@ namespace LUC.DiscoveryServices.Test.InternalTests
 //#endif
 
         [Test, SocketConventions(BuildEndPointRequest.RandomEndPoint)]
-        public void StateInPool_FewTasksWantToTakeSocketAndOnlyOneSetsItInPool_WaitingOfTakingFromPoolIsGreaterThanFrequencySetItInPool( ConnectionPool.Socket socket )
+        public void StateInPool_FewTasksWantToTakeSocketAndOnlyOneSetsItInPool_WaitingOfTakingFromPoolIsGreaterThanFrequencySetItInPool( Socket socket )
         {
             Action setTakeFromPoolState = () => socket.TakeFromPoolAsync( IoBehavior.Synchronous, DsConstants.TimeWaitSocketReturnedToPool ).ConfigureAwait( continueOnCapturedContext: false );
 

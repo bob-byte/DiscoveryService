@@ -8,13 +8,15 @@ namespace LUC.DiscoveryServices.Kademlia
     public class RpcError
     {
         public Boolean HasError =>
-            IDMismatchError || LocalError || RemoteError;
+            IDMismatchError || LocalError || RemoteError || OtherError;
 
         public Boolean IDMismatchError { get; set; }
 
         public Boolean LocalError { get; set; }
 
         public Boolean RemoteError { get; set; }
+
+        public Boolean OtherError { get; set; }
 
         public String ErrorMessage { get; set; }
 
@@ -28,6 +30,7 @@ namespace LUC.DiscoveryServices.Kademlia
                 {
                     stringWriter.WriteLine( $";\n" +
                         $"{Display.VariableWithValue( nameof( IDMismatchError ), IDMismatchError )};\n" +
+                        $"{Display.VariableWithValue( nameof( OtherError ), OtherError )};\n" +
                         $"{Display.VariableWithValue( nameof( LocalError ), LocalError )};\n" +
                         $"{Display.VariableWithValue( nameof( RemoteError ), RemoteError )};\n" +
                         $"{Display.VariableWithValue( nameof( ErrorMessage ), ErrorMessage )}" );

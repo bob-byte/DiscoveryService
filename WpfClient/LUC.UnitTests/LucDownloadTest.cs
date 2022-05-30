@@ -14,14 +14,13 @@ using System.Threading.Tasks;
 using LUC.Services.Implementation;
 using LUC.Interfaces.Constants;
 using System.Linq;
+using LUC.Interfaces.Extensions;
 
 namespace LUC.UnitTests
 {
     public class LucDownloadTest
     {
-        private const Int32 BYTES_IN_ONE_KB = 1022;
-
-        private const Int32 BYTES_IN_ONE_MB = BYTES_IN_ONE_KB * 1000;
+        public const Int32 BYTES_COUNT_OF_RND_FILE = 10 * GeneralConstants.BYTES_IN_ONE_MEGABYTE;
 
         private const String PATH_FROM_ROOT_FOLDER_TO_TESTING_FILES = "DownloadedFiles";
 
@@ -106,14 +105,12 @@ namespace LUC.UnitTests
 
             m_pathForDownloadingFile = Path.Combine( m_directoryFullNameForDownloadingFiles, m_downloadingFileName );
 
-            Int32 bytesCountOfRndFile = 100 * BYTES_IN_ONE_MB;
-
             String fullFileNameOfUploadingFile = Path.Combine( m_currentUser.RootFolderPath, m_rndBucketName.LocalName, m_downloadingFileName );
 
             Boolean createNewRndFile = !File.Exists( fullFileNameOfUploadingFile );
             if ( createNewRndFile )
             {
-                m_fileInfoInServer = CreateFile( bytesCountOfRndFile, m_rndBucketName.LocalName );
+                m_fileInfoInServer = CreateFile( BYTES_COUNT_OF_RND_FILE, m_rndBucketName.LocalName );
 
                 m_uploadResponse = await m_apiClient.TryUploadAsync( m_fileInfoInServer ).ConfigureAwait( false );
                 Assert.IsTrue( m_uploadResponse.IsSuccess, m_uploadResponse.Message );
@@ -122,13 +119,13 @@ namespace LUC.UnitTests
             {
                 String localPathToFileWhichIsInServer = Path.Combine( m_currentUser.RootFolderPath, m_rndBucketName.LocalName, DEFAULT_FILE_NAME_FOR_TESTING );
                 m_fileInfoInServer = new FileInfo( localPathToFileWhichIsInServer );
-                if ( m_fileInfoInServer.Length != bytesCountOfRndFile )
+                if ( m_fileInfoInServer.Length != BYTES_COUNT_OF_RND_FILE )
                 {
-                    m_fileInfoInServer = CreateFile( bytesCountOfRndFile, m_rndBucketName.LocalName );
+                    m_fileInfoInServer = CreateFile( BYTES_COUNT_OF_RND_FILE, m_rndBucketName.LocalName );
                 }
 
                 m_listResponse = await m_apiClient.ListAsync( m_rndBucketName.ServerName ).ConfigureAwait( false );
-                m_objectDescription = m_listResponse.ToObjectsListModel().ObjectDescriptions.Find( o => o.OriginalName.Equals( m_fileInfoInServer.Name, StringComparison.Ordinal ) && !o.IsDeleted && ( o.ByteCount == bytesCountOfRndFile ) );
+                m_objectDescription = m_listResponse.ToObjectsListModel().ObjectDescriptions.Find( o => o.OriginalName.Equals( m_fileInfoInServer.Name, StringComparison.Ordinal ) && !o.IsDeleted && ( o.ByteCount == BYTES_COUNT_OF_RND_FILE ) );
                 if ( m_objectDescription == null )
                 {
                     m_uploadResponse = await m_apiClient.TryUploadAsync( m_fileInfoInServer ).ConfigureAwait( false );
@@ -165,22 +162,25 @@ namespace LUC.UnitTests
 
             m_apiClient.Downloader.DownloadNecessaryChunksFromServer( allChunkRanges, downloadingFileInfo, m_pathForDownloadingFile );
 
+            //method DownloadNecessaryChunksFromServer sets readonly attribute to m_pathForDownloadingFile
+            File.SetAttributes( m_pathForDownloadingFile, FileAttributes.Normal );
+
             var downloadedFile = new FileInfo( m_pathForDownloadingFile );
             downloadedFile.Length.Should().Be( m_fileInfoInServer.Length );
         }
 
         [Test]
-        public void JoinedChunkRanges_GetAllRangesAndRemoveSecondLastAndSecondAndMiddle_CountOfJoinedChunkRangesIsFour()
+        public void JoinedChunkRanges_GetAllRangesAndRemoveLastAndSecondAndMiddle_CountOfJoinedChunkRangesIsThree()
         {
             UInt64 totalBytesCountOfFile = (UInt64)m_fileInfoInServer.Length;
             List<ChunkRange> allChunkRanges = ChunkRanges( start: 0, finallyEnd: totalBytesCountOfFile - 1, DsConstants.MAX_CHUNK_SIZE, totalBytesCountOfFile );
 
-            allChunkRanges.RemoveAt( index: allChunkRanges.Count - 2 );
+            allChunkRanges.RemoveAt( index: allChunkRanges.Count - 1 );
             allChunkRanges.RemoveAt( 1 );
             allChunkRanges.RemoveAt( index: allChunkRanges.Count / 2 );
 
             List<ChunkRange> joinedChunkRanges = m_apiClient.Downloader.JoinedChunkRanges( allChunkRanges ).ToList();
-            joinedChunkRanges.Count.Should().Be( expected: 4 );
+            joinedChunkRanges.Count.Should().Be( expected: 3 );
         }
 
 #if !ENABLE_DS_DOWNLOAD_FROM_CURRENT_PC
@@ -190,7 +190,7 @@ namespace LUC.UnitTests
             // Because this call is not awaited, execution of the current method continues before the call is completed.
 #pragma warning disable CS4014 
             //start download in another thread
-            Task.Run( async () => await m_apiClient.DownloadFileAsync( m_rndBucketName.ServerName, m_hexPrefixOfUploadedFile, m_directoryFullNameForDownloadingFiles, m_fileInfoInServer.Name, m_objectDescription ).ConfigureAwait( continueOnCapturedContext: false ) ).ConfigureAwait( false );
+            Task.Run( () => m_apiClient.DownloadFileAsync( m_rndBucketName.ServerName, m_hexPrefixOfUploadedFile, m_directoryFullNameForDownloadingFiles, m_fileInfoInServer.Name, m_objectDescription ) );
 #pragma warning restore CS4014
 
             await Task.Delay( TimeSpan.FromSeconds( value: 2 ) );

@@ -12,7 +12,7 @@ using LUC.Interfaces.Constants;
 
 namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
-    public partial class DsDownloader
+    public partial class DownloaderFromLocalNetwork
     {
         private Int32 ContactCountWithFileCapacity( UInt64 bytesFileCount, Int64 undownloadedFileBytesCount )
         {

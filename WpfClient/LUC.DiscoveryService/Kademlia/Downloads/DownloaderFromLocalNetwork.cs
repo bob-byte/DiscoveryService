@@ -21,7 +21,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
     /// <summary>
     /// Thread safe class for download files
     /// </summary>
-    public partial class DsDownloader
+    public partial class DownloaderFromLocalNetwork
     {
         /// <summary>
         /// Raises when exception during download is thrown, except <seealso cref="FilePartiallyDownloadedException"/>
@@ -35,7 +35,6 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
 
         /// <summary>
         /// Raises when download process was started, but exception is occured 
-        /// (this does not indicate that any chunks have been downloaded)
         /// </summary>
         public event EventHandler<FilePartiallyDownloadedEventArgs> FilePartiallyDownloaded;
 
@@ -48,6 +47,8 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
 
         private const Int32 CONTACT_COUNT_WITH_FILE_CAPACITY = 10;
 
+        private readonly TimeSpan m_timeWaitRepostContactInActionBlock = TimeSpan.FromSeconds( value: 0.5 );
+
         private readonly Object m_lockWriteFile;
         private readonly DownloadingFile m_downloadingFile;
 
@@ -58,7 +59,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
 
         private Int64 m_minFreeDriveSpace;
 
-        public DsDownloader( IDiscoveryService discoveryService, IoBehavior ioBehavior, Int64 minFreeDriveSpace = 100000000 )
+        public DownloaderFromLocalNetwork( IDiscoveryService discoveryService, IoBehavior ioBehavior, Int64 minFreeDriveSpace = 100000000 )
         {
             m_downloadingFile = new DownloadingFile();
             m_lockWriteFile = new Object();
@@ -127,7 +128,6 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         public Task DownloadFileAsync(
             DownloadingFileInfo downloadingFileInfo,
             IFileChangesQueue fileChangesQueue = null,
-            EventWaitHandle downloadedAnyChunk = null,
             IProgress<FileDownloadProgressArgs> downloadProgress = null
         )
         {
@@ -136,7 +136,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             //It is the reason why is DownloadFileInternalAsync created
             if (downloadingFileInfo != null)
             {
-                Task downloadTask = DownloadFileInternalAsync(downloadingFileInfo, fileChangesQueue, downloadedAnyChunk, downloadProgress);
+                Task downloadTask = DownloadFileInternalAsync(downloadingFileInfo, fileChangesQueue, downloadProgress);
                 return downloadTask;
             }
             else
@@ -184,7 +184,6 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         private async Task DownloadFileInternalAsync(
             DownloadingFileInfo downloadingFileInfo,
             IFileChangesQueue fileChangesQueue = null,
-            EventWaitHandle downloadedAnyChunk = null,
             IProgress<FileDownloadProgressArgs> downloadProgress = null
         ){
             List<IContact> onlineContacts = m_discoveryService.OnlineContacts();
@@ -218,8 +217,6 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                             downloadingFileInfo.CancellationToken,
                             downloadProgress
                         ).ConfigureAwait(continueOnCapturedContext: false);
-
-                        downloadedAnyChunk?.Set();
                     }
                     else
                     {
@@ -236,8 +233,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                             initialRequest,
                             totalFileBytesCount,
                             downloadingFileInfo.CancellationToken,
-                            downloadProgress,
-                            downloadedAnyChunk
+                            downloadProgress
                         ).ConfigureAwait(false);
                     }
 
@@ -319,7 +315,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                 CancellationToken = cancellationToken,
                 BoundedCapacity = DataflowBlockOptions.Unbounded,//set explicitly available data which can be posted
                 MaxMessagesPerTask = 1,
-                EnsureOrdered = false
+                EnsureOrdered = true //in order to another contacts can read our downloaded chunks
             };
     }
 }

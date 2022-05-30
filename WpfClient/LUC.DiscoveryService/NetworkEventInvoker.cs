@@ -655,7 +655,11 @@ namespace LUC.DiscoveryServices
         /// </param>
         private void RaiseSpecificTcpReceivedEvent( Object sender, TcpMessageEventArgs receiveResult )
         {
-            if ( ( receiveResult != null ) && ( receiveResult.Buffer.Length >= Message.MIN_TCP_LENGTH ) )
+            if ( receiveResult.Buffer.Length < Message.MIN_TCP_LENGTH )
+            {
+                DsLoggerSet.DefaultLogger.LogFatal( message: $"Received message with length less then {Message.MIN_TCP_LENGTH}" );
+            }
+            else
             {
                 DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started to handle {receiveResult.Buffer.Length} bytes" );
 

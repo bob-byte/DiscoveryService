@@ -13,7 +13,7 @@ using System.Threading;
 
 namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
-    public partial class DsDownloader
+    public partial class DownloaderFromLocalNetwork
     {
         /// <summary>
         /// It is thread safe class. That is the reason why it has only methods

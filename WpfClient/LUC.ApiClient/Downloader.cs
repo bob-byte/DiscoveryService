@@ -37,14 +37,14 @@ namespace LUC.ApiClient
 
         private static TimeSpan s_maxTimeToDownloadChunk = TimeSpan.FromMinutes( value: 2 );
 
-        private readonly DsDownloader m_dsDownloader;
+        private readonly DownloaderFromLocalNetwork m_downloaderFromLocalNetwork;
 
         private readonly IFileChangesQueue m_fileChangesQueue;
 
         public Downloader( ApiClient apiClient ) 
             : base( apiClient, apiClient.ObjectNameProvider )
         {
-            m_dsDownloader = new DsDownloader( apiClient.DiscoveryService, IoBehavior.Asynchronous );
+            m_downloaderFromLocalNetwork = new DownloaderFromLocalNetwork( apiClient.DiscoveryService, IoBehavior.Asynchronous );
 
             NotifyService = apiClient.NotifyService;
 
@@ -241,7 +241,7 @@ namespace LUC.ApiClient
                 try
                 {
                     AdsExtensions.WriteThatDownloadProcessIsStarted( downloadingFileInfo.PathWhereDownloadFileFirst );
-                    await m_dsDownloader.DownloadFileAsync( downloadingFileInfo, m_fileChangesQueue ).ConfigureAwait( continueOnCapturedContext: false );
+                    await m_downloaderFromLocalNetwork.DownloadFileAsync( downloadingFileInfo, m_fileChangesQueue ).ConfigureAwait( continueOnCapturedContext: false );
                 }
                 //when DS (DiscoveryService) doesn't find any node or node with required file
                 catch ( InvalidOperationException )
@@ -397,7 +397,7 @@ namespace LUC.ApiClient
         }
 
         private void VerifyAbilityToDownloadFile( String fullFileName, Int64 bytesCountOfFile, out String bestPlaceWhereDownloadFile ) =>
-            m_dsDownloader.VerifyAbilityToDownloadFile( fullFileName, bytesCountOfFile, out bestPlaceWhereDownloadFile );
+            m_downloaderFromLocalNetwork.VerifyAbilityToDownloadFile( fullFileName, bytesCountOfFile, out bestPlaceWhereDownloadFile );
 
         private void WriteResponseBytes(
             FileStream fileStream,

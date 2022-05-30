@@ -513,7 +513,7 @@ namespace LUC.DiscoveryServices
 
         private void TryFindNewServicesTick( Object timerState )
         {
-#if !DS_TEST
+#if !CONNECTION_POOL_TEST
             List<IContact> onlineContacts = OnlineContacts();
 
             //we don't need to say about us another nodes, when we aren't in any not Kademlia buckets,
@@ -530,7 +530,7 @@ namespace LUC.DiscoveryServices
                 {
                     ;//do nothing
                 }
-#if !DS_TEST
+#if !CONNECTION_POOL_TEST
             }
 #endif
         }

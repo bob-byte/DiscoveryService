@@ -53,6 +53,7 @@ namespace LUC.DiscoveryServices.Kademlia
                 {
                     rpcError = new RpcError
                     {
+                        OtherError = true,
                         ErrorMessage = $"{remoteEndPoint} is in different network"
                     };
                 }

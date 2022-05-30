@@ -17,7 +17,7 @@ namespace LUC.DiscoveryServices.Messages
     {
         public const Int32 MIN_LENGTH = 5;//MessageOperation(1 byte) + MessageLength (4 bytes)
 
-        public const Int32 MIN_TCP_LENGTH = MulticastMessage.MAX_LENGTH;
+        public const Int32 MIN_TCP_LENGTH = 71;
 
         public Message(Byte[] receivedBytes)
         {

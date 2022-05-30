@@ -152,6 +152,9 @@ namespace LUC.ApiClient
                     Settings.InitializeAccessToken( result.Token );
                     IsTokenExpiredOrIncorrectAccessToken = false;
 
+                    result.Message = $"Logged as '{result.Login}' at {DateTime.UtcNow.ToLongTimeString()} {DateTime.UtcNow.ToLongDateString()}";
+                    LoggingService.LogInfo( result.Message );
+
                     try
                     {
                         //init DS in order to send UDP messages to update our buckets IDs in remote nodes
@@ -161,9 +164,7 @@ namespace LUC.ApiClient
                     {
                         ;
                     }
-
-                    result.Message = $"Logged as '{result.Login}' at {DateTime.UtcNow.ToLongTimeString()} {DateTime.UtcNow.ToLongDateString()}";
-                    LoggingService.LogInfo( result.Message );
+                    
                     return result;
                 }
                 else

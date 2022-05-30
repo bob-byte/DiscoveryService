@@ -151,11 +151,11 @@
     <Compile Include="Kademlia\RemoteProcedureCaller.cs" />
     <Compile Include="TcpListenersCollection.cs" />
     <Compile Include="UdpSendersCollection.cs" />
-    <Compile Include="Kademlia\Downloads\Downloader.CheckFileExists.cs" />
-    <Compile Include="Kademlia\Downloads\Downloader.cs" />
+    <Compile Include="Kademlia\Downloads\DownloaderFromLocalNetwork.CheckFileExists.cs" />
+    <Compile Include="Kademlia\Downloads\DownloaderFromLocalNetwork.cs" />
     <Compile Include="Common\AsyncSocket.cs" />
-    <Compile Include="Kademlia\Downloads\Downloader.DownloadProcess.cs" />
-    <Compile Include="Kademlia\Downloads\Downloader.DownloadingFile.cs" />
+    <Compile Include="Kademlia\Downloads\DownloaderFromLocalNetwork.DownloadProcess.cs" />
+    <Compile Include="Kademlia\Downloads\DownloaderFromLocalNetwork.DownloadingFile.cs" />
     <Compile Include="Interfaces\INetworkEventHandler.cs" />
     <Compile Include="Interfaces\IWireSerialiser.cs" />
     <Compile Include="Kademlia\AbstractKademlia.cs" />
@@ -305,15 +305,17 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="LUC.Interfaces, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LUC dlls\LUC.Interfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="LUC.Services.Implementation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LUC dlls\LUC.Services.Implementation.dll</HintPath>
-    </Reference>
     <Reference Include="System.ServiceModel" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LUC.Interfaces\LUC.Interfaces.csproj">
+      <Project>{0f5f0967-f62a-4099-a6d7-2687cba9e4df}</Project>
+      <Name>LUC.Interfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
+      <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
+      <Name>LUC.Services.Implementation</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

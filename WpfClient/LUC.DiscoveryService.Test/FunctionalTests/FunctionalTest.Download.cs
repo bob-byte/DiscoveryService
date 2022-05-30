@@ -25,7 +25,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
         /// </summary>
         private async static Task DownloadRandomFileAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider )
         {
-            var download = new DsDownloader( s_discoveryService, IoBehavior.Asynchronous );
+            var download = new DownloaderFromLocalNetwork( s_discoveryService, IoBehavior.Asynchronous );
             download.FileSuccessfullyDownloaded += OnFileDownloaded;
 
             String filePrefix = UserIntersectionInConsole.ValidValueInputtedByUser( requestToUser: "Input file prefix where new file can exist on the server: ", ( userInput ) =>
@@ -68,13 +68,11 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                          hexFilePrefix
                      );
 
-                     var downloadedAnyChunk = new ManualResetEvent( initialState: false );
                      try
                      {
                          await download.DownloadFileAsync(
                              downloadingFileInfo,
                              fileChangesQueue: null,
-                             downloadedAnyChunk,
                              downloadProgress
                          ).ConfigureAwait( false );
                      }
@@ -83,8 +81,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                          Console.WriteLine( ex.ToString() );
                      }
 
-                     Boolean isDownloadedAnyChunks = downloadedAnyChunk.WaitOne( TimeSpan.Zero );
-                     if ( isDownloadedAnyChunks )
+                     if ( downloadedChunks.Count > 0 )
                      {
                          Console.WriteLine( "Downloaded chunks: " );
                          ShowChunkRanges( downloadedChunks );

@@ -151,34 +151,29 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LUC.ApiClient\LUC.ApiClient.csproj">
+      <Project>{f071e944-a1ee-4aee-b74a-36fd5b246ba5}</Project>
+      <Name>LUC.ApiClient</Name>
+    </ProjectReference>
     <ProjectReference Include="..\LUC.DiscoveryService\DiscoveryService.csproj">
       <Project>{9daf9ac8-c899-4d34-a5f8-8850fa45f26e}</Project>
       <Name>DiscoveryService</Name>
     </ProjectReference>
+    <ProjectReference Include="..\LUC.Interfaces\LUC.Interfaces.csproj">
+      <Project>{0f5f0967-f62a-4099-a6d7-2687cba9e4df}</Project>
+      <Name>LUC.Interfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LUC.Services.Implementation\LUC.Services.Implementation.csproj">
+      <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
+      <Name>LUC.Services.Implementation</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LUC.UnitTests\LUC.UnitTests.csproj">
+      <Project>{7de06238-95bf-40f4-b1d0-834bb6429380}</Project>
+      <Name>LUC.UnitTests</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="LightSquareIcon32x32.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="LUC.ApiClient, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LUC dlls\LUC.ApiClient.dll</HintPath>
-    </Reference>
-    <Reference Include="LUC.Common.PrismEvents">
-      <HintPath>..\LUC dlls\LUC.Common.PrismEvents.dll</HintPath>
-    </Reference>
-    <Reference Include="LUC.Interfaces, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LUC dlls\LUC.Interfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="LUC.Services.Implementation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LUC dlls\LUC.Services.Implementation.dll</HintPath>
-    </Reference>
-    <Reference Include="LUC.UnitTests, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LUC dlls\LUC.UnitTests.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

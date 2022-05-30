@@ -60,6 +60,7 @@ namespace LUC.UnitTests
             LoggingService = AppSettings.ExportedValue<ILoggingService>();
             CurrentUserProvider = AppSettings.ExportedValue<ICurrentUserProvider>();
             ApiClient = AppSettings.ExportedValue<IApiClient>();
+            SyncingObjectsList = AppSettings.ExportedValue<ISyncingObjectsList>();
         }
 
         [OneTimeSetUp]
@@ -71,6 +72,8 @@ namespace LUC.UnitTests
             String password = "integration1" )
         {
             LoginResponse loginResponse = await ApiClient.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
+
+            SyncFolder = CurrentUserProvider.RootFolderPath;
             return (ApiClient as ApiClient.ApiClient, loginResponse, CurrentUserProvider);
         }
     }
