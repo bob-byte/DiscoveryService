@@ -43,69 +43,68 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                 Console.WriteLine( "Press any key to start download process. \n" +
                 "After that if you want to cancel download, press C key. If you do not want to cancel, press any other button." );
                 Console.ReadKey( intercept: true );//true says that pressed key will not show in console
-
-                var downloadTask = Task.Run( async () =>
-                 {
-                     var downloadedChunks = new List<ChunkRange>();
-                     IProgress<FileDownloadProgressArgs> downloadProgress = new Progress<FileDownloadProgressArgs>( ( progressArgs ) => downloadedChunks.Add( progressArgs.ChunkRange ) );
-
-                     download.FilePartiallyDownloaded += ( sender, eventArgs ) =>
-                     {
-                         IEnumerable<ChunkRange> undownloadedChunks = eventArgs.UndownloadedRanges;
-
-                         Console.WriteLine( "Undownloaded chunks: " );
-                         ShowChunkRanges( undownloadedChunks );
-                     };
-
-                     String targetFullFileName = Path.Combine( localFolderPath, filePrefix, fileDescription.OriginalName );
-                     //#if RECEIVE_UDP_FROM_OURSELF
-                     //                     String directoryPath = Directory.GetParent( Path.GetDirectoryName( targetFullFileName ) ).FullName;
-                     //                     targetFullFileName = Path.Combine( directoryPath, fileDescription.OriginalName );
-                     //#endif
-
-                     var downloadingFileInfo = fileDescription.ToDownloadingFileInfo(
-                         bucketName.ServerName,
-                         targetFullFileName,
-                         hexFilePrefix
-                     );
-
-                     try
-                     {
-                         var startTimeOfDownload = DateTime.Now;
-
-                         await download.DownloadFileAsync(
-                             downloadingFileInfo,
-                             fileChangesQueue: null,
-                             downloadProgress
-                         ).ConfigureAwait( false );
-
-                         TimeSpan downloadTime = DateTime.Now.Subtract( startTimeOfDownload );
-                         Console.WriteLine( $"Download time is {downloadTime} of file with size {(Double)downloadingFileInfo.ByteCount / GeneralConstants.BYTES_IN_ONE_MEGABYTE} MB" );
-                     }
-                     catch ( Exception ex )
-                     {
-                         Console.WriteLine( ex.ToString() );
-                     }
-
-                     if ( downloadedChunks.Count > 0 )
-                     {
-                         Console.WriteLine( "Downloaded chunks: " );
-                         ShowChunkRanges( downloadedChunks );
-                     }
-
-                     Console.WriteLine( "If you have not pressed any button, do so to continue testing" );
-                 } );
-
-                ConsoleKey pressedKey = Console.ReadKey().Key;
-                Console.WriteLine();
-                if ( pressedKey == ConsoleKey.C )
-                {
-                    s_cancellationTokenSource.Cancel();
-                }
-
-                downloadTask.GetAwaiter().GetResult();
             }
 
+            var downloadTask = Task.Run( async () =>
+            {
+                var downloadedChunks = new List<ChunkRange>();
+                IProgress<FileDownloadProgressArgs> downloadProgress = new Progress<FileDownloadProgressArgs>( ( progressArgs ) => downloadedChunks.Add( progressArgs.ChunkRange ) );
+
+                download.FilePartiallyDownloaded += ( sender, eventArgs ) =>
+                {
+                    IEnumerable<ChunkRange> undownloadedChunks = eventArgs.UndownloadedRanges;
+
+                    Console.WriteLine( "Undownloaded chunks: " );
+                    ShowChunkRanges( undownloadedChunks );
+                };
+
+                String targetFullFileName = Path.Combine( localFolderPath, filePrefix, fileDescription.OriginalName );
+                //#if RECEIVE_UDP_FROM_OURSELF
+                //                     String directoryPath = Directory.GetParent( Path.GetDirectoryName( targetFullFileName ) ).FullName;
+                //                     targetFullFileName = Path.Combine( directoryPath, fileDescription.OriginalName );
+                //#endif
+
+                var downloadingFileInfo = fileDescription.ToDownloadingFileInfo(
+                    bucketName.ServerName,
+                    targetFullFileName,
+                    hexFilePrefix
+                );
+
+                try
+                {
+                    var startTimeOfDownload = DateTime.Now;
+
+                    await download.DownloadFileAsync(
+                        downloadingFileInfo,
+                        fileChangesQueue: null,
+                        downloadProgress
+                    ).ConfigureAwait( false );
+
+                    TimeSpan downloadTime = DateTime.Now.Subtract( startTimeOfDownload );
+                    Console.WriteLine( $"Download time is {downloadTime} of file with size {(Double)downloadingFileInfo.ByteCount / GeneralConstants.BYTES_IN_ONE_MEGABYTE} MB" );
+                }
+                catch ( Exception ex )
+                {
+                    Console.WriteLine( ex.ToString() );
+                }
+
+                if ( downloadedChunks.Count > 0 )
+                {
+                    Console.WriteLine( "Downloaded chunks: " );
+                    ShowChunkRanges( downloadedChunks );
+                }
+
+                Console.WriteLine( "If you have not pressed any button, do so to continue testing" );
+            } );
+
+            ConsoleKey pressedKey = Console.ReadKey().Key;
+            Console.WriteLine();
+            if ( pressedKey == ConsoleKey.C )
+            {
+                s_cancellationTokenSource.Cancel();
+            }
+
+            await downloadTask.ConfigureAwait( false );
             s_cancellationTokenSource = new CancellationTokenSource();
         }
 

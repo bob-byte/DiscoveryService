@@ -370,7 +370,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             UInt64 totalBytes = bytesCount;
             UInt64 lastPartBytesOfContact = 0;
 
-            UInt32 chunkCountPerContact = (UInt32)( ( (Double)сountUndistributedBytes / contactsWithFile.Count ) / maxChunkSize );
+            UInt32 chunkCountPerContact = (UInt32)Math.Ceiling( (Double)сountUndistributedBytes / maxChunkSize / contactsWithFile.Count );
             UInt32 partBytesOfContact = chunkCountPerContact > 1 ? maxChunkSize * chunkCountPerContact : maxChunkSize;
 
             Int32 numChunk = 0;

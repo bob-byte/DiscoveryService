@@ -189,6 +189,14 @@ namespace LUC.DiscoveryServices.CodingData
             return Encoding.ASCII.GetString( bytes );
         }
 
+        public String ReadString(Encoding encoding)
+        {
+            UInt32 bytesCount = ReadUInt32();
+            Byte[] bytes = ReadBytes( (Int32)bytesCount );
+
+            return encoding.GetString( bytes );
+        }
+
         public String ReadUtf32String()
         {
             UInt32 bytesCount = ReadUInt32();

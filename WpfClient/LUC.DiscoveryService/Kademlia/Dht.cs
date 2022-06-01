@@ -487,16 +487,17 @@ namespace LUC.DiscoveryServices.Kademlia
 
         protected void BucketRefreshTimerElapsed(Object sender, ElapsedEventArgs e)
         {
-            lock ( m_bucketRefreshTimer )
+            List<KBucket> currentBuckets;
+            DateTime now = DateTime.UtcNow;
+
+            lock ( Node.BucketList )
             {
-                DateTime now = DateTime.UtcNow;
-
                 // Put into a separate list as bucket collections may be modified.
-                var currentBuckets = new List<KBucket>(Node.BucketList.Buckets.
+                currentBuckets = new List<KBucket>(Node.BucketList.Buckets.
                     Where(b => (now - b.TimeStamp).TotalMilliseconds >= DsConstants.BUCKET_REFRESH_INTERVAL));
-
-                currentBuckets.ForEach(b => RefreshBucket(b));
             }
+
+            currentBuckets.ForEach( b => RefreshBucket( b ) );
         }
 
         /// <summary>
@@ -585,7 +586,7 @@ namespace LUC.DiscoveryServices.Kademlia
         {
             bucket.Touch();
 
-            KademliaId rndId = KademliaIdExtension.RandomIDWithinBucket(bucket);
+            KademliaId rndId = bucket.RandomIDWithinBucket();
 
             List<IContact> contacts;
             lock (Node.BucketList)

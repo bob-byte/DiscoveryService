@@ -135,7 +135,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                 {
                     try
                     {
-                        FileUploadResponse response = apiClient.TryUploadAsync( new FileInfo( eventArgs.FullPath ) ).GetAwaiter().GetResult();
+                        _ = apiClient.TryUploadAsync( new FileInfo( eventArgs.FullPath ) ).GetAwaiter().GetResult();
                     }
                     catch ( NullReferenceException )
                     {
@@ -143,7 +143,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                     }
                     catch ( Exception ex )
                     {
-                        DsSetUpTests.LoggingService.LogCriticalError( ex );
+                        Console.WriteLine( ex.ToString() );
                     }
                 }
             }

@@ -134,7 +134,6 @@
     <Compile Include="Common\ForcingConcurrencyError.cs" />
     <Compile Include="DiscoveryServiceFacade.cs" />
     <Compile Include="DsLogger.cs" />
-    <Compile Include="GlobalAspects.cs" />
     <Compile Include="Interfaces\ListenersCollection.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.Clear.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.GetConnectedSockets.cs" />
@@ -148,7 +147,6 @@
     <Compile Include="Kademlia\Downloads\FilePartiallyDownloadedEventArgs.cs" />
     <Compile Include="Kademlia\Exceptions\MalfactorAttackException.cs" />
     <Compile Include="Kademlia\Exceptions\NotEnoughDriveSpaceException.cs" />
-    <Compile Include="Kademlia\KademliaIdExtension.cs" />
     <Compile Include="Kademlia\RemoteProcedureCaller.cs" />
     <Compile Include="TcpListenersCollection.cs" />
     <Compile Include="UdpSendersCollection.cs" />
@@ -228,7 +226,6 @@
     <Compile Include="Messages\TcpMessageEventArgs.cs" />
     <Compile Include="Messages\Message.cs" />
     <Compile Include="Messages\MessageOperation.cs" />
-    <Compile Include="Listeners.cs" />
     <Compile Include="Messages\RecentMessages.cs" />
     <Compile Include="NetworkInterfaceEventArgs.cs" />
     <Compile Include="NetworkEventInvoker.cs" />

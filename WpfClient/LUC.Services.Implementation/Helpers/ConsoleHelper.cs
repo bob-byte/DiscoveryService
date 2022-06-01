@@ -57,6 +57,9 @@ namespace LUC.Services.Implementation.Helpers
                 };
                 Console.SetOut( standardOutput );
 
+                //clear line which was added by creating standardOutput variable
+                ClearCurrentConsoleLine();
+
                 Console.OutputEncoding = Encoding.UTF8;
 #if DEBUG
                 Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -68,6 +71,15 @@ namespace LUC.Services.Implementation.Helpers
             {
                 Log.Error( e, "Can't create console." );
             }
+        }
+
+        public static void ClearCurrentConsoleLine()
+        {
+            Int32 currntLineCursor = Console.CursorTop;
+            Console.SetCursorPosition(left: 0, currntLineCursor);
+
+            Console.Write( value: new String( c: ' ', Console.BufferWidth ) );
+            Console.SetCursorPosition( 0, currntLineCursor );
         }
     }
 }

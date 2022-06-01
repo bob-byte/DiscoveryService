@@ -63,7 +63,7 @@ namespace LUC.DiscoveryServices.Messages
 
                 MessageId = reader.ReadUInt32();
                 IdOfSendingContact = reader.ReadBigInteger();
-                MachineId = reader.ReadAsciiString();
+                MachineId = reader.ReadString( Encoding.UTF8 );
 
                 ProtocolVersion = reader.ReadUInt16();
                 TcpPort = reader.ReadUInt16();
@@ -101,7 +101,7 @@ namespace LUC.DiscoveryServices.Messages
 
                 writer.Write( MessageId );
                 writer.Write( IdOfSendingContact );
-                writer.WriteAsciiString( MachineId );
+                writer.Write( MachineId, Encoding.UTF8 );
                 writer.Write( ProtocolVersion );
                 writer.Write( TcpPort );
                 writer.WriteEnumerable( BucketIds );

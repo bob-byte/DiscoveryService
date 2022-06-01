@@ -46,6 +46,8 @@ namespace LUC.DiscoveryServices
 
         private static readonly ConcurrentDictionary<UInt16, DiscoveryService> s_instances = new ConcurrentDictionary<UInt16, DiscoveryService>();
 
+        private static readonly Random s_random = new Random();
+
         /// <summary>
         /// Indicates whether DS.Test project is running
         /// </summary>
@@ -332,9 +334,8 @@ namespace LUC.DiscoveryServices
                     {
                         IContact sendingContact = NetworkEventInvoker.OurContact;
 
-                        var random = new Random();
                         var tcpMessage = new AcknowledgeTcpMessage(
-                           messageId: (UInt32)random.Next( maxValue: Int32.MaxValue ),
+                           messageId: (UInt32)s_random.Next( maxValue: Int32.MaxValue ),
                            MachineId,
                            sendingContact.KadId.Value,
                            RunningTcpPort,

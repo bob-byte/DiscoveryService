@@ -51,11 +51,6 @@ namespace LUC.Services.Implementation
                 AddProcessorId().
                 AddMotherboardSerialNumber().
                 ToString();
-
-            Byte[] encodedIdAsBytes = Encoding.UTF8.GetBytes( encodedMachineId );
-
-            //to get ASCII encoding
-            encodedMachineId = ArrayExtensions.CalculateMd5Hash( encodedIdAsBytes );
             return encodedMachineId;
         }
 

@@ -51,9 +51,6 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
         static async Task Main( String[] args )
         {
-            //clear LUC unnecessary logs
-            Console.Clear();
-
             SentryHelper.InitAppSentry();
 
             s_settingsService = DsSetUpTests.SettingsService;
@@ -446,7 +443,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
                         var receivedTcpMess = new AutoResetEvent( initialState: false );
 
-                        s_discoveryService.NetworkEventInvoker.AnswerReceived += ( sender, eventArgs ) => receivedTcpMess.Set();
+                        s_discoveryService.NetworkEventInvoker.FindNodeReceived += ( sender, eventArgs ) => receivedTcpMess.Set();
 
                         //After revecing AcknowledgeTcpMessage we will receive FindNodeResponse
                         receivedTcpMess.WaitOne( (Int32)timeExecutionKadOp.TotalMilliseconds * 2 );
