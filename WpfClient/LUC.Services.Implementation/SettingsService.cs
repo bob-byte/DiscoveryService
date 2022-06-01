@@ -62,10 +62,13 @@ namespace LUC.Services.Implementation
                 appSettings = new AppSettings();
             }
 
+#if DEBUG
+            appSettings.IsShowConsole = true;
+#endif
+
             if ( appSettings.IsShowConsole )
             {
                 ConsoleHelper.CreateConsole();
-                Console.WriteLine("Console is launched.");
             }            
 
             return appSettings;

@@ -51,6 +51,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             UpdateRootFolderPath( newLucFullFolderName, currentUserProvider );
         }
 
+        //TODO: fix for containers
         /// <summary>
         /// Root folder which also is available for containers
         /// </summary>

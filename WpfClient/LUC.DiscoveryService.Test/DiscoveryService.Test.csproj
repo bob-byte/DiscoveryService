@@ -116,7 +116,11 @@
     <Compile Include="WireReaderWriterTest.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".dockerignore">
+      <DependentUpon>Dockerfile</DependentUpon>
+    </None>
     <None Include="app.config" />
+    <None Include="Dockerfile" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AutoFixture.AutoMoq">

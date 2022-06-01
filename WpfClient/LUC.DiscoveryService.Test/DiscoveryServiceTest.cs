@@ -89,7 +89,7 @@ namespace LUC.DiscoveryServices.Test
         }
 
         [Test]
-        public void Ctor_PassNullPar_GetException() => Assert.That( code: (TestDelegate)( () => m_discoveryService = DiscoveryService.Instance( null, null ) ),
+        public void Ctor_PassNullPar_GetArgumentNullException() => Assert.That( code: (TestDelegate)( () => m_discoveryService = DiscoveryService.Instance( null, null ) ),
             constraint: Throws.TypeOf( expectedType: typeof( ArgumentNullException ) ) );
 
 #if !RECEIVE_UDP_FROM_OURSELF
@@ -130,7 +130,7 @@ namespace LUC.DiscoveryServices.Test
         /// Sd - Service Discovery
         /// </summary>
         [Test]
-        public void QueryAllServices_WhenSdIsntStarted_GetException()
+        public void QueryAllServices_WhenSdIsntStarted_GetInvalidOperationException()
         {
             m_discoveryService.Stop(allowReuseService: true);
             Assert.That(code: m_discoveryService.TryFindAllNodes, Throws.TypeOf(typeof(InvalidOperationException)));
@@ -140,7 +140,7 @@ namespace LUC.DiscoveryServices.Test
         /// Sd - Service Discovery
         /// </summary>
         [Test]
-        public void QueryAllServices_WhenSdIsStartedAndStopped_GetException()
+        public void QueryAllServices_WhenSdIsStartedAndStopped_GetInvalidOperationException()
         {
             m_discoveryService.Start();
             m_discoveryService.Stop(allowReuseService: true);
@@ -159,7 +159,7 @@ namespace LUC.DiscoveryServices.Test
         }
 
         [Test]
-        public async Task SendTcpMessageAsync_GetTcpMessage_NotFailed()
+        public async Task SendTcpMessageAsync_SendMessageAndWaitForReceiving_MessageReceived()
         {
             var done = new ManualResetEvent( false );
 

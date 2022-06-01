@@ -5,8 +5,6 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-using ConcurrentCollections;
-
 using LUC.DiscoveryServices.Kademlia.Exceptions;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;

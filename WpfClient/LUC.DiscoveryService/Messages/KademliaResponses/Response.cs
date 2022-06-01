@@ -27,6 +27,11 @@ namespace LUC.DiscoveryServices.Messages.KademliaResponses
             RandomID = requestRandomId;
         }
 
+        protected Response()
+        {
+            ;
+        }
+
         public BigInteger RandomID { get; private set; }
 
         /// <inheritdoc/>

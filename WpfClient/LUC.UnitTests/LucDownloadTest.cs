@@ -24,7 +24,7 @@ namespace LUC.UnitTests
 
         private const String PATH_FROM_ROOT_FOLDER_TO_TESTING_FILES = "DownloadedFiles";
 
-        private const String DEFAULT_FILE_NAME_FOR_TESTING = "qweij1woen1oine.txt";
+        private const String DEFAULT_FILE_NAME_FOR_TESTING = "123qweij1woen1oine.txt";
 
 
         private ApiClient.ApiClient m_apiClient;
@@ -92,9 +92,16 @@ namespace LUC.UnitTests
         [OneTimeTearDown]
         public void TryDeleteDirectoryWithDownloadingFiles()
         {
-            if ( Directory.Exists( m_directoryFullNameForDownloadingFiles ) )
+            var directoryInfo = new DirectoryInfo( m_directoryFullNameForDownloadingFiles );
+
+            if ( directoryInfo.Exists )
             {
-                Directory.Delete( m_directoryFullNameForDownloadingFiles, recursive: true );
+                foreach ( String filePath in directoryInfo.EnumerateFiles().Select( c => c.FullName ) )
+                {
+                    File.SetAttributes( filePath, FileAttributes.Normal );
+                }
+
+                directoryInfo.Delete( recursive: true );
             }
         }
 
@@ -125,7 +132,7 @@ namespace LUC.UnitTests
                 }
 
                 m_listResponse = await m_apiClient.ListAsync( m_rndBucketName.ServerName ).ConfigureAwait( false );
-                m_objectDescription = m_listResponse.ToObjectsListModel().ObjectDescriptions.Find( o => o.OriginalName.Equals( m_fileInfoInServer.Name, StringComparison.Ordinal ) && !o.IsDeleted && ( o.ByteCount == BYTES_COUNT_OF_RND_FILE ) );
+                m_objectDescription = m_listResponse.ToObjectsListModel().ObjectDescriptions.Find( o => o.OriginalName.Equals( m_fileInfoInServer.Name, StringComparison.Ordinal ) && ( o.ByteCount == BYTES_COUNT_OF_RND_FILE ) );
                 if ( m_objectDescription == null )
                 {
                     m_uploadResponse = await m_apiClient.TryUploadAsync( m_fileInfoInServer ).ConfigureAwait( false );
@@ -184,7 +191,7 @@ namespace LUC.UnitTests
         }
 
 #if !ENABLE_DS_DOWNLOAD_FROM_CURRENT_PC
-        [ Test]
+        [Test]
         public async Task DownloadFileAsync_CancelDownloadBecauseOfFileOnServerAndInFileSystemHaveDifferentVersions_DownloadIsCancelledAndFileIsDeleted()
         {
             // Because this call is not awaited, execution of the current method continues before the call is completed.
@@ -258,7 +265,7 @@ namespace LUC.UnitTests
         private void WriteRndFile( Int64 bytesCount, String fullFileName )
         {
             var random = new Random();
-            using ( FileStream writer = File.OpenWrite( fullFileName ) )
+            using ( FileStream writer = File.Create( fullFileName ) )
             {
                 Byte[] buffer = new Byte[ bytesCount ];
                 random.NextBytes( buffer );

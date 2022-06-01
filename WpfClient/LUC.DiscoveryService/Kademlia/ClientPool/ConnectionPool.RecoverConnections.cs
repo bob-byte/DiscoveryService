@@ -17,7 +17,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
     {
         private CancellationTokenSource m_cancellationRecover;
 
-        public async ValueTask TryRecoverAllConnectionsAsync(TimeSpan timeWaitToReturnToPool)
+        public async Task TryRecoverAllConnectionsAsync(TimeSpan timeWaitToReturnToPool)
         {
             if (ConnectionSettings.ConnectionBackgroundReset)
             {

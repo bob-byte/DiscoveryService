@@ -31,7 +31,7 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
             m_distributedHashTable = NetworkEventInvoker.DistributedHashTable( m_discoveryService.ProtocolVersion );
 
             m_currentUserProvider = currentUserProvider;
-            m_settingsService = new SettingsService();
+            m_settingsService = AppSettings.ExportedValue<ISettingsService>();
         }
 
         public virtual async void SendResponse( Object sender, TcpMessageEventArgs eventArgs )

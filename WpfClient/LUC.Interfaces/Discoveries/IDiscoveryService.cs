@@ -33,13 +33,6 @@ namespace LUC.Interfaces.Discoveries
         IContact OurContact { get; }
 
         /// <summary>
-        /// IP address of peers which were discovered.
-        /// Key is a network in a format "IP-address:port".
-        /// Value is a list of group names, which peer supports
-        /// </summary>
-        ConcurrentDictionary<EndPoint, List<String>> KnownIps { get; }
-
-        /// <summary>
         /// Groups which current peer belongs to.
         /// Key is a local name of bucket, which current peer supports.
         /// Value is path to a SSL certificate of group

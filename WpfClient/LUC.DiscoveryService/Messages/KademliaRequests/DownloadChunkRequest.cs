@@ -41,12 +41,12 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
 
         public String FileVersion { get; set; }
 
-        public String PathWhereDownloadFileFirst { get; set; }
+        ///// <summary>
+        ///// Whether <see cref="IContact"/> has downloaded all the bytes for which it is responsible
+        ///// </summary>
+        //public Boolean WasDownloadedAllBytes => ChunkRange.TotalPerContact - CountDownloadedBytes == 0;
 
-        /// <summary>
-        /// Whether <see cref="IContact"/> has downloaded all the bytes for which it is responsible
-        /// </summary>
-        public Boolean WasDownloadedAllBytes => ChunkRange.TotalPerContact - CountDownloadedBytes == 0;
+        internal String PathWhereDownloadFileFirst { get; set; }
 
         public override void Write(WireWriter writer)
         {
@@ -91,6 +91,10 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
             Boolean isRightResponse = IsRightDownloadFileResponse(downloadResponse, error, remoteContact);
             ChunkRange.IsDownloaded = isRightResponse;
 
+            //to be available to get next response (NetworkEventInvoker
+            //ignores messages with the same ID in RecentMessages.Interval)
+            RandomID = KademliaId.Random().Value;
+
             if ( isRightResponse )
             {
                 CountDownloadedBytes += (UInt64)downloadResponse.Chunk.Length;
@@ -129,7 +133,7 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
 
             var stringBuilder = new StringBuilder(requestAsStrWithoutChunkRange);
 
-            String chunkRangeAsStr = Display.ToString(ChunkRange, initialTabulation: Display.TABULATION);
+            String chunkRangeAsStr = Display.ToString(ChunkRange, initialTabulation: Display.TABULATION_AS_STR);
             stringBuilder.AppendLine(chunkRangeAsStr);
 
             return stringBuilder.ToString();

@@ -11,6 +11,7 @@ using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Kademlia.Downloads;
 using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces;
+using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Models;
@@ -43,9 +44,9 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                 "After that if you want to cancel download, press C key. If you do not want to cancel, press any other button." );
                 Console.ReadKey( intercept: true );//true says that pressed key will not show in console
 
-                ConfiguredTaskAwaitable downloadTask = Task.Run( async () =>
+                var downloadTask = Task.Run( async () =>
                  {
-                     var downloadedChunks = new ConcurrentBag<ChunkRange>();
+                     var downloadedChunks = new List<ChunkRange>();
                      IProgress<FileDownloadProgressArgs> downloadProgress = new Progress<FileDownloadProgressArgs>( ( progressArgs ) => downloadedChunks.Add( progressArgs.ChunkRange ) );
 
                      download.FilePartiallyDownloaded += ( sender, eventArgs ) =>
@@ -57,24 +58,29 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                      };
 
                      String targetFullFileName = Path.Combine( localFolderPath, filePrefix, fileDescription.OriginalName );
-#if RECEIVE_UDP_FROM_OURSELF
-                     String directoryPath = Directory.GetParent( Path.GetDirectoryName( targetFullFileName ) ).FullName;
-                     targetFullFileName = Path.Combine( directoryPath, fileDescription.OriginalName );
-#endif
+                     //#if RECEIVE_UDP_FROM_OURSELF
+                     //                     String directoryPath = Directory.GetParent( Path.GetDirectoryName( targetFullFileName ) ).FullName;
+                     //                     targetFullFileName = Path.Combine( directoryPath, fileDescription.OriginalName );
+                     //#endif
 
-                     var downloadingFileInfo = fileDescription.ToDownloadingFileInfo( 
-                         bucketName.ServerName, 
-                         targetFullFileName, 
+                     var downloadingFileInfo = fileDescription.ToDownloadingFileInfo(
+                         bucketName.ServerName,
+                         targetFullFileName,
                          hexFilePrefix
                      );
 
                      try
                      {
+                         var startTimeOfDownload = DateTime.Now;
+
                          await download.DownloadFileAsync(
                              downloadingFileInfo,
                              fileChangesQueue: null,
                              downloadProgress
                          ).ConfigureAwait( false );
+
+                         TimeSpan downloadTime = DateTime.Now.Subtract( startTimeOfDownload );
+                         Console.WriteLine( $"Download time is {downloadTime} of file with size {(Double)downloadingFileInfo.ByteCount / GeneralConstants.BYTES_IN_ONE_MEGABYTE} MB" );
                      }
                      catch ( Exception ex )
                      {
@@ -88,7 +94,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                      }
 
                      Console.WriteLine( "If you have not pressed any button, do so to continue testing" );
-                 } ).ConfigureAwait( false );
+                 } );
 
                 ConsoleKey pressedKey = Console.ReadKey().Key;
                 Console.WriteLine();
@@ -111,7 +117,17 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             }
         }
 
-        private static void OnFileDownloaded( Object sender, FileDownloadedEventArgs eventArgs ) => AdsExtensions.Write( eventArgs.FullFileName, eventArgs.Version, AdsExtensions.Stream.LastSeenVersion );
+        private static void OnFileDownloaded( Object sender, FileDownloadedEventArgs eventArgs )
+        {
+            try
+            {
+                AdsExtensions.WriteInfoAboutNewFileVersion( new FileInfo( eventArgs.FullFileName ), eventArgs.Version, eventArgs.Guid );
+            }
+            catch ( Exception ex )
+            {
+                DsLoggerSet.DefaultLogger.LogError( ex, logRecord: $"Cannot write version ({eventArgs.Version}) or guid ({eventArgs.Guid}) for {eventArgs.FullFileName}" );
+            }
+        }
 
         private async static Task<(ObjectDescriptionModel randomFileToDownload, IBucketName bucketName, String localFolderPath, String hexFilePrefix)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, String filePrefix )
         {
@@ -150,7 +166,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                  shouldBeDownloaded = !isFileInCurrentPc;
 #endif
 
-                return shouldBeDownloaded;
+                 return shouldBeDownloaded;
              } ).ToList();
 
             ObjectDescriptionModel randomFileToDownload;

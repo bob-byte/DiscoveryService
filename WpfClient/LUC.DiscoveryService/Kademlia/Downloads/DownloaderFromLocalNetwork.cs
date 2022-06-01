@@ -79,7 +79,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         public Int64 MinFreeDriveSpace
         {
             get => m_minFreeDriveSpace;
-            set => Interlocked.Exchange(ref m_minFreeDriveSpace, value);
+            set => Interlocked.Exchange( ref m_minFreeDriveSpace, value );
         }
 
         /// <summary>
@@ -134,49 +134,49 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             //Because of the way async/await methods are rewritten by the compiler, any exceptions
             //thrown during the parameters check will happen only when the task is observed.
             //It is the reason why is DownloadFileInternalAsync created
-            if (downloadingFileInfo != null)
+            if ( downloadingFileInfo != null )
             {
-                Task downloadTask = DownloadFileInternalAsync(downloadingFileInfo, fileChangesQueue, downloadProgress);
+                Task downloadTask = DownloadFileInternalAsync( downloadingFileInfo, fileChangesQueue, downloadProgress );
                 return downloadTask;
             }
             else
             {
-                throw new ArgumentNullException(paramName: nameof(downloadingFileInfo));
+                throw new ArgumentNullException( paramName: nameof( downloadingFileInfo ) );
             }
         }
 
-        public void TryGetTempFullFileNameFromException(Exception exception, out String tempFullFileName, out Boolean isInExceptionData)
+        public void TryGetTempFullFileNameFromException( Exception exception, out String tempFullFileName, out Boolean isInExceptionData )
         {
-            isInExceptionData = exception.Data.Contains(TEMP_FULL_FILE_NAME_KEY);
-            tempFullFileName = isInExceptionData ? (String)exception.Data[TEMP_FULL_FILE_NAME_KEY] : null;
+            isInExceptionData = exception.Data.Contains( TEMP_FULL_FILE_NAME_KEY );
+            tempFullFileName = isInExceptionData ? (String)exception.Data[ TEMP_FULL_FILE_NAME_KEY ] : null;
         }
 
-        public void VerifyAbilityToDownloadFile(String fullFileName, Int64 bytesCountOfFile, out String bestPlaceWhereDownloadFile)
+        public void VerifyAbilityToDownloadFile( String fullFileName, Int64 bytesCountOfFile, out String bestPlaceWhereDownloadFile )
         {
-            String driveName = fullFileName[0].ToString();
-            var driveInfo = new DriveInfo(driveName);
+            String driveName = fullFileName[ 0 ].ToString();
+            var driveInfo = new DriveInfo( driveName );
 
-            Int64 freeDiskSpaceAfterDownload = driveInfo.AvailableFreeSpace - (bytesCountOfFile + MinFreeDriveSpace);//free disk space after download process, except MinFreeDriveSpace
+            Int64 freeDiskSpaceAfterDownload = driveInfo.AvailableFreeSpace - ( bytesCountOfFile + MinFreeDriveSpace );//free disk space after download process, except MinFreeDriveSpace
 
             Boolean isEnoughFreeDiskSpace = freeDiskSpaceAfterDownload >= 0;
-            if (isEnoughFreeDiskSpace)
+            if ( isEnoughFreeDiskSpace )
             {
                 bestPlaceWhereDownloadFile = fullFileName;
             }
             else
             {
-                bestPlaceWhereDownloadFile = PathExtensions.TargetDownloadedFullFileName(fullFileName, m_currentUserProvider.RootFolderPath);
-                var fileInfo = new FileInfo(bestPlaceWhereDownloadFile);
-                if (fileInfo.Exists)
+                bestPlaceWhereDownloadFile = PathExtensions.TargetDownloadedFullFileName( fullFileName, m_currentUserProvider.RootFolderPath );
+                var fileInfo = new FileInfo( bestPlaceWhereDownloadFile );
+                if ( fileInfo.Exists )
                 {
-                    freeDiskSpaceAfterDownload = driveInfo.AvailableFreeSpace - (bytesCountOfFile - fileInfo.Length + MinFreeDriveSpace);
+                    freeDiskSpaceAfterDownload = driveInfo.AvailableFreeSpace - ( bytesCountOfFile - fileInfo.Length + MinFreeDriveSpace );
                     isEnoughFreeDiskSpace = freeDiskSpaceAfterDownload >= 0;
                 }
 
-                if (!isEnoughFreeDiskSpace)
+                if ( !isEnoughFreeDiskSpace )
                 {
-                    String pathAfterSyncFolder = m_downloadingFile.FileNameFromSyncFolder(m_currentUserProvider.RootFolderPath, fullFileName);
-                    throw new NotEnoughDriveSpaceException(fullFileName, message: $"You need to free {-freeDiskSpaceAfterDownload} to download {pathAfterSyncFolder}");
+                    String pathAfterSyncFolder = m_downloadingFile.FileNameFromSyncFolder( m_currentUserProvider.RootFolderPath, fullFileName );
+                    throw new NotEnoughDriveSpaceException( fullFileName, message: $"You need to free {-freeDiskSpaceAfterDownload} to download {pathAfterSyncFolder}" );
                 }
             }
         }
@@ -185,19 +185,20 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             DownloadingFileInfo downloadingFileInfo,
             IFileChangesQueue fileChangesQueue = null,
             IProgress<FileDownloadProgressArgs> downloadProgress = null
-        ){
+        )
+        {
             List<IContact> onlineContacts = m_discoveryService.OnlineContacts();
 
-            String onlineContactsAsStr = onlineContacts.ToString(showAllPropsOfItems: true, initialTabulation: String.Empty, nameOfEnumerable: "Online Contacts");
-            DsLoggerSet.DefaultLogger.LogInfo(onlineContactsAsStr);
+            String onlineContactsAsStr = onlineContacts.ToString( showAllPropsOfItems: true, initialTabulation: String.Empty, nameOfEnumerable: "Online Contacts" );
+            DsLoggerSet.DefaultLogger.LogInfo( onlineContactsAsStr );
 
-            var contactsInSameBucket = ContactsInSameBucket(onlineContacts, downloadingFileInfo.BucketId).ToList();
+            var contactsInSameBucket = ContactsInSameBucket( onlineContacts, downloadingFileInfo.BucketId ).ToList();
 
             try
             {
-                if (contactsInSameBucket.Count >= 1)
+                if ( contactsInSameBucket.Count >= 1 )
                 {
-                    var initialRequest = new DownloadChunkRequest(m_ourContact.KadId.Value, m_ourContact.MachineId)
+                    var initialRequest = new DownloadChunkRequest( m_ourContact.KadId.Value, m_ourContact.MachineId )
                     {
                         PathWhereDownloadFileFirst = downloadingFileInfo.PathWhereDownloadFileFirst,
                         FileOriginalName = downloadingFileInfo.OriginalName,
@@ -208,7 +209,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
 
                     UInt64 totalFileBytesCount = (UInt64)downloadingFileInfo.ByteCount;
 
-                    if (totalFileBytesCount <= DsConstants.MAX_CHUNK_SIZE)
+                    if ( totalFileBytesCount <= DsConstants.MAX_CHUNK_SIZE )
                     {
                         await DownloadSmallFileAsync(
                             contactsInSameBucket,
@@ -216,7 +217,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                             totalFileBytesCount,
                             downloadingFileInfo.CancellationToken,
                             downloadProgress
-                        ).ConfigureAwait(continueOnCapturedContext: false);
+                        ).ConfigureAwait( continueOnCapturedContext: false );
                     }
                     else
                     {
@@ -234,45 +235,45 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                             totalFileBytesCount,
                             downloadingFileInfo.CancellationToken,
                             downloadProgress
-                        ).ConfigureAwait(false);
+                        ).ConfigureAwait( false );
                     }
 
-                    FileExtensions.SetDownloadedFileToNormal(downloadingFileInfo, fileChangesQueue);
+                    FileExtensions.SetDownloadedFileToNormal( downloadingFileInfo, fileChangesQueue );
 
-                    FileSuccessfullyDownloaded?.Invoke(sender: this, new FileDownloadedEventArgs(downloadingFileInfo.LocalFilePath, downloadingFileInfo.Version));
+                    FileSuccessfullyDownloaded?.Invoke( sender: this, new FileDownloadedEventArgs( downloadingFileInfo.LocalFilePath, downloadingFileInfo.Version, downloadingFileInfo.Guid ) );
                 }
                 else
                 {
-                    String pathFromSyncFolder = m_downloadingFile.FileNameFromSyncFolder(m_currentUserProvider.RootFolderPath, downloadingFileInfo.LocalFilePath);
-                    throw new InvalidOperationException($"{nameof(DiscoveryService)} didn\'t find any node in the same bucket to download {pathFromSyncFolder}");
+                    String pathFromSyncFolder = m_downloadingFile.FileNameFromSyncFolder( m_currentUserProvider.RootFolderPath, downloadingFileInfo.LocalFilePath );
+                    throw new InvalidOperationException( $"{nameof( DiscoveryService )} didn\'t find any node in the same bucket to download {pathFromSyncFolder}" );
                 }
             }
-            catch (OperationCanceledException ex)
+            catch ( OperationCanceledException ex )
             {
-                downloadingFileInfo.LocalFilePath = FullFileNameAfterDownloadBigFileException(ex, downloadingFileInfo.LocalFilePath);
+                downloadingFileInfo.LocalFilePath = FullFileNameAfterDownloadBigFileException( ex, downloadingFileInfo.LocalFilePath );
 
-                HandleException(ex, downloadingFileInfo.LocalFilePath);
+                HandleException( ex, downloadingFileInfo.LocalFilePath );
             }
-            catch (InvalidOperationException ex)
+            catch ( InvalidOperationException ex )
             {
-                HandleException(ex, downloadingFileInfo.LocalFilePath);
+                HandleException( ex, downloadingFileInfo.LocalFilePath );
             }
-            catch (IOException ex)
+            catch ( IOException ex )
             {
-                downloadingFileInfo.LocalFilePath = FullFileNameAfterDownloadBigFileException(ex, downloadingFileInfo.LocalFilePath);
+                downloadingFileInfo.LocalFilePath = FullFileNameAfterDownloadBigFileException( ex, downloadingFileInfo.LocalFilePath );
 
-                HandleException(ex, downloadingFileInfo.LocalFilePath);
+                HandleException( ex, downloadingFileInfo.LocalFilePath );
             }
-            catch (FilePartiallyDownloadedException ex)
+            catch ( FilePartiallyDownloadedException ex )
             {
-                DsLoggerSet.DefaultLogger.LogFatal(ex.ToString());
+                DsLoggerSet.DefaultLogger.LogFatal( ex.ToString() );
 
-                FilePartiallyDownloaded?.Invoke(sender: this, new FilePartiallyDownloadedEventArgs(ex.UndownloadedRanges));
+                FilePartiallyDownloaded?.Invoke( sender: this, new FilePartiallyDownloadedEventArgs( ex.UndownloadedRanges ) );
                 throw;
             }
         }
 
-        private void HandleException(Exception exception, String fullFileName)
+        private void HandleException( Exception exception, String fullFileName )
         {
 #if DEBUG
             if ( exception is InvalidOperationException )
@@ -287,20 +288,20 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             }
 #endif
 
-            DownloadErrorHappened?.Invoke(sender: this, new DownloadErrorHappenedEventArgs(exception, fullFileName));
+            DownloadErrorHappened?.Invoke( sender: this, new DownloadErrorHappenedEventArgs( exception, fullFileName ) );
             throw exception;
         }
 
-        private IEnumerable<IContact> ContactsInSameBucket(IEnumerable<IContact> contacts, String bucketId) =>
-            contacts.Where(c => c.Buckets().Any(b => b.Equals(bucketId, StringComparison.OrdinalIgnoreCase)));
+        private IEnumerable<IContact> ContactsInSameBucket( IEnumerable<IContact> contacts, String bucketId ) =>
+            contacts.Where( c => c.Buckets().Any( b => b.Equals( bucketId, StringComparison.OrdinalIgnoreCase ) ) );
 
-        private String FullFileNameAfterDownloadBigFileException(Exception exception, String originalFullFileName)
+        private String FullFileNameAfterDownloadBigFileException( Exception exception, String originalFullFileName )
         {
             String fullFileName = (String)originalFullFileName.Clone();
 
-            TryGetTempFullFileNameFromException(exception, out String tempFullFileName, out Boolean isInExceptionData);
+            TryGetTempFullFileNameFromException( exception, out String tempFullFileName, out Boolean isInExceptionData );
 
-            if (isInExceptionData)
+            if ( isInExceptionData )
             {
                 fullFileName = tempFullFileName;
             }
@@ -308,7 +309,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             return fullFileName;
         }
 
-        private ExecutionDataflowBlockOptions ParallelOptions(CancellationToken cancellationToken) =>
+        private ExecutionDataflowBlockOptions ParallelOptions( CancellationToken cancellationToken ) =>
             new ExecutionDataflowBlockOptions
             {
                 MaxDegreeOfParallelism = DsConstants.MAX_THREADS,

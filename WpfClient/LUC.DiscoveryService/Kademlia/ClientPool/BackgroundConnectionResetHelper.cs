@@ -65,7 +65,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 {
                     if ( s_workerTask == null )
                     {
-                        s_workerTask = Task.Run(async () => await ReturnSocketsAsync());
+                        s_workerTask = Task.Run( ReturnSocketsAsync );
                     }
                 }
             }
@@ -109,10 +109,6 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             {
                 try
                 {
-#if DEBUG
-                    DsLoggerSet.DefaultLogger.LogInfo( "Waiting for semaphore" );
-#endif
-
                     await s_semaphore.WaitAsync(s_cancellationTokenSource.Token).ConfigureAwait(continueOnCapturedContext: false);
 
                     //process all sockets that have started being returned

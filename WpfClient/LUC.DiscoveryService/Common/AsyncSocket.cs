@@ -78,7 +78,7 @@ namespace LUC.DiscoveryServices.Common
                 SocketAsyncOperation.Connect,
                 ( asyncCallback ) =>
                 {
-                    DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Start {nameof( BeginConnect )} with {remoteEndPoint}" );
+                    DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Start to connect with {remoteEndPoint}" );
                     return BeginConnect( remoteEndPoint, asyncCallback, state: this );
                 },
                 timeout, cancellationToken
@@ -388,9 +388,6 @@ namespace LUC.DiscoveryServices.Common
                 {
                     case SocketAsyncOperation.Connect:
                     {
-                        DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"{nameof( BeginConnect )} successfully finished" );
-
-                        DsLoggerSet.DefaultLogger.LogInfo( $"Start {nameof(socket.EndConnect)}" );
                         socket.EndConnect( asyncResult );
                         DsLoggerSet.DefaultLogger.LogInfo( $"Connection successfully made" );
 

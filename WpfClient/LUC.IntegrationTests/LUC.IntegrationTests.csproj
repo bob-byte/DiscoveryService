@@ -135,6 +135,10 @@
       <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
       <Name>LUC.Services.Implementation</Name>
     </ProjectReference>
+    <ProjectReference Include="..\LUC.UnitTests\LUC.UnitTests.csproj">
+      <Project>{7de06238-95bf-40f4-b1d0-834bb6429380}</Project>
+      <Name>LUC.UnitTests</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

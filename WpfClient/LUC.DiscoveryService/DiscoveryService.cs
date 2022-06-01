@@ -1,4 +1,5 @@
-﻿//#define IS_IN_LUC
+﻿#define DOES_CONTAINER_USE
+//#define IS_IN_LUC
 
 using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Common.Extensions;
@@ -87,9 +88,6 @@ namespace LUC.DiscoveryServices
                 throw new ArgumentNullException( nameof( profile ) );
             }
         }
-
-        /// <inheritdoc/>
-        public ConcurrentDictionary<EndPoint, List<String>> KnownIps { get; protected set; }
 
         /// <inheritdoc/>
         public ConcurrentDictionary<String, String> LocalBuckets =>
@@ -451,52 +449,17 @@ namespace LUC.DiscoveryServices
             }
         }
 
-        private void AddEndpoint( Object sender, TcpMessageEventArgs e )
-        {
-            AcknowledgeTcpMessage tcpMessage = e.Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
-            if ( ( tcpMessage != null ) && ( e.RemoteEndPoint is IPEndPoint ipEndPoint ) )
-            {
-                KnownIps.AddOrUpdate(
-                    ipEndPoint,
-                    addValueFactory: ( ip ) => tcpMessage.BucketIds,
-                    updateValueFactory: ( ip, previousBuckets ) => tcpMessage.BucketIds
-                );
-            }
-            else
-            {
-                throw new ArgumentException( $"Bad format of {nameof( e )}" );
-            }
-        }
-
         private void InitDiscoveryService( ServiceProfile profile )
         {
-            KnownIps = new ConcurrentDictionary<EndPoint, List<String>>();
-
-#if !IS_IN_LUC
+#if !IS_IN_LUC && !DOES_CONTAINER_USE
             ConfigureFirewall();
 #endif
 
 #if DEBUG
-            //get assembly of executable file
-            var assembly = Assembly.GetEntryAssembly();
+            String dsTestNamespace = "DiscoveryServices.Test";
 
-#if IS_IN_LUC
-            String dsTestAssebmlyName = "LUC.LUC.DiscoveryServices.Test";
-#else
-            String dsTestAssebmlyName = "DiscoveryService.Test";
-#endif
-
-            //if executable file does not use DS, then get
-            //running .dll (case when unit tests uses DS) 
-            if ( assembly != null )
-            {
-                m_isDsTest = assembly.FullName.Contains( dsTestAssebmlyName );
-            }
-            else
-            {
-                var stackTrace = new StackTrace();
-                m_isDsTest = stackTrace.ToString().Contains( dsTestAssebmlyName );
-            }
+            var stackTrace = new StackTrace();
+            m_isDsTest = stackTrace.ToString().Contains( dsTestNamespace );
 #else
             m_isDsTest = false;
 #endif
@@ -552,8 +515,6 @@ namespace LUC.DiscoveryServices
 
             NetworkEventInvoker.QueryReceived += ( invokerEvent, eventArgs ) => 
                 SendAcknowledgeTcpMessageAsync( eventArgs, IoBehavior.Synchronous ).ConfigureAwait( continueOnCapturedContext: false );
-
-            NetworkEventInvoker.AnswerReceived += AddEndpoint;
             NetworkEventInvoker.AnswerReceived += NetworkEventInvoker.Bootstrap;
             NetworkEventInvoker.NetworkInterfaceDiscovered += UpdateConnectionPoolAsync;
 

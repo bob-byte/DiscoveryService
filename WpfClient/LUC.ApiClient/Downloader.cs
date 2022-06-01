@@ -37,14 +37,14 @@ namespace LUC.ApiClient
 
         private static TimeSpan s_maxTimeToDownloadChunk = TimeSpan.FromMinutes( value: 2 );
 
-        private readonly DownloaderFromLocalNetwork m_downloaderFromLocalNetwork;
+        private readonly DownloaderFromLocalNetwork m_downloaderFromLan;
 
         private readonly IFileChangesQueue m_fileChangesQueue;
 
         public Downloader( ApiClient apiClient ) 
             : base( apiClient, apiClient.ObjectNameProvider )
         {
-            m_downloaderFromLocalNetwork = new DownloaderFromLocalNetwork( apiClient.DiscoveryService, IoBehavior.Asynchronous );
+            m_downloaderFromLan = new DownloaderFromLocalNetwork( apiClient.DiscoveryService, IoBehavior.Asynchronous );
 
             NotifyService = apiClient.NotifyService;
 
@@ -241,7 +241,7 @@ namespace LUC.ApiClient
                 try
                 {
                     AdsExtensions.WriteThatDownloadProcessIsStarted( downloadingFileInfo.PathWhereDownloadFileFirst );
-                    await m_downloaderFromLocalNetwork.DownloadFileAsync( downloadingFileInfo, m_fileChangesQueue ).ConfigureAwait( continueOnCapturedContext: false );
+                    await m_downloaderFromLan.DownloadFileAsync( downloadingFileInfo, m_fileChangesQueue ).ConfigureAwait( continueOnCapturedContext: false );
                 }
                 //when DS (DiscoveryService) doesn't find any node or node with required file
                 catch ( InvalidOperationException )
@@ -397,7 +397,7 @@ namespace LUC.ApiClient
         }
 
         private void VerifyAbilityToDownloadFile( String fullFileName, Int64 bytesCountOfFile, out String bestPlaceWhereDownloadFile ) =>
-            m_downloaderFromLocalNetwork.VerifyAbilityToDownloadFile( fullFileName, bytesCountOfFile, out bestPlaceWhereDownloadFile );
+            m_downloaderFromLan.VerifyAbilityToDownloadFile( fullFileName, bytesCountOfFile, out bestPlaceWhereDownloadFile );
 
         private void WriteResponseBytes(
             FileStream fileStream,
@@ -565,6 +565,9 @@ namespace LUC.ApiClient
 
         private void CancelDownloadFile( DownloadingFileInfo downloadingFileInfo )
         {
+            FileExtensions.UpdateAttributesOfBeforeDownloadingFile( downloadingFileInfo.PathWhereDownloadFileFirst );
+            SyncingObjectsList.TryDeleteFile( downloadingFileInfo.PathWhereDownloadFileFirst );
+
             downloadingFileInfo.IsDownloaded = true;
             SyncingObjectsList.RemoveDownloadingFile( downloadingFileInfo );
         }

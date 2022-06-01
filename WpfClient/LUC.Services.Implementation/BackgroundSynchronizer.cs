@@ -305,6 +305,7 @@ namespace LUC.Services.Implementation
         private void ResetSyncToServerCancellation()
         {
             //thread-safe reset m_cancelSyncToServer.IsCancellationRequested to false
+            //TODO: dispose previous m_cancelSyncToServer value
             Interlocked.Exchange( ref m_cancelSyncToServer, value: new CancellationTokenSource() );
         }
 

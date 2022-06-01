@@ -13,10 +13,11 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         /// <param name="version">
         /// Version of the file created by ADS
         /// </param>
-        public FileDownloadedEventArgs( String fullFileName, String version )
+        public FileDownloadedEventArgs( String fullFileName, String version, String guid )
         {
             FullFileName = fullFileName;
             Version = version;
+            Guid = guid;
         }
 
         /// <summary>
@@ -28,5 +29,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         /// Version of file created by ADS
         /// </summary>
         public String Version { get; }
+
+        public String Guid { get; }
     }
 }

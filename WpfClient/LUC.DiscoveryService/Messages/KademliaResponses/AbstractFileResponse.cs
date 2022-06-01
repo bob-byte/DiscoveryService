@@ -17,7 +17,12 @@ namespace LUC.DiscoveryServices.Messages.KademliaResponses
         protected AbstractFileResponse( BigInteger requestRandomId )
             : base( requestRandomId )
         {
-            FileExists = false;
+            ;
+        }
+
+        protected AbstractFileResponse()
+        {
+            ;
         }
 
         /// <value>

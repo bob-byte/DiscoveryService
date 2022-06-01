@@ -12,7 +12,8 @@ namespace LUC.DiscoveryServices.Common
 {
     internal static class Display
     {
-        public const String TABULATION = "\t";
+        public const Char TABULATION = '\t';
+        public const String TABULATION_AS_STR = "\t";
 
         public static String ResponseWithCloseContacts( Response response, ICollection<IContact> contacts )
         {
@@ -94,14 +95,10 @@ namespace LUC.DiscoveryServices.Common
                 {
                     if ( ( prop.PropertyType != typeof( String ) ) && typeof( IEnumerable ).IsAssignableFrom( prop.PropertyType ) )
                     {
-                        stringBuilder.Append( $"{initialTabulation}{TABULATION}{prop.Name}:\n" );
-
                         if ( prop.GetValue( objectToConvert ) is IEnumerable enumerable )
                         {
-                            foreach ( Object item in enumerable )
-                            {
-                                stringBuilder.Append( $"{initialTabulation}{TABULATION}{TABULATION}{item};\n" );
-                            }
+                            String tab = $"{initialTabulation}{TABULATION}";
+                            stringBuilder.Append( enumerable.ToString( tab, enumerableName: prop.Name, nameOfEachItem: String.Empty ) );
                         }
                     }
                     else
@@ -118,12 +115,33 @@ namespace LUC.DiscoveryServices.Common
             }
         }
 
+        public static String ToString(this IEnumerable enumerable, String initialTabulation, String enumerableName = "", String nameOfEachItem = "" )
+        {
+            String checkedEnumarableName = CheckedNameOfVariable( enumerableName, enumerable );
+
+            var stringBuilder = new StringBuilder( value: $"{initialTabulation}{checkedEnumarableName}:\n" );
+
+            foreach ( Object item in enumerable )
+            {
+                String itemAsStr = item?.ToString();
+
+                String tab = $"{initialTabulation}{TABULATION}";
+                itemAsStr = ( itemAsStr != null ) && itemAsStr.Equals( item.GetType().FullName, StringComparison.Ordinal ) ?
+                    item.ToString( tab, nameOfEachItem ) :
+                    $"{tab}{itemAsStr};";
+
+                stringBuilder.Append( $"{itemAsStr}\n" );
+            }
+
+            return stringBuilder.ToString();
+        }
+
         /// <summary>
         /// With tabulation in start
         /// </summary>
         internal static String VariableWithValue<T>( String nameProp, T value, Boolean useTab = true )
         {
-            String tab = useTab ? TABULATION : String.Empty;
+            String tab = useTab ? TABULATION_AS_STR : String.Empty;
 
             String propertyWithValue = $"{tab}{nameProp} = {value}";
             return propertyWithValue;

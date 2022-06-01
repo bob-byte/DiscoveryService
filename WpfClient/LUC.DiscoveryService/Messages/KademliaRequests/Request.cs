@@ -47,7 +47,7 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
             IsReceivedLastRightResp = false;
         }
 
-        public BigInteger RandomID { get; private set; }
+        public BigInteger RandomID { get; protected set; }
 
         public BigInteger SenderKadId { get; set; }
 

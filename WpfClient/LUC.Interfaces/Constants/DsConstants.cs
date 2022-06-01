@@ -21,7 +21,14 @@ namespace LUC.Interfaces.Constants
         /// 2 MB
         /// </value>
         public const Int32 MAX_CHUNK_SIZE = 2000000;
-        public const Int32 MAX_CHUNK_READ_PER_ONE_TIME = 64 * 1024;
+
+        /// <summary>
+        /// <a href="http://www.regatta.cs.msu.su/doc/usr/share/man/info/ru_RU/a_doc_lib/aixbman/prftungd/2365c93.htm">
+        /// Performance tuning guide
+        /// </a>
+        /// </summary>
+        public const Int32 MAX_CHUNK_READ_PER_ONE_TIME = 4096;
+
         public const Int32 MAX_AVAILABLE_READ_BYTES = (Int32)( MAX_CHUNK_SIZE * 1.5 );
 
         public const Int32 B = 5;

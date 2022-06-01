@@ -22,6 +22,12 @@ namespace LUC.DiscoveryServices.Messages.KademliaResponses
             DefaultInit();
         }
 
+        //To use map from CheckFileExistsResponse
+        public DownloadChunkResponse()
+        {
+            DefaultInit();
+        }
+
         //It is internal to not show all bytes in log(see method Display.ObjectToString)
         internal Byte[] Chunk { get; set; }
 

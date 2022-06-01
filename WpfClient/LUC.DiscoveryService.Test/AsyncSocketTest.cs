@@ -20,7 +20,7 @@ namespace LUC.DiscoveryServices.Test
     class AsyncSocketTest
     {
         [Test]
-        public void Connect_RemoteEndPointIsNull_GetException()
+        public void Connect_RemoteEndPointIsNull_GetArgumentNullException()
         {
             AsyncSocket dsSocket = InitializedTcpSocket();
 
@@ -30,7 +30,7 @@ namespace LUC.DiscoveryServices.Test
         }
 
         [Test]
-        public void ConnectAsync_RemoteEndPointIsNull_GetException()
+        public void ConnectAsync_RemoteEndPointIsNull_GetArgumentNullException()
         {
             AsyncSocket dsSocket = InitializedTcpSocket();
 
@@ -40,7 +40,7 @@ namespace LUC.DiscoveryServices.Test
         }
 
         [Test]
-        public void SendAsync_WithoutSettingConnection_ThrowSocketException()
+        public void SendAsync_WithoutSettingConnection_GetSocketException()
         {
             AsyncSocket socket = InitializedTcpSocket();
 
