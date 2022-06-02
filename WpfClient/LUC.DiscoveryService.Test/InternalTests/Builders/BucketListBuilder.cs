@@ -33,6 +33,7 @@ namespace LUC.DiscoveryServices.Test.InternalTests.Builders
                     {
                         var contactSeeded = new ContactBuilder( m_discoveryService, BuildContactRequest.Dummy );
                         IContact dummyContact = contactSeeded.Create<IContact>();
+
                         createdObject = new BucketList( KademliaId.RandomIDInKeySpace, dummyContact, m_discoveryService.ProtocolVersion );
 
                         break;

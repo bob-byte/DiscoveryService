@@ -51,7 +51,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                 foreach ( IContact contact in contactsWithFile )
                 {
                     //here small chunk is full file, because this file has length less than Constants.MaxChunkSize
-                    (isRightDownloaded, _) = await DownloadProcessSmallChunkAsync( contact, request, fileStream, cancellationToken, downloadProgress ).ConfigureAwait( continueOnCapturedContext: false );
+                    (isRightDownloaded, _) = await DownloadProcessSmallChunkAsync( contact, request, fileStream, IOBehavior, cancellationToken, downloadProgress ).ConfigureAwait( continueOnCapturedContext: false );
 
                     if ( isRightDownloaded )
                     {
@@ -81,6 +81,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             IContact remoteContact,
             DownloadChunkRequest downloadFileRequest,
             FileStream fileStream,
+            IoBehavior ioBehavior,
             CancellationToken cancellationToken,
             IProgress<FileDownloadProgressArgs> downloadProgress
         )
@@ -89,7 +90,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             var lastRequest = (DownloadChunkRequest)downloadFileRequest.Clone();
 
             (DownloadChunkResponse response, _, Boolean isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate
-                    ( remoteContact, IOBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
+                    ( remoteContact, ioBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -181,6 +182,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                                          contactWithRequest.Request,
                                          contactWithRequest.ChunkRanges,
                                          fileStream,
+                                         IoBehavior.Synchronous,//otherwise we will have too many tasks
                                          cancellationToken,
                                          downloadProgress
                                      ).ConfigureAwait( continueOnCapturedContext: false );
@@ -283,6 +285,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             DownloadChunkRequest request,
             List<ChunkRange> chunkRanges,
             FileStream fileStream,
+            IoBehavior ioBehavior,
             CancellationToken cancellationToken,
             IProgress<FileDownloadProgressArgs> downloadProgress
         )
@@ -293,11 +296,11 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
 
             if ( request.ChunkRange.TotalPerContact <= DsConstants.MAX_CHUNK_SIZE )
             {
-                (isDownloadedAnyChunk, updatedRequest) = await DownloadProcessSmallChunkAsync( contact, request, fileStream, cancellationToken, downloadProgress ).ConfigureAwait( continueOnCapturedContext: false );
+                (isDownloadedAnyChunk, updatedRequest) = await DownloadProcessSmallChunkAsync( contact, request, fileStream, ioBehavior, cancellationToken, downloadProgress ).ConfigureAwait( continueOnCapturedContext: false );
             }
             else
             {
-                (updatedRequest, isDownloadedAnyChunk) = await DownloadBigTotalPerContactBytesAsync( contact, request, chunkRanges, fileStream, cancellationToken, downloadProgress ).ConfigureAwait( false );
+                (updatedRequest, isDownloadedAnyChunk) = await DownloadBigTotalPerContactBytesAsync( contact, request, chunkRanges, fileStream, ioBehavior, cancellationToken, downloadProgress ).ConfigureAwait( false );
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -310,6 +313,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             DownloadChunkRequest sampleRequest,
             List<ChunkRange> chunkRangesPerContact,
             Stream fileStream,
+            IoBehavior ioBehavior,
             CancellationToken cancellationToken,
             IProgress<FileDownloadProgressArgs> downloadProgress
         )
@@ -325,7 +329,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                 lastRequest.ChunkRange = chunkRangesPerContact[ numChunkPerContact ];
 
                 DownloadChunkResponse response;
-                (response, _, isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate( remoteContact, IOBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
+                (response, _, isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate( remoteContact, ioBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
                 cancellationToken.ThrowIfCancellationRequested();
 

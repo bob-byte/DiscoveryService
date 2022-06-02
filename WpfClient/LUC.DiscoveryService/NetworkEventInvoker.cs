@@ -6,8 +6,6 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Numerics;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,10 +13,8 @@ using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Common.Extensions;
 using LUC.DiscoveryServices.Interfaces;
 using LUC.DiscoveryServices.Kademlia;
-using LUC.DiscoveryServices.Kademlia.Routers;
 using LUC.DiscoveryServices.Messages;
 using LUC.DiscoveryServices.Messages.KademliaRequests;
-using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 
 using Nito.AsyncEx;
@@ -186,7 +182,7 @@ namespace LUC.DiscoveryServices
 
             OurContact = new Contact( MachineId, KademliaId.Random(), RunningTcpPort, bucketLocalNames );
             var distributedHashTable = new Dht( OurContact, ProtocolVersion,
-                storageFactory: () => new VirtualStorage(), new ParallelRouter( ProtocolVersion ) );
+                storageFactory: () => new VirtualStorage() );
             s_dhts.TryAdd( protocolVersion, distributedHashTable );
 
             m_networkInterfacesFilter = filter;

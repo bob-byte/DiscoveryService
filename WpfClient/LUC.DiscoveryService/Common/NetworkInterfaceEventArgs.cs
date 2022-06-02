@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 
-namespace LUC.DiscoveryServices
+namespace LUC.DiscoveryServices.Common
 {
     /// <summary>
     ///   The event data for <see cref="MulticastService.NetworkInterfaceDiscovered"/>.

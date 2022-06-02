@@ -1,4 +1,4 @@
-﻿#define DOES_CONTAINER_USE
+﻿//#define DOES_CONTAINER_USE
 //#define IS_IN_LUC
 
 using LUC.DiscoveryServices.Common;
@@ -456,14 +456,10 @@ namespace LUC.DiscoveryServices
             ConfigureFirewall();
 #endif
 
-#if DEBUG
             String dsTestNamespace = "DiscoveryServices.Test";
 
             var stackTrace = new StackTrace();
             m_isDsTest = stackTrace.ToString().Contains( dsTestNamespace );
-#else
-            m_isDsTest = false;
-#endif
 
             m_localBuckets = profile.GroupsSupported;
 

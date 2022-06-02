@@ -133,7 +133,7 @@
     <Compile Include="Common\Extensions\IpAddressExtension.SockAddrIn6.cs" />
     <Compile Include="Common\ForcingConcurrencyError.cs" />
     <Compile Include="DiscoveryServiceFacade.cs" />
-    <Compile Include="DsLogger.cs" />
+    <Compile Include="Common\DsLogger.cs" />
     <Compile Include="Interfaces\ListenersCollection.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.Clear.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.GetConnectedSockets.cs" />
@@ -209,17 +209,13 @@
     <Compile Include="Messages\AcknowledgeTcpMessage.cs" />
     <Compile Include="CodingData\WireReader.cs" />
     <Compile Include="CodingData\WireWriter.cs" />
-    <Compile Include="Kademlia\Routers\BaseRouter.cs" />
     <Compile Include="Kademlia\BucketList.cs" />
     <Compile Include="Kademlia\Contact.cs" />
-    <Compile Include="Kademlia\ContactQueueItem.cs" />
     <Compile Include="Kademlia\Dht.cs" />
     <Compile Include="Kademlia\Exceptions\BucketDoesNotContainContactToEvict.cs" />
-    <Compile Include="Kademlia\FindResult.cs" />
     <Compile Include="Kademlia\Interfaces\IStorage.cs" />
     <Compile Include="Kademlia\KBucket.cs" />
     <Compile Include="Kademlia\Node.cs" />
-    <Compile Include="Kademlia\Routers\ParallelRouter.cs" />
     <Compile Include="Kademlia\RpcError.cs" />
     <Compile Include="Kademlia\StoreValue.cs" />
     <Compile Include="Kademlia\VirtualStorage.cs" />
@@ -227,7 +223,7 @@
     <Compile Include="Messages\Message.cs" />
     <Compile Include="Messages\MessageOperation.cs" />
     <Compile Include="Messages\RecentMessages.cs" />
-    <Compile Include="NetworkInterfaceEventArgs.cs" />
+    <Compile Include="Common\NetworkInterfaceEventArgs.cs" />
     <Compile Include="NetworkEventInvoker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DiscoveryService.cs" />

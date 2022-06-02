@@ -39,7 +39,7 @@ namespace LUC.DiscoveryServices.Kademlia
         [JsonIgnore]
         public IDht Dht { get; set; }
 
-#if DEBUG       // For unit testing
+        // For unit testing
         public BucketList( KademliaId id, IContact dummyContact, UInt16 protocolVersion )
             : base( protocolVersion )
         {
@@ -52,7 +52,6 @@ namespace LUC.DiscoveryServices.Kademlia
                 new KBucket()
             };
         }
-#endif
 
         /// <summary>
         /// For serialization.
