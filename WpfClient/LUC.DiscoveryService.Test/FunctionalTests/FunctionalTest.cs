@@ -18,8 +18,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Management.Automation;
 using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -523,15 +525,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                     script = webClient.DownloadString( pathToPowercatScript );
                 }
 
-                try
-                {
-                    powerShell.AddScript( script ).AddScript( "Invoke-Method" ).Invoke();
-                }
-                catch ( ParseException )
-                {
-                    throw;
-                }
-
+                powerShell.AddScript( script ).AddScript( "Invoke-Method" ).Invoke();
                 powerShell.AddCommand( cmdlet: "powercat" );
 
                 Dictionary<String, Object> parameters = PowercatParameters();
@@ -562,21 +556,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
         {
             var parameters = new Dictionary<String, Object>();
 
-            IPAddress serverIpAddress = null;
-            do
-            {
-                Console.Write( "Input IP-address of a Discovery Service TCP server to connect: " );
-
-                try
-                {
-                    serverIpAddress = IPAddress.Parse( Console.ReadLine() );
-                }
-                catch ( FormatException ex )
-                {
-                    Console.WriteLine( ex.Message );
-                }
-            }
-            while ( serverIpAddress == null );
+            IPAddress serverIpAddress = s_discoveryService.NetworkEventInvoker.ReachableIpAddresses.First( c => c.AddressFamily == AddressFamily.InterNetwork );
 
             parameters.Add( key: "c", value: serverIpAddress.ToString() );
             parameters.Add( "p", s_discoveryService.RunningTcpPort.ToString() );
@@ -593,7 +573,5 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
             return parameters;
         }
-
-
     }
 }

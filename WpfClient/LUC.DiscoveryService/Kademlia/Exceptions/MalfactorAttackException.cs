@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryServices.Kademlia.Exceptions
 {
-    internal class MalfactorAttackException : RpcException
+    internal class MalfactorAttackException : Exception
     {
         public MalfactorAttackException() 
         {

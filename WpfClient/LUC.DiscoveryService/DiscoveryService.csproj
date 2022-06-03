@@ -166,15 +166,9 @@
     <Compile Include="Kademlia\ClientPool\SocketHealth.cs" />
     <Compile Include="Kademlia\KadLocalTcp.cs" />
     <Compile Include="Kademlia\Exceptions\FilePartiallyDownloadedException.cs" />
-    <Compile Include="Kademlia\Exceptions\IDMismatchException.cs" />
-    <Compile Include="Kademlia\Exceptions\NoNonEmptyBucketsException.cs" />
-    <Compile Include="Kademlia\Exceptions\NotContactException.cs" />
-    <Compile Include="Kademlia\Exceptions\NullIDException.cs" />
     <Compile Include="Kademlia\Exceptions\OurNodeCannotBeAContactException.cs" />
-    <Compile Include="Kademlia\Exceptions\RpcException.cs" />
     <Compile Include="Kademlia\Exceptions\SendingQueryToSelfException.cs" />
     <Compile Include="Kademlia\Exceptions\TooManyContactsException.cs" />
-    <Compile Include="Kademlia\Exceptions\ValueCannotBeNullException.cs" />
     <Compile Include="Kademlia\Interfaces\IBucketList.cs" />
     <Compile Include="Kademlia\Interfaces\IDht.cs" />
     <Compile Include="Kademlia\Interfaces\INode.cs" />
@@ -251,12 +245,6 @@
     </PackageReference>
     <PackageReference Include="Nito.AsyncEx">
       <Version>5.1.2</Version>
-    </PackageReference>
-    <PackageReference Include="PostSharp">
-      <Version>6.10.6</Version>
-    </PackageReference>
-    <PackageReference Include="PostSharp.Patterns.Threading">
-      <Version>6.10.6</Version>
     </PackageReference>
     <PackageReference Include="Serilog.Sinks.File">
       <Version>5.0.0</Version>

@@ -15,11 +15,11 @@ namespace LUC.DiscoveryServices.Messages
         /// <summary>
         /// Maximum bytes of a message.
         /// </summary>
-#if !DEBUG
-        public const Int32 MAX_LENGTH = 60;
-#else
+#if DEBUG
         //Machine ID can be with guid in DS.Test 
-        public const Int32 MAX_LENGTH = 100;
+        public const Int32 MAX_LENGTH = 88;
+#else
+        public const Int32 MAX_LENGTH = 60;
 #endif
 
         /// <summary>

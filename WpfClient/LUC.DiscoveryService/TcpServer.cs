@@ -806,13 +806,6 @@ namespace LUC.DiscoveryServices
             }
         }
 
-        // Use C# destructor syntax for finalization code.
-        ~TcpServer()
-        {
-            // Simply call Dispose(false).
-            Dispose( false );
-        }
-
         #endregion
     }
 }

@@ -69,14 +69,7 @@ namespace LUC.DiscoveryServices.Test.InternalTests.Builders
                     {
                         DefineBasicParameters( out String machineId, out IEnumerable<String> bucketsSupported );
 
-                        try
-                        {
-                            if ( default( BigInteger ) == m_contactId )
-                            {
-                                m_contactId = KademliaId.RandomIDInKeySpace;
-                            }
-                        }
-                        catch ( NullIDException )
+                        if ( default( BigInteger ) == m_contactId )
                         {
                             m_contactId = KademliaId.RandomIDInKeySpace;
                         }
