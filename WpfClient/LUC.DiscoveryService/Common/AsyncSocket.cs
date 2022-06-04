@@ -20,7 +20,7 @@ namespace LUC.DiscoveryServices.Common
     /// <remarks>
     /// New socket methods are marked <a href="Ds"/> in the front of the name, so <see cref="State"/> property will be changed only there.
     /// </remarks>
-    public class AsyncSocket : Socket
+    public partial class AsyncSocket : Socket
     {
         private Int32 m_state;
 

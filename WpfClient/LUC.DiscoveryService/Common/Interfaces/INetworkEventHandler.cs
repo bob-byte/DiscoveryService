@@ -2,7 +2,7 @@
 
 using System;
 
-namespace LUC.DiscoveryServices.Interfaces
+namespace LUC.DiscoveryServices.Common.Interfaces
 {
     interface INetworkEventHandler
     {

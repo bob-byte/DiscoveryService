@@ -34,7 +34,6 @@ namespace LUC.DiscoveryServices
 {
     /// <summary>
     ///   LightUpon.Cloud Service Discovery maintens the list of IP addresses in LAN. 
-    ///   Realizes Singleton pattern per <seealso cref="AbstractDsData.ProtocolVersion"/>
     /// </summary>
     [Export( typeof( IDiscoveryService ) )]
     public class DiscoveryService : AbstractDsData, IDiscoveryService
@@ -77,19 +76,87 @@ namespace LUC.DiscoveryServices
         /// <param name="currentUserProvider">
         /// Logged user to LUC app
         /// </param>
-        private DiscoveryService( ServiceProfile profile, ICurrentUserProvider currentUserProvider )
+        private DiscoveryService( String machineId, UInt16 protocolVersion, Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, String> groups, ICurrentUserProvider currentUserProvider )
         {
-            if ( ( profile != null ) && ( currentUserProvider != null ) )
-            {
-                InitDiscoveryService( profile );
+            #region Check parameters
+            Boolean osSupportsIPv4 = Socket.OSSupportsIPv4;
+            Boolean osSupportsIPv6 = Socket.OSSupportsIPv6;
 
-                CurrentUserProvider = currentUserProvider;
-            }
-            else
+            String baseLogRecord = $"Underlying OS or network adapters don't support";
+            if ( useIpv4 && !osSupportsIPv4 )
             {
-                throw new ArgumentNullException( nameof( profile ) );
+                throw new ArgumentException( message: $"{baseLogRecord} IPv4", paramName: nameof( useIpv4 ) );
             }
+            else if ( useIpv6 && !osSupportsIPv6 )
+            {
+                throw new ArgumentException( $"{baseLogRecord} IPv6", paramName: nameof( useIpv6 ) );
+            }
+            #endregion
+
+            DefaultInit( machineId, protocolVersion, useIpv4, useIpv6, groups, currentUserProvider );
         }
+
+        private DiscoveryService( String machineId, UInt16 protocolVersion, ConcurrentDictionary<String, String> groups, ICurrentUserProvider currentUserProvider )
+        {
+            Boolean osSupportsIPv4 = Socket.OSSupportsIPv4;
+            Boolean osSupportsIPv6 = Socket.OSSupportsIPv6;
+
+            String baseLogRecord = "Doesn't support ";
+            if ( !osSupportsIPv4 )
+            {
+                DsLoggerSet.DefaultLogger.LogFatal( message: $"{baseLogRecord} IPv4" );
+            }
+
+            if ( !osSupportsIPv6 )
+            {
+                DsLoggerSet.DefaultLogger.LogFatal( $"{baseLogRecord} IPv6" );
+            }
+
+            DefaultInit( machineId, protocolVersion, osSupportsIPv4, osSupportsIPv6, groups, currentUserProvider );
+        }
+
+        private void DefaultInit( String machineId, UInt16 protocolVersion, Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, String> groups, ICurrentUserProvider currentUserProvider )
+        {
+            #region Check parameters
+            if ( machineId == null )
+            {
+                throw new ArgumentNullException( nameof( machineId ) );
+            }
+            else if ( !useIpv4 && !useIpv6 )
+            {
+                throw new ArgumentException( message: $"{nameof( useIpv4 )} and {nameof( useIpv6 )} aren't in use, so {nameof( DiscoveryService )} will do nothing" );
+            }
+            else if( groups == null )
+            {
+                throw new ArgumentNullException( nameof( groups ) );
+            }
+            else if ( currentUserProvider == null )
+            {
+                throw new ArgumentNullException( nameof( currentUserProvider ) );
+            }
+            #endregion
+
+#if !IS_IN_LUC && !DOES_CONTAINER_USE
+            ConfigureFirewall();
+#endif
+
+            String dsTestNamespace = "DiscoveryServices.Test";
+
+            var stackTrace = new StackTrace();
+            m_isDsTest = stackTrace.ToString().Contains( dsTestNamespace );
+
+            m_localBuckets = groups;
+
+            UseIpv4 = useIpv4;
+            UseIpv6 = useIpv6;
+            ProtocolVersion = protocolVersion;
+            MachineId = machineId;
+
+            m_connectionPool = ConnectionPool.Instance;
+
+            CurrentUserProvider = currentUserProvider;
+        }
+
 
         /// <inheritdoc/>
         public ConcurrentDictionary<String, String> LocalBuckets =>
@@ -125,14 +192,11 @@ namespace LUC.DiscoveryServices
         }
 
         /// <summary>
-        /// Get a new instance of the <seealso cref="DiscoveryService"/> class with the same protocol version. 
-        /// If it has not been created before with this protocol version, it will be initialized
+        /// Get an instance of the <seealso cref="DiscoveryService"/> class with some <paramref name="protocolVersion"/>. 
+        /// If it has not been created before with this parameter, it will be initialized
         /// </summary>
-        /// <param name="profile">
-        /// <seealso cref="DiscoveryService"/> settings
-        /// </param>
-        public static DiscoveryService Instance( ServiceProfile serviceProfile, ICurrentUserProvider currentUserProvider ) =>
-            Instance( serviceProfile, () => new DiscoveryService( serviceProfile, currentUserProvider ) );
+        public static DiscoveryService Instance( String machineId, UInt16 protocolVersion, ICurrentUserProvider currentUserProvider, ConcurrentDictionary<String, String> userGroups ) =>
+            Instance( protocolVersion, userGroups, () => new DiscoveryService( machineId, protocolVersion, userGroups, currentUserProvider ) );
 
         /// <summary>
         /// Get before created instance of the <seealso cref="DiscoveryService"/> class
@@ -393,30 +457,25 @@ namespace LUC.DiscoveryServices
             }
         }
 
-        private static DiscoveryService Instance( ServiceProfile serviceProfile, Func<DiscoveryService> creator )
+        private static DiscoveryService Instance( UInt16 protocolVersion, ConcurrentDictionary<String, String> groups, Func<DiscoveryService> creator )
         {
-            if ( serviceProfile != null )
+            Boolean isAppreciateDsAlreadyCreated = s_instances.TryGetValue( protocolVersion, out DiscoveryService takenDiscoveryService );
+
+            if ( isAppreciateDsAlreadyCreated )
             {
-                Boolean isAppreciateDsAlreadyCreated = s_instances.TryGetValue( serviceProfile.ProtocolVersion, out DiscoveryService takenDiscoveryService );
-                if ( isAppreciateDsAlreadyCreated )
-                {
-                    takenDiscoveryService.ReplaceAllBuckets(serviceProfile.GroupsSupported);
-                }
-                else
-                {
-                    DiscoveryService newDs = creator();
-                    s_instances.AddOrUpdate(serviceProfile.ProtocolVersion, (protocolVersion) => newDs, (protocolVersion, previousDs) => newDs);
-
-                    //to get last initialized DS
-                    s_instances.TryGetValue(serviceProfile.ProtocolVersion, out takenDiscoveryService);
-                }
-
-                return takenDiscoveryService;
+                ConcurrentDictionary<String, String> validGroups = groups ?? new ConcurrentDictionary<String, String>();
+                takenDiscoveryService.ReplaceAllBuckets( validGroups );
             }
             else
             {
-                throw new ArgumentNullException( nameof( serviceProfile ) );
+                DiscoveryService newDs = creator();
+                s_instances.AddOrUpdate( protocolVersion, _ => newDs, ( _, previousDs ) => newDs );
+
+                //to get last initialized DS
+                s_instances.TryGetValue( protocolVersion, out takenDiscoveryService );
             }
+
+            return takenDiscoveryService;
         }
 
         private void ConfigureFirewall()
@@ -448,27 +507,6 @@ namespace LUC.DiscoveryServices
                 DsLoggerSet.DefaultLogger.LogCriticalError( message: $"{appName} cannot be granted in private networks", ex );
                 throw;
             }
-        }
-
-        private void InitDiscoveryService( ServiceProfile profile )
-        {
-#if !IS_IN_LUC && !DOES_CONTAINER_USE
-            ConfigureFirewall();
-#endif
-
-            String dsTestNamespace = "DiscoveryServices.Test";
-
-            var stackTrace = new StackTrace();
-            m_isDsTest = stackTrace.ToString().Contains( dsTestNamespace );
-
-            m_localBuckets = profile.GroupsSupported;
-
-            UseIpv4 = profile.UseIpv4;
-            UseIpv6 = profile.UseIpv6;
-            ProtocolVersion = profile.ProtocolVersion;
-            MachineId = profile.MachineId;
-
-            m_connectionPool = ConnectionPool.Instance;
         }
 
         private void TryFindNewServicesTick( Object timerState )

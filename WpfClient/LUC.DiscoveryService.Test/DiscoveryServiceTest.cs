@@ -13,6 +13,7 @@ using LUC.Services.Implementation;
 using NUnit.Framework;
 
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -89,8 +90,15 @@ namespace LUC.DiscoveryServices.Test
         }
 
         [Test]
-        public void Ctor_PassNullPar_GetArgumentNullException() => Assert.That( code: (TestDelegate)( () => m_discoveryService = DiscoveryService.Instance( null, null ) ),
-            constraint: Throws.TypeOf( expectedType: typeof( ArgumentNullException ) ) );
+        public void Ctor_PassNullPar_GetArgumentNullException() => Assert.That( 
+            code: () => m_discoveryService = DiscoveryService.Instance(
+               null,
+               GeneralConstants.PROTOCOL_VERSION,
+               null,
+               null
+            ),
+            constraint: Throws.TypeOf( expectedType: typeof( ArgumentNullException ) )
+        );
 
 #if !RECEIVE_UDP_FROM_OURSELF
         [Test]
@@ -230,7 +238,12 @@ namespace LUC.DiscoveryServices.Test
         [Test]
         public void Instance_CreateOneMoreInstanceOfDsAndCompareMachineId_TheSameMachineId()
         {
-            DiscoveryService discoveryService2 = DiscoveryService.Instance( new ServiceProfile( MachineId.Create(), useIpv4: true, useIpv6: true, protocolVersion: 2 ), DsSetUpTests.CurrentUserProvider );
+            var discoveryService2 = DiscoveryService.Instance(
+                MachineId.Create(),
+                GeneralConstants.PROTOCOL_VERSION + 1,
+                DsSetUpTests.CurrentUserProvider,
+                userGroups: new ConcurrentDictionary<String, String>()
+            );
 
             Assert.IsTrue( m_discoveryService.MachineId == discoveryService2.MachineId );
         }

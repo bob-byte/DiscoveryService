@@ -68,7 +68,7 @@ namespace LUC.DiscoveryServices
                         }
                     }
 
-                    m_isListening = true;
+                    m_isListening = Listeners.All( c => c.Client.IsBound ) && ( Listeners.Count > 0 );
                 }
             }
             else

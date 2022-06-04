@@ -60,7 +60,7 @@ namespace LUC.DiscoveryServices
                         }
                     }
 
-                    m_isListening = true;
+                    m_isListening = Listeners.All( c => c.IsStarted ) && ( Listeners.Count > 0 );
                 }
             }
             else

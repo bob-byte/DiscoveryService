@@ -112,6 +112,8 @@ namespace LUC.DiscoveryServices
         /// </summary>
         private readonly AsyncLock m_asyncLock;
 
+        private readonly List<AddressFamily> m_supportedAddressFamilies;
+
         /// <summary>
         ///   Function used for listening filtered network interfaces.
         /// </summary>
@@ -176,8 +178,20 @@ namespace LUC.DiscoveryServices
             m_receivedMessages = new RecentMessages();
 
             MachineId = machineId;
+
+            m_supportedAddressFamilies = new List<AddressFamily>();
             UseIpv4 = useIpv4;
+            if(useIpv4)
+            {
+                m_supportedAddressFamilies.Add( AddressFamily.InterNetwork );
+            }
+
             UseIpv6 = useIpv6;
+            if ( useIpv6 )
+            {
+                m_supportedAddressFamilies.Add( AddressFamily.InterNetworkV6 );
+            }
+
             ProtocolVersion = protocolVersion;
 
             OurContact = new Contact( MachineId, KademliaId.Random(), RunningTcpPort, bucketLocalNames );
@@ -403,16 +417,28 @@ namespace LUC.DiscoveryServices
                     {
                         try
                         {
-                            var multicastMessage = new MulticastMessage(
-                                messageId: (UInt32)m_random.Next( minValue: 0, Int32.MaxValue ),
-                                ProtocolVersion,
-                                RunningTcpPort,
-                                MachineId
-                            );
-                            Byte[] packet = multicastMessage.ToByteArray();
+                            Boolean isFirstSend = true;
 
-                            DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started send UDP messages. Their content:\n{multicastMessage}" );
-                            await m_udpSenders.SendMulticastsAsync( packet, ioBehavior ).ConfigureAwait( false );
+                            foreach ( AddressFamily addressFamily in m_supportedAddressFamilies)
+                            {
+                                var multicastMessage = new MulticastMessage(
+                                    messageId: (UInt32)m_random.Next( minValue: 0, Int32.MaxValue ),
+                                    ProtocolVersion,
+                                    RunningTcpPort,
+                                    MachineId
+                                );
+
+                                if ( isFirstSend )
+                                {
+                                    DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started send UDP messages. Their content:\n{multicastMessage}" );
+                                }
+
+                                Byte[] packet = multicastMessage.ToByteArray();
+                                await m_udpSenders.SendMulticastsAsync( packet, ioBehavior, addressFamily ).ConfigureAwait( false );
+
+                                isFirstSend = false;
+                            }
+                            
                             DsLoggerSet.DefaultLogger.LogInfo( "Finished send UDP messages" );
                         }
                         catch ( Exception ex )

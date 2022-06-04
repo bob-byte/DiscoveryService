@@ -121,8 +121,6 @@
     <Compile Include="Common\Display.cs" />
     <Compile Include="Common\Extensions\AsyncAutoResetEventExtension.cs" />
     <Compile Include="Common\Extensions\AsyncLockExtension.cs" />
-    <Compile Include="Common\Extensions\DictionaryEqualityComparer.cs" />
-    <Compile Include="Common\Extensions\EventWaitHandleExtension.cs" />
     <Compile Include="Common\Extensions\IDictionaryExtension.cs" />
     <Compile Include="Common\Extensions\NetworkInterfaceExtension.cs" />
     <Compile Include="Common\Extensions\RandomExtension.cs" />
@@ -134,7 +132,7 @@
     <Compile Include="Common\ForcingConcurrencyError.cs" />
     <Compile Include="DiscoveryServiceFacade.cs" />
     <Compile Include="Common\DsLogger.cs" />
-    <Compile Include="Interfaces\ListenersCollection.cs" />
+    <Compile Include="Common\ListenersCollection.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.Clear.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.GetConnectedSockets.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.RecoverConnections.cs" />
@@ -155,14 +153,14 @@
     <Compile Include="Common\AsyncSocket.cs" />
     <Compile Include="Kademlia\Downloads\DownloaderFromLocalNetwork.DownloadProcess.cs" />
     <Compile Include="Kademlia\Downloads\DownloaderFromLocalNetwork.DownloadingFile.cs" />
-    <Compile Include="Interfaces\INetworkEventHandler.cs" />
-    <Compile Include="Interfaces\IWireSerialiser.cs" />
+    <Compile Include="Common\Interfaces\INetworkEventHandler.cs" />
+    <Compile Include="Common\Interfaces\IWireSerialiser.cs" />
     <Compile Include="Kademlia\AbstractKademlia.cs" />
     <Compile Include="Kademlia\ClientPool\BackgroundConnectionResetHelper.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionPool.Socket.cs" />
     <Compile Include="Kademlia\ClientPool\ConnectionSettings.cs" />
-    <Compile Include="Common\IOBehavior.cs" />
+    <Compile Include="Common\IoBehavior.cs" />
     <Compile Include="Kademlia\ClientPool\SocketHealth.cs" />
     <Compile Include="Kademlia\KadLocalTcp.cs" />
     <Compile Include="Kademlia\Exceptions\FilePartiallyDownloadedException.cs" />
@@ -174,7 +172,7 @@
     <Compile Include="Kademlia\Interfaces\INode.cs" />
     <Compile Include="Messages\KademliaRequests\AbstractFileRequest.cs" />
     <Compile Include="Messages\KademliaRequests\CheckFileExistsRequest.cs" />
-    <Compile Include="Messages\ChunkRange.cs" />
+    <Compile Include="Common\ChunkRange.cs" />
     <Compile Include="Messages\KademliaRequests\DownloadChunkRequest.cs" />
     <Compile Include="Messages\KademliaResponses\AbstractFileResponse.cs" />
     <Compile Include="Messages\KademliaResponses\CheckFileExistsResponse.cs" />
@@ -221,8 +219,7 @@
     <Compile Include="NetworkEventInvoker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DiscoveryService.cs" />
-    <Compile Include="ServiceProfile.cs" />
-    <Compile Include="Common\StateObjectForAccept.cs" />
+    <Compile Include="Common\AsyncSocket.StateObjectForAccept.cs" />
     <Compile Include="TcpServer.cs" />
     <Compile Include="TcpSession.cs" />
     <Compile Include="UdpListenersCollection.cs" />
@@ -295,6 +292,10 @@
       <Project>{2706edd4-0304-4824-a331-7403d2b54eba}</Project>
       <Name>LUC.Services.Implementation</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram1.cd" />
+    <None Include="ClassDiagram2.cd" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

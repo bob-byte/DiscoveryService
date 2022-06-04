@@ -8,7 +8,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LUC.DiscoveryServices.Interfaces
+namespace LUC.DiscoveryServices.Common
 {
     internal abstract class ListenersCollection<TEventArgs, TListener> : IDisposable
         where TEventArgs : MessageEventArgs

@@ -5,7 +5,7 @@ using System;
 namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
-    /// <b>Abstract</b> class for messages
+    /// <b>Abstract</b> class for discovery messages
     /// </summary>
     internal abstract class DiscoveryMessage : Message
     {

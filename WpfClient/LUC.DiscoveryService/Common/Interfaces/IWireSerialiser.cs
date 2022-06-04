@@ -3,7 +3,7 @@ using System.IO;
 
 using LUC.DiscoveryServices.Messages;
 
-namespace LUC.DiscoveryServices.Interfaces
+namespace LUC.DiscoveryServices.Common.Interfaces
 {
     interface IWireSerialiser
     {

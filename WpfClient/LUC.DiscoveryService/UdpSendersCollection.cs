@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -124,6 +125,9 @@ namespace LUC.DiscoveryServices
             );
         }
 
+        public Task SendMulticastsAsync( Byte[] packet, IoBehavior ioBehavior, AddressFamily addressFamily ) =>
+            SendMulticastsAsync( packet, ioBehavior, m_sendersUdp.Where( c => c.Key.AddressFamily == addressFamily ) );
+
         /// <summary>
         /// It sends udp messages from each address, which is initialized in this class
         /// </summary>
@@ -133,9 +137,12 @@ namespace LUC.DiscoveryServices
         /// <returns>
         /// Task which allow to see any exception. Async void method doens't allow it
         /// </returns>
-        public async Task SendMulticastsAsync( Byte[] packet, IoBehavior ioBehavior )
+        public Task SendMulticastsAsync( Byte[] packet, IoBehavior ioBehavior ) =>
+            SendMulticastsAsync( packet, ioBehavior, m_sendersUdp.ToArray() );
+
+        private async Task SendMulticastsAsync( Byte[] packet, IoBehavior ioBehavior, IEnumerable<KeyValuePair<IPAddress, UdpClient>> udpSenders )
         {
-            foreach ( KeyValuePair<IPAddress, UdpClient> sender in m_sendersUdp )
+            foreach ( KeyValuePair<IPAddress, UdpClient> sender in udpSenders )
             {
                 try
                 {
@@ -146,10 +153,10 @@ namespace LUC.DiscoveryServices
                     {
                         case IoBehavior.Asynchronous:
                         {
-                            await sender.Value.SendAsync( 
-                                packet, 
-                                packet.Length, 
-                                endpoint 
+                            await sender.Value.SendAsync(
+                                packet,
+                                packet.Length,
+                                endpoint
                             ).ConfigureAwait( continueOnCapturedContext: false );
                             break;
                         }

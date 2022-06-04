@@ -2,7 +2,7 @@
 
 using System;
 
-namespace LUC.DiscoveryServices.Messages
+namespace LUC.DiscoveryServices.Common
 {
     public class ChunkRange : ICloneable
     {

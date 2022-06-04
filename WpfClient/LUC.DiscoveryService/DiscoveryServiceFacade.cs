@@ -20,14 +20,7 @@ namespace LUC.DiscoveryServices
         {
             DsBucketsSupported.Define( currentUserProvider, out ConcurrentDictionary<String, String> bucketsSupported );
 
-            var discoveryService = DiscoveryService.Instance(
-                new ServiceProfile(
-                    settingsService.MachineId,
-                    GeneralConstants.PROTOCOL_VERSION,
-                    bucketsSupported
-                ),
-                currentUserProvider
-            );
+            DiscoveryService discoveryService = InternalInitWithoutForceToStart( currentUserProvider, bucketsSupported, settingsService.MachineId );
             return discoveryService;
         }
 
@@ -40,7 +33,7 @@ namespace LUC.DiscoveryServices
             if ( discoveryService.IsRunning )
             {
 #if DEBUG
-                Boolean isReplacedBuckets = !bucketsSupported.SequenceEqual(discoveryService.LocalBuckets);
+                Boolean isReplacedBuckets = !bucketsSupported.Equals<String, String>(discoveryService.LocalBuckets);
 
                 if ( isReplacedBuckets )
                 {
@@ -56,17 +49,12 @@ namespace LUC.DiscoveryServices
             return discoveryService;
         }
 
-        private static DiscoveryService InternalInitWithoutForceToStart(ICurrentUserProvider currentUserProvider, ConcurrentDictionary<String, String> bucketsSupported, String machineId)
-        {
-            var discoveryService = DiscoveryService.Instance(
-                new ServiceProfile(
-                    machineId,
-                    GeneralConstants.PROTOCOL_VERSION,
-                    bucketsSupported
-                ),
-                currentUserProvider
+        private static DiscoveryService InternalInitWithoutForceToStart(ICurrentUserProvider currentUserProvider, ConcurrentDictionary<String, String> bucketsSupported, String machineId) =>
+            DiscoveryService.Instance(
+                machineId,
+                GeneralConstants.PROTOCOL_VERSION,
+                currentUserProvider,
+                bucketsSupported
             );
-            return discoveryService;
-        }
     }
 }

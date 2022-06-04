@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryServices.CodingData;
 using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.Interfaces.Constants;
 
 using System;
@@ -204,9 +204,5 @@ namespace LUC.DiscoveryServices.Messages
         {
             ;//do nothing
         }
-
-        [MethodImpl( MethodImplOptions.AggressiveInlining )]
-        protected String PropertyWithValue<T>( String nameProp, T value ) =>
-            $"{nameProp} = {value}";
     }
 }

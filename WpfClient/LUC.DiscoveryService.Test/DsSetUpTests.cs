@@ -31,8 +31,6 @@ namespace LUC.DiscoveryServices.Test
     {
         private static DiscoveryService s_discoveryService = null;
 
-        private static ISettingsService s_settingsService;
-
         static DsSetUpTests()
         {
             Init( DEFAULT_USER_LOGIN_FOR_TEST, SetupServicesContainerWithoutDs );
@@ -53,12 +51,7 @@ namespace LUC.DiscoveryServices.Test
             {
                 if ( s_discoveryService == null )
                 {
-                    s_settingsService = AppSettings.ExportedValue<ISettingsService>();
-
-                    CurrentUserProvider.RootFolderPath = s_settingsService.ReadUserRootFolderPath();
-                    DsBucketsSupported.Define( CurrentUserProvider, out ConcurrentDictionary<String, String> bucketsSupported );
-
-                    s_discoveryService = DiscoveryService.Instance( new ServiceProfile( MachineId.Create(), UseIpv4, UseIpv6, DefaultProtocolVersion, bucketsSupported ), CurrentUserProvider );
+                    s_discoveryService = DiscoveryServiceFacade.InitWithoutForceToStart( CurrentUserProvider, SettingsService );
                 }
 
                 return s_discoveryService;
