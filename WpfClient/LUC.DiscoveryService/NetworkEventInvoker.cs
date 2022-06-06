@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 
 using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Common.Extensions;
-using LUC.DiscoveryServices.Interfaces;
 using LUC.DiscoveryServices.Kademlia;
 using LUC.DiscoveryServices.Messages;
 using LUC.DiscoveryServices.Messages.KademliaRequests;
@@ -27,11 +26,7 @@ namespace LUC.DiscoveryServices
     /// <remarks>
     ///   Sends UDP queries via the multicast mechachism
     ///   defined in <see href="https://tools.ietf.org/html/rfc6762"/>.
-    ///   Receives UDP queries and answers with TCP/IP/SSL responses.
-    ///   <para>
-    ///   One of the events, <see cref="QueryReceived"/> or <see cref="AnswerReceived"/>, is
-    ///   raised when a <see cref="DiscoveryMessage"/> is received.
-    ///   </para>
+    ///   Receives UDP queries, answers <seealso cref="AcknowledgeTcpMessage"/> and Kademlia requests.
     /// </remarks>
     public class NetworkEventInvoker : AbstractDsData
     {
@@ -149,9 +144,6 @@ namespace LUC.DiscoveryServices
         /// <summary>
         ///   Create a new instance of the <see cref="NetworkEventInvoker"/> class.
         /// </summary>
-        /// <param name="filter">
-        ///   Multicast listener will be bound to result of filtering function.
-        /// </param>
         internal NetworkEventInvoker(
             String machineId,
             Boolean useIpv4,
@@ -201,11 +193,7 @@ namespace LUC.DiscoveryServices
 
             m_networkInterfacesFilter = filter;
 
-#if DEBUG
-            IgnoreDuplicateMessages = false;
-#else
             IgnoreDuplicateMessages = true;
-#endif
         }
 
         public IContact OurContact { get; }
@@ -217,7 +205,7 @@ namespace LUC.DiscoveryServices
         ///   <b>true</b> to ignore duplicate messages. Defaults to <b>true</b>.
         /// </value>
         /// <remarks>
-        ///   When set, a message that has been received within the last minute
+        ///   When set, a message that has been received within the last 5 seconds
         ///   will be ignored.
         /// </remarks>
         public Boolean IgnoreDuplicateMessages { get; set; }
@@ -502,7 +490,8 @@ namespace LUC.DiscoveryServices
 
                         m_udpSenders?.Dispose();
 
-                        if ( ReachableIpAddresses.Count > 0 )
+                        Boolean isConnectedToNetwork = ReachableIpAddresses.Count > 0;
+                        if ( isConnectedToNetwork )
                         {
                             m_udpSenders = new UdpSendersCollection( ReachableIpAddresses, RunningUdpPort );
                             InitAllListeners();
@@ -510,8 +499,7 @@ namespace LUC.DiscoveryServices
                     }
                 }
 
-                Boolean isConnectedToNetwork = newNics.Any();
-                if ( isConnectedToNetwork )
+                if ( newNics.Any() )
                 {
                     NetworkInterfaceDiscovered?.Invoke( this, new NetworkInterfaceEventArgs
                     {

@@ -12,7 +12,7 @@ namespace LUC.DiscoveryServices.Kademlia.Interfaces
         KademliaId OurID { get; set; }
         IContact OurContact { get; set; }
         void AddContact( IContact contact );
-        KBucket GetKBucket( KademliaId otherID );
+        KBucket KBucket( KademliaId otherID );
 
         List<IContact> GetCloseContacts( KademliaId key, String machineIdForExclude );
 

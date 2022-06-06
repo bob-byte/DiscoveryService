@@ -3,6 +3,7 @@
 using LUC.Common.PrismEvents;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
+using LUC.Interfaces.Models;
 
 using Prism.Events;
 using Prism.Regions;
@@ -73,6 +74,7 @@ namespace LUC.Services.Implementation
             }
         }
 
+        //TODO: use translator
         public void TrySelectSyncFolder( out Boolean isUserSelectedRightPath, out String syncFolder )
         {
             isUserSelectedRightPath = false;
@@ -103,7 +105,11 @@ namespace LUC.Services.Implementation
             }
             else
             {
-                NotifyService.NotifyInfo( "You should select some folder for starting sync process. You may change it at any time." );
+                NotifyService.Notify( new NotificationResult
+                {
+                    IsSuccess = false,
+                    Message = "You should select some folder for starting sync process. You may change it at any time."
+                } );
             }
         }
 

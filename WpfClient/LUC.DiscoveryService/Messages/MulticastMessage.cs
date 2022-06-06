@@ -1,5 +1,5 @@
 ﻿using LUC.DiscoveryServices.CodingData;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 
 using System;
 using System.IO;
@@ -17,9 +17,9 @@ namespace LUC.DiscoveryServices.Messages
         /// </summary>
 #if DEBUG
         //Machine ID can be with guid in DS.Test 
-        public const Int32 MAX_LENGTH = 88;
+        public const Int32 MAX_LENGTH = 108;
 #else
-        public const Int32 MAX_LENGTH = 60;
+        public const Int32 MAX_LENGTH = 80;
 #endif
 
         /// <summary>

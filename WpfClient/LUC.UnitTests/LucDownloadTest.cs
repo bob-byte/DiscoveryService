@@ -15,6 +15,7 @@ using LUC.Services.Implementation;
 using LUC.Interfaces.Constants;
 using System.Linq;
 using LUC.Interfaces.Extensions;
+using LUC.DiscoveryServices.Common;
 
 namespace LUC.UnitTests
 {
@@ -289,8 +290,7 @@ namespace LUC.UnitTests
             UInt64 finallyEnd,
             UInt32 maxChunkSize,
             UInt64 total
-        )
-        {
+        ){
             var chunkRanges = new List<ChunkRange>();
 
             UInt64 totalPerContact = finallyEnd + 1 - start;

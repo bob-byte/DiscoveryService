@@ -177,7 +177,7 @@ namespace LUC.DiscoveryServices.Kademlia
 
                 contacts.ForEach(c => Node.BucketList.AddContact(c));
 
-                KBucket knownPeerBucket = Node.BucketList.GetKBucket(knownPeer.KadId);
+                KBucket knownPeerBucket = Node.BucketList.KBucket(knownPeer.KadId);
 
                 DateTime now = DateTime.UtcNow;
 
@@ -301,7 +301,7 @@ namespace LUC.DiscoveryServices.Kademlia
         {
             try
             {
-                KBucket bucket = Node.BucketList.GetKBucket(toEvict.KadId);
+                KBucket bucket = Node.BucketList.KBucket(toEvict.KadId);
 
                 // Prevent other threads from manipulating the bucket list or buckets.
                 lock (Node.BucketList)
@@ -344,7 +344,7 @@ namespace LUC.DiscoveryServices.Kademlia
             // Non-concurrent list needs locking while we query it.
             lock ( m_pendingContacts )
             {
-                contact = m_pendingContacts.Where(c => Node.BucketList.GetKBucket(c.KadId) == bucket).OrderBy(c => c.LastSeen).LastOrDefault();
+                contact = m_pendingContacts.Where(c => Node.BucketList.KBucket(c.KadId) == bucket).OrderBy(c => c.LastSeen).LastOrDefault();
 
                 if ( contact != null )
                 {
@@ -405,7 +405,7 @@ namespace LUC.DiscoveryServices.Kademlia
             SetupExpireKeysTimer();
         }
 
-        protected void TouchBucketWithKey(KademliaId key) => Node.BucketList.GetKBucket(key).Touch();
+        protected void TouchBucketWithKey(KademliaId key) => Node.BucketList.KBucket(key).Touch();
 
         protected void SetupBucketRefreshTimer()
         {

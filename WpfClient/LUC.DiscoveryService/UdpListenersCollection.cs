@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 
 using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Models;

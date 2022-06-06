@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
+using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Messages;
 
 namespace LUC.DiscoveryServices.Kademlia.Downloads

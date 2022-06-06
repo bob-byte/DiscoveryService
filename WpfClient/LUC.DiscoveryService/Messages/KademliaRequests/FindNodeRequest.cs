@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryServices.CodingData;
 using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 
 using System;
 using System.Collections.Generic;

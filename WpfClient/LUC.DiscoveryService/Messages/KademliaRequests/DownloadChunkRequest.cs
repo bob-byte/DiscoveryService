@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryServices.CodingData;
 using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Kademlia;
 using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Discoveries;

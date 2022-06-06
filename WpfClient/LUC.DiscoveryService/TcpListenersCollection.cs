@@ -1,5 +1,5 @@
 ﻿using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Constants;
 
@@ -81,21 +81,23 @@ namespace LUC.DiscoveryServices
                     _ = task.ContinueWith( x => StartNextMessageReceiving( listener ), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously );
 
                     //using tasks provides unblocking event calls
-                    _ = task.ContinueWith( async taskReceivingSession =>
+                    _ = task.ContinueWith( taskReceivingSession =>
                     {
-                        TcpMessageEventArgs eventArgs = null;
-                        TcpSession tcpSession = await taskReceivingSession.ConfigureAwait( continueOnCapturedContext: false );
+                        TcpMessageEventArgs receiveResult = null;
+
+                        //taskReceivingSession is already completed, so we can use Result property
+                        TcpSession tcpSession = taskReceivingSession.Result;
 
                         try
                         {
-                            eventArgs = await listener.ReceiveAsync( DsConstants.ReceiveTimeout, tcpSession ).ConfigureAwait( false );
+                            receiveResult = tcpSession.Receive( DsConstants.ReceiveTimeout );
                         }
                         finally
                         {
                             tcpSession?.CanBeUsedByAnotherThread.Set();
                         }
                         
-                        InvokeMessageReceived( listener, eventArgs );
+                        InvokeMessageReceived( listener, receiveResult );
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously );
 
                     await task.ConfigureAwait( false );

@@ -215,13 +215,13 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 {
                     Shutdown( SocketShutdown.Both );
                 }
-                catch ( ObjectDisposedException ex )
+                catch ( ObjectDisposedException )
                 {
-                    DsLoggerSet.DefaultLogger.LogCriticalError( message: "Dispose is called several times", ex );
+                    ;//do nothing
                 }
-                catch ( SocketException ex )
+                catch ( SocketException )
                 {
-                    DsLoggerSet.DefaultLogger.LogCriticalError( ex );
+                    ;
                 }
                 finally
                 {

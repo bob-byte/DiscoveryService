@@ -1,4 +1,5 @@
-﻿using LUC.DiscoveryServices.Kademlia;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Kademlia;
 using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Discoveries;
 

@@ -1,5 +1,5 @@
 ﻿using LUC.DiscoveryServices.CodingData;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 
 using System;
 using System.Collections.Generic;
@@ -12,9 +12,6 @@ using System.Threading.Tasks;
 
 namespace LUC.DiscoveryServices.Messages
 {
-    /// <summary>
-    /// Allows to write and read TCP message to/from <see cref="Stream"/>
-    /// </summary>
     class AcknowledgeTcpMessage : DiscoveryMessage
     {
         /// <summary>
@@ -111,9 +108,6 @@ namespace LUC.DiscoveryServices.Messages
                 throw new ArgumentNullException( nameof( writer ) );
             }
         }
-
-        //public override String ToString() =>
-        //    Display.ObjectToString( objectToConvert: this );
 
         protected override void DefaultInit( params Object[] args )
         {

@@ -54,7 +54,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
         static async Task Main( String[] args )
         {
             SentryHelper.InitAppSentry();
-
+            var consoleOutputEncoding = Console.OutputEncoding;
             s_settingsService = DsSetUpTests.SettingsService;
 
             IApiClient apiClient = DsSetUpTests.ApiClient;

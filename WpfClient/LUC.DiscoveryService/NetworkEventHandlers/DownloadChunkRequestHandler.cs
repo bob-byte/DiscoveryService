@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 
 using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Messages;
 using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.DiscoveryServices.Messages.KademliaResponses;
@@ -13,15 +14,24 @@ using System.IO;
 
 namespace LUC.DiscoveryServices.NetworkEventHandlers
 {
-    class DownloadChunkRequestHandler : CheckFileExistsRequestHandler
+    class DownloadChunkRequestHandler : INetworkEventHandler
     {
         private readonly IMapper m_mapper;
 
         private readonly Object m_lockReadFile = new Object();
 
+        private readonly DiscoveryService m_discoveryService;
+
+        private readonly ISettingsService m_settingsService;
+        private readonly ICurrentUserProvider m_currentUserProvider;
+
         public DownloadChunkRequestHandler( ICurrentUserProvider currentUserProvider, DiscoveryService discoveryService )
-            : base( currentUserProvider, discoveryService )
         {
+            m_discoveryService = discoveryService;
+
+            m_currentUserProvider = currentUserProvider;
+            m_settingsService = AppSettings.ExportedValue<ISettingsService>();
+
             AppSettings.
                 MapperConfigurationExpression.
                 CreateMap<AbstractFileResponse, DownloadChunkResponse>().
@@ -33,14 +43,30 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
             m_mapper = AppSettings.Mapper;
         }
 
-        public override async void SendResponse( Object sender, TcpMessageEventArgs eventArgs )
+        public async void SendResponse( Object sender, TcpMessageEventArgs eventArgs )
         {
             DownloadChunkRequest request = eventArgs.Message<DownloadChunkRequest>( whetherReadMessage: false );
 
             if ( request != null )
             {
-                AbstractFileResponse abstractResponse = FileResponse( request );
+                Boolean isRightBucket = m_discoveryService.LocalBuckets.ContainsKey( request.LocalBucketId );
+                AbstractFileResponse abstractResponse;
+                String fullFileName = String.Empty;
 
+                if ( isRightBucket )
+                {
+                    fullFileName = CheckFileExistsResponse.FullFileName( request, m_currentUserProvider.LoggedUser?.Groups, m_currentUserProvider.RootFolderPath );
+                    abstractResponse = new CheckFileExistsResponse( request, fullFileName );
+                }
+                else
+                {
+                    abstractResponse = new CheckFileExistsResponse( request.RandomID )
+                    {
+                        IsRightBucket = false,
+                        FileExists = false
+                    };
+                }
+                
                 try
                 {
                     DownloadChunkResponse downloadFileResponse = m_mapper.Map<DownloadChunkResponse>( abstractResponse );
@@ -49,7 +75,6 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
                     {
                         Byte[] fileBytes;
 
-                        String fullFileName = FullFileName( request );
                         if ( request.ChunkRange.Total <= DsConstants.MAX_CHUNK_SIZE )
                         {
                             fileBytes = File.ReadAllBytes( fullFileName );

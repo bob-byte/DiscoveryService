@@ -1,6 +1,8 @@
-﻿namespace LUC.DiscoveryServices.Kademlia.ClientPool
+﻿using System;
+
+namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
-    public enum SocketStateInPool
+    public enum SocketStateInPool : Byte
     {
         NeverWasInPool,
         TakenFromPool,

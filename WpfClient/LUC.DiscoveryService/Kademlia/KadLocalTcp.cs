@@ -105,7 +105,7 @@ namespace LUC.DiscoveryServices.Kademlia
             {
                 if ( bucketList.ContactExists( remoteContact ) )
                 {
-                    KBucket kBucket = bucketList.GetKBucket( remoteContact.KadId );
+                    KBucket kBucket = bucketList.KBucket( remoteContact.KadId );
                     kBucket.ReplaceContact( remoteContact );
                 }
                 else

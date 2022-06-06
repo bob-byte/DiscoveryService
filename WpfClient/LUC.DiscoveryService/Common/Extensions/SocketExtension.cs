@@ -13,76 +13,74 @@ namespace LUC.DiscoveryServices.Common.Extensions
 {
     static class SocketExtension
     {
-        /// <summary>
-        ///   Reads all available data
-        /// </summary>
-        public async static Task<Byte[]> ReadMessageBytesAsync( this Socket socket, AsyncAutoResetEvent receiveDone, Int32 chunkSizeToReadPerOneTime, Int32 maxReadBytes, CancellationToken cancellationToken )
+        public static Byte[] ReadMessageBytes( this Socket socket, Int32 chunkSizeToReadPerOneTime, Int32 maxReadBytes, CancellationToken cancellationToken )
         {
             var allMessage = new List<Byte>();
             Int32 messageLength = 0;
 
-            await Task.Run( () =>
+            Int32 chunkSize;
+            Boolean isFirstRead = true;
+            Int32 maxNeededDataToRead;
+
+            do
             {
-                Int32 chunkSize;
-                Boolean isFirstRead = true;
-                Int32 maxNeededDataToRead;
-
-                do
+                if ( isFirstRead )
                 {
-                    if ( isFirstRead )
+                    maxNeededDataToRead = Message.MIN_LENGTH;//bytes in Message.MessageOperation(Byte type) and Message.MessageLength(UInt32, so 4 bytes)
+                }
+                else
+                {
+                    maxNeededDataToRead = messageLength - allMessage.Count;
+                }
+
+                chunkSize = ChunkSize( maxNeededDataToRead, socket.Available, chunkSizeToReadPerOneTime );
+
+                Boolean isTooBigMessage = maxReadBytes < chunkSize + allMessage.Count;
+
+                if ( ( !isTooBigMessage ) && ( chunkSize != 0 ) && ( socket.Available != 0 ) )
+                {
+                    var buffer = new Byte[ chunkSize ];
+                    Int32 countOfReadBytes = socket.Receive( buffer, chunkSize, SocketFlags.None );
+
+                    if ( countOfReadBytes != 0 )
                     {
-                        maxNeededDataToRead = Message.MIN_LENGTH;//bytes in Message.MessageOperation(Byte type) and Message.MessageLength(UInt32, so 4 bytes)
-                    }
-                    else
-                    {
-                        maxNeededDataToRead = messageLength - allMessage.Count;
-                    }
+                        IEnumerable<Byte> bufferEnumerable = buffer;
 
-                    chunkSize = ChunkSize( maxNeededDataToRead, socket.Available, chunkSizeToReadPerOneTime );
-
-                    Boolean isTooBigMessage = maxReadBytes < chunkSize + allMessage.Count;
-
-                    if ( ( !isTooBigMessage ) && ( chunkSize != 0 ) && ( socket.Available != 0 ) )
-                    {
-                        var buffer = new Byte[ chunkSize ];
-                        Int32 countOfReadBytes = socket.Receive( buffer, chunkSize, SocketFlags.None );
-
-                        if ( countOfReadBytes != 0 )
+                        if ( countOfReadBytes < chunkSize )
                         {
-                            IEnumerable<Byte> bufferEnumerable = buffer;
+                            bufferEnumerable = buffer.Take( countOfReadBytes );
+                        }
 
-                            if ( countOfReadBytes < chunkSize )
-                            {
-                                bufferEnumerable = buffer.Take( countOfReadBytes );
-                            }
+                        allMessage.AddRange( bufferEnumerable );
 
-                            allMessage.AddRange( bufferEnumerable );
+                        if ( isFirstRead && allMessage.Count >= Message.MIN_LENGTH )
+                        {
+                            var message = new Message();
+                            message.Read( allMessage.ToArray() );
 
-                            if ( isFirstRead && allMessage.Count >= Message.MIN_LENGTH )
-                            {
-                                var message = new Message();
-                                message.Read( allMessage.ToArray() );
-
-                                messageLength = (Int32)message.MessageLength;
-                                isFirstRead = false;
-                            }
+                            messageLength = (Int32)message.MessageLength;
+                            isFirstRead = false;
                         }
                     }
-                    else if ( isTooBigMessage )
-                    {
-                        receiveDone.Set();
-                        throw new InvalidOperationException( message: "Received too big message" );
-                    }
                 }
-                while ( ( ( allMessage.Count < messageLength ) || isFirstRead ) && !cancellationToken.IsCancellationRequested );
+                else if ( isTooBigMessage )
+                {
+                    throw new InvalidOperationException( message: "Received too big message" );
+                }
+            }
+            while ( ( ( allMessage.Count < messageLength ) || isFirstRead ) && !cancellationToken.IsCancellationRequested );
 
-            } ).ConfigureAwait( false );
+            Boolean isInTimeCompleted = !cancellationToken.IsCancellationRequested;
+            if ( isInTimeCompleted )
+            {
+                DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Read message with {allMessage.Count} bytes" );
 
-            receiveDone.Set();
-
-            DsLoggerSet.DefaultLogger.LogInfo( $"Read message with {allMessage.Count} bytes" );
-
-            return allMessage.ToArray();
+                return allMessage.ToArray();
+            }
+            else
+            {
+                throw new TimeoutException( message: "Timeout to read message" );
+            }
         }
 
         private static Int32 ChunkSize( Int32 maxNeededData, Int32 availableDataToRead, Int32 chunkSizeToReadPerOneTime )
