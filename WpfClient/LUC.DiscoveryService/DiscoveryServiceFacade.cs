@@ -20,46 +20,41 @@ namespace LUC.DiscoveryServices
         {
             DsBucketsSupported.Define( currentUserProvider, out ConcurrentDictionary<String, String> bucketsSupported );
 
-            var discoveryService = DiscoveryService.Instance(
-                new ServiceProfile(
-                    settingsService.MachineId,
-                    GeneralConstants.PROTOCOL_VERSION,
-                    bucketsSupported
-                ),
-                currentUserProvider
-            );
+            DiscoveryService discoveryService = InternalInitWithoutForceToStart( currentUserProvider, bucketsSupported, settingsService.MachineId );
             return discoveryService;
         }
 
         public static DiscoveryService FullyInitialized( ICurrentUserProvider currentUserProvider, ISettingsService settingsService )
         {
-            DiscoveryService discoveryService = InitWithoutForceToStart( currentUserProvider, settingsService );
+            DsBucketsSupported.Define(currentUserProvider, out ConcurrentDictionary<String, String> bucketsSupported);
 
-            DsBucketsSupported.Define( currentUserProvider, out ConcurrentDictionary<String, String> bucketsSupported );
+            DiscoveryService discoveryService = InternalInitWithoutForceToStart( currentUserProvider, bucketsSupported, settingsService.MachineId );
 
-            Boolean isReplacedBuckets;
-            if( !discoveryService.LocalBuckets.Equals<String, String>( bucketsSupported ) )
-            {
-                discoveryService.ReplaceAllBuckets( bucketsSupported );
-                isReplacedBuckets = true;
-            }
-            else
-            {
-                isReplacedBuckets = false;
-            }
-
-            if ( discoveryService.IsRunning && isReplacedBuckets )
+            if ( discoveryService.IsRunning )
             {
 #if DEBUG
-                discoveryService.TryFindAllNodes();
+                Boolean isReplacedBuckets = !bucketsSupported.Equals<String, String>(discoveryService.LocalBuckets);
+
+                if ( isReplacedBuckets )
+                {
+                    discoveryService.TryFindAllNodes();
+                }
 #endif
             }
-            else if ( !discoveryService.IsRunning )
+            else
             {
                 discoveryService.Start();
             }
 
             return discoveryService;
         }
+
+        private static DiscoveryService InternalInitWithoutForceToStart(ICurrentUserProvider currentUserProvider, ConcurrentDictionary<String, String> bucketsSupported, String machineId) =>
+            DiscoveryService.Instance(
+                machineId,
+                GeneralConstants.PROTOCOL_VERSION,
+                currentUserProvider,
+                bucketsSupported
+            );
     }
 }

@@ -135,7 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ApiClient.cs" />
-    <Compile Include="LucDownloader.cs" />
+    <Compile Include="Downloader.cs" />
     <Compile Include="FileOperation.cs" />
     <Compile Include="HandleResponse.cs" />
     <Compile Include="Lock.cs" />

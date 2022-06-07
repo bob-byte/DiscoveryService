@@ -55,28 +55,11 @@ namespace LUC.DiscoveryServices.Test
         }
 
         [Test]
-        public void WriteString_NotAscii_ArgumentException()
-        {
-            var writer = new WireWriter( Stream.Null );
-
-            Assert.That( code: () => writer.WriteAsciiString( "δοκιμή" ), constraint: Throws.TypeOf( typeof( ArgumentException ) ) ); // test in Greek
-        }
-
-        [Test]
         public void WriteString_TooBigString_ArgumentException()
         {
             var writer = new WireWriter( Stream.Null );
 
             Assert.That( code: () => writer.WriteAsciiString( new String( 'a', count: 256 ) ), constraint: Throws.TypeOf( typeof( ArgumentException ) ) );
-        }
-
-        [Test]
-        public void ReadString_NotAscii_InvalidDataException()
-        {
-            var memoryStream = new MemoryStream( new Byte[] { 1, 255 } );
-            var reader = new WireReader( memoryStream );
-
-            Assert.That( code: () => reader.ReadAsciiString(), constraint: Throws.TypeOf( typeof( InvalidDataException ) ) );
         }
 
         [Test]

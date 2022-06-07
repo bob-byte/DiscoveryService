@@ -1,53 +1,53 @@
-﻿namespace LUC.DiscoveryServices.Common
-{
-    public enum SocketState
-    {
-        Creating = 1,
+﻿using System;
 
+namespace LUC.DiscoveryServices.Common
+{
+    public enum SocketState : Byte
+    {
         /// <summary>
         /// The socket has been created; no connection has been made
         /// </summary>
-        Created = 2,
+        Created,
 
-        Accepting = 4,
+        Accepting,
 
-        Accepted = 8,
+        Accepted,
 
         /// <summary>
         /// The socket is attempting to connect to an another peer
         /// </summary>
-        Connecting = 16,
+        Connecting,
 
         /// <summary>
         /// The socket is connected to a server; there is no active query
         /// </summary>
-        Connected = 32,
+        Connected,
 
-        SendingBytes = 64,
+        SendingBytes,
 
-        SentBytes = 128,
+        SentBytes,
 
-        Reading = 256,
+        Reading,
 
-        AlreadyRead = 512,
+        AlreadyRead,
 
-        Disconnecting = 1024,
+        Disconnecting,
 
-        Disconnected = 2048,
+        Disconnected,
 
         /// <summary>
         /// An unexpected error occurred; the socket is in an unusable state.
         /// </summary>
-        Failed = 4096,
+        Failed,
 
         /// <summary>
         /// The socket is closing
         /// </summary>
-        Closing = 8192,
+        Closing,
 
         /// <summary>
         /// The socked is closed
         /// </summary>
-        Closed = 16384,
+        Closed,
     }
 }

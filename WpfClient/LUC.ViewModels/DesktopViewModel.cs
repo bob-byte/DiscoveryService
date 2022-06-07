@@ -293,7 +293,7 @@ namespace LUC.ViewModels
                 //console is not run
                 catch ( InvalidOperationException )
                 {
-                    return;
+                    ;//do nothing
                 }
             } ).ConfigureAwait( continueOnCapturedContext: false );
 

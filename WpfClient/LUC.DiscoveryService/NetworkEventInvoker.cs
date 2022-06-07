@@ -6,19 +6,14 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Numerics;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
 using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Common.Extensions;
-using LUC.DiscoveryServices.Interfaces;
 using LUC.DiscoveryServices.Kademlia;
-using LUC.DiscoveryServices.Kademlia.Routers;
 using LUC.DiscoveryServices.Messages;
 using LUC.DiscoveryServices.Messages.KademliaRequests;
-using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 
 using Nito.AsyncEx;
@@ -31,11 +26,7 @@ namespace LUC.DiscoveryServices
     /// <remarks>
     ///   Sends UDP queries via the multicast mechachism
     ///   defined in <see href="https://tools.ietf.org/html/rfc6762"/>.
-    ///   Receives UDP queries and answers with TCP/IP/SSL responses.
-    ///   <para>
-    ///   One of the events, <see cref="QueryReceived"/> or <see cref="AnswerReceived"/>, is
-    ///   raised when a <see cref="DiscoveryMessage"/> is received.
-    ///   </para>
+    ///   Receives UDP queries, answers <seealso cref="AcknowledgeTcpMessage"/> and Kademlia requests.
     /// </remarks>
     public class NetworkEventInvoker : AbstractDsData
     {
@@ -116,6 +107,8 @@ namespace LUC.DiscoveryServices
         /// </summary>
         private readonly AsyncLock m_asyncLock;
 
+        private readonly List<AddressFamily> m_supportedAddressFamilies;
+
         /// <summary>
         ///   Function used for listening filtered network interfaces.
         /// </summary>
@@ -151,9 +144,6 @@ namespace LUC.DiscoveryServices
         /// <summary>
         ///   Create a new instance of the <see cref="NetworkEventInvoker"/> class.
         /// </summary>
-        /// <param name="filter">
-        ///   Multicast listener will be bound to result of filtering function.
-        /// </param>
         internal NetworkEventInvoker(
             String machineId,
             Boolean useIpv4,
@@ -180,22 +170,30 @@ namespace LUC.DiscoveryServices
             m_receivedMessages = new RecentMessages();
 
             MachineId = machineId;
+
+            m_supportedAddressFamilies = new List<AddressFamily>();
             UseIpv4 = useIpv4;
+            if(useIpv4)
+            {
+                m_supportedAddressFamilies.Add( AddressFamily.InterNetwork );
+            }
+
             UseIpv6 = useIpv6;
+            if ( useIpv6 )
+            {
+                m_supportedAddressFamilies.Add( AddressFamily.InterNetworkV6 );
+            }
+
             ProtocolVersion = protocolVersion;
 
             OurContact = new Contact( MachineId, KademliaId.Random(), RunningTcpPort, bucketLocalNames );
             var distributedHashTable = new Dht( OurContact, ProtocolVersion,
-                storageFactory: () => new VirtualStorage(), new ParallelRouter( ProtocolVersion ) );
+                storageFactory: () => new VirtualStorage() );
             s_dhts.TryAdd( protocolVersion, distributedHashTable );
 
             m_networkInterfacesFilter = filter;
 
-#if DEBUG
-            IgnoreDuplicateMessages = false;
-#else
             IgnoreDuplicateMessages = true;
-#endif
         }
 
         public IContact OurContact { get; }
@@ -207,7 +205,7 @@ namespace LUC.DiscoveryServices
         ///   <b>true</b> to ignore duplicate messages. Defaults to <b>true</b>.
         /// </value>
         /// <remarks>
-        ///   When set, a message that has been received within the last minute
+        ///   When set, a message that has been received within the last 5 seconds
         ///   will be ignored.
         /// </remarks>
         public Boolean IgnoreDuplicateMessages { get; set; }
@@ -407,16 +405,28 @@ namespace LUC.DiscoveryServices
                     {
                         try
                         {
-                            var multicastMessage = new MulticastMessage(
-                                messageId: (UInt32)m_random.Next( minValue: 0, Int32.MaxValue ),
-                                ProtocolVersion,
-                                RunningTcpPort,
-                                MachineId
-                            );
-                            Byte[] packet = multicastMessage.ToByteArray();
+                            Boolean isFirstSend = true;
 
-                            DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started send UDP messages. Their content:\n{multicastMessage}" );
-                            await m_udpSenders.SendMulticastsAsync( packet, ioBehavior ).ConfigureAwait( false );
+                            foreach ( AddressFamily addressFamily in m_supportedAddressFamilies)
+                            {
+                                var multicastMessage = new MulticastMessage(
+                                    messageId: (UInt32)m_random.Next( minValue: 0, Int32.MaxValue ),
+                                    ProtocolVersion,
+                                    RunningTcpPort,
+                                    MachineId
+                                );
+
+                                if ( isFirstSend )
+                                {
+                                    DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started send UDP messages. Their content:\n{multicastMessage}" );
+                                }
+
+                                Byte[] packet = multicastMessage.ToByteArray();
+                                await m_udpSenders.SendMulticastsAsync( packet, ioBehavior, addressFamily ).ConfigureAwait( false );
+
+                                isFirstSend = false;
+                            }
+                            
                             DsLoggerSet.DefaultLogger.LogInfo( "Finished send UDP messages" );
                         }
                         catch ( Exception ex )
@@ -480,7 +490,8 @@ namespace LUC.DiscoveryServices
 
                         m_udpSenders?.Dispose();
 
-                        if ( ReachableIpAddresses.Count > 0 )
+                        Boolean isConnectedToNetwork = ReachableIpAddresses.Count > 0;
+                        if ( isConnectedToNetwork )
                         {
                             m_udpSenders = new UdpSendersCollection( ReachableIpAddresses, RunningUdpPort );
                             InitAllListeners();
@@ -488,8 +499,7 @@ namespace LUC.DiscoveryServices
                     }
                 }
 
-                Boolean isConnectedToNetwork = newNics.Any();
-                if ( isConnectedToNetwork )
+                if ( newNics.Any() )
                 {
                     NetworkInterfaceDiscovered?.Invoke( this, new NetworkInterfaceEventArgs
                     {
@@ -655,7 +665,11 @@ namespace LUC.DiscoveryServices
         /// </param>
         private void RaiseSpecificTcpReceivedEvent( Object sender, TcpMessageEventArgs receiveResult )
         {
-            if ( ( receiveResult != null ) && ( receiveResult.Buffer.Length >= Message.MIN_TCP_LENGTH ) )
+            if ( receiveResult.Buffer.Length < Message.MIN_TCP_CLIENT_MESS_LENGTH )
+            {
+                DsLoggerSet.DefaultLogger.LogFatal( message: $"Received message with length less then {Message.MIN_TCP_CLIENT_MESS_LENGTH}" );
+            }
+            else
             {
                 DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started to handle {receiveResult.Buffer.Length} bytes" );
 

@@ -13,6 +13,7 @@ using LUC.Services.Implementation;
 using NUnit.Framework;
 
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -25,15 +26,14 @@ namespace LUC.DiscoveryServices.Test
     {
         private DiscoveryService m_discoveryService;
 
-        [OneTimeSetUp]
-        public void SetupService()
+        public DiscoveryServiceTest()
         {
             m_discoveryService = DsSetUpTests.DiscoveryService;
-            m_discoveryService.Start();
         }
 
-        [OneTimeTearDown]
-        public void TearDownService() => m_discoveryService?.Stop();
+        [SetUp]
+        public void SetupDs() =>
+            m_discoveryService.Start();
 
         [Test]
         public void BeforeCreatedInstance_CreateDifferentProtocolVersionAndTryToGetAccordingDs_ThrowsArgumentException()
@@ -68,17 +68,12 @@ namespace LUC.DiscoveryServices.Test
             Int32 byteCount = DsConstants.MAX_AVAILABLE_READ_BYTES + 1;
             var fakeMessage = new FakeMessage( byteCount );
 
-            //create AutoResetEvent for setting in TcpReceived
-            var fakeMessageReceived = new AutoResetEvent( initialState: false );
-
-            m_discoveryService.Start();
-            m_discoveryService.NetworkEventInvoker.AnswerReceived += ( sender, eventArgs ) => fakeMessageReceived.Set();
-
             //create socket with reachable IP-address
             await fakeMessage.SendAsync( socket ).ConfigureAwait( false );
 
-            //AutoResetEvent shouldn't be set
-            Boolean isMessageReceived = fakeMessageReceived.WaitOne( TimeSpan.FromSeconds( value: 400 ) );
+            await Task.Delay(TimeSpan.FromSeconds(value: 3)).ConfigureAwait(false);
+
+            Boolean isMessageReceived = socket.Available > 0;
             isMessageReceived.Should().BeFalse();
         }
 
@@ -95,9 +90,17 @@ namespace LUC.DiscoveryServices.Test
         }
 
         [Test]
-        public void Ctor_PassNullPar_GetException() => Assert.That( code: (TestDelegate)( () => m_discoveryService = DiscoveryService.Instance( null, null ) ),
-            constraint: Throws.TypeOf( expectedType: typeof( ArgumentNullException ) ) );
+        public void Ctor_PassNullPar_GetArgumentNullException() => Assert.That( 
+            code: () => m_discoveryService = DiscoveryService.Instance(
+               null,
+               GeneralConstants.PROTOCOL_VERSION,
+               null,
+               null
+            ),
+            constraint: Throws.TypeOf( expectedType: typeof( ArgumentNullException ) )
+        );
 
+#if !RECEIVE_UDP_FROM_OURSELF
         [Test]
         public void QueryAllServices_GetOwnUdpMessage_DontGet()
         {
@@ -116,36 +119,39 @@ namespace LUC.DiscoveryServices.Test
 
             Assert.IsFalse( done.WaitOne( TimeSpan.FromSeconds( value: 1 ) ), message: "Got own UDP message" );
         }
+#endif
 
         [Test]
-#pragma warning disable S2699 // Tests should include assertions
         public void StartAndStop_RoundTrip_WithoutExceptions()
-#pragma warning restore S2699 // Tests should include assertions
         {
-            m_discoveryService.Stop();
+            m_discoveryService.Stop(allowReuseService: true);
             m_discoveryService.Start();
             m_discoveryService.Start();
-            m_discoveryService.Stop();
-            m_discoveryService.Stop();
+            m_discoveryService.Stop(true);
+            m_discoveryService.Stop(true);
             m_discoveryService.Start();
 
-            m_discoveryService.TryFindAllNodes();
+            Assert.DoesNotThrow(m_discoveryService.TryFindAllNodes);
         }
 
         /// <summary>
         /// Sd - Service Discovery
         /// </summary>
         [Test]
-        public void QueryAllServices_WhenSdIsntStarted_GetException() => Assert.That( code: (TestDelegate)(() => m_discoveryService.TryFindAllNodes()), Throws.TypeOf( typeof( InvalidOperationException ) ) );
+        public void QueryAllServices_WhenSdIsntStarted_GetInvalidOperationException()
+        {
+            m_discoveryService.Stop(allowReuseService: true);
+            Assert.That(code: m_discoveryService.TryFindAllNodes, Throws.TypeOf(typeof(InvalidOperationException)));
+        }
 
         /// <summary>
         /// Sd - Service Discovery
         /// </summary>
         [Test]
-        public void QueryAllServices_WhenSdIsStartedAndStopped_GetException()
+        public void QueryAllServices_WhenSdIsStartedAndStopped_GetInvalidOperationException()
         {
             m_discoveryService.Start();
-            m_discoveryService.Stop();
+            m_discoveryService.Stop(allowReuseService: true);
 
             Assert.That( code: () => m_discoveryService.TryFindAllNodes(), Throws.TypeOf( typeof( InvalidOperationException ) ) );
         }
@@ -161,10 +167,10 @@ namespace LUC.DiscoveryServices.Test
         }
 
         [Test]
-        public async Task SendTcpMessageAsync_GetTcpMessage_NotFailed()
+        public async Task SendTcpMessageAsync_SendMessageAndWaitForReceiving_MessageReceived()
         {
             var done = new ManualResetEvent( false );
-            m_discoveryService.Start();
+
             m_discoveryService.NetworkEventInvoker.AnswerReceived += ( sender, e ) => done.Set();
 
             IPAddress[] availableIps = m_discoveryService.NetworkEventInvoker.ReachableIpAddresses.ToArray();
@@ -173,11 +179,12 @@ namespace LUC.DiscoveryServices.Test
                 RemoteEndPoint = new IPEndPoint( availableIps[ 1 ], m_discoveryService.RunningTcpPort )
             };
 
-            eventArgs.SetMessage( new MulticastMessage( messageId: 123, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null ) );
+            eventArgs.SetMessage( new MulticastMessage( messageId: 123, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, machineId: DsSetUpTests.Fixture.Create<String>() ) );
 
-            await m_discoveryService.SendAcknowledgeTcpMessageAsync( sender: this, eventArgs ).ConfigureAwait( continueOnCapturedContext: false );
+            await m_discoveryService.SendAcknowledgeTcpMessageAsync( eventArgs, IoBehavior.Asynchronous ).ConfigureAwait( continueOnCapturedContext: false );
 
-            Assert.IsTrue( done.WaitOne( TimeSpan.FromSeconds( value: 10 ) ) );
+            //wait while FindNode executed (when DS receive AcknowledgeTcpMessage, it starts NetworkEventInvoker.Bootstrap)
+            Assert.IsTrue( done.WaitOne(DsConstants.TimeWaitSocketReturnedToPool) );
         }
 
         [Test]
@@ -190,7 +197,7 @@ namespace LUC.DiscoveryServices.Test
             };
             eventArgs.SetMessage( new AcknowledgeTcpMessage( messageId: 123, m_discoveryService.MachineId, KademliaId.Random().Value, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, groupsIds: null ) );
 
-            Assert.That( () => m_discoveryService.SendAcknowledgeTcpMessageAsync( this, eventArgs ), Throws.TypeOf( typeof( ArgumentException ) ) );
+            AssertSendAcknowledgeTcpMessageAsyncThrowArgException(eventArgs);
         }
 
         [Test]
@@ -200,7 +207,7 @@ namespace LUC.DiscoveryServices.Test
             var eventArgs = new UdpMessageEventArgs();
             eventArgs.SetMessage<MulticastMessage>( message: null );
 
-            Assert.That( () => m_discoveryService.SendAcknowledgeTcpMessageAsync( this, eventArgs ), Throws.TypeOf( typeof( ArgumentException ) ) );
+            AssertSendAcknowledgeTcpMessageAsyncThrowArgException(eventArgs);
         }
 
         [Test]
@@ -213,20 +220,16 @@ namespace LUC.DiscoveryServices.Test
             };
             eventArgs.SetMessage( new MulticastMessage( messageId: 123, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null ) );
 
-            Assert.That( () => m_discoveryService.SendAcknowledgeTcpMessageAsync( this, eventArgs ), Throws.TypeOf( typeof( ArgumentException ) ) );
+            AssertSendAcknowledgeTcpMessageAsyncThrowArgException(eventArgs);
         }
 
-        [Test]
-        public void SendTcpMess_EndPointIsDns_GetException()
-        {
-            m_discoveryService.Start();
-            var eventArgs = new UdpMessageEventArgs
-            {
-                RemoteEndPoint = new DnsEndPoint( Dns.GetHostName(), DsConstants.DEFAULT_PORT, AddressFamily.InterNetwork )
-            };
-            eventArgs.SetMessage( new MulticastMessage( messageId: 123, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null ) );
+        private void AssertSendAcknowledgeTcpMessageAsyncThrowArgException(UdpMessageEventArgs eventArgs) =>
+            AssertSendAcknowledgeTcpMessageAsyncThrowException(eventArgs, typeof(ArgumentException));
 
-            Assert.That( () => m_discoveryService.SendAcknowledgeTcpMessageAsync( this, eventArgs ), Throws.TypeOf( typeof( ArgumentException ) ) );
+
+        private void AssertSendAcknowledgeTcpMessageAsyncThrowException(UdpMessageEventArgs eventArgs, Type exceptionType = null)
+        {
+            Assert.That(() => m_discoveryService.SendAcknowledgeTcpMessageAsync(eventArgs, IoBehavior.Synchronous).ConfigureAwait(continueOnCapturedContext: false), Throws.TypeOf(exceptionType));
         }
 
         /// <summary>
@@ -235,7 +238,12 @@ namespace LUC.DiscoveryServices.Test
         [Test]
         public void Instance_CreateOneMoreInstanceOfDsAndCompareMachineId_TheSameMachineId()
         {
-            DiscoveryService discoveryService2 = DiscoveryService.Instance( new ServiceProfile( MachineId.Create(), useIpv4: true, useIpv6: true, protocolVersion: 2 ), DsSetUpTests.CurrentUserProvider );
+            var discoveryService2 = DiscoveryService.Instance(
+                MachineId.Create(),
+                GeneralConstants.PROTOCOL_VERSION + 1,
+                DsSetUpTests.CurrentUserProvider,
+                userGroups: new ConcurrentDictionary<String, String>()
+            );
 
             Assert.IsTrue( m_discoveryService.MachineId == discoveryService2.MachineId );
         }

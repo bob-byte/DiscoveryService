@@ -20,7 +20,7 @@ namespace LUC.Interfaces.Extensions
 
         public static void RemoveRange<TKey, TValue>( this ConcurrentDictionary<TKey, TValue> concurrentDictionary, IEnumerable<TKey> keys )
         {
-            while ( concurrentDictionary.Keys.AsParallel().Any( k => keys.AsParallel().Any( k2 => k2.Equals( k ) ) ) )
+            while ( concurrentDictionary.Keys.Any( k => keys.Any( k2 => k2.Equals( k ) ) ) )
             {
                 Parallel.ForEach( keys, key => concurrentDictionary.TryRemove( key ) );
             }
@@ -31,7 +31,7 @@ namespace LUC.Interfaces.Extensions
             Int32 countDeletedItems = 0;
             try
             {
-                Parallel.ForEach( concurrentCollection.AsParallel().Where( predicate ), item =>
+                Parallel.ForEach( concurrentCollection.Where( predicate ), item =>
                 {
                     Boolean isRemoved = concurrentCollection.TryRemove( item.Key, value: out _ );
                     if ( isRemoved )

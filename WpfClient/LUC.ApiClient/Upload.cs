@@ -184,15 +184,26 @@ namespace LUC.ApiClient
                 System.Net.Http.HttpResponseMessage response = await lightClient.Upload( m_apiSettings.Host, CurrentUserProvider.LoggedUser.Token, userId, bucket.ServerName,
                                                         fullPath, filePrefix, version );
 
-
-                String str = await response.Content?.ReadAsStringAsync();
-                FileUploadResponse responseUpload = response.IsSuccessStatusCode
-                    ? JsonConvert.DeserializeObject<FileUploadResponse>( str )
-                    : new FileUploadResponse
+                FileUploadResponse responseUpload;
+                if (response.Content != null)
+                {
+                    String str = await response.Content?.ReadAsStringAsync();
+                    responseUpload = response.IsSuccessStatusCode
+                        ? JsonConvert.DeserializeObject<FileUploadResponse>( str )
+                        : new FileUploadResponse
+                        {
+                            IsSuccess = false,
+                            Message = str ?? String.Empty
+                        };
+                }
+                else
+                {
+                    responseUpload = new FileUploadResponse
                     {
                         IsSuccess = false,
-                        Message = str ?? String.Empty
+                        Message = "Content is null"
                     };
+                }
 
                 if ( responseUpload.IsSuccess )
                 {

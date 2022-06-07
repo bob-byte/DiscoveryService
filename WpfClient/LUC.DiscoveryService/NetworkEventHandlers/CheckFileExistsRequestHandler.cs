@@ -1,4 +1,4 @@
-﻿using LUC.DiscoveryServices.Interfaces;
+﻿using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Kademlia;
 using LUC.DiscoveryServices.Messages;
 using LUC.DiscoveryServices.Messages.KademliaRequests;
@@ -31,7 +31,7 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
             m_distributedHashTable = NetworkEventInvoker.DistributedHashTable( m_discoveryService.ProtocolVersion );
 
             m_currentUserProvider = currentUserProvider;
-            m_settingsService = new SettingsService();
+            m_settingsService = AppSettings.ExportedValue<ISettingsService>();
         }
 
         public virtual async void SendResponse( Object sender, TcpMessageEventArgs eventArgs )
@@ -39,7 +39,7 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
             CheckFileExistsRequest request = eventArgs.Message<CheckFileExistsRequest>( whetherReadMessage: false );
             if ( request != null )
             {
-                AbstractFileResponse response = FileResponse( request );
+                AbstractFileResponse response = new CheckFileExistsResponse( request, m_currentUserProvider.LoggedUser?.Groups, m_currentUserProvider.RootFolderPath );
 
                 await response.SendAsync( eventArgs.AcceptedSocket ).ConfigureAwait( continueOnCapturedContext: false );
             }
@@ -81,9 +81,6 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
         {
             String fullFileName;
 
-#if ENABLE_DS_DOWNLOAD_FROM_CURRENT_PC_IN_LUC
-            fullFileName = Path.Combine( m_currentUserProvider.RootFolderPath, request.FileOriginalName );
-#else
             GroupServiceModel groupServiceModel = m_currentUserProvider.LoggedUser?.Groups?.SingleOrDefault( c => c.Id.Equals( request.LocalBucketId, StringComparison.Ordinal ) );
 
             if ( groupServiceModel != null )
@@ -103,7 +100,6 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
 
                 throw new ArgumentException( messageException.ToString() );
             }
-#endif
 
             return fullFileName;
         }

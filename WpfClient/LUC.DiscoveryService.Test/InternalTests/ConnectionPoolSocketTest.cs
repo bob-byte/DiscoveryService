@@ -19,36 +19,36 @@ using static LUC.DiscoveryServices.Kademlia.ClientPool.ConnectionPool;
 namespace LUC.DiscoveryServices.Test.InternalTests
 {
     [TestFixture]
-    class SocketTest
+    class ConnectionPoolSocketTest
     {
-#if RECEIVE_UDP_FROM_OURSELF
-        [Test, SocketConventions( BuildEndPointRequest.ReachableDsEndPoint )]
-        public async Task DsReceiveAsync_SendPingRequestThenStopDsThenReceiveResponse_GetResponse(Socket socket)
-        {
-            DiscoveryService discoveryService = DsSetUpTests.DiscoveryService;
-            discoveryService.Start();
+//#if RECEIVE_UDP_FROM_OURSELF
+//        [Test, SocketConventions( BuildEndPointRequest.ReachableDsEndPoint )]
+//        public async Task DsReceiveAsync_SendPingRequestThenStopDsThenReceiveResponse_GetResponse(Socket socket)
+//        {
+//            DiscoveryService discoveryService = DsSetUpTests.DiscoveryService;
+//            discoveryService.Start();
 
-            AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
-            discoveryService.NetworkEventInvoker.PingReceived += ( sender, eventArgs ) => receiveDone.Set();
+//            AutoResetEvent receiveDone = new AutoResetEvent( initialState: false );
+//            discoveryService.NetworkEventInvoker.PingReceived += ( sender, eventArgs ) => receiveDone.Set();
 
-            socket.DsConnect( socket.Id, DsConstants.ConnectTimeout );
-            var pingRequest = new PingRequest( KademliaId.RandomIDInKeySpace.Value, discoveryService.MachineId );
+//            socket.DsConnect( socket.Id, DsConstants.ConnectTimeout );
+//            var pingRequest = new PingRequest( KademliaId.RandomIDInKeySpace.Value, discoveryService.MachineId );
 
-            socket.DsSend( pingRequest.ToByteArray(), DsConstants.SendTimeout );
+//            socket.DsSend( pingRequest.ToByteArray(), DsConstants.SendTimeout );
 
-            //wait until ds handle request
-            receiveDone.WaitOne( DsConstants.SendTimeout );
+//            //wait until ds handle request
+//            receiveDone.WaitOne( DsConstants.SendTimeout );
 
-            discoveryService.Stop();
+//            discoveryService.Stop();
 
-            socket.Dispose();
-            Byte[] bytes = await socket.DsReceiveAsync( Timeout.InfiniteTimeSpan );
-            bytes.Should().NotBeNullOrEmpty();
-        }
-#endif
+//            socket.DisposeUnmanagedResources();
+//            Byte[] bytes = await socket.DsReceiveAsync( Timeout.InfiniteTimeSpan );
+//            bytes.Should().NotBeNullOrEmpty();
+//        }
+//#endif
 
         [Test, SocketConventions(BuildEndPointRequest.RandomEndPoint)]
-        public void StateInPool_FewTasksWantToTakeSocketAndOnlyOneSetsItInPool_WaitingOfTakingFromPoolIsGreaterThanFrequencySetItInPool( ConnectionPool.Socket socket )
+        public void StateInPool_FewTasksWantToTakeSocketAndOnlyOneSetsItInPool_WaitingOfTakingFromPoolIsGreaterThanFrequencySetItInPool( Socket socket )
         {
             Action setTakeFromPoolState = () => socket.TakeFromPoolAsync( IoBehavior.Synchronous, DsConstants.TimeWaitSocketReturnedToPool ).ConfigureAwait( continueOnCapturedContext: false );
 

@@ -1,0 +1,695 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="LUC.DiscoveryServices.CodingData.Binary" Collapsed="true">
+    <Position X="11.75" Y="9.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAACAAAAAAAQAA=</HashCode>
+      <FileName>CodingData\Binary.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.CodingData.Buffer" Collapsed="true">
+    <Position X="49.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AARAAAAAAAAAgAgECAAABAACAAAAARAAAAACAAHAgAA=</HashCode>
+      <FileName>CodingData\Buffer.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.CodingData.WireReader" Collapsed="true">
+    <Position X="10.5" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>JAAAFAAAACAAAQgAAIAAAAgABCAAI0AQAEARAAAAAAA=</HashCode>
+      <FileName>CodingData\WireReader.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.CodingData.WireWriter" Collapsed="true">
+    <Position X="12.75" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAECAAAAAgAQAAAAAAQAAAAAACIAAAAAEAAAA=</HashCode>
+      <FileName>CodingData\WireWriter.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.AbstractDsData" Collapsed="true">
+    <Position X="6.75" Y="9.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>kIAAAAAAJAAAAAAAAQAAAAAAAAAAKAAACAKCAAAAAAA=</HashCode>
+      <FileName>Common\AbstractDsData.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.AsyncSocket" Collapsed="true">
+    <Position X="40.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAUAAAACAAIABAAAAAAARAgAAAAECgMQAIBAAAAQg=</HashCode>
+      <FileName>Common\AsyncSocket.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.ChunkRange" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="52.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAIAAAQBACAAAAAEgAAAAAAAAAAAQIAAAAAAAAAAABA=</HashCode>
+      <FileName>Common\ChunkRange.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.Display" Collapsed="true">
+    <Position X="49.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABAAAAABAAAAAAAEAAAAAAAAAAAAAAQAAAABIAAAAAA=</HashCode>
+      <FileName>Common\Display.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.DsLogger" Collapsed="true">
+    <Position X="38" Y="2.5" Width="1.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAABAAAAAABAAAAAIAAMAAAAAIAAAAAAAAA=</HashCode>
+      <FileName>Common\DsLogger.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.DsLoggerSet" Collapsed="true">
+    <Position X="40.25" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAgAAAAAAAAAAAAAAAAAAACAAAAAAAEAAAAAA=</HashCode>
+      <FileName>Common\DsLoggerSet.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.IpAddressExtension" Collapsed="true">
+    <Position X="40" Y="3.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AQAAAAAQAAAAAAAAAAAAAAAAIAgAAAAAAAAgABAAAAA=</HashCode>
+      <FileName>Common\Extensions\IpAddressExtension.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.ForcingConcurrencyError" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="35" Y="3.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAACAAAACAgAAAEAAAAAAAAQAAAAAAQAAAAAAAAAAA=</HashCode>
+      <FileName>Common\ForcingConcurrencyError.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.ListenersCollection&lt;TEventArgs, TListener&gt;" Collapsed="true">
+    <Position X="1.25" Y="9.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAgAAAAQCAAAAAJAAAAAAAAAAAAKACCABAAAAABAAA=</HashCode>
+      <FileName>Common\ListenersCollection.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.Extensions.AsyncAutoResetEventExtension" Collapsed="true">
+    <Position X="34.5" Y="0.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAQAAAAAAAQAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\Extensions\AsyncAutoResetEventExtension.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.Extensions.AsyncLockExtension" Collapsed="true">
+    <Position X="37.5" Y="0.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\Extensions\AsyncLockExtension.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.Extensions.IDictionaryExtension" Collapsed="true">
+    <Position X="37.5" Y="3.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\Extensions\IDictionaryExtension.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.Extensions.NetworkInterfaceExtension" Collapsed="true">
+    <Position X="39.5" Y="4.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\Extensions\NetworkInterfaceExtension.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.Extensions.RandomExtension" Collapsed="true">
+    <Position X="49.5" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAEAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\Extensions\RandomExtension.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.Extensions.SocketExtension" Collapsed="true">
+    <Position X="43.25" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAACAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\Extensions\SocketExtension.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.Extensions.ValueTaskExtension" Collapsed="true">
+    <Position X="40" Y="6.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\Extensions\ValueTaskExtension.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.DiscoveryService" Collapsed="true">
+    <Position X="5.5" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>kCoAAAAAADEgCKAAAAAAQCACAoIAIIBBYQSAAAoAIAA=</HashCode>
+      <FileName>DiscoveryService.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.DiscoveryServiceFacade" Collapsed="true">
+    <Position X="46.25" Y="1.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAQAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAEAAAA=</HashCode>
+      <FileName>DiscoveryServiceFacade.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.NetworkEventInvoker" Collapsed="true">
+    <Position X="7.75" Y="10.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAEChIAiBIKAAwQCAAIhAgAYBEggFysACwFAIFBAA=</HashCode>
+      <FileName>NetworkEventInvoker.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.TcpListenersCollection" Collapsed="true">
+    <Position X="2.75" Y="10.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAgABAAAAAAAAA=</HashCode>
+      <FileName>TcpListenersCollection.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.TcpServer" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="49.5" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>kKQCgAMQOiDggRBCMFBIABDCBAFQAiIIIBAEABBAADI=</HashCode>
+      <FileName>TcpServer.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.TcpSession" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="52.25" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAVCAAIAACChgABSIFQIBJBBBAAEAwI4ABADAyiAABI=</HashCode>
+      <FileName>TcpSession.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.UdpListenersCollection" Collapsed="true">
+    <Position X="0.5" Y="10.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAgAAAAAAAAAAAAAAAAABAgAAAAAAAAABAAAAAAAAA=</HashCode>
+      <FileName>UdpListenersCollection.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.UdpSendersCollection" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="37.5" Y="6.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACCAIAAACAAAAAAAAAAAAAAAAAAAAgAAAAA=</HashCode>
+      <FileName>UdpSendersCollection.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.AbstractKademlia" Collapsed="true">
+    <Position X="3" Y="6.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\AbstractKademlia.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.BucketList" Collapsed="true">
+    <Position X="0.75" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAAABAMQAAAAAAAAIAAACAAAAAAABAAIAAIAIAA=</HashCode>
+      <FileName>Kademlia\BucketList.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Contact" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="40.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gQQAAAkACBEgAAAEhQAAIIAIAABCAYkACAAgQBAAAEI=</HashCode>
+      <FileName>Kademlia\Contact.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Dht" Collapsed="true">
+    <Position X="3" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CUCAgIAYAFAAgkCgFAhAgAUIAQEIAEaByACIAQMQxCE=</HashCode>
+      <FileName>Kademlia\Dht.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.KadLocalTcp" Collapsed="true">
+    <Position X="43.25" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAACAAAAEgAAAAAABAAAAAAQAAAAQAAQAA=</HashCode>
+      <FileName>Kademlia\KadLocalTcp.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.KBucket" Collapsed="true">
+    <Position X="49.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAACAFAAAAASAAgAAAAAAAAgABAAwAAAAABAQECQ=</HashCode>
+      <FileName>Kademlia\KBucket.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Node" Collapsed="true">
+    <Position X="5.25" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAACAAACAAAEAAAAAAAAMAAAAARQAAAQIAQgA=</HashCode>
+      <FileName>Kademlia\Node.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.RemoteProcedureCaller" Collapsed="true">
+    <Position X="35" Y="5.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAgAAAEAAAAQAAAEAAAAAAAAAAAAAAAAAABI=</HashCode>
+      <FileName>Kademlia\RemoteProcedureCaller.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.RpcError" Collapsed="true">
+    <Position X="37.75" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AQAAAEAAAAAABAAEAAAAAAAAAAAAABAIEAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\RpcError.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.StoreValue" Collapsed="true">
+    <Position X="46.75" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAiAAAAAAA=</HashCode>
+      <FileName>Kademlia\StoreValue.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.VirtualStorage" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="43.25" Y="6.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CAAAQAAAAAAABABACAAABACAAAAAAAAAAAAAABAQAAg=</HashCode>
+      <FileName>Kademlia\VirtualStorage.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.ClientPool.BackgroundConnectionResetHelper" Collapsed="true">
+    <Position X="42" Y="0.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AABAAAAAACAAAAAAAAgIAAAgAAAAAABAAAhAIAAAAAA=</HashCode>
+      <FileName>Kademlia\ClientPool\BackgroundConnectionResetHelper.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.ClientPool.ConnectionPool" Collapsed="true">
+    <Position X="35.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>KBQAAAMACA4CAAgwAggAACAAiIQAgAAAQQIACCYIEAA=</HashCode>
+      <FileName>Kademlia\ClientPool\ConnectionPool.Clear.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.ClientPool.ConnectionSettings" Collapsed="true">
+    <Position X="37.5" Y="1.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAoCEAAAAAAAAAAAAAAAAAAIAAAAAAEAIAAAAIAA=</HashCode>
+      <FileName>Kademlia\ClientPool\ConnectionSettings.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Downloads.DataOfDownloadBigFileBlock" Collapsed="true">
+    <Position X="42.5" Y="1.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAIAAAAAAAAAAAACAAAAAAAAAAAgAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Downloads\DataOfDownloadBigFileBlock.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Downloads.DownloaderFromLocalNetwork" Collapsed="true">
+    <Position X="51.25" Y="1.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AkAAAQAAgAAokIAQAAAxCAAMAEAUkCAAEA0A1AwQALA=</HashCode>
+      <FileName>Kademlia\Downloads\DownloaderFromLocalNetwork.CheckFileExists.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Downloads.DownloadErrorHappenedEventArgs" Collapsed="true">
+    <Position X="34.25" Y="2.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAABAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Downloads\DownloadErrorHappenedEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Downloads.FileDownloadedEventArgs" Collapsed="true">
+    <Position X="42.75" Y="2.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAABAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Downloads\FileDownloadedEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Downloads.FileDownloadProgressArgs" Collapsed="true">
+    <Position X="46" Y="2.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>ABAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Downloads\FileDownloadProgressArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Downloads.FilePartiallyDownloadedEventArgs" Collapsed="true">
+    <Position X="48.5" Y="2.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Downloads\FilePartiallyDownloadedEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Exceptions.BucketDoesNotContainContactToEvictException" Collapsed="true">
+    <Position X="44.75" Y="0.5" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Exceptions\BucketDoesNotContainContactToEvict.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Exceptions.FilePartiallyDownloadedException" Collapsed="true">
+    <Position X="51.25" Y="2.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AEAAAAAAAAAAAAAAAAAAECAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Exceptions\FilePartiallyDownloadedException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Exceptions.MalfactorAttackException" Collapsed="true">
+    <Position X="51.75" Y="3.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Exceptions\MalfactorAttackException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Exceptions.NotEnoughDriveSpaceException" Collapsed="true">
+    <Position X="42.25" Y="4.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAIAAAAAACAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Exceptions\NotEnoughDriveSpaceException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Exceptions.OurNodeCannotBeAContactException" Collapsed="true">
+    <Position X="45.5" Y="4.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Exceptions\OurNodeCannotBeAContactException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Exceptions.SendingQueryToSelfException" Collapsed="true">
+    <Position X="39.5" Y="5.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Exceptions\SendingQueryToSelfException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Kademlia.Exceptions.TooManyContactsException" Collapsed="true">
+    <Position X="34.75" Y="6.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\Exceptions\TooManyContactsException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.AcknowledgeTcpMessage" Collapsed="true">
+    <Position X="31" Y="3" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAACAgAAAAAAEEAAAAAAEAAAA=</HashCode>
+      <FileName>Messages\AcknowledgeTcpMessage.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.DiscoveryMessage" Collapsed="true">
+    <Position X="29.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAAABAAAAAAAAAAAAAAAAAAAAAEAAACAAAAAEA=</HashCode>
+      <FileName>Messages\DiscoveryMessage.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.Message" Collapsed="true">
+    <Position X="20.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AABAAAAAAAAAABAEAIBAASBgAAAABAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Messages\Message.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.MessageEventArgs" Collapsed="true">
+    <Position X="9.75" Y="6.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAAQAAAAAAAAAIAAAAAAAAAAAEAIAAAQAA=</HashCode>
+      <FileName>Messages\MessageEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.MulticastMessage" Collapsed="true">
+    <Position X="27.25" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAECAgAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Messages\MulticastMessage.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.RecentMessages" Collapsed="true">
+    <Position X="52.25" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAIAAAAAAAAAIAAAACAAAAAAAAAAAAAAQAAAAA=</HashCode>
+      <FileName>Messages\RecentMessages.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.TcpMessageEventArgs" Collapsed="true">
+    <Position X="8.5" Y="8" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAIAAAAgAAAAAAAQAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Messages\TcpMessageEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.UdpMessageEventArgs" Collapsed="true">
+    <Position X="10.75" Y="8" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Messages\UdpMessageEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaRequests.AbstractFileRequest" Collapsed="true">
+    <Position X="20.5" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AIAAQAAAAAAAAAAAAAAAAAAgAAAAAABAAAAAAAEAAAA=</HashCode>
+      <FileName>Messages\KademliaRequests\AbstractFileRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaRequests.CheckFileExistsRequest" Collapsed="true">
+    <Position X="18.75" Y="7" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Messages\KademliaRequests\CheckFileExistsRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaRequests.DownloadChunkRequest" Collapsed="true">
+    <Position X="21.75" Y="7" Width="2" />
+    <TypeIdentifier>
+      <HashCode>ABAAAAAIAAQAAABEAAAAACAgAAAAAAAAAgAAQAEgABA=</HashCode>
+      <FileName>Messages\KademliaRequests\DownloadChunkRequest.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaRequests.FindNodeRequest" Collapsed="true">
+    <Position X="23.25" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAABAAAAAAAAIAACAgAAAAAAAEAAAAAAEAAEA=</HashCode>
+      <FileName>Messages\KademliaRequests\FindNodeRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaRequests.FindValueRequest" Collapsed="true">
+    <Position X="25.5" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAIAACAgAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Messages\KademliaRequests\FindValueRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaRequests.PingRequest" Collapsed="true">
+    <Position X="16.25" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Messages\KademliaRequests\PingRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaRequests.Request" Collapsed="true">
+    <Position X="20.25" Y="4" Width="1.25" />
+    <TypeIdentifier>
+      <HashCode>IAABAAAAAACAAAAAEAAAAEAgAAAAAAAAAEEAAAEAAwA=</HashCode>
+      <FileName>Messages\KademliaRequests\Request.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaRequests.StoreRequest" Collapsed="true">
+    <Position X="18.25" Y="5.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAgCAgAAAAAAAAAAggIAEAAAA=</HashCode>
+      <FileName>Messages\KademliaRequests\StoreRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaResponses.AbstractFileResponse" Collapsed="true">
+    <Position X="6" Y="3.25" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAABABAAAAAAgAAAAAAAAAAAAQAEAAAA=</HashCode>
+      <FileName>Messages\KademliaResponses\AbstractFileResponse.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaResponses.CheckFileExistsResponse" Collapsed="true">
+    <Position X="4.5" Y="4.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAABAAAAAAAAAAAAACAAAAAAAAAAAAACAAAAAAA=</HashCode>
+      <FileName>Messages\KademliaResponses\CheckFileExistsResponse.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaResponses.DownloadChunkResponse" Collapsed="true">
+    <Position X="7.25" Y="4.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAAAAAAAAEAAAAACAgAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Messages\KademliaResponses\DownloadChunkResponse.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaResponses.ErrorResponse" Collapsed="true">
+    <Position X="8.75" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AQAAAAAAAAAAAAAAAAAAACAgAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Messages\KademliaResponses\ErrorResponse.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaResponses.FindNodeResponse" Collapsed="true">
+    <Position X="11" Y="3.25" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAABAAAAAEAAAAACAgAAAAAAAGAAAAAAEAAEA=</HashCode>
+      <FileName>Messages\KademliaResponses\FindNodeResponse.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaResponses.FindValueResponse" Collapsed="true">
+    <Position X="13.25" Y="3.25" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>ACBAAAAAAAEAAAAEAAAAACAgAAAAgAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Messages\KademliaResponses\FindValueResponse.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaResponses.PingResponse" Collapsed="true">
+    <Position X="15.5" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Messages\KademliaResponses\PingResponse.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaResponses.Response" Collapsed="true">
+    <Position X="9" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Messages\KademliaResponses\Response.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Messages.KademliaResponses.StoreResponse" Collapsed="true">
+    <Position X="3.25" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Messages\KademliaResponses\StoreResponse.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.NetworkEventHandlers.CheckFileExistsRequestHandler" Collapsed="true">
+    <Position X="45.75" Y="6.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABABEAAIAAAAAAAAAAAAAAQAAAAAAAAAQAgAAAA=</HashCode>
+      <FileName>NetworkEventHandlers\CheckFileExistsRequestHandler.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.NetworkEventHandlers.DownloadChunkRequestHandler" Collapsed="true">
+    <Position X="48.5" Y="6.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAAIAAAAAAAAABABAAQAAAAAAAAAQAAAAAA=</HashCode>
+      <FileName>NetworkEventHandlers\DownloadChunkRequestHandler.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.NetworkEventHandlers.KadRpcHandler" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="46.75" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CAAAABAAAAAAAAAAAAAQIAAAAAAAAAAgAAAAAAgAEEA=</HashCode>
+      <FileName>NetworkEventHandlers\KadRpcHandler.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="LUC.DiscoveryServices.NetworkEventHandlers.NetworkEventHandler" Collapsed="true">
+    <Position X="35.25" Y="4.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>NetworkEventHandlers\NetworkEventHandler.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LUC.DiscoveryServices.Common.NetworkInterfaceEventArgs" Collapsed="true">
+    <Position X="37" Y="4.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\NetworkInterfaceEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Interface Name="LUC.DiscoveryServices.Common.Interfaces.INetworkEventHandler">
+    <Position X="39.5" Y="7.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\Interfaces\INetworkEventHandler.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="LUC.DiscoveryServices.Common.Interfaces.IWireSerialiser">
+    <Position X="45.5" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAEAAAA=</HashCode>
+      <FileName>Common\Interfaces\IWireSerialiser.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="LUC.DiscoveryServices.Kademlia.Interfaces.IBucketList">
+    <Position X="36" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAAABAMAAAAAAAAAIAAACAAAAAAABAAAAAIAAAA=</HashCode>
+      <FileName>Kademlia\Interfaces\IBucketList.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="LUC.DiscoveryServices.Kademlia.Interfaces.IDht">
+    <Position X="37.75" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAACAAAEAAAA=</HashCode>
+      <FileName>Kademlia\Interfaces\IDht.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="LUC.DiscoveryServices.Kademlia.Interfaces.INode">
+    <Position X="41.75" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAEAAAAAAAAEAAAAAQAAAAQIAQgA=</HashCode>
+      <FileName>Kademlia\Interfaces\INode.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="LUC.DiscoveryServices.Kademlia.Interfaces.IStorage">
+    <Position X="43.5" Y="7.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>CAAAAAAAAAAABABACAAABACAAAAAAAAAAAAAABAQAAg=</HashCode>
+      <FileName>Kademlia\Interfaces\IStorage.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Enum Name="LUC.DiscoveryServices.Common.IoBehavior">
+    <Position X="35.75" Y="11" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAEAAAQAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Common\IoBehavior.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="LUC.DiscoveryServices.Common.SocketState">
+    <Position X="42" Y="11" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAQAAAAAAAQAACgAAAAAEABACAAAQAABAAggCAQAA=</HashCode>
+      <FileName>Common\SocketState.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="LUC.DiscoveryServices.Kademlia.ClientPool.SocketHealth">
+    <Position X="40.25" Y="11" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAgAAAAAAAAAAAAAABAAAAAAAAABAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\ClientPool\SocketHealth.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="LUC.DiscoveryServices.Kademlia.ClientPool.SocketStateInPool">
+    <Position X="43.75" Y="11" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAACAAIAEIAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Kademlia\ClientPool\SocketStateInPool.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="LUC.DiscoveryServices.Messages.MessageOperation">
+    <Position X="37.5" Y="11" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AEAAAAEAAAAAAAAAAUAAAQHAAAAAABABQEAAAQBBQAA=</HashCode>
+      <FileName>Messages\MessageOperation.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

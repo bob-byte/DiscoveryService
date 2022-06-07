@@ -179,7 +179,7 @@ namespace LUC.Services.Implementation.Helpers
             //for optimization, because rules variable works like stack
             notAddedRules.Reverse();
 
-            if ( !hasAppNecessaryRules )
+            if(!hasAppNecessaryRules)
             {
                 foreach ( INetFwRule newRule in notAddedRules )
                 {
@@ -190,18 +190,13 @@ namespace LUC.Services.Implementation.Helpers
                 firewallPolicy = ComObject<INetFwPolicy2>( "HNetCfg.FwPolicy2" );
                 allFirewallRules = firewallPolicy.Rules.Cast<INetFwRule>();
 
-                DefineHasAppNecessaryRules( appRules, allFirewallRules, out _, out hasAppNecessaryRules );
+                DefineHasAppNecessaryRules( appRules, allFirewallRules, out _, out hasAppNecessaryRules);
                 if ( !hasAppNecessaryRules )
                 {
                     throw new FirewallHelperException( message: "App is not granted after adding it to firewall rules" );
                 }
             }
         }
-
-        //public void GrantAppAuthInRules( params INetFwRule[] netFwRules )
-        //{
-
-        //}
 
         private void DefineHasAppNecessaryRules(IEnumerable<INetFwRule> rulesOfApp, IEnumerable<INetFwRule> allRules, out List<INetFwRule> notAddedRules, out Boolean hasAppAuth )
         {
@@ -213,7 +208,6 @@ namespace LUC.Services.Implementation.Helpers
             foreach ( INetFwRule rule in allRules )
             {
                 INetFwRule foundRule = default;
-
                 foreach ( INetFwRule addedRule in notAddedRules )
                 {
                     Boolean isSameRule = equalityComparer.Equals( rule.Description, addedRule.Description ) &&

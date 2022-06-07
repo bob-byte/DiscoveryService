@@ -142,9 +142,6 @@ namespace LUC.ViewModels
             {
                 SettingService.ReadSettingsFromFile();
 
-                var model = response.ToLoginServiceModel();
-                CurrentUserProvider.LoggedUser = model;
-
                 m_settingsService.WriteIsRememberPassword( m_isRememberPassword, Password.Base64Encode() );
 
                 m_eventAggregator.GetEvent<IsUserLoggedChangedEvent>().Publish( new IsUserLoggedChangedEventArgs

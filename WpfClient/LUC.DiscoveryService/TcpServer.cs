@@ -365,79 +365,6 @@ namespace LUC.DiscoveryServices
             }
         }
 
-        public async Task<TcpMessageEventArgs> ReceiveAsync( TimeSpan timeoutToRead, TcpSession clientToReadMessage )
-        {
-            Byte[] readBytes;
-
-            if ( !( clientToReadMessage.Socket.RemoteEndPoint is IPEndPoint ipEndPoint ) )
-            {
-                throw new InvalidOperationException( message: $"Received message not from {nameof( IPEndPoint )}" );
-            }
-            else
-            {
-                var cancelSource = new CancellationTokenSource();
-
-                //because any next code can receive SocketException if it will use clientToReadMessage.Socket.RemoteEndPoint
-                var clonedIpEndPoint = new IPEndPoint( ipEndPoint.Address, ipEndPoint.Port );
-                var receiveDone = new AsyncAutoResetEvent( set: false );
-
-                try
-                {
-                    ConfiguredTaskAwaitable<Byte[]> taskReadBytes = clientToReadMessage.Socket.ReadMessageBytesAsync(
-                        receiveDone,
-                        DsConstants.MAX_CHUNK_READ_PER_ONE_TIME,
-                        DsConstants.MAX_AVAILABLE_READ_BYTES,
-                        cancelSource.Token
-                    ).ConfigureAwait( false );
-
-                    Boolean isReceivedInTime = await receiveDone.WaitAsync( timeoutToRead ).ConfigureAwait( false );
-
-                    cancelSource.Cancel();
-
-                    if ( isReceivedInTime )
-                    {
-                        readBytes = await taskReadBytes;
-                    }
-                    else
-                    {
-                        //we need to delete it because we will have malformed all next messages
-                        UnregisterSession( clientToReadMessage.Id );
-
-                        var timeoutEx = new TimeoutException( $"Timeout to read data from {clonedIpEndPoint}" );
-                        DsLoggerSet.DefaultLogger.LogCriticalError( timeoutEx );
-
-                        throw timeoutEx;
-                    }
-                }
-                catch ( SocketException )
-                {
-                    if ( IsSocketDisposed )
-                    {
-                        throw new ObjectDisposedException( $"Socket is disposed" );
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                finally
-                {
-                    cancelSource.Dispose();
-                }
-
-                var receiveResult = new TcpMessageEventArgs
-                {
-                    Buffer = readBytes,
-                    RemoteEndPoint = clonedIpEndPoint,
-                    AcceptedSocket = clientToReadMessage.Socket,
-                    LocalEndPoint = Endpoint,
-                    UnregisterSocket = () => UnregisterSession( clientToReadMessage.Id )
-                };
-
-                return receiveResult;
-            }
-        }
-
         public async Task<TcpSession> SessionWithMessageAsync()
         {
             TcpSession sessionWithData = null;
@@ -804,13 +731,6 @@ namespace LUC.DiscoveryServices
                 // Mark as disposed.
                 IsDisposed = true;
             }
-        }
-
-        // Use C# destructor syntax for finalization code.
-        ~TcpServer()
-        {
-            // Simply call Dispose(false).
-            Dispose( false );
         }
 
         #endregion

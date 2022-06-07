@@ -1,8 +1,9 @@
 ﻿using LUC.DiscoveryServices.CodingData;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 
 using System;
 using System.IO;
+using System.Text;
 
 namespace LUC.DiscoveryServices.Messages
 {
@@ -14,11 +15,11 @@ namespace LUC.DiscoveryServices.Messages
         /// <summary>
         /// Maximum bytes of a message.
         /// </summary>
-#if !DEBUG
-        public const Int32 MAX_LENGTH = 46;
-#else
+#if DEBUG
         //Machine ID can be with guid in DS.Test 
-        public const Int32 MAX_LENGTH = 85;
+        public const Int32 MAX_LENGTH = 108;
+#else
+        public const Int32 MAX_LENGTH = 80;
 #endif
 
         /// <summary>
@@ -57,7 +58,7 @@ namespace LUC.DiscoveryServices.Messages
                 base.Read( reader );
 
                 MessageId = reader.ReadUInt32();
-                MachineId = reader.ReadAsciiString();
+                MachineId = reader.ReadString( Encoding.UTF8 );
 
                 ProtocolVersion = reader.ReadUInt16();
                 TcpPort = reader.ReadUInt16();
@@ -78,7 +79,7 @@ namespace LUC.DiscoveryServices.Messages
                 base.Write( writer );
 
                 writer.Write( MessageId );
-                writer.WriteAsciiString( MachineId );
+                writer.Write( MachineId, Encoding.UTF8 );
 
                 writer.Write( ProtocolVersion );
                 writer.Write( TcpPort );

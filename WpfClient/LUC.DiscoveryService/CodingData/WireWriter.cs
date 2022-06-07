@@ -1,4 +1,5 @@
-﻿using LUC.DiscoveryServices.Messages;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Discoveries;
 
 using System;
@@ -139,6 +140,27 @@ namespace LUC.DiscoveryServices.CodingData
             {
                 Byte[] bytes = Encoding.ASCII.GetBytes( value );
                 WriteByteLengthPrefixedBytes( bytes );
+            }
+            else
+            {
+                throw new ArgumentNullException( nameof( value ) );
+            }
+        }
+
+        public void Write(String value, Encoding encoding)
+        {
+            if ( value != null )
+            {
+                Byte[] bytes = encoding.GetBytes( value );
+
+                UInt32 bytesCount = (UInt32)bytes.Length;
+                if ( bytesCount > Int32.MaxValue )
+                {
+                    throw new ArgumentException( $"Length can\'t exceed {Int32.MaxValue}", nameof( value ) );
+                }
+
+                Write( bytesCount );
+                WriteBytes( bytes );
             }
             else
             {

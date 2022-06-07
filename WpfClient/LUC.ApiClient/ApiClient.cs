@@ -40,7 +40,7 @@ using LoginResponse = LUC.Interfaces.OutputContracts.LoginResponse;
 [assembly: InternalsVisibleTo(assemblyName: "LUC.UnitTests")]
 namespace LUC.ApiClient
 {
-    [Export(typeof(IApiClient))]
+    [Export( typeof( IApiClient ) )]
     public class ApiClient : WebRestorable, IApiClient
     {
         #region Fields
@@ -48,7 +48,7 @@ namespace LUC.ApiClient
         private readonly Object m_lockLucDowloaderInit;
 
         private Upload m_upload;
-        private LucDownloader m_downloader;
+        private Downloader m_downloader;
         private FileOperation m_fileOperation;
         private Lock m_fileLocker;
 
@@ -62,40 +62,40 @@ namespace LUC.ApiClient
 
         public ObjectNameProvider ObjectNameProvider { get; set; }
 
-        [Import(typeof(ISyncingObjectsList))]
+        [Import( typeof( ISyncingObjectsList ) )]
         public ISyncingObjectsList SyncingObjectsList { get; set; }
 
-        [Import(typeof(ILoggingService))]
+        [Import( typeof( ILoggingService ) )]
         public ILoggingService LoggingService { get; set; }
 
-        [Import(typeof(ISettingsService))]
+        [Import( typeof( ISettingsService ) )]
         public ISettingsService SettingsService { get; set; }
 
-        [Import(typeof(INotifyService))]
+        [Import( typeof( INotifyService ) )]
         public INotifyService NotifyService { get; set; }
 
         public Byte[] EncryptionKey { get; set; }
 
         public ApiSettings Settings { get; }
 
-        protected override Action StopOperation => new Action(() => { });
+        protected override Action StopOperation => new Action( () => { } );
 
         protected override Action RerunOperation { get; }
 
         internal IDiscoveryService DiscoveryService { get; private set; }
 
-        internal LucDownloader Downloader => m_downloader;
+        internal Downloader Downloader => m_downloader;
 
         #endregion Properties
 
         #region Constructors
 
         [ImportingConstructor]
-        public ApiClient(ICurrentUserProvider currentUserProvider, ILoggingService loggingService, ISyncingObjectsList syncingObjectsList, ISettingsService settingsService, INotifyService notifyService = null)
+        public ApiClient( ICurrentUserProvider currentUserProvider, ILoggingService loggingService, ISyncingObjectsList syncingObjectsList, ISettingsService settingsService, INotifyService notifyService = null )
         {
             Settings = new ApiSettings();
 
-            if (notifyService != null)
+            if ( notifyService != null )
             {
                 NotifyService = notifyService;
             }
@@ -108,7 +108,7 @@ namespace LUC.ApiClient
             SyncingObjectsList = syncingObjectsList;
             SettingsService = settingsService;
             CurrentUserProvider = currentUserProvider;
-            ObjectNameProvider = new ObjectNameProvider(currentUserProvider, loggingService, this);
+            ObjectNameProvider = new ObjectNameProvider( currentUserProvider, loggingService, this );
 
             m_isOperationsInitialized = false;
             m_lockLucDowloaderInit = new Object();
@@ -120,28 +120,28 @@ namespace LUC.ApiClient
 
         #region Login/Logout Methods
 
-        public async Task<LoginResponse> LoginAsync(String email, String password)
+        public async Task<LoginResponse> LoginAsync( String email, String password )
         {
             var lightClient = new LightClient();
 
             try
             {
-                HttpResponseMessage response = await lightClient.LoginAsync(email, password, Settings.Host);
+                HttpResponseMessage response = await lightClient.LoginAsync( email, password, Settings.Host );
 
-                if (response.IsSuccessStatusCode)
+                if ( response.IsSuccessStatusCode )
                 {
                     LoginResponse result;
 
                     try
                     {
-                        result = JsonConvert.DeserializeObject<LoginResponse>(await response.Content.ReadAsStringAsync());
+                        result = JsonConvert.DeserializeObject<LoginResponse>( await response.Content.ReadAsStringAsync() );
 
                         var model = result.ToLoginServiceModel();
                         CurrentUserProvider.LoggedUser = model;
                     }
-                    catch (Exception ex)
+                    catch ( Exception ex )
                     {
-                        LoggingService.LogError(ex, ex.Message);
+                        LoggingService.LogError( ex, ex.Message );
                         return new LoginResponse
                         {
                             IsSuccess = false,
@@ -149,34 +149,35 @@ namespace LUC.ApiClient
                         };
                     }
 
-                    Settings.InitializeAccessToken(result.Token);
+                    Settings.InitializeAccessToken( result.Token );
                     IsTokenExpiredOrIncorrectAccessToken = false;
+
+                    result.Message = $"Logged as '{result.Login}' at {DateTime.UtcNow.ToLongTimeString()} {DateTime.UtcNow.ToLongDateString()}";
+                    LoggingService.LogInfo( result.Message );
 
                     try
                     {
                         //init DS in order to send UDP messages to update our buckets IDs in remote nodes
-                        InitLucDownloader(updateOurBucketsIdsInRemoteNodes: true);
+                        InitLucDownloader( updateOurBucketsIdsInRemoteNodes: true );
                     }
                     catch
                     {
                         ;
                     }
-
-                    result.Message = $"Logged as '{result.Login}' at {DateTime.UtcNow.ToLongTimeString()} {DateTime.UtcNow.ToLongDateString()}";
-                    LoggingService.LogInfo(result.Message);
+                    
                     return result;
                 }
                 else
                 {
                     String stringResult = null;
-                    if (response.Content != null)
+                    if ( response.Content != null )
                     {
                         stringResult = await response.Content?.ReadAsStringAsync();
                     }
 
-                    LoggingService.LogError($"Can't login: {stringResult}. Status code = {response.StatusCode}");
+                    LoggingService.LogError( $"Can't login: {stringResult}. Status code = {response.StatusCode}" );
 
-                    switch (response.StatusCode)
+                    switch ( response.StatusCode )
                     {
                         case HttpStatusCode.Forbidden:
                             return new LoginResponse
@@ -188,12 +189,12 @@ namespace LUC.ApiClient
                             return new LoginResponse
                             {
                                 IsSuccess = false,
-                                Message = String.Format(Strings.MessageTemplate_CantLogin, response.StatusCode)
+                                Message = String.Format( Strings.MessageTemplate_CantLogin, response.StatusCode )
                             };
                     }
                 }
             }
-            catch (HttpRequestException)
+            catch ( HttpRequestException )
             {
                 return new LoginResponse
                 {
@@ -201,7 +202,7 @@ namespace LUC.ApiClient
                     Message = Strings.Message_NoConnection
                 };
             }
-            catch (WebException)
+            catch ( WebException )
             {
                 return new LoginResponse
                 {
@@ -209,7 +210,7 @@ namespace LUC.ApiClient
                     Message = Strings.Message_NoConnection
                 };
             }
-            catch (SocketException)
+            catch ( SocketException )
             {
                 return new LoginResponse
                 {
@@ -223,13 +224,13 @@ namespace LUC.ApiClient
         {
             var result = new LogoutResponse();
 
-            using (var client = new HttpClient())
+            using ( var client = new HttpClient() )
             {
-                HttpResponseMessage response = await client.GetAsync(BuildUriExtensions.GetLogoutUri(Settings.Host));
+                HttpResponseMessage response = await client.GetAsync( BuildUriExtensions.GetLogoutUri( Settings.Host ) );
 
-                if (response.IsSuccessStatusCode)
+                if ( response.IsSuccessStatusCode )
                 {
-                    Settings.InitializeAccessToken(String.Empty);
+                    Settings.InitializeAccessToken( String.Empty );
                     NotifyServicesAboutLogout();
 
                     return result;
@@ -237,7 +238,7 @@ namespace LUC.ApiClient
 
                 String stringResult = await response.Content.ReadAsStringAsync();
 
-                LoggingService.LogError("Can't logout: " + stringResult);
+                LoggingService.LogError( "Can't logout: " + stringResult );
 
                 result.IsSuccess = false;
                 result.Message = stringResult;
@@ -247,13 +248,13 @@ namespace LUC.ApiClient
 
         #endregion Login/Logout Methods
 
-        public async Task<CreateDirectoryResponse> CreateDirectoryOnServerAsync(String fullPath)
+        public async Task<CreateDirectoryResponse> CreateDirectoryOnServerAsync( String fullPath )
         {
-            IBucketName bucket = CurrentUserProvider.TryExtractBucket(fullPath);
+            IBucketName bucket = CurrentUserProvider.TryExtractBucket( fullPath );
 
-            if (!bucket.IsSuccess)
+            if ( !bucket.IsSuccess )
             {
-                LoggingService.LogError(bucket.ErrorMessage);
+                LoggingService.LogError( bucket.ErrorMessage );
                 return new CreateDirectoryResponse
                 {
                     IsSuccess = false,
@@ -261,33 +262,33 @@ namespace LUC.ApiClient
                 };
             }
 
-            LoggingService.LogInfo($"API CreatePseudoDirectory {fullPath}");
+            LoggingService.LogInfo( $"API CreatePseudoDirectory {fullPath}" );
 
-            String prefix = await ObjectNameProvider.ServerPrefix(fullPath);
+            String prefix = await ObjectNameProvider.ServerPrefix( fullPath );
 
-            String stringContent = JsonConvert.SerializeObject(new CreateDirectoryRequest
+            String stringContent = JsonConvert.SerializeObject( new CreateDirectoryRequest
             {
-                DirectoryName = new DirectoryInfo(fullPath).Name,
+                DirectoryName = new DirectoryInfo( fullPath ).Name,
                 Prefix = prefix
-            });
+            } );
 
-            using (var client = new RepeatableHttpClient(Settings.AccessToken))
+            using ( var client = new RepeatableHttpClient( Settings.AccessToken ) )
             {
-                using (var content = new StringContent(stringContent, Encoding.UTF8, "application/json"))
+                using ( var content = new StringContent( stringContent, Encoding.UTF8, "application/json" ) )
                 {
-                    String requestUri = BuildUriExtensions.PostCreatePseudoDirectoryUri(Settings.Host, bucket.ServerName);
+                    String requestUri = BuildUriExtensions.PostCreatePseudoDirectoryUri( Settings.Host, bucket.ServerName );
 
-                    HttpResponseMessage response = await client.SendRepeatableAsync(requestUri, () => RepeatableHttpClient.CloneHttpContentAsync(content), HttpMethod.Post).ConfigureAwait(continueOnCapturedContext: false);
+                    HttpResponseMessage response = await client.SendRepeatableAsync( requestUri, () => RepeatableHttpClient.CloneHttpContentAsync( content ), HttpMethod.Post ).ConfigureAwait( continueOnCapturedContext: false );
 
-                    if (response.IsSuccessStatusCode)
+                    if ( response.IsSuccessStatusCode )
                     {
-                        LoggingService.LogInfo($"OK. Directory '{fullPath}' was created.");
+                        LoggingService.LogInfo( $"OK. Directory '{fullPath}' was created." );
                     }
-                    else if (response.StatusCode == HttpStatusCode.Forbidden)
+                    else if ( response.StatusCode == HttpStatusCode.Forbidden )
                     {
-                        ForbiddenListResponse parsed = JsonConvert.DeserializeObject<ForbiddenListResponse>(await response.Content.ReadAsStringAsync());
+                        ForbiddenListResponse parsed = JsonConvert.DeserializeObject<ForbiddenListResponse>( await response.Content.ReadAsStringAsync() );
 
-                        CurrentUserProvider.UpdateLoggedUserGroups(parsed.Groups.ToGroupServiceModelList());
+                        CurrentUserProvider.UpdateLoggedUserGroups( parsed.Groups.ToGroupServiceModelList() );
 
                         return new CreateDirectoryResponse
                         {
@@ -299,9 +300,9 @@ namespace LUC.ApiClient
                     {
                         // {"error":10} Directory exists already.
                         // "{\"error\":29}" "Object exists already.". Ignore for the moment. Later add conflict UI.
-                        String plainStringResponse = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        String plainStringResponse = await response.Content.ReadAsStringAsync().ConfigureAwait( false );
 
-                        if (plainStringResponse.Contains("10"))
+                        if ( plainStringResponse.Contains( "10" ) )
                         {
                             return new CreateDirectoryResponse
                             {
@@ -310,7 +311,7 @@ namespace LUC.ApiClient
                         }
                         else
                         {
-                            LoggingService.LogError("Directory was not created: " + plainStringResponse);
+                            LoggingService.LogError( "Directory was not created: " + plainStringResponse );
                         }
                     }
 
@@ -325,11 +326,11 @@ namespace LUC.ApiClient
 
         #region Upload Methods
 
-        public async Task<FileUploadResponse> TryUploadAsync(FileInfo fileInfo)
+        public async Task<FileUploadResponse> TryUploadAsync( FileInfo fileInfo )
         {
             DateTime startUpload = DateTime.Now;
-            FileUploadResponse response = await m_upload.TryUploadAsync(fileInfo);
-            response.UploadTime = (Int64)(DateTime.Now - startUpload).TotalSeconds;
+            FileUploadResponse response = await m_upload.TryUploadAsync( fileInfo );
+            response.UploadTime = (Int64)( DateTime.Now - startUpload ).TotalSeconds;
 
             return response;
         }
@@ -337,15 +338,15 @@ namespace LUC.ApiClient
         // TODO Release 2.0 Implement for second release https://github.com/GrzegorzBlok/FastRsyncNet
         #endregion Upload Methods
 
-        public async Task<ObjectsListResponse> ListWithCancelDownloadAsync(String bucketName, String prefix = "", Boolean showDeleted = false) =>
-            await m_fileOperation.ListWithCancelDownloadAsync(bucketName, prefix, showDeleted).ConfigureAwait(continueOnCapturedContext: false);
+        public async Task<ObjectsListResponse> ListWithCancelDownloadAsync( String bucketName, String prefix = "", Boolean showDeleted = false ) =>
+            await m_fileOperation.ListWithCancelDownloadAsync( bucketName, prefix, showDeleted ).ConfigureAwait( continueOnCapturedContext: false );
 
-        public async Task<ObjectsListResponse> ListAsync(String bucketName, String prefix = "", Boolean showDeleted = false) =>
-            await m_fileOperation.ListAsync(bucketName, prefix, showDeleted).ConfigureAwait(continueOnCapturedContext: false);
+        public async Task<ObjectsListResponse> ListAsync( String bucketName, String prefix = "", Boolean showDeleted = false ) =>
+            await m_fileOperation.ListAsync( bucketName, prefix, showDeleted ).ConfigureAwait( continueOnCapturedContext: false );
 
-        public async Task<DeleteResponse> DeleteAsync(params String[] fullPathes) => await m_fileOperation.DeleteAsync(fullPathes);
+        public async Task<DeleteResponse> DeleteAsync( params String[] fullPathes ) => await m_fileOperation.DeleteAsync( fullPathes );
 
-        public async Task<HttpResponseMessage> DeleteAsync(DeleteRequest requestBody, String bucketName) => await m_fileOperation.DeleteAsync(requestBody, bucketName);
+        public async Task<HttpResponseMessage> DeleteAsync( DeleteRequest requestBody, String bucketName ) => await m_fileOperation.DeleteAsync( requestBody, bucketName );
 
         // TODO Release 3.0 Should be setting how to sync per bucket.
         // They should be shared and synchronized during each API List
@@ -353,11 +354,11 @@ namespace LUC.ApiClient
 
         // It sends list of moved objects.
         // TODO Server Handle 202 response! Not all objects was moved. Test with Vitaly over repetable logic.
-        public async Task<MoveOrCopyResponse> MoveAsync(String oldFullPath, String newFullPath)
+        public async Task<MoveOrCopyResponse> MoveAsync( String oldFullPath, String newFullPath )
         {
-            IBucketName bucket = CurrentUserProvider.TryExtractBucket(oldFullPath);
+            IBucketName bucket = CurrentUserProvider.TryExtractBucket( oldFullPath );
 
-            if (!bucket.IsSuccess)
+            if ( !bucket.IsSuccess )
             {
                 return new MoveOrCopyResponse
                 {
@@ -366,42 +367,42 @@ namespace LUC.ApiClient
                 };
             }
 
-            String requestUrl = BuildUriExtensions.PostMoveUri(Settings.Host, bucket.ServerName);
+            String requestUrl = BuildUriExtensions.PostMoveUri( Settings.Host, bucket.ServerName );
 
-            LoggingService.LogInfo($"API Move from {oldFullPath} to {newFullPath}");
+            LoggingService.LogInfo( $"API Move from {oldFullPath} to {newFullPath}" );
 
-            MoveOrCopyResponse result = await MoveOrCopy(oldFullPath, newFullPath, requestUrl);
+            MoveOrCopyResponse result = await MoveOrCopy( oldFullPath, newFullPath, requestUrl );
 
             return result;
         }
 
-        private async Task<MoveOrCopyResponse> MoveOrCopy(String oldFullPath, String newFullPath, String requestUrl)
+        private async Task<MoveOrCopyResponse> MoveOrCopy( String oldFullPath, String newFullPath, String requestUrl )
         {
-            ServerObjectDescription serverDesc = await ObjectNameProvider.GetExistingObjectDescription(oldFullPath);
+            ServerObjectDescription serverDesc = await ObjectNameProvider.GetExistingObjectDescription( oldFullPath );
 
-            FileSystemInfo fi = FileInfoHelper.TryGetFileInfo(newFullPath);
+            FileSystemInfo fi = FileInfoHelper.TryGetFileInfo( newFullPath );
 
-            if (fi == null)
+            if ( fi == null )
             {
-                fi = FileInfoHelper.TryGetDirectoryInfo(newFullPath);
+                fi = FileInfoHelper.TryGetDirectoryInfo( newFullPath );
             }
 
-            if (serverDesc.IsSuccess)
+            if ( serverDesc.IsSuccess )
             {
-                if (fi == null)
+                if ( fi == null )
                 {
-                    Log.Warning($"No object {newFullPath}");
+                    Log.Warning( $"No object {newFullPath}" );
 
                     return new MoveOrCopyResponse
                     {
                         IsSuccess = false,
-                        Message = String.Format(FileInfoHelper.ERROR_DESCRIPTION, newFullPath)
+                        Message = String.Format( FileInfoHelper.ERROR_DESCRIPTION, newFullPath )
                     };
                 }
 
-                String sourcePrefix = await ObjectNameProvider.ServerPrefix(oldFullPath);
+                String sourcePrefix = await ObjectNameProvider.ServerPrefix( oldFullPath );
 
-                if (sourcePrefix == null)
+                if ( sourcePrefix == null )
                 {
                     return new MoveOrCopyResponse
                     {
@@ -410,22 +411,22 @@ namespace LUC.ApiClient
                     };
                 }
 
-                String destinationPrefix = await ObjectNameProvider.ServerPrefix(newFullPath);
+                String destinationPrefix = await ObjectNameProvider.ServerPrefix( newFullPath );
 
                 var sourceKeys = new Dictionary<String, String>();
 
-                if (Directory.Exists(newFullPath) || File.Exists(newFullPath))
+                if ( Directory.Exists( newFullPath ) || File.Exists( newFullPath ) )
                 {
-                    sourceKeys.Add(serverDesc.ObjectKey, Path.GetFileName(newFullPath));
+                    sourceKeys.Add( serverDesc.ObjectKey, Path.GetFileName( newFullPath ) );
                 }
                 else
                 {
                     return new MoveOrCopyResponse { IsSuccess = false, Message = "Object does not exist." };
                 }
 
-                IBucketName bucket = CurrentUserProvider.TryExtractBucket(newFullPath);
+                IBucketName bucket = CurrentUserProvider.TryExtractBucket( newFullPath );
 
-                if (!bucket.IsSuccess)
+                if ( !bucket.IsSuccess )
                 {
                     return new MoveOrCopyResponse
                     {
@@ -442,20 +443,20 @@ namespace LUC.ApiClient
                     DestinationBucketId = bucket.ServerName,
                 };
 
-                String stringContent = JsonConvert.SerializeObject(moveRequest);
+                String stringContent = JsonConvert.SerializeObject( moveRequest );
 
-                using (var client = new RepeatableHttpClient(Settings.AccessToken, HttpStatusCode.Accepted))
+                using ( var client = new RepeatableHttpClient( Settings.AccessToken, HttpStatusCode.Accepted ) )
                 {
-                    var content = new StringContent(stringContent, Encoding.UTF8, "application/json");
+                    var content = new StringContent( stringContent, Encoding.UTF8, "application/json" );
 
-                    HttpResponseMessage response = await client.SendRepeatableAsync(requestUrl, () => RepeatableHttpClient.CloneHttpContentAsync(content), HttpMethod.Post);
+                    HttpResponseMessage response = await client.SendRepeatableAsync( requestUrl, () => RepeatableHttpClient.CloneHttpContentAsync( content ), HttpMethod.Post );
 
                     // NOTE For file which does not exist on server response will be 200 also.
-                    if (response.StatusCode == HttpStatusCode.OK)
+                    if ( response.StatusCode == HttpStatusCode.OK )
                     {
                         String parsed2 = await response.Content.ReadAsStringAsync();
                         MoveOrCopyResponse parsed;
-                        LoggingService.LogInfo($"Plain Move/Copy API response = {parsed2}");
+                        LoggingService.LogInfo( $"Plain Move/Copy API response = {parsed2}" );
                         try
                         {
                             JsonConvert.DefaultSettings = () => new JsonSerializerSettings
@@ -464,11 +465,11 @@ namespace LUC.ApiClient
                                 ContractResolver = new CamelCasePropertyNamesContractResolver(),
                                 NullValueHandling = NullValueHandling.Include
                             };
-                            parsed = JsonConvert.DeserializeObject<MoveOrCopyResponse>(parsed2);
+                            parsed = JsonConvert.DeserializeObject<MoveOrCopyResponse>( parsed2 );
                         }
-                        catch (Exception ex)
+                        catch ( Exception ex )
                         {
-                            LoggingService.LogError(ex, ex.Message);
+                            LoggingService.LogError( ex, ex.Message );
 
                             return new MoveOrCopyResponse
                             {
@@ -477,7 +478,7 @@ namespace LUC.ApiClient
                             };
                         }
 
-                        if (parsed.ToString() == String.Empty)
+                        if ( parsed.ToString() == String.Empty )
                         {
                             return new MoveOrCopyResponse
                             {
@@ -506,18 +507,18 @@ namespace LUC.ApiClient
 
                         //if (String.IsNullOrEmpty(parsed.SkippedReason))
                         //{
-                        AdsExtensions.Write(newFullPath, text: newFullPath, AdsExtensions.Stream.LocalPathMarker); // NOTE. Do it before renaming.
+                        AdsExtensions.Write( newFullPath, text: newFullPath, AdsExtensions.Stream.LocalPathMarker ); // NOTE. Do it before renaming.
 
                         // TODO 1.0 Test after Vitaly fix. Move/Copy file which is deleted on server. check response with empty list. upload with new path if old is absent on server.
                         parsed.IsSuccess = true;
                         parsed.Message = "Object " + oldFullPath + " was moved/copied.";
 
-                        if (parsed.IsRenamed) // TODO Release 2.0 discuss renaming of directories.
+                        if ( parsed.IsRenamed ) // TODO Release 2.0 discuss renaming of directories.
                         {
-                            if (!File.Exists(oldFullPath))
+                            if ( !File.Exists( oldFullPath ) )
                             {
-                                INotificationResult result = SyncingObjectsList.RenameFileOnlyLocal(fi as FileInfo, parsed.DestinationOriginalName, fi.LastWriteTimeUtc, parsed.Guid);
-                                if (result.IsSuccess)
+                                INotificationResult result = SyncingObjectsList.RenameFileOnlyLocal( fi as FileInfo, parsed.DestinationOriginalName, fi.LastWriteTimeUtc, parsed.Guid );
+                                if ( result.IsSuccess )
                                 {
                                     parsed.Message = "Object " + oldFullPath + " was moved to the " + newFullPath;
                                     return parsed;
@@ -525,7 +526,7 @@ namespace LUC.ApiClient
                             }
                             else
                             {
-                                FileUploadResponse uploadResult = await TryUploadAsync(fi as FileInfo);
+                                FileUploadResponse uploadResult = await TryUploadAsync( fi as FileInfo );
 
                                 return new MoveOrCopyResponse
                                 {
@@ -535,7 +536,7 @@ namespace LUC.ApiClient
                             }
                         }
 
-                        LoggingService.LogInfo(parsed.Message);
+                        LoggingService.LogInfo( parsed.Message );
                         return parsed;
                         //}
                         //else
@@ -550,9 +551,9 @@ namespace LUC.ApiClient
                         //    };
                         //}
                     }
-                    else if (response.StatusCode == HttpStatusCode.Forbidden)
+                    else if ( response.StatusCode == HttpStatusCode.Forbidden )
                     {
-                        return await HandleResponse403<MoveOrCopyResponse>(response, $"Status code = '{response.StatusCode}'.");
+                        return await HandleResponse403<MoveOrCopyResponse>( response, $"Status code = '{response.StatusCode}'." );
                     }
                     else
                     {
@@ -565,10 +566,10 @@ namespace LUC.ApiClient
 
                         String error = await response.Content.ReadAsStringAsync();
 
-                        LoggingService.LogError($"Can't move/copy from {oldFullPath} to {newFullPath}: {error}");
-                        LoggingService.LogError($"Can't move/copy from {oldFullPath} to {newFullPath}. Plain request = {stringContent}");
+                        LoggingService.LogError( $"Can't move/copy from {oldFullPath} to {newFullPath}: {error}" );
+                        LoggingService.LogError( $"Can't move/copy from {oldFullPath} to {newFullPath}. Plain request = {stringContent}" );
 
-                        LoggingService.LogError($"Move response: {response.StatusCode}, error: {error}");
+                        LoggingService.LogError( $"Move response: {response.StatusCode}, error: {error}" );
 
                         return new MoveOrCopyResponse
                         {
@@ -580,9 +581,9 @@ namespace LUC.ApiClient
             }
             else
             {
-                if (Directory.Exists(newFullPath))
+                if ( Directory.Exists( newFullPath ) )
                 {
-                    CreateDirectoryResponse response = await CreateDirectoryOnServerAsync(newFullPath);
+                    CreateDirectoryResponse response = await CreateDirectoryOnServerAsync( newFullPath );
 
                     return new MoveOrCopyResponse
                     {
@@ -590,9 +591,9 @@ namespace LUC.ApiClient
                         Message = response.Message
                     };
                 }
-                else if (File.Exists(newFullPath))
+                else if ( File.Exists( newFullPath ) )
                 {
-                    FileUploadResponse uploadResult = await TryUploadAsync(fi as FileInfo);
+                    FileUploadResponse uploadResult = await TryUploadAsync( fi as FileInfo );
 
                     return new MoveOrCopyResponse
                     {
@@ -603,7 +604,7 @@ namespace LUC.ApiClient
                 else
                 {
                     String message = $"Can't Move/Copy: {serverDesc.Message} Cant get server object name for path '{ oldFullPath}' and local file info for '{newFullPath}'";
-                    LoggingService.LogError(message);
+                    LoggingService.LogError( message );
 
                     return new MoveOrCopyResponse
                     {
@@ -614,11 +615,11 @@ namespace LUC.ApiClient
             }
         }
 
-        public async Task<MoveOrCopyResponse> CopyAsync(String oldFullPath, String newFullPath)
+        public async Task<MoveOrCopyResponse> CopyAsync( String oldFullPath, String newFullPath )
         {
-            IBucketName bucket = CurrentUserProvider.TryExtractBucket(oldFullPath);//it doesn't work correctly
+            IBucketName bucket = CurrentUserProvider.TryExtractBucket( oldFullPath );//it doesn't work correctly
 
-            if (!bucket.IsSuccess)
+            if ( !bucket.IsSuccess )
             {
                 return new MoveOrCopyResponse
                 {
@@ -627,35 +628,35 @@ namespace LUC.ApiClient
                 };
             }
 
-            String requestUrl = BuildUriExtensions.PostCopyUri(Settings.Host, bucket.ServerName);
+            String requestUrl = BuildUriExtensions.PostCopyUri( Settings.Host, bucket.ServerName );
 
-            LoggingService.LogInfo($"API Copy from {oldFullPath} to {newFullPath}");
+            LoggingService.LogInfo( $"API Copy from {oldFullPath} to {newFullPath}" );
 
-            MoveOrCopyResponse result = await MoveOrCopy(oldFullPath, newFullPath, requestUrl);
+            MoveOrCopyResponse result = await MoveOrCopy( oldFullPath, newFullPath, requestUrl );
 
-            if (result.IsSuccess)
+            if ( result.IsSuccess )
             {
                 String finalName = result.IsRenamed ? result.DestinationOriginalName : result.SourceOriginalName;
-                String finalPath = Path.Combine(Path.GetDirectoryName(newFullPath), finalName);
+                String finalPath = Path.Combine( Path.GetDirectoryName( newFullPath ), finalName );
 
-                AdsExtensions.WriteGuidAndLocalPathMarkersIfNotTheSame(finalPath, result.Guid);
+                AdsExtensions.WriteGuidAndLocalPathMarkersIfNotTheSame( finalPath, result.Guid );
             }
 
             return result;
         }
 
-        public async Task<RenameResponse> RenameAsync(String oldFullPath, String newFullPath)
+        public async Task<RenameResponse> RenameAsync( String oldFullPath, String newFullPath )
         {
             // TODO Check rename when something is locked inside. 202.
-            LoggingService.LogInfo($"API request for rename from {oldFullPath} to {newFullPath}");
+            LoggingService.LogInfo( $"API request for rename from {oldFullPath} to {newFullPath}" );
 
-            ServerObjectDescription serverDesc = await ObjectNameProvider.GetExistingObjectDescription(oldFullPath);
+            ServerObjectDescription serverDesc = await ObjectNameProvider.GetExistingObjectDescription( oldFullPath );
 
-            if (serverDesc.IsSuccess)
+            if ( serverDesc.IsSuccess )
             {
-                IBucketName bucket = CurrentUserProvider.TryExtractBucket(oldFullPath);
+                IBucketName bucket = CurrentUserProvider.TryExtractBucket( oldFullPath );
 
-                if (!bucket.IsSuccess)
+                if ( !bucket.IsSuccess )
                 {
                     return new RenameResponse
                     {
@@ -666,33 +667,33 @@ namespace LUC.ApiClient
 
                 var renameRequest = new RenameRequest
                 {
-                    Prefix = await ObjectNameProvider.ServerPrefix(oldFullPath),
-                    DestinationObjectName = Path.GetFileName(newFullPath),
+                    Prefix = await ObjectNameProvider.ServerPrefix( oldFullPath ),
+                    DestinationObjectName = Path.GetFileName( newFullPath ),
                     SourceObjectKey = serverDesc.ObjectKey
                 };
-                
-                using (var client = new RepeatableHttpClient(Settings.AccessToken))
+
+                using ( var client = new RepeatableHttpClient( Settings.AccessToken ) )
                 {
-                    var content = new StringContent(JsonConvert.SerializeObject(renameRequest), Encoding.UTF8, "application/json");
+                    var content = new StringContent( JsonConvert.SerializeObject( renameRequest ), Encoding.UTF8, "application/json" );
 
-                    String requestUri = BuildUriExtensions.PostRenameUri(Settings.Host, bucket.ServerName);
+                    String requestUri = BuildUriExtensions.PostRenameUri( Settings.Host, bucket.ServerName );
 
-                    HttpResponseMessage response = await client.SendRepeatableAsync(requestUri, contentReciever: () => RepeatableHttpClient.CloneHttpContentAsync(content), HttpMethod.Post);
+                    HttpResponseMessage response = await client.SendRepeatableAsync( requestUri, contentReciever: () => RepeatableHttpClient.CloneHttpContentAsync( content ), HttpMethod.Post );
 
-                    LoggingService.LogInfo($"API response for rename from {oldFullPath} to {newFullPath} is {response.StatusCode}");
+                    LoggingService.LogInfo( $"API response for rename from {oldFullPath} to {newFullPath} is {response.StatusCode}" );
 
-                    if (response.IsSuccessStatusCode)
+                    if ( response.IsSuccessStatusCode )
                     {
-                        AdsExtensions.Write(newFullPath, text: newFullPath, AdsExtensions.Stream.LocalPathMarker);
+                        AdsExtensions.Write( newFullPath, text: newFullPath, AdsExtensions.Stream.LocalPathMarker );
 
                         return new RenameResponse
                         {
                             Message = "Object " + oldFullPath + " was renamed."
                         };
                     }
-                    else if (response.StatusCode == HttpStatusCode.Forbidden)
+                    else if ( response.StatusCode == HttpStatusCode.Forbidden )
                     {
-                        return await HandleResponse403<RenameResponse>(response, $"Status code = '{response.StatusCode}'.");
+                        return await HandleResponse403<RenameResponse>( response, $"Status code = '{response.StatusCode}'." );
                     }
                     else
                     {
@@ -704,19 +705,19 @@ namespace LUC.ApiClient
 
                         // Release 2.0 Later show conflict files UI
                         String error = await response.Content.ReadAsStringAsync();
-                        
-                        if (error.Contains("29") || error.Contains("43"))
+
+                        if ( error.Contains( "29" ) || error.Contains( "43" ) )
                         {
-                            FileInfo fileInfo = FileInfoHelper.TryGetFileInfo(newFullPath);
-                            if (fileInfo != null)
+                            FileInfo fileInfo = FileInfoHelper.TryGetFileInfo( newFullPath );
+                            if ( fileInfo != null )
                             {
-                                String guid = AdsExtensions.Read(newFullPath, AdsExtensions.Stream.Guid);
-                                _ = SyncingObjectsList.RenameFileOnlyLocal(fileInfo, oldFullPath, fileInfo.LastWriteTimeUtc, guid);
+                                String guid = AdsExtensions.Read( newFullPath, AdsExtensions.Stream.Guid );
+                                _ = SyncingObjectsList.RenameFileOnlyLocal( fileInfo, oldFullPath, fileInfo.LastWriteTimeUtc, guid );
                             }
                         }
                         else
                         {
-                            LoggingService.LogError("Can't rename: " + error);
+                            LoggingService.LogError( "Can't rename: " + error );
                         }
 
                         return new RenameResponse
@@ -729,13 +730,13 @@ namespace LUC.ApiClient
             }
             else
             {
-                FileInfo fileInfo = FileInfoHelper.TryGetFileInfo(newFullPath);
-                if (fileInfo == null)
+                FileInfo fileInfo = FileInfoHelper.TryGetFileInfo( newFullPath );
+                if ( fileInfo == null )
                 {
-                    if (Directory.Exists(newFullPath))
+                    if ( Directory.Exists( newFullPath ) )
                     {
-                        LoggingService.LogInfo($"Directory to rename {oldFullPath} does not exist on server. So the directory {newFullPath} will be created.");
-                        CreateDirectoryResponse response = await CreateDirectoryOnServerAsync(newFullPath);
+                        LoggingService.LogInfo( $"Directory to rename {oldFullPath} does not exist on server. So the directory {newFullPath} will be created." );
+                        CreateDirectoryResponse response = await CreateDirectoryOnServerAsync( newFullPath );
                     }
                     else
                     {
@@ -748,8 +749,8 @@ namespace LUC.ApiClient
                 }
                 else
                 {
-                    LoggingService.LogInfo($"File to rename {oldFullPath} does not exist on server. So the file {newFullPath} will be uploaded from scratch.");
-                    _ = await TryUploadAsync(fileInfo);
+                    LoggingService.LogInfo( $"File to rename {oldFullPath} does not exist on server. So the file {newFullPath} will be uploaded from scratch." );
+                    _ = await TryUploadAsync( fileInfo );
                 }
 
                 return new RenameResponse
@@ -760,25 +761,25 @@ namespace LUC.ApiClient
             }
         }
 
-        private async Task<T> HandleResponse403<T>(HttpResponseMessage response, String message) where T : BaseResponse
+        private async Task<T> HandleResponse403<T>( HttpResponseMessage response, String message ) where T : BaseResponse
         {
-            ForbiddenListResponse parsed = JsonConvert.DeserializeObject<ForbiddenListResponse>(await response.Content.ReadAsStringAsync());
+            ForbiddenListResponse parsed = JsonConvert.DeserializeObject<ForbiddenListResponse>( await response.Content.ReadAsStringAsync() );
             //ForbiddenListResponse parsed = await response.Content.ReadAsync<ForbiddenListResponse>();
 
-            CurrentUserProvider.UpdateLoggedUserGroups(parsed.Groups.ToGroupServiceModelList());
+            CurrentUserProvider.UpdateLoggedUserGroups( parsed.Groups.ToGroupServiceModelList() );
 
-            Object result = Activator.CreateInstance(typeof(T), new Object[] { false, true, message });
+            Object result = Activator.CreateInstance( typeof( T ), new Object[] { false, true, message } );
 
             return result as T;
         }
 
         #region Lock/Unlock Methods
 
-        public async Task LockFile(String fullPath) => 
-            await m_fileLocker.LockFile(fullPath);
+        public async Task LockFile( String fullPath ) =>
+            await m_fileLocker.LockFile( fullPath );
 
-        public async Task UnlockFile(String fullPath) => 
-            await m_fileLocker.UnlockFile(fullPath);
+        public async Task UnlockFile( String fullPath ) =>
+            await m_fileLocker.UnlockFile( fullPath );
 
         #endregion Lock/Unlock Methods
 
@@ -791,7 +792,7 @@ namespace LUC.ApiClient
             CancellationToken cancellationToken = default
         )
         {
-            InitLucDownloader(updateOurBucketsIdsInRemoteNodes: false);
+            InitLucDownloader( updateOurBucketsIdsInRemoteNodes: false );
 
             await Downloader.DownloadFileAsync(
                   bucketName,
@@ -800,20 +801,20 @@ namespace LUC.ApiClient
                   localOriginalName,
                   objectDescription,
                   cancellationToken
-             ).ConfigureAwait(continueOnCapturedContext: false);
+             ).ConfigureAwait( continueOnCapturedContext: false );
         }
 
-        public Task<ServerObjectDescription> GetExistingObjectDescription(String objectFullPath) => 
-            ObjectNameProvider.GetExistingObjectDescription(objectFullPath);
+        public Task<ServerObjectDescription> GetExistingObjectDescription( String objectFullPath ) =>
+            ObjectNameProvider.GetExistingObjectDescription( objectFullPath );
 
         private void InitOperations()
         {
-            if (!m_isOperationsInitialized)
+            if ( !m_isOperationsInitialized )
             {
-                m_fileOperation = new FileOperation(this);
-                m_fileLocker = new Lock(Settings, ObjectNameProvider, NotifyService);
+                m_fileOperation = new FileOperation( this );
+                m_fileLocker = new Lock( Settings, ObjectNameProvider, NotifyService );
 
-                m_upload = new Upload(this);
+                m_upload = new Upload( this );
 
                 m_isOperationsInitialized = true;
             }
@@ -834,7 +835,7 @@ namespace LUC.ApiClient
                         DiscoveryService = DiscoveryServiceFacade.FullyInitialized( CurrentUserProvider, SettingsService );
                     }
 
-                    var downloader = new LucDownloader( this );
+                    var downloader = new Downloader( this );
                     return downloader;
                 },
                 m_lockLucDowloaderInit,
@@ -846,14 +847,14 @@ namespace LUC.ApiClient
         {
             try
             {
-                var discoveryService = DiscoveryServices.DiscoveryService.BeforeCreatedInstance( GeneralConstants.PROTOCOL_VERSION);
+                var discoveryService = DiscoveryServices.DiscoveryService.BeforeCreatedInstance( GeneralConstants.PROTOCOL_VERSION );
                 discoveryService.ClearAllLocalBuckets();
 
-                SyncingObjectsList.CancelDownloadingAllFilesWhichBelongPath(CurrentUserProvider.RootFolderPath);
+                SyncingObjectsList.CancelDownloadingAllFilesWhichBelongPath( CurrentUserProvider.RootFolderPath );
             }
-            catch (Exception ex)
+            catch ( Exception ex )
             {
-                LoggingService.LogError(ex.ToString());
+                LoggingService.LogError( ex.ToString() );
             }
         }
     }

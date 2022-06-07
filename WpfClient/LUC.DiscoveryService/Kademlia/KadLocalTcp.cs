@@ -90,7 +90,7 @@ namespace LUC.DiscoveryServices.Kademlia
             return (closeContacts, response?.ValueInResponsingPeer, rpcError);
         }
 
-        private List<IContact> EmptyContactList() => 
+        private List<IContact> EmptyContactList() =>
             new List<IContact>();
 
         private void UpdateContactInDht( IContact remoteContact, FindNodeResponse findNodeResponse )
@@ -101,17 +101,20 @@ namespace LUC.DiscoveryServices.Kademlia
             Dht dht = NetworkEventInvoker.DistributedHashTable( m_protocolVersion );
             IBucketList bucketList = dht.Node.BucketList;
 
-            if ( bucketList.ContactExists( remoteContact ) )
+            lock ( bucketList )
             {
-                KBucket kBucket = bucketList.GetKBucket( remoteContact.KadId );
-                kBucket.ReplaceContact( remoteContact );
-            }
-            else
-            {
-                IContact oldInfoAboutContact = dht.PendingContacts.SingleOrDefault( c => c.Equals( remoteContact ) );
-                if ( oldInfoAboutContact != null )
+                if ( bucketList.ContactExists( remoteContact ) )
                 {
-                    oldInfoAboutContact.UpdateAccordingToNewState( remoteContact );
+                    KBucket kBucket = bucketList.KBucket( remoteContact.KadId );
+                    kBucket.ReplaceContact( remoteContact );
+                }
+                else
+                {
+                    IContact oldInfoAboutContact = dht.PendingContacts.SingleOrDefault( c => c.Equals( remoteContact ) );
+                    if ( oldInfoAboutContact != null )
+                    {
+                        oldInfoAboutContact.UpdateAccordingToNewState( remoteContact );
+                    }
                 }
             }
         }

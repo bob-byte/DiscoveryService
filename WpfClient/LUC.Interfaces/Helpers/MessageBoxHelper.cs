@@ -16,11 +16,21 @@ namespace LUC.Interfaces.Helpers
         public static MessageBoxResult ShowMessageBox( String message, String caption, MessageBoxButton buttons )
         {
             MessageBoxResult messageBoxResult = default;
-            Application.Current.Dispatcher.Invoke( () =>
+
+            Action showMessageBox = () =>
             {
                 Style defaultStyle = DefaultAppStyle();
                 messageBoxResult = Xceed.Wpf.Toolkit.MessageBox.Show( Application.Current.MainWindow, message, caption, buttons, defaultStyle );
-            } );
+            };
+
+            if ( Application.Current.Dispatcher != null )
+            {
+                Application.Current.Dispatcher.Invoke( showMessageBox );
+            }
+            else
+            {
+                showMessageBox();
+            }
 
             return messageBoxResult;
         }

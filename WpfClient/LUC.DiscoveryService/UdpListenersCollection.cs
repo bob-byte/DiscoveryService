@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 
 using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Models;
@@ -68,7 +68,7 @@ namespace LUC.DiscoveryServices
                         }
                     }
 
-                    m_isListening = true;
+                    m_isListening = Listeners.All( c => c.Client.IsBound ) && ( Listeners.Count > 0 );
                 }
             }
             else
@@ -132,75 +132,6 @@ namespace LUC.DiscoveryServices
                 }
 #endif
             } );
-        }
-
-        private void ConfigureListeners( AddressFamily addressFamily, IEnumerable<IPAddress> reachableIpAddresses )
-        {
-            SocketOptionLevel socketOptionLevel;
-            IPAddress listeningAddress;
-            Func<IPAddress, Object> createdMulticastOption;
-
-            switch ( addressFamily )
-            {
-                case AddressFamily.InterNetwork:
-                {
-                    listeningAddress = IPAddress.Any;//0.0.0.0
-                    socketOptionLevel = SocketOptionLevel.IP;
-                    createdMulticastOption = ip =>
-                        new MulticastOption( DsConstants.MulticastAddressIpv4, ip );
-
-                    break;
-                }
-
-                case AddressFamily.InterNetworkV6:
-                {
-                    listeningAddress = IPAddress.IPv6Any;//::ffff:0:0
-                    socketOptionLevel = SocketOptionLevel.IPv6;
-                    createdMulticastOption = ip =>
-                        new IPv6MulticastOption( DsConstants.MulticastAddressIpv6, ip.ScopeId );
-
-                    break;
-                }
-
-                default:
-                {
-                    throw new NotSupportedException( message: $"Address family {addressFamily}." );
-                }
-            }
-
-            UdpClient udpReceiver = null;
-            try
-            {
-                udpReceiver = new UdpClient( addressFamily );
-                udpReceiver.Client.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, optionValue: true );
-                udpReceiver.Client.Bind( localEP: new IPEndPoint( listeningAddress, ListeningPort ) );
-
-                Listeners.Add( udpReceiver );
-            }
-            catch ( SocketException ex )
-            {
-                DsLoggerSet.DefaultLogger.LogCriticalError( ex );
-            }
-            catch ( SecurityException ex )
-            {
-                DsLoggerSet.DefaultLogger.LogCriticalError( ex );
-            }
-
-            if ( udpReceiver != null )
-            {
-                foreach ( IPAddress ipAddress in reachableIpAddresses.Where( ip => ip.AddressFamily == addressFamily ) )
-                {
-                    try
-                    {
-                        Object optionValue = createdMulticastOption( ipAddress );
-                        udpReceiver.Client.SetSocketOption( socketOptionLevel, SocketOptionName.AddMembership, optionValue );
-                    }
-                    catch ( SocketException )
-                    {
-                        DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Cannot join socket with IP-address {ipAddress} to multicast group" );
-                    }
-                }
-            }
         }
 
         private void ConfigureListeners( IEnumerable<IPAddress> reachableIpAddresses )

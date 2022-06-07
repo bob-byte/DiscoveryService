@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryServices.CodingData;
 using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 
 using System;
 using System.Net.Sockets;
@@ -25,6 +25,11 @@ namespace LUC.DiscoveryServices.Messages.KademliaResponses
         protected Response( BigInteger requestRandomId )
         {
             RandomID = requestRandomId;
+        }
+
+        protected Response()
+        {
+            ;
         }
 
         public BigInteger RandomID { get; private set; }

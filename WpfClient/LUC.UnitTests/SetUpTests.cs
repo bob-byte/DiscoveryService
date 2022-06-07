@@ -24,7 +24,23 @@ namespace LUC.UnitTests
     {
         public const String DEFAULT_USER_LOGIN_FOR_TEST = "integration1";
 
-        public static void SetupServicesContainer(String syncFolder ) =>
+        public static String SyncFolder { get; private set; }
+
+        public static IUnityContainer UnityContainer { get; protected set; }
+
+        public static IFixture Fixture { get; protected set; }
+
+        public static IApiClient ApiClient { get; set; }
+
+        public static ICurrentUserProvider CurrentUserProvider { get; protected set; }
+
+        public static ISettingsService SettingsService { get; protected set; }
+
+        public static ILoggingService LoggingService { get; protected set; }
+
+        public static ISyncingObjectsList SyncingObjectsList { get; protected set; }
+
+        public static void SetupServicesContainer( String syncFolder ) =>
             UnityContainer.Setup( syncFolder );
 
         public static void Init( String login, Action<String> setupServicesContainer )
@@ -44,29 +60,20 @@ namespace LUC.UnitTests
             LoggingService = AppSettings.ExportedValue<ILoggingService>();
             CurrentUserProvider = AppSettings.ExportedValue<ICurrentUserProvider>();
             ApiClient = AppSettings.ExportedValue<IApiClient>();
+            SyncingObjectsList = AppSettings.ExportedValue<ISyncingObjectsList>();
         }
 
-        public static String SyncFolder { get; private set; }
-
-        public static IUnityContainer UnityContainer { get; protected set; }
-
-        public static IFixture Fixture { get; protected set; }
-
-        public static IApiClient ApiClient { get; set; }
-
-        public static ICurrentUserProvider CurrentUserProvider { get; protected set; }
-
-        public static ISettingsService SettingsService { get; protected set; }
-
-        public static ILoggingService LoggingService { get; protected set; }
-
-        public static ISyncingObjectsList SyncingObjectsList { get; protected set; }
+        [OneTimeSetUp]
+        public void Init() =>
+            Init( DEFAULT_USER_LOGIN_FOR_TEST, SetupServicesContainer );
 
         protected internal async static Task<(ApiClient.ApiClient apiClient, LoginResponse loginResponse, ICurrentUserProvider userProvider)> LoginAsync(
             String login = "integration1",
             String password = "integration1" )
         {
             LoginResponse loginResponse = await ApiClient.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
+
+            SyncFolder = CurrentUserProvider.RootFolderPath;
             return (ApiClient as ApiClient.ApiClient, loginResponse, CurrentUserProvider);
         }
     }

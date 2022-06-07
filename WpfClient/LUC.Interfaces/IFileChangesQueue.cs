@@ -1,4 +1,5 @@
-﻿using LUC.Interfaces.Models;
+﻿using LUC.Interfaces.Enums;
+using LUC.Interfaces.Models;
 
 using System;
 using System.IO;
@@ -9,6 +10,8 @@ namespace LUC.Interfaces
     public interface IFileChangesQueue
     {
         void AddEvent( FileSystemEventArgs args );
+
+        void TryGetEventArgs( String path, out Boolean existsInQueue, out FileSystemEventArgs eventArgs );
 
         Task HandleLockedFilesAsync();
 

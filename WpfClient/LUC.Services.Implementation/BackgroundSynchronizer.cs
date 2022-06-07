@@ -305,6 +305,7 @@ namespace LUC.Services.Implementation
         private void ResetSyncToServerCancellation()
         {
             //thread-safe reset m_cancelSyncToServer.IsCancellationRequested to false
+            //TODO: dispose previous m_cancelSyncToServer value
             Interlocked.Exchange( ref m_cancelSyncToServer, value: new CancellationTokenSource() );
         }
 
@@ -459,14 +460,24 @@ namespace LUC.Services.Implementation
                     // TODO Release 2.0 Later will be separate UI for conflicting objects. Now we ignoring
                 }
 
-                SyncingObjectsList.AddCreatingDirectory( relatedToPrefixFolder );
+                //TODO check whether FileChangesQueue contains deleted folder
+                FileChangesQueue.TryGetEventArgs( relatedToPrefixFolder, out Boolean existsInQueue, out FileSystemEventArgs eventArgs );
 
-                //directory deletion from SyncingObjectsList is in FileSystemFacade.Watcher_Created
-                Directory.CreateDirectory( relatedToPrefixFolder );
-                var di = new DirectoryInfo( relatedToPrefixFolder );
+                if ( existsInQueue && ( eventArgs.ChangeType == WatcherChangeTypes.Deleted ) )
+                {
+                    return false;
+                }
+                else
+                {
+                    SyncingObjectsList.AddCreatingDirectory( relatedToPrefixFolder );
 
-                //remove read-only attribute
-                di.Attributes &= ~FileAttributes.ReadOnly;
+                    //directory deletion from SyncingObjectsList is in FileSystemFacade.Watcher_Created
+                    Directory.CreateDirectory( relatedToPrefixFolder );
+                    var di = new DirectoryInfo( relatedToPrefixFolder );
+
+                    //remove read-only attribute
+                    di.Attributes &= ~FileAttributes.ReadOnly;
+                }                
             }
             else  // If directory is present when remove read-only attribute
             {
@@ -743,7 +754,7 @@ namespace LUC.Services.Implementation
             var checkEventArgsCollection = timerState as CheckServerChangesEventArgsCollection;
             foreach ( CheckServerChangesEventArgs checkEventArgs in checkEventArgsCollection )
             {
-                await ApiClient.ListWithCancelDownloadAsync( checkEventArgs.ServerBucketName, checkEventArgs.HexPrefix ).ConfigureAwait( continueOnCapturedContext: false );
+                await ApiClient.ListWithCancelDownloadAsync( checkEventArgs.ServerBucketName, checkEventArgs.HexPrefix, showDeleted: true ).ConfigureAwait( continueOnCapturedContext: false );
                 checkEventArgsCollection.TryRemoveFirstItem( isRemoved: out _ );
             }
         }

@@ -1,8 +1,12 @@
-﻿using LUC.Interfaces.Constants;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Extensions;
+using LUC.DiscoveryServices.Messages;
+using LUC.Interfaces.Constants;
 
 using Nito.AsyncEx;
 
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -363,6 +367,67 @@ namespace LUC.DiscoveryServices
         /// <param name="text">Text string to send</param>
         /// <returns>'true' if the text was successfully sent, 'false' if the session is not connected</returns>
         public virtual Boolean SendAsync( String text ) => SendAsync( Encoding.UTF8.GetBytes( text ) );
+
+        public TcpMessageEventArgs Receive( TimeSpan timeoutToRead )
+        {
+            Byte[] readBytes;
+
+            if ( !( Socket.RemoteEndPoint is IPEndPoint ipEndPoint ) )
+            {
+                throw new InvalidOperationException( message: $"Received message not from {nameof( IPEndPoint )}" );
+            }
+            else
+            {
+                //because any next code can receive SocketException if it will use clientToReadMessage.Socket.RemoteEndPoint
+                var clonedIpEndPoint = new IPEndPoint( ipEndPoint.Address, ipEndPoint.Port );
+                var cancelSource = new CancellationTokenSource( delay: timeoutToRead );
+
+                try
+                {
+                    readBytes = Socket.ReadMessageBytes(
+                        DsConstants.MAX_CHUNK_READ_PER_ONE_TIME,
+                        DsConstants.MAX_AVAILABLE_READ_BYTES,
+                        cancelSource.Token
+                    );
+                }
+                catch ( SocketException )
+                {
+                    if ( Server.IsSocketDisposed )
+                    {
+                        throw new ObjectDisposedException( $"Socket is disposed" );
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+                catch ( TimeoutException )
+                {
+                    //we need to delete it because we will have malformed all next messages
+                    Server.UnregisterSession( Id );
+
+                    var timeoutEx = new TimeoutException( $"Timeout to read data from {clonedIpEndPoint}" );
+                    DsLoggerSet.DefaultLogger.LogCriticalError( timeoutEx );
+
+                    throw timeoutEx;
+                }
+                finally
+                {
+                    cancelSource.Dispose();
+                }
+
+                var receiveResult = new TcpMessageEventArgs
+                {
+                    Buffer = readBytes,
+                    RemoteEndPoint = clonedIpEndPoint,
+                    AcceptedSocket = Socket,
+                    LocalEndPoint = Server.Endpoint,
+                    UnregisterSocket = () => Server.UnregisterSession( Id )
+                };
+
+                return receiveResult;
+            }
+        }
 
         /// <summary>
         /// Receive data from the client (synchronous)

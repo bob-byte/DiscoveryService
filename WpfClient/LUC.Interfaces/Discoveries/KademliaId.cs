@@ -67,15 +67,15 @@ namespace LUC.Interfaces.Discoveries
         /// </summary>
         public static KademliaId Random()
         {
-            //var guid = Guid.NewGuid();
-            //Byte[] guidBuffer = guid.ToByteArray();
+            var guid = Guid.NewGuid();
+            Byte[] guidBuffer = guid.ToByteArray();
 
-            Byte[] rndBuffer = new Byte[ DsConstants.KID_LENGTH_BYTES/* - guidBuffer.Length*/ ];
+            Byte[] rndBuffer = new Byte[ DsConstants.KID_LENGTH_BYTES - guidBuffer.Length ];
             s_rndObj.NextBytes( rndBuffer );
 
-            //Byte[] idBuffer = guidBuffer.Concat( rndBuffer );
+            Byte[] idBuffer = guidBuffer.Concat( rndBuffer );
 
-            var randomId = new KademliaId( rndBuffer /*idBuffer*/ );
+            var randomId = new KademliaId( idBuffer );
             return randomId;
         }
 

@@ -6,6 +6,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 
 namespace LUC.DubstackAdsUtility
@@ -14,6 +15,9 @@ namespace LUC.DubstackAdsUtility
     {
         public static void Main( String[] args )
         {
+            Encoding encoding = Console.OutputEncoding;
+            TextWriter inConsoleWriter = Console.Out;
+
             MessageBox.Show( String.Join( "-", args ) );
             foreach ( String item in args )
             {

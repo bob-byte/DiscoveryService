@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,6 +11,7 @@ using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Kademlia.Downloads;
 using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces;
+using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Models;
@@ -24,7 +26,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
         /// </summary>
         private async static Task DownloadRandomFileAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider )
         {
-            var download = new DsDownloader( s_discoveryService, IoBehavior.Asynchronous );
+            var download = new DownloaderFromLocalNetwork( s_discoveryService, IoBehavior.Asynchronous );
             download.FileSuccessfullyDownloaded += OnFileDownloaded;
 
             String filePrefix = UserIntersectionInConsole.ValidValueInputtedByUser( requestToUser: "Input file prefix where new file can exist on the server: ", ( userInput ) =>
@@ -41,67 +43,68 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                 Console.WriteLine( "Press any key to start download process. \n" +
                 "After that if you want to cancel download, press C key. If you do not want to cancel, press any other button." );
                 Console.ReadKey( intercept: true );//true says that pressed key will not show in console
-
-                ConfiguredTaskAwaitable downloadTask = Task.Run( async () =>
-                 {
-                     var downloadedChunks = new List<ChunkRange>();
-                     IProgress<FileDownloadProgressArgs> downloadProgress = new Progress<FileDownloadProgressArgs>( ( progressArgs ) => downloadedChunks.Add( progressArgs.ChunkRange ) );
-
-                     download.FilePartiallyDownloaded += ( sender, eventArgs ) =>
-                     {
-                         IEnumerable<ChunkRange> undownloadedChunks = eventArgs.UndownloadedRanges;
-
-                         Console.WriteLine( "Undownloaded chunks: " );
-                         ShowChunkRanges( undownloadedChunks );
-                     };
-
-                     String targetFullFileName = Path.Combine( localFolderPath, filePrefix, fileDescription.OriginalName );
-#if RECEIVE_UDP_FROM_OURSELF
-                     String directoryPath = Directory.GetParent( Path.GetDirectoryName( targetFullFileName ) ).FullName;
-                     targetFullFileName = Path.Combine( directoryPath, fileDescription.OriginalName );
-#endif
-
-                     var downloadingFileInfo = fileDescription.ToDownloadingFileInfo( 
-                         bucketName.ServerName, 
-                         targetFullFileName, 
-                         hexFilePrefix
-                     );
-
-                     var downloadedAnyChunk = new ManualResetEvent( initialState: false );
-                     try
-                     {
-                         await download.DownloadFileAsync(
-                             downloadingFileInfo,
-                             fileChangesQueue: null,
-                             downloadedAnyChunk,
-                             downloadProgress
-                         ).ConfigureAwait( false );
-                     }
-                     catch ( Exception ex )
-                     {
-                         Console.WriteLine( ex.ToString() );
-                     }
-
-                     Boolean isDownloadedAnyChunks = downloadedAnyChunk.WaitOne( TimeSpan.Zero );
-                     if ( isDownloadedAnyChunks )
-                     {
-                         Console.WriteLine( "Downloaded chunks: " );
-                         ShowChunkRanges( downloadedChunks );
-                     }
-
-                     Console.WriteLine( "If you have not pressed any button, do so to continue testing" );
-                 } ).ConfigureAwait( false );
-
-                ConsoleKey pressedKey = Console.ReadKey().Key;
-                Console.WriteLine();
-                if ( pressedKey == ConsoleKey.C )
-                {
-                    s_cancellationTokenSource.Cancel();
-                }
-
-                downloadTask.GetAwaiter().GetResult();
             }
 
+            var downloadTask = Task.Run( async () =>
+            {
+                var downloadedChunks = new List<ChunkRange>();
+                IProgress<FileDownloadProgressArgs> downloadProgress = new Progress<FileDownloadProgressArgs>( ( progressArgs ) => downloadedChunks.Add( progressArgs.ChunkRange ) );
+
+                download.FilePartiallyDownloaded += ( sender, eventArgs ) =>
+                {
+                    IEnumerable<ChunkRange> undownloadedChunks = eventArgs.UndownloadedRanges;
+
+                    Console.WriteLine( "Undownloaded chunks: " );
+                    ShowChunkRanges( undownloadedChunks );
+                };
+
+                String targetFullFileName = Path.Combine( localFolderPath, filePrefix, fileDescription.OriginalName );
+                //#if RECEIVE_UDP_FROM_OURSELF
+                //                     String directoryPath = Directory.GetParent( Path.GetDirectoryName( targetFullFileName ) ).FullName;
+                //                     targetFullFileName = Path.Combine( directoryPath, fileDescription.OriginalName );
+                //#endif
+
+                var downloadingFileInfo = fileDescription.ToDownloadingFileInfo(
+                    bucketName.ServerName,
+                    targetFullFileName,
+                    hexFilePrefix
+                );
+
+                try
+                {
+                    var startTimeOfDownload = DateTime.Now;
+
+                    await download.DownloadFileAsync(
+                        downloadingFileInfo,
+                        fileChangesQueue: null,
+                        downloadProgress
+                    ).ConfigureAwait( false );
+
+                    TimeSpan downloadTime = DateTime.Now.Subtract( startTimeOfDownload );
+                    Console.WriteLine( $"Download time is {downloadTime} of file with size {(Double)downloadingFileInfo.ByteCount / GeneralConstants.BYTES_IN_ONE_MEGABYTE} MB" );
+                }
+                catch ( Exception ex )
+                {
+                    Console.WriteLine( ex.ToString() );
+                }
+
+                if ( downloadedChunks.Count > 0 )
+                {
+                    Console.WriteLine( "Downloaded chunks: " );
+                    ShowChunkRanges( downloadedChunks );
+                }
+
+                Console.WriteLine( "If you have not pressed any button, do so to continue testing" );
+            } );
+
+            ConsoleKey pressedKey = Console.ReadKey().Key;
+            Console.WriteLine();
+            if ( pressedKey == ConsoleKey.C )
+            {
+                s_cancellationTokenSource.Cancel();
+            }
+
+            await downloadTask.ConfigureAwait( false );
             s_cancellationTokenSource = new CancellationTokenSource();
         }
 
@@ -113,7 +116,17 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             }
         }
 
-        private static void OnFileDownloaded( Object sender, FileDownloadedEventArgs eventArgs ) => AdsExtensions.Write( eventArgs.FullFileName, eventArgs.Version, AdsExtensions.Stream.LastSeenVersion );
+        private static void OnFileDownloaded( Object sender, FileDownloadedEventArgs eventArgs )
+        {
+            try
+            {
+                AdsExtensions.WriteInfoAboutNewFileVersion( new FileInfo( eventArgs.FullFileName ), eventArgs.Version, eventArgs.Guid );
+            }
+            catch ( Exception ex )
+            {
+                DsLoggerSet.DefaultLogger.LogError( ex, logRecord: $"Cannot write version ({eventArgs.Version}) or guid ({eventArgs.Guid}) for {eventArgs.FullFileName}" );
+            }
+        }
 
         private async static Task<(ObjectDescriptionModel randomFileToDownload, IBucketName bucketName, String localFolderPath, String hexFilePrefix)> RandomFileToDownloadAsync( IApiClient apiClient, ICurrentUserProvider currentUserProvider, String filePrefix )
         {
@@ -152,7 +165,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                  shouldBeDownloaded = !isFileInCurrentPc;
 #endif
 
-                return shouldBeDownloaded;
+                 return shouldBeDownloaded;
              } ).ToList();
 
             ObjectDescriptionModel randomFileToDownload;

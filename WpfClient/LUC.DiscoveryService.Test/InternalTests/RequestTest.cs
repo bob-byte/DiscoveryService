@@ -12,34 +12,51 @@ using LUC.DiscoveryServices.Test.InternalTests.Builders;
 using LUC.DiscoveryServices.Test.InternalTests.Requests;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Constants;
+using Nito.AsyncEx.Synchronous;
 
 namespace LUC.DiscoveryServices.Test.InternalTests
 {
     class RequestTest
     {
+#if RECEIVE_UDP_FROM_OURSELF
         [Test]
         public void ResultAsync_SendPingRequestSyncLotOfTimes_ValueTasksAreImmediatelyCompleted()
         {
             DsSetUpTests.DiscoveryService.Start();
 
-            String rndMachineId = DsSetUpTests.Fixture.Create<String>();
-            var pingRequest = new PingRequest( KademliaId.Random().Value, rndMachineId );
+            //var contactBuilder = new ContactBuilder( DsSetUpTests.DiscoveryService, BuildContactRequest.OurContactWithIpAddresses );
+            IContact ourContact = DsSetUpTests.DiscoveryService.OurContact;
 
-            var contactBuilder = new ContactBuilder( DsSetUpTests.DiscoveryService, BuildContactRequest.OurContactWithIpAddresses );
-            IContact ourContact = contactBuilder.Create<IContact>();
-
-            Int32 attemptCountToForceError = 10;
+            Int32 attemptCountToForceError = DsConstants.MAX_THREADS * 2;
 
             var parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = DsConstants.MAX_THREADS
             };
 
-            Parallel.For( fromInclusive: 0, attemptCountToForceError, parallelOptions, ( numAttempt ) =>
+            Parallel.For( fromInclusive: 0, attemptCountToForceError, parallelOptions, ( numAttempt, loopState ) =>
              {
-                 ValueTask<(PingResponse, RpcError)> valueTask = pingRequest.ResultAsync<PingResponse>( ourContact, IoBehavior.Synchronous, DsSetUpTests.DefaultProtocolVersion );
-                 valueTask.IsCompleted.Should().BeTrue();
+                 var pingRequest = new PingRequest( ourContact.KadId.Value, ourContact.MachineId );
+
+                 Task<(PingResponse, RpcError)> taskWithResponse = pingRequest.ResultAsync<PingResponse>( ourContact, IoBehavior.Synchronous, DsSetUpTests.DefaultProtocolVersion ).AsTask();
+
+                 Boolean isSyncCompleted = taskWithResponse.IsCompleted;
+
+                 var rpcError = new RpcError();
+                 if (isSyncCompleted)
+                 {
+                     (_, rpcError) = taskWithResponse.GetAwaiter().GetResult();
+                 }
+
+                 isSyncCompleted.Should().BeTrue();
+                 rpcError.HasError.Should().BeFalse( rpcError.ToString() );
+
+                 if ( !isSyncCompleted || rpcError.HasError )
+                 {
+                     loopState.Stop();
+                 }
              } );
         }
+#endif
     }
 }

@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryServices.CodingData;
 using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 
 using System;
 using System.Numerics;
@@ -18,6 +18,12 @@ namespace LUC.DiscoveryServices.Messages.KademliaResponses
 
         public DownloadChunkResponse( BigInteger requestRandomId )
             : base( requestRandomId )
+        {
+            DefaultInit();
+        }
+
+        //To use map from CheckFileExistsResponse
+        public DownloadChunkResponse()
         {
             DefaultInit();
         }

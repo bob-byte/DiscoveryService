@@ -1,5 +1,5 @@
 ﻿using LUC.DiscoveryServices.CodingData;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Messages;
 
 using System;

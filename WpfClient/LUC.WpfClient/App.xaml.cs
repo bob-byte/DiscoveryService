@@ -91,8 +91,6 @@ namespace LUC.WpfClient
                     SettingsService = AppSettings.ExportedValue<ISettingsService>(),
                     NotifyService = AppSettings.ExportedValue<INotifyService>()
                 };
-
-                ConfigureFirewall();
             }
             catch ( ReflectionTypeLoadException ex )
             {
@@ -124,30 +122,30 @@ namespace LUC.WpfClient
             }
         }
 
-        private void ConfigureFirewall()
-        {
-            var entryAssembly = Assembly.GetEntryAssembly();
+        //private void ConfigureFirewall()
+        //{
+        //    var entryAssembly = Assembly.GetEntryAssembly();
 
-            String pathToExeFile = entryAssembly.Location;
+        //    String pathToExeFile = entryAssembly.Location;
 
-            String appVersion = entryAssembly.GetName().Version.ToString();
-            String appName = $"Light Upon Cloud {appVersion}";
+        //    String appVersion = entryAssembly.GetName().Version.ToString();
+        //    String appName = $"Light Upon Cloud {appVersion}";
 
-            try
-            {
-                FirewallHelper firewallHelper = FirewallHelper.Instance;
+        //    try
+        //    {
+        //        FirewallHelper firewallHelper = FirewallHelper.Instance;
 
-                firewallHelper.GrantAppAuthInAnyNetworksInAllPorts( pathToExeFile, appName );
-                m_loggingService.LogInfo( logRecord: $"{appName} successfully granted in private networks" );
-            }
-            catch ( Exception ex )
-            {
-                m_loggingService.LogCriticalError( message: $"{appName} cannot be granted in private networks", ex );
+        //        firewallHelper.GrantAppAuthInAnyNetworksInAllPorts( pathToExeFile, appName );
+        //        m_loggingService.LogInfo( logRecord: $"{appName} successfully granted in private networks" );
+        //    }
+        //    catch ( Exception ex )
+        //    {
+        //        m_loggingService.LogCriticalError( message: $"{appName} cannot be granted in private networks", ex );
 
-                MessageBox.Show( ex.ToString() );
-                Shutdown( exitCode: -1 );
-            }
-        }
+        //        MessageBox.Show( ex.ToString() );
+        //        Shutdown( exitCode: -1 );
+        //    }
+        //}
 
         private void AutoUpdaterCheckForUpdateEvent( UpdateInfoEventArgs args )
         {
@@ -242,7 +240,6 @@ namespace LUC.WpfClient
 
             try
             {
-                //ServiceDiscovery.Start() is in DefaultServicesFactory.DiscoveryService (DiscoveryService assembly)
                 var discoveryService = DiscoveryService.BeforeCreatedInstance( GeneralConstants.PROTOCOL_VERSION );
                 discoveryService.Stop();
 

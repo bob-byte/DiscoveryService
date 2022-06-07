@@ -2,7 +2,7 @@
 using System.Numerics;
 
 using LUC.DiscoveryServices.CodingData;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 
 namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {

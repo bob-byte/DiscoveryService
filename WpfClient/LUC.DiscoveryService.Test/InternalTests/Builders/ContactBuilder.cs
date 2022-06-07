@@ -69,14 +69,7 @@ namespace LUC.DiscoveryServices.Test.InternalTests.Builders
                     {
                         DefineBasicParameters( out String machineId, out IEnumerable<String> bucketsSupported );
 
-                        try
-                        {
-                            if ( default( BigInteger ) == m_contactId )
-                            {
-                                m_contactId = KademliaId.RandomIDInKeySpace;
-                            }
-                        }
-                        catch ( NullIDException )
+                        if ( default( BigInteger ) == m_contactId )
                         {
                             m_contactId = KademliaId.RandomIDInKeySpace;
                         }
@@ -119,7 +112,7 @@ namespace LUC.DiscoveryServices.Test.InternalTests.Builders
 
         private void DefineBasicParameters( out String machineId, out IEnumerable<String> bucketsSupported )
         {
-            machineId = MachineIdExtensions.Create();
+            machineId = DsSetUpTests.Fixture.Create<String>();
 
             DsBucketsSupported.Define( DsSetUpTests.CurrentUserProvider, out ConcurrentDictionary<String, String> dictBucketsSupported );
             bucketsSupported = dictBucketsSupported.Keys;

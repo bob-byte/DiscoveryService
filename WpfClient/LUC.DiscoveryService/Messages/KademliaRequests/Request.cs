@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryServices.CodingData;
 using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Kademlia;
 using LUC.DiscoveryServices.Kademlia.ClientPool;
 using LUC.DiscoveryServices.Kademlia.Exceptions;
@@ -17,6 +17,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -35,7 +36,7 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
         }
 
         protected Request( Byte[] receivedBytes )
-            : base(receivedBytes)
+            : base( receivedBytes )
         {
             ;//do nothing
         }
@@ -47,7 +48,7 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
             IsReceivedLastRightResp = false;
         }
 
-        public BigInteger RandomID { get; private set; }
+        public BigInteger RandomID { get; protected set; }
 
         public BigInteger SenderKadId { get; set; }
 
@@ -68,7 +69,7 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
                 base.Read( reader );
 
                 SenderKadId = reader.ReadBigInteger();
-                SenderMachineId = reader.ReadAsciiString();
+                SenderMachineId = reader.ReadString( Encoding.UTF8 );
                 RandomID = reader.ReadBigInteger();
 
                 return this;
@@ -87,7 +88,7 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
                 base.Write( writer );
 
                 writer.Write( SenderKadId );
-                writer.WriteAsciiString( SenderMachineId );
+                writer.Write( SenderMachineId, Encoding.UTF8 );
                 writer.Write( RandomID );
             }
             else
@@ -123,8 +124,8 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
             List<IPAddress> clonedListOfIpAddresses = remoteContact.IpAddresses();
 
             //start from the last active IP-address and go to the oldest
-            for (  Int32 numAddress = clonedListOfIpAddresses.Count - 1;
-                 ( numAddress >= 0 ) && ( response == null ); 
+            for ( Int32 numAddress = clonedListOfIpAddresses.Count - 1;
+                 ( numAddress >= 0 ) && ( response == null );
                    numAddress-- )
             {
                 var ipEndPoint = new IPEndPoint( clonedListOfIpAddresses[ numAddress ], remoteContact.TcpPort );

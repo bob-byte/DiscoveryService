@@ -72,7 +72,7 @@ namespace LUC.Interfaces.Extensions
             Write(path, lockDescription.ToString(), Stream.Lock);
 
         public static void WriteThatDownloadProcessIsStarted(String path) =>
-            WriteInAdsProcess(path, text: Boolean.FalseString, Stream.IsDownloadedButNotMovedFile); //write that file isn't downloaded
+            InternalWriteInAds(path, text: Boolean.FalseString, Stream.IsDownloadedButNotMovedFile); //write that file isn't downloaded
 
         /// <summary>
         /// Write that file is downloaded, but doesn't moved to <seealso cref="ICurrentUserProvider.RootFolderPath"/>
@@ -92,7 +92,7 @@ namespace LUC.Interfaces.Extensions
 
             if (!isTextNullOrWhiteSpace && fileExists && (adsStream != Stream.None))
             {
-                WriteInAdsProcess(path, text, adsStream);
+                InternalWriteInAds(path, text, adsStream);
             }
             else if (!fileExists)
             {
@@ -316,7 +316,7 @@ namespace LUC.Interfaces.Extensions
             }
         }
 
-        private static void WriteInAdsProcess(String path, String text, Stream adsStream)
+        private static void InternalWriteInAds(String path, String text, Stream adsStream)
         {
             if (adsStream == Stream.IsDownloadedButNotMovedFile)
             {

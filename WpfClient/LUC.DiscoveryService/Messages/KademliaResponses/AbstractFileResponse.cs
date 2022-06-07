@@ -1,12 +1,12 @@
 ﻿using LUC.DiscoveryServices.CodingData;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 
 using System;
 using System.Numerics;
 
 namespace LUC.DiscoveryServices.Messages.KademliaResponses
 {
-    abstract class AbstractFileResponse : Response, ICloneable
+    abstract class AbstractFileResponse : Response
     {
         protected AbstractFileResponse( Byte[] receivedBytes )
             : base( receivedBytes )
@@ -17,7 +17,12 @@ namespace LUC.DiscoveryServices.Messages.KademliaResponses
         protected AbstractFileResponse( BigInteger requestRandomId )
             : base( requestRandomId )
         {
-            FileExists = false;
+            ;
+        }
+
+        protected AbstractFileResponse()
+        {
+            ;
         }
 
         /// <value>
@@ -74,8 +79,5 @@ namespace LUC.DiscoveryServices.Messages.KademliaResponses
 
             return this;
         }
-
-        public Object Clone() =>
-            MemberwiseClone();
     }
 }

@@ -1,6 +1,6 @@
 ﻿using LUC.DiscoveryServices.CodingData;
 using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.Interfaces.Constants;
 
 using System;
@@ -17,7 +17,7 @@ namespace LUC.DiscoveryServices.Messages
     {
         public const Int32 MIN_LENGTH = 5;//MessageOperation(1 byte) + MessageLength (4 bytes)
 
-        public const Int32 MIN_TCP_LENGTH = MulticastMessage.MAX_LENGTH;
+        public const Int32 MIN_TCP_CLIENT_MESS_LENGTH = 71;
 
         public Message(Byte[] receivedBytes)
         {
@@ -204,9 +204,5 @@ namespace LUC.DiscoveryServices.Messages
         {
             ;//do nothing
         }
-
-        [MethodImpl( MethodImplOptions.AggressiveInlining )]
-        protected String PropertyWithValue<T>( String nameProp, T value ) =>
-            $"{nameProp} = {value}";
     }
 }

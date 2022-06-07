@@ -1,6 +1,6 @@
 ﻿using System;
 
-using LUC.DiscoveryServices.Messages;
+using LUC.DiscoveryServices.Common;
 
 namespace LUC.DiscoveryServices.Kademlia.Downloads
 {

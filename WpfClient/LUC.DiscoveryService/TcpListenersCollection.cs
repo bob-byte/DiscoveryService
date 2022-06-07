@@ -1,5 +1,5 @@
 ﻿using LUC.DiscoveryServices.Common;
-using LUC.DiscoveryServices.Interfaces;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Constants;
 
@@ -60,7 +60,7 @@ namespace LUC.DiscoveryServices
                         }
                     }
 
-                    m_isListening = true;
+                    m_isListening = Listeners.All( c => c.IsStarted ) && ( Listeners.Count > 0 );
                 }
             }
             else
@@ -81,21 +81,23 @@ namespace LUC.DiscoveryServices
                     _ = task.ContinueWith( x => StartNextMessageReceiving( listener ), TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously );
 
                     //using tasks provides unblocking event calls
-                    _ = task.ContinueWith( async taskReceivingSession =>
+                    _ = task.ContinueWith( taskReceivingSession =>
                     {
-                        TcpMessageEventArgs eventArgs = null;
-                        TcpSession tcpSession = await taskReceivingSession.ConfigureAwait( continueOnCapturedContext: false );
+                        TcpMessageEventArgs receiveResult = null;
+
+                        //taskReceivingSession is already completed, so we can use Result property
+                        TcpSession tcpSession = taskReceivingSession.Result;
 
                         try
                         {
-                            eventArgs = await listener.ReceiveAsync( DsConstants.ReceiveTimeout, tcpSession ).ConfigureAwait( false );
+                            receiveResult = tcpSession.Receive( DsConstants.ReceiveTimeout );
                         }
                         finally
                         {
                             tcpSession?.CanBeUsedByAnotherThread.Set();
                         }
                         
-                        InvokeMessageReceived( listener, eventArgs );
+                        InvokeMessageReceived( listener, receiveResult );
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.RunContinuationsAsynchronously );
 
                     await task.ConfigureAwait( false );
@@ -108,32 +110,11 @@ namespace LUC.DiscoveryServices
                         StartNextMessageReceiving( listener );
                     }
                 }
-                //An error occurred when accessing the socket.
-                catch ( SocketException ex )
-                {
-                    //TODO Change absolutely TCP port (in TcpListener), but take into account maxValueTcpPort
-                    DsLoggerSet.DefaultLogger.LogFatal( $"Failed to listen on TCP port.\n" +
-                          $"{ex}" );
-
-                    StartNextMessageReceiving( listener );
-                }
-                //message is not from IPEndpoint
-                catch ( InvalidOperationException ex )
-                {
-                    DsLoggerSet.DefaultLogger.LogFatal( $"Failed to listen on TCP port.\n" +
-                         $"{ex.Message}" );
-
-                    StartNextMessageReceiving( listener );
-                }
-                //all another exception is wrapped in TimeoutException
-                catch ( TimeoutException )
-                {
-                    StartNextMessageReceiving( listener );
-                }
 #if DEBUG
                 catch ( Exception ex )
                 {
                     DsLoggerSet.DefaultLogger.LogCriticalError( message: $"Unhandled exception during listening TCP messages, {ex.GetType().Name}: {ex.Message}", ex );
+                    StartNextMessageReceiving(listener);
                 }
 #endif
             } );

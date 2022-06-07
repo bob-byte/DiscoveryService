@@ -39,7 +39,8 @@ namespace LUC.DiscoveryServices.Test.InternalTests.Kademlia
                     Boolean isAdded = ids.TryAdd( rndId, value: null );
                     if(!isAdded)
                     {
-                        Assert.IsTrue( isAdded, message: $"Found the same key at {ids.Count}" );
+                        ids.Count.Should().Be( countOfIds,
+                            because: "Kademlia protocol generates a lot of IDs and anyone can be for contact" ); 
                         loopState.Stop();
                     }
                 } 

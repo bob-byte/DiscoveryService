@@ -16,7 +16,7 @@ namespace LUC.DiscoveryServices.Kademlia
     class BucketList : AbstractKademlia, IBucketList
     {
         /// <summary>
-        /// <seealso cref="KBucket"/>s of our <seealso cref="Node"/>. First <see cref="Buckets"/> has 1 full bucket then 
+        /// <seealso cref="Kademlia.KBucket"/>s of our <seealso cref="Node"/>. First <see cref="Buckets"/> has 1 full bucket then 
         /// it can be splited into more buckets during <see cref="AddContact(ref IContact)"/> method
         /// </summary>
         public List<KBucket> Buckets { get; set; }
@@ -39,7 +39,7 @@ namespace LUC.DiscoveryServices.Kademlia
         [JsonIgnore]
         public IDht Dht { get; set; }
 
-#if DEBUG       // For unit testing
+        // For unit testing
         public BucketList( KademliaId id, IContact dummyContact, UInt16 protocolVersion )
             : base( protocolVersion )
         {
@@ -52,7 +52,6 @@ namespace LUC.DiscoveryServices.Kademlia
                 new KBucket()
             };
         }
-#endif
 
         /// <summary>
         /// For serialization.
@@ -147,7 +146,7 @@ namespace LUC.DiscoveryServices.Kademlia
         {
             lock ( this )
             {
-                KBucket kBucket = Buckets.AsParallel().SingleOrDefault( c => c.Contains( contact ) );
+                KBucket kBucket = Buckets.SingleOrDefault( c => c.Contains( contact ) );
                 if ( kBucket == null )
                 {
                     kBucket = Buckets[ GetKBucketIndex( contact.KadId ) ];
@@ -157,7 +156,7 @@ namespace LUC.DiscoveryServices.Kademlia
             }
         }
 
-        public KBucket GetKBucket( KademliaId otherID )
+        public KBucket KBucket( KademliaId otherID )
         {
             BucketList bucketList = this;
             lock ( bucketList )

@@ -9,6 +9,8 @@ using NUnit.Framework;
 using AutoFixture;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
+using FluentAssertions;
+using System.Threading.Tasks;
 
 namespace LUC.DiscoveryServices.Test.InternalTests.Kademlia
 {
@@ -25,32 +27,39 @@ namespace LUC.DiscoveryServices.Test.InternalTests.Kademlia
             var bucketListBuilder = new BucketListBuilder( discoveryService, BuildBucketListRequest.Dummy );
             IBucketList bucketList = bucketListBuilder.Create<BucketList>();
 
-            for ( Int32 i = 0; i < DsConstants.K; i++ )
+            Parallel.For(fromInclusive: 0, toExclusive: DsConstants.K, _ =>
             {
-                var contactBuilder = new ContactBuilder( discoveryService, KademliaId.Random(), BuildContactRequest.Default );
+                var contactBuilder = new ContactBuilder(discoveryService, KademliaId.Random(), BuildContactRequest.Default);
 
                 IContact newContact = contactBuilder.Create<IContact>();
-                bucketList.AddContact( newContact );
-            }
+                bucketList.AddContact(newContact);
+            });
 
-            Assert.IsTrue( condition: bucketList.Buckets.Count == 1, message: "No split should have taken place" );
-            Assert.IsTrue( bucketList.Buckets[ 0 ].Contacts.Count == DsConstants.K, "K contacts should have been added" );
+            bucketList.Buckets.Count.Should().Be(expected: 1, because: "No split should have taken place" );
+            bucketList.Buckets[0].Contacts.Count.Should().Be(DsConstants.K, "K contacts should have been added");
         }
 
         //[Test]
         //public void AddContact_AddSameContact_ContainsOneContactWithoutSplitBuckets()
         //{
-        //    IBucketList bucketList = BucketListFactory.Dummy( SetupTests.DiscoveryService );
+        //    DiscoveryService discoveryService = DsSetUpTests.DiscoveryService;
 
-        //    ID id = ID.RandomIDInKeySpace;
-        //    IContact contact1 = ContactFactory.Default( SetupTests.DiscoveryService, id );
-        //    bucketList.AddContact( ref contact1 );
+        //    var bucketListBuilder = new BucketListBuilder(discoveryService, BuildBucketListRequest.Dummy);
+        //    IBucketList bucketList = bucketListBuilder.Create<BucketList>();
 
-        //    IContact contact2 = ContactFactory.Default( SetupTests.DiscoveryService, id );
-        //    bucketList.AddContact( ref contact2 );
+        //    var id = KademliaId.RandomIDInKeySpace;
+        //    IContact contact1 = ContactFactory.Default(SetupTests.DiscoveryService, id);
+        //    bucketList.AddContact(ref contact1);
+        //    var contactBuilder = new ContactBuilder(discoveryService, id, BuildContactRequest.Default);
 
-        //    Assert.IsTrue( condition: bucketList.Buckets.Count == 1, message: "No split should have taken place" );
-        //    Assert.IsTrue( bucketList.Buckets[ 0 ].Contacts.Count == 1, "Bucket should have 1 contact" );
+        //    IContact newContact1 = contactBuilder.Create<IContact>();
+        //    bucketList.AddContact(newContact1);
+
+        //    IContact contact2 = ContactFactory.Default(SetupTests.DiscoveryService, id);
+        //    bucketList.AddContact(ref contact2);
+
+        //    Assert.IsTrue(condition: bucketList.Buckets.Count == 1, message: "No split should have taken place");
+        //    Assert.IsTrue(bucketList.Buckets[0].Contacts.Count == 1, "Bucket should have 1 contact");
         //}
 
         //[Test]

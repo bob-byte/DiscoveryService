@@ -1,4 +1,5 @@
-﻿using LUC.DiscoveryServices.Messages;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Messages;
 
 using System;
 using System.Collections.Generic;

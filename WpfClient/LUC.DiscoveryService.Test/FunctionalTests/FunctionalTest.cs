@@ -18,8 +18,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Management.Automation;
 using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -52,6 +54,12 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
         static async Task Main( String[] args )
         {
             SentryHelper.InitAppSentry();
+            var consoleOutputEncoding = Console.OutputEncoding;
+            s_settingsService = DsSetUpTests.SettingsService;
+
+            IApiClient apiClient = DsSetUpTests.ApiClient;
+            ICurrentUserProvider currentUserProvider = DsSetUpTests.CurrentUserProvider;
+            ILoggingService loggingService = DsSetUpTests.LoggingService;
 
             String containerId = String.Empty;
             String argName = "-containerId";
@@ -72,19 +80,9 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                 }
             }
 
-            Console.CancelKeyPress += StopDs;
-
-            String warning = "Before test DS(Discovery Service) with container you should run DS.Test.exe without them or \n" +
-                "set DS.Test/bin/integrationTests/DownloadTest/{anyname} as LUC root folder and\n" +
-                "put there all directories (files isn't required) from previous LUC root folder.\n" +
-                "If you did that you can test with all options, if not, you can't normally observe changes in root folder and\n" +
-                "set bytes of files which another contacts want to download";
-            Console.WriteLine( warning.WithAttention() );
-
-            s_settingsService = DsSetUpTests.SettingsService;
-            IApiClient apiClient = DsSetUpTests.ApiClient;
-            ICurrentUserProvider currentUserProvider = DsSetUpTests.CurrentUserProvider;
-            ILoggingService loggingService = DsSetUpTests.LoggingService;
+            Console.CancelKeyPress += ClearConsoleIfPressedControlC;
+            Console.CancelKeyPress += TerminateProgramIfPressedControlBreak;
+            Console.WriteLine( "To clear console press Ctrl + C. To exit from program, press Ctrl + Break" );
 
             String fileNameWithMachineId = $"{DsConstants.FILE_WITH_MACHINE_ID}{containerId}{DsConstants.FILE_WITH_MACHINE_ID_EXTENSION}";
 
@@ -97,7 +95,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             String machineId = MachineId.Create( fileNameWithMachineId );
             s_settingsService.WriteMachineId( machineId );
 
-            s_discoveryService = DiscoveryServiceFacade.InitWithoutForceToStart( currentUserProvider, s_settingsService ) as DiscoveryService;
+            s_discoveryService = DiscoveryServiceFacade.InitWithoutForceToStart( currentUserProvider, s_settingsService );
             DsSetUpTests.UnityContainer.RegisterInstance<IDiscoveryService>( s_discoveryService );
 
             Console.WriteLine( $"Your machine Id: {s_discoveryService.MachineId}" );
@@ -108,11 +106,11 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
             do
             {
-                loginResponse = await apiClient.LoginAsync( login, password ).ConfigureAwait(continueOnCapturedContext: false);
+                loginResponse = await apiClient.LoginAsync( login, password ).ConfigureAwait( continueOnCapturedContext: false );
 
                 if ( loginResponse.IsSuccess )
                 {
-                    String loggedUserAsStr = currentUserProvider.LoggedUser.ToString(String.Empty);
+                    String loggedUserAsStr = currentUserProvider.LoggedUser.ToString( String.Empty );
                     loggingService.LogInfo( loggedUserAsStr );
                 }
                 else
@@ -135,7 +133,8 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                 }
             };
 
-            await s_discoveryService.NetworkEventInvoker.WaitHandleAllTcpEvents.WaitAsync(/*DsConstants.TimeWaitSocketReturnedToPool*/).ConfigureAwait( false );
+            await s_discoveryService.NetworkEventInvoker.WaitHandleAllTcpEvents.WaitAsync().ConfigureAwait( false );
+            await Task.Delay( TimeSpan.FromSeconds( value: 0.1 ) ).ConfigureAwait( false );
 
             Boolean wantToObserveChageInDownloadTestFolder = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( $"Do you want to observe changes in {DsConstants.DOWNLOAD_TEST_NAME_FOLDER} folder" );
 
@@ -146,12 +145,13 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             else
             {
                 UpdateLucRootFolder( machineId, currentUserProvider, newLucFullFolderName: out _ );
-            }           
+            }
 
             Boolean isCountConnectionsAvailableTest = UserIntersectionInConsole.NormalResposeFromUserAtClosedQuestion( "Do you want to test count available connections?" );
 
             IContact contact = null;
             Boolean isFirstTest = true;
+
             while ( true )
             {
                 try
@@ -196,7 +196,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
                         lock ( UserIntersectionInConsole.Lock )
                         {
-                            ShowAvailableUserOptions(contact);
+                            ShowAvailableUserOptions( contact );
                             pressedKey = Console.ReadKey().Key;
                         }
                     }
@@ -215,7 +215,34 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             }
         }
 
-        private static void StopDs( Object sender, ConsoleCancelEventArgs eventArgs ) => s_discoveryService?.Stop();
+        private static void ClearConsoleIfPressedControlC( Object sender, ConsoleCancelEventArgs eventArgs )
+        {
+            if ( eventArgs.SpecialKey == ConsoleSpecialKey.ControlC )
+            {
+                //when eventArgs.Cancel is false, program can be terminated
+                eventArgs.Cancel = true;
+
+                Console.Clear();
+            }
+        }
+
+        private static void TerminateProgramIfPressedControlBreak( Object sender, ConsoleCancelEventArgs eventArgs)
+        {
+            if ( eventArgs.SpecialKey == ConsoleSpecialKey.ControlBreak )
+            {
+                try
+                {
+                    s_discoveryService?.Stop( allowReuseService: false );
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine( ex.ToString() );
+                }
+
+                s_cancellationTokenSource.Cancel();
+                Environment.Exit( exitCode: 0 );
+            }
+        }
 
         private static void OnGoodTcpMessage( Object sender, TcpMessageEventArgs e )
         {
@@ -283,16 +310,16 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             }
         }
 
-        private static void ShowAvailableUserOptions(IContact contact = null)
+        private static void ShowAvailableUserOptions( IContact contact = null )
         {
-            if(contact == null)
+            if ( contact == null )
             {
-                Console.WriteLine("You didn\'t find any contact, so some options is not available");
+                Console.WriteLine( "You didn\'t find any contact, so some options is not available" );
             }
 
             String options = $"Select an operation:\n" +
                 $"1 - send multicast\n";
-            if(contact != null)
+            if ( contact != null )
             {
                 options += $"2 - send {typeof( PingRequest ).Name}\n" +
                     $"3 - send {typeof( StoreRequest ).Name}\n" +
@@ -418,7 +445,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
                         var receivedTcpMess = new AutoResetEvent( initialState: false );
 
-                        s_discoveryService.NetworkEventInvoker.AnswerReceived += ( sender, eventArgs ) => receivedTcpMess.Set();
+                        s_discoveryService.NetworkEventInvoker.FindNodeReceived += ( sender, eventArgs ) => receivedTcpMess.Set();
 
                         //After revecing AcknowledgeTcpMessage we will receive FindNodeResponse
                         receivedTcpMess.WaitOne( (Int32)timeExecutionKadOp.TotalMilliseconds * 2 );
@@ -484,7 +511,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
             eventArgs.SetMessage( new MulticastMessage( messageId, s_discoveryService.ProtocolVersion,
                 remoteContact.TcpPort, machineId: s_discoveryService.MachineId ) );
-            s_discoveryService.SendAcknowledgeTcpMessageAsync( s_discoveryService, eventArgs ).WaitAndUnwrapException();
+            s_discoveryService.SendAcknowledgeTcpMessageAsync( eventArgs, IoBehavior.Synchronous ).GetAwaiter().GetResult();
         }
 
         private static void CountAvailableConnectionsTest()
@@ -492,21 +519,13 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             using ( var powerShell = PowerShell.Create() )
             {
                 String script;
-                using (var webClient = new WebClient())
+                using ( var webClient = new WebClient() )
                 {
                     String pathToPowercatScript = "https://raw.githubusercontent.com/besimorhino/powercat/master/powercat.ps1";
-                    script = webClient.DownloadString(pathToPowercatScript);
+                    script = webClient.DownloadString( pathToPowercatScript );
                 }
 
-                try
-                {
-                    powerShell.AddScript( script ).AddScript( "Invoke-Method" ).Invoke();
-                }
-                catch ( ParseException )
-                {
-                    throw;
-                }
-
+                powerShell.AddScript( script ).AddScript( "Invoke-Method" ).Invoke();
                 powerShell.AddCommand( cmdlet: "powercat" );
 
                 Dictionary<String, Object> parameters = PowercatParameters();
@@ -519,13 +538,13 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
                 }
                 while ( !Int32.TryParse( Console.ReadLine(), out countConnection ) );
 
+                var waitToServerRead = TimeSpan.FromSeconds( 0.5 );
                 for ( Int32 numConnection = 1; numConnection <= countConnection; numConnection++ )
                 {
                     Console.WriteLine( $"{nameof( numConnection )} = {numConnection}" );
 
                     powerShell.BeginInvoke();
 
-                    var waitToServerRead = TimeSpan.FromSeconds( 0.5 );
                     Thread.Sleep( waitToServerRead );
 
                     powerShell.Stop();
@@ -537,21 +556,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
         {
             var parameters = new Dictionary<String, Object>();
 
-            IPAddress serverIpAddress = null;
-            do
-            {
-                Console.Write( "Input IP-address of a Discovery Service TCP server to connect: " );
-
-                try
-                {
-                    serverIpAddress = IPAddress.Parse( Console.ReadLine() );
-                }
-                catch ( FormatException ex )
-                {
-                    Console.WriteLine( ex.Message );
-                }
-            }
-            while ( serverIpAddress == null );
+            IPAddress serverIpAddress = s_discoveryService.NetworkEventInvoker.ReachableIpAddresses.First( c => c.AddressFamily == AddressFamily.InterNetwork );
 
             parameters.Add( key: "c", value: serverIpAddress.ToString() );
             parameters.Add( "p", s_discoveryService.RunningTcpPort.ToString() );
@@ -568,7 +573,5 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
             return parameters;
         }
-
-
     }
 }

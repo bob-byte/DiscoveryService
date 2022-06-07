@@ -28,7 +28,7 @@ namespace LUC.Interfaces.Models
         public DownloadingFileInfo ToDownloadingFileInfo(
             String serverBucketName,
             String fullLocalFilePath,
-            String hexFilePrefix )
+            String fileHexPrefix )
         {
             DownloadingFileInfo downloadingFileInfo = AppSettings.Mapper.Map<DownloadingFileInfo>( this );
 
@@ -38,7 +38,7 @@ namespace LUC.Interfaces.Models
 
             downloadingFileInfo.LocalFilePath = fullLocalFilePath;
             downloadingFileInfo.PathWhereDownloadFileFirst = PathExtensions.TempFullFileNameForDownload( fullLocalFilePath, currentUserProvider.RootFolderPath );
-            downloadingFileInfo.FileHexPrefix = hexFilePrefix;
+            downloadingFileInfo.FileHexPrefix = fileHexPrefix;
 
             return downloadingFileInfo;
         }

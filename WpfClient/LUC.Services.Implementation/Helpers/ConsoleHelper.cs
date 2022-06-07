@@ -37,7 +37,6 @@ namespace LUC.Services.Implementation.Helpers
         internal static void CreateConsole()
         {
             AllocConsole();
-            Console.Write( "This will NOT show up in the Console window." );
 
             try
             {
@@ -58,7 +57,9 @@ namespace LUC.Services.Implementation.Helpers
                 };
                 Console.SetOut( standardOutput );
 
-                Console.CancelKeyPress += Console_CancelKeyPress;
+                //clear line which was added by creating standardOutput variable
+                ClearCurrentConsoleLine();
+
                 Console.OutputEncoding = Encoding.UTF8;
 #if DEBUG
                 Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
@@ -72,6 +73,13 @@ namespace LUC.Services.Implementation.Helpers
             }
         }
 
-        private static void Console_CancelKeyPress( Object sender, ConsoleCancelEventArgs e ) => Console.WriteLine( $"Application exit with code Ctrl + C" );
+        public static void ClearCurrentConsoleLine()
+        {
+            Int32 currntLineCursor = Console.CursorTop;
+            Console.SetCursorPosition(left: 0, currntLineCursor);
+
+            Console.Write( value: new String( c: ' ', Console.BufferWidth ) );
+            Console.SetCursorPosition( 0, currntLineCursor );
+        }
     }
 }

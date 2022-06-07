@@ -1,0 +1,32 @@
+version: '3.4'
+
+services:
+  ds.test.node1:
+    container_name: DsTestNode1
+    image: ${DOCKER_REGISTRY-}dstestnode1
+    build:
+      context: .\LUC.DiscoveryService.Test
+      dockerfile: Dockerfile
+    networks:
+      netForDsTest: {}
+
+  ds.test.node2:
+    container_name: DsTestNode2
+    image: ${DOCKER_REGISTRY-}dstestnode2
+    build:
+      context: ./LUC.DiscoveryService.Test
+      dockerfile: Dockerfile
+    networks:
+      netForDsTest: {}
+
+  ds.test.node3:
+    container_name: DsTestNode3
+    image: ${DOCKER_REGISTRY-}dstestnode3
+    build:
+      context: ./LUC.DiscoveryService.Test
+      dockerfile: Dockerfile
+    networks:
+      netForDsTest: {}
+
+networks:
+  netForDsTest:

@@ -53,7 +53,7 @@ namespace LUC.DiscoveryServices.Kademlia
                 {
                     rpcError = new RpcError
                     {
-                        RemoteError = true,
+                        OtherError = true,
                         ErrorMessage = $"{remoteEndPoint} is in different network"
                     };
                 }
@@ -98,10 +98,9 @@ namespace LUC.DiscoveryServices.Kademlia
 
                     if ( countCheck <= DsConstants.MAX_CHECK_AVAILABLE_DATA )
                     {
-                        Byte[] bytesOfResponse = await client.DsReceiveAsync( 
-                            ioBehavior, 
-                            DsConstants.ReceiveTimeout 
-                        ).ConfigureAwait( false );
+                        Byte[] bytesOfResponse = ioBehavior == IoBehavior.Asynchronous ?
+                            await client.DsReceiveAsync( DsConstants.ReceiveTimeout ).ConfigureAwait( false ) :
+                            client.DsReceive( DsConstants.ReceiveTimeout );
 
                         if ( bytesOfResponse[ 0 ] != (Byte)MessageOperation.LocalError )
                         {

@@ -16,7 +16,6 @@ using System.Windows.Markup;
 
 namespace LUC.WpfClient
 {
-    [Export]
     public sealed class CustomBootstrapper : MefBootstrapper
     {
         protected override void ConfigureAggregateCatalog()
@@ -31,15 +30,14 @@ namespace LUC.WpfClient
             RegisterDefaultTypesIfMissing();
         }
 
-        protected override DependencyObject CreateShell()
+        protected override void ConfigureContainer()
         {
-            var shellView = Container.GetExportedValue<ShellView>();
-
+            base.ConfigureContainer();
             AppSettings.SetExportValueProvider( new ExportedValueProviderAdapter( Container ) );
-            InitDiscoveryService();
-
-            return shellView;
         }
+
+        protected override DependencyObject CreateShell() =>
+            Container.GetExportedValue<ShellView>();
 
         protected override void InitializeShell()
         {
@@ -76,12 +74,29 @@ namespace LUC.WpfClient
             base.ConfigureModuleCatalog();
         }
 
+        protected override void InitializeModules()
+        {
+            InitDiscoveryService();
+            base.InitializeModules();
+        }
+
         private void InitDiscoveryService()
         {
             var currentUserProvider = Container.GetExportedValue<ICurrentUserProvider>();
             var settingsService = Container.GetExportedValue<ISettingsService>();
 
-            IDiscoveryService discoveryService = DiscoveryServiceFacade.InitWithoutForceToStart( currentUserProvider, settingsService );
+  #if DEBUG
+            IDiscoveryService discoveryService = DiscoveryServiceFacade.InitWithoutForceToStart( 
+                currentUserProvider, 
+                settingsService 
+            );
+  #else
+            IDiscoveryService discoveryService = DiscoveryServiceFacade.FullyInitialized( 
+                currentUserProvider, 
+                settingsService 
+            );
+  #endif
+
             Container.ComposeExportedValue( discoveryService );
         }
     }

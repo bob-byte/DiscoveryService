@@ -20,10 +20,8 @@ namespace LUC.DiscoveryServices.Common
     /// <remarks>
     /// New socket methods are marked <a href="Ds"/> in the front of the name, so <see cref="State"/> property will be changed only there.
     /// </remarks>
-    public class AsyncSocket : Socket
+    public partial class AsyncSocket : Socket
     {
-        private Int32 m_state;
-
         public AsyncSocket( AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType )
                     : base( addressFamily, socketType, protocolType )
         {
@@ -32,11 +30,7 @@ namespace LUC.DiscoveryServices.Common
             State = SocketState.Created;
         }
 
-        public SocketState State
-        {
-            get => (SocketState)m_state;
-            protected set => Interlocked.Exchange( ref m_state, (Int32)value );
-        }
+        public SocketState State { get; protected set; }
 
         public void DsAccept( TimeSpan timeout, out Socket acceptedSocket )
         {
@@ -78,7 +72,7 @@ namespace LUC.DiscoveryServices.Common
                 SocketAsyncOperation.Connect,
                 ( asyncCallback ) =>
                 {
-                    DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Start {nameof( BeginConnect )} with {remoteEndPoint}" );
+                    DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Start to connect with {remoteEndPoint}" );
                     return BeginConnect( remoteEndPoint, asyncCallback, state: this );
                 },
                 timeout, cancellationToken
@@ -131,16 +125,16 @@ namespace LUC.DiscoveryServices.Common
         public async Task DsDisconnectAsync( Boolean reuseSocket, TimeSpan timeout, CancellationToken cancellationToken = default ) =>
             await Task.Run( () => DsDisconnect( reuseSocket, timeout, cancellationToken ) ).ConfigureAwait( continueOnCapturedContext: false );
 
-        public async Task<Byte[]> DsReceiveAsync( IoBehavior ioBehavior, TimeSpan timeout, CancellationToken cancellationToken = default )
+        public ValueTask<Byte[]> DsReceiveAsync( IoBehavior ioBehavior, TimeSpan timeout, CancellationToken cancellationToken = default )
         {
-            Byte[] bytesOfResponse;
+            ValueTask<Byte[]> bytesOfResponse;
             if ( ioBehavior == IoBehavior.Asynchronous )
             {
-                bytesOfResponse = await DsReceiveAsync( timeout, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
+                bytesOfResponse = new ValueTask<Byte[]>( DsReceiveAsync( timeout, cancellationToken ) );
             }
             else if ( ioBehavior == IoBehavior.Synchronous )
             {
-                bytesOfResponse = DsReceive( timeout, cancellationToken );
+                bytesOfResponse = new ValueTask<Byte[]>( DsReceive( timeout, cancellationToken ) );
             }
             else
             {
@@ -155,29 +149,33 @@ namespace LUC.DiscoveryServices.Common
 
         public Byte[] DsReceive( TimeSpan timeout, CancellationToken cancellationToken = default )
         {
-            Boolean isInTimeCompleted;
-            Task<Byte[]> taskReadBytes;
-            var taskDone = new AsyncAutoResetEvent( set: false );
-            var cancelSource = new CancellationTokenSource();
+            var cancelSource = CancellationTokenSource.CreateLinkedTokenSource( cancellationToken );
 
             try
             {
-                taskReadBytes = ReadMessageBytesAsync( socketToRead: this, taskDone, cancelSource.Token );
+                cancelSource.CancelAfter( timeout );
 
-                isInTimeCompleted = IsInTimeCompleted( taskDone, timeout, cancellationToken );
-                if ( !isInTimeCompleted )
+                State = SocketState.Reading;
+
+                Byte[] readBytes = this.ReadMessageBytes(
+                    DsConstants.MAX_CHUNK_READ_PER_ONE_TIME,
+                    DsConstants.MAX_AVAILABLE_READ_BYTES,
+                    cancelSource.Token
+                );
+
+                State = SocketState.AlreadyRead;
+
+                if ( readBytes.Length == 0 )
                 {
-                    throw new TimeoutException( message: $"Receive bytes timeout occured" );
+                    DsLoggerSet.DefaultLogger.LogFatal( message: $"Read 0 bytes" );
                 }
+
+                return readBytes;
             }
             finally
             {
-                cancelSource.Cancel();
                 cancelSource.Dispose();
             }
-
-            Byte[] readBytes = taskReadBytes.WaitAndUnwrapException();
-            return readBytes;
         }
 
         public void DsSend( Byte[] bytesToSend, TimeSpan timeout, CancellationToken cancellationToken = default )
@@ -275,7 +273,7 @@ namespace LUC.DiscoveryServices.Common
 
         protected override void Dispose( Boolean disposing )
         {
-            if ( State < SocketState.Closing )
+            if ( disposing && ( State < SocketState.Closing ) )
             {
                 State = SocketState.Closing;
 
@@ -333,48 +331,6 @@ namespace LUC.DiscoveryServices.Common
             return isInTimeCompleted;
         }
 
-        /// <summary>
-        ///   Reads all available data
-        /// </summary>
-        private async Task<Byte[]> ReadMessageBytesAsync( Socket socketToRead, AsyncAutoResetEvent receiveDone, CancellationToken cancellationToken )
-        {
-            State = SocketState.Reading;
-            Byte[] readBytes;
-
-            try
-            {
-                readBytes = await socketToRead.ReadMessageBytesAsync(
-                    receiveDone,
-                    DsConstants.MAX_CHUNK_READ_PER_ONE_TIME,
-                    DsConstants.MAX_AVAILABLE_READ_BYTES,
-                    cancellationToken
-                ).ConfigureAwait( continueOnCapturedContext: false );
-            }
-            catch ( SocketException ex )
-            {
-                HandleExceptionOfEndSocketOp<SocketException>( ex, receiveDone, outEx: out _ );
-                DsLoggerSet.DefaultLogger.LogCriticalError( ex );
-
-                throw;
-            }
-            catch ( InvalidOperationException ex )
-            {
-                HandleExceptionOfEndSocketOp<InvalidOperationException>( ex, receiveDone, outEx: out _ );
-                DsLoggerSet.DefaultLogger.LogCriticalError( ex );
-
-                throw;
-            }
-
-            if ( readBytes.Length == 0 )
-            {
-                DsLoggerSet.DefaultLogger.LogFatal( message: $"Read 0 bytes" );
-            }
-
-            State = SocketState.AlreadyRead;
-
-            return readBytes;
-        }
-
         //Now it is only for Connect, Send and Disconnect 
         private void SocketOperationCallback( SocketAsyncOperation socketOp, IAsyncResult asyncResult, AsyncAutoResetEvent operationDone, out ObjectDisposedException disposedException, out SocketException socketException )
         {
@@ -388,9 +344,6 @@ namespace LUC.DiscoveryServices.Common
                 {
                     case SocketAsyncOperation.Connect:
                     {
-                        DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"{nameof( BeginConnect )} successfully finished" );
-
-                        DsLoggerSet.DefaultLogger.LogInfo( $"Start {nameof(socket.EndConnect)}" );
                         socket.EndConnect( asyncResult );
                         DsLoggerSet.DefaultLogger.LogInfo( $"Connection successfully made" );
 

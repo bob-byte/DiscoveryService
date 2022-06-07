@@ -17,7 +17,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
     {
         private readonly SemaphoreSlim m_cleanSemaphore;
 
-        public async Task ClearPoolAsync( IoBehavior ioBehavior, Boolean respectMinPoolSize, CancellationToken cancellationToken )
+        public async ValueTask ClearPoolAsync( IoBehavior ioBehavior, Boolean respectMinPoolSize, Boolean allowReusePool, CancellationToken cancellationToken )
         {
             DsLoggerSet.DefaultLogger.LogInfo( $"Pool clearing connection pool" );
 
@@ -59,6 +59,13 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 else if ( ioBehavior == IoBehavior.Synchronous )
                 {
                     AsyncContext.Run( async () => await taskStopRecoveringConnections );
+                }
+
+                if(!allowReusePool)
+                {
+                    m_cleanSemaphore.Dispose();
+                    m_cancellationRecover.Dispose();
+                    m_socketsSemaphore.Dispose();
                 }
             }
         }

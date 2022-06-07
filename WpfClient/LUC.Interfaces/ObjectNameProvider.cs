@@ -227,6 +227,7 @@ namespace LUC.Interfaces
 
                 String serverPrefix = directoryDescription.HexPrefix;
 
+                //TODO: maybe here should give isShowDeleted
                 lastList = await ApiClient.ListWithCancelDownloadAsync( bucketName, serverPrefix );
 
                 if ( !lastList.IsSuccess )

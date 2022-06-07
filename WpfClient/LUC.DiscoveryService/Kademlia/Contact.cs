@@ -67,6 +67,11 @@ namespace LUC.DiscoveryServices.Kademlia
             LastSeen = lastSeen;
         }
 
+        protected Contact()
+        {
+            ;//do nothing
+        }
+
         public DateTime LastSeen
         {
             get => new DateTime(m_lastSeenInTicks);
