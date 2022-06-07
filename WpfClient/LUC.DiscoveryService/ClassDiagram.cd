@@ -253,7 +253,7 @@
   <Class Name="LUC.DiscoveryServices.Kademlia.Node" Collapsed="true">
     <Position X="5.25" Y="7.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAABAAACAAACAAAEAAAAAAAAMAAAAARQAAAQIAQgA=</HashCode>
+      <HashCode>AAAAAAAAACAAACAAAEAAAAAAAAMAAAAARQAAAQIAQgA=</HashCode>
       <FileName>Kademlia\Node.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
@@ -500,7 +500,7 @@
     </TypeIdentifier>
   </Class>
   <Class Name="LUC.DiscoveryServices.Messages.KademliaRequests.Request" Collapsed="true">
-    <Position X="20.25" Y="4" Width="1.25" />
+    <Position X="20.25" Y="4.25" Width="1.25" />
     <TypeIdentifier>
       <HashCode>IAABAAAAAACAAAAAEAAAAEAgAAAAAAAAAEEAAAEAAwA=</HashCode>
       <FileName>Messages\KademliaRequests\Request.cs</FileName>
