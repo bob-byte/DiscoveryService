@@ -1,5 +1,6 @@
 ﻿using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Common.Extensions;
+using LUC.Interfaces.Enums;
 using LUC.Interfaces.Extensions;
 
 using Nito.AsyncEx;
@@ -146,64 +147,48 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 return isReturned;
             }
 
-            public async Task<Boolean> TryRecoverConnectionAsync( Boolean returnToPool, Boolean reuseSocket, TimeSpan disconnectTimeout,
-                TimeSpan connectTimeout, IoBehavior ioBehavior, CancellationToken cancellationToken = default )
+            public async Task<Boolean> TryRecoverConnectionAsync( Boolean returnToPool, TimeSpan connectTimeout, IoBehavior ioBehavior, CancellationToken cancellationToken = default )
             {
                 Boolean isRecoveredConnection = false;
 
-                Socket newSocket = null;
-                try
+                Boolean canBeReachable = ( Id as IPEndPoint ).Address.CanBeReachableInCurrentNetwork();
+                Socket socket;
+                if ( canBeReachable )
                 {
-                    newSocket = NewSimilarSocket( SocketStateInPool.TakenFromPool );
-                    await newSocket.DsConnectAsync( newSocket.Id, connectTimeout, ioBehavior, cancellationToken ).ConfigureAwait( false );
-
-                    //if we didn't recover connection, we will have an exception
-                    isRecoveredConnection = true;
-                }
-                catch ( SocketException )
-                {
-                    ;//do nothing
-                }
-                catch ( TimeoutException )
-                {
-                    ;//do nothing
-                }
-                catch ( ObjectDisposedException )
-                {
-                    ;//do nothing
-                }
-                finally
-                {
-                    if ( returnToPool && ( !cancellationToken.IsCancellationRequested ) )
+                    socket = NewSimilarSocket( SocketStateInPool.TakenFromPool );
+                    try
                     {
-                        await newSocket.ReturnToPoolAsync( connectTimeout, ioBehavior ).ConfigureAwait( false );
-                    }
-                    else if ( cancellationToken.IsCancellationRequested )
-                    {
-                        try
-                        {
-                            newSocket.VerifyConnected();
+                        await socket.DsConnectAsync( socket.Id, connectTimeout, ioBehavior, cancellationToken ).ConfigureAwait( false );
 
-                            await newSocket.DsDisconnectAsync( reuseSocket, disconnectTimeout, cancellationToken ).ConfigureAwait( false );
-                        }
-                        catch ( SocketException )
-                        {
-                            ;//do nothing
-                        }
-                        catch ( TimeoutException )
-                        {
-                            ;//do nothing
-                        }
-                        catch ( ObjectDisposedException )
-                        {
-                            ;//do nothing
-                        }
-                        finally
-                        {
-                            newSocket.DisposeUnmanagedResources();
-                            await newSocket.ReturnToPoolAsync( connectTimeout, ioBehavior ).ConfigureAwait( false );
-                        }
+                        //if we didn't recover connection, we will have an exception
+                        isRecoveredConnection = true;
                     }
+                    catch ( SocketException ex )
+                    {
+                        DsLoggerSet.DefaultLogger.LogError( ex.Message );
+                    }
+                    catch ( TimeoutException ex )
+                    {
+                        DsLoggerSet.DefaultLogger.LogError( ex.Message );
+                    }
+                    catch ( ObjectDisposedException ex )
+                    {
+                        DsLoggerSet.DefaultLogger.LogError( ex.Message );
+                    }
+                }
+                else
+                {
+                    socket = this;
+                    isRecoveredConnection = false;
+                }
+
+                if ( returnToPool && ( !cancellationToken.IsCancellationRequested ) )
+                {
+                    Pool.TryReturnToPoolWithoutConnectionRecover( socket, isReturned: out _ );
+                }
+                else if ( cancellationToken.IsCancellationRequested )
+                {
+                    Pool.TryReturnToPoolWithoutConnectionRecover( socket, isReturned: out _ );
                 }
 
                 return isRecoveredConnection;
@@ -301,16 +286,13 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             {
                 Boolean socketWasReturnedByAnotherThread;
 
-                using ( await m_lockWaitingToTakeFromPool.LockAsync( ioBehavior, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false ) )
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
+                cancellationToken.ThrowIfCancellationRequested();
 
-                    socketWasReturnedByAnotherThread = await m_canBeTakenFromPool.WaitAsync(
-                        timeWaitSocketReturnedToPool,
-                        ioBehavior,
-                        cancellationToken
-                    ).ConfigureAwait( false );
-                }
+                socketWasReturnedByAnotherThread = await m_canBeTakenFromPool.WaitAsync(
+                    timeWaitSocketReturnedToPool,
+                    ioBehavior,
+                    cancellationToken
+                ).ConfigureAwait( false );
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -325,11 +307,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                     String logRecord = $"Taken socket with {Id}, which is used by another thread";
                     var exception = new InvalidProgramException( logRecord );
 
-#if CONNECTION_POOL_TEST
-                    throw exception;
-#else
-                DsLoggerSet.DefaultLogger.LogCriticalError( logRecord, exception );
-#endif
+                    DsLoggerSet.DefaultLogger.LogCriticalError( logRecord, exception );
                 }
             }
 

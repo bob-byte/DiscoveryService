@@ -1,4 +1,5 @@
-﻿using LUC.DiscoveryServices.Common.Interfaces;
+﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Interfaces;
 using LUC.DiscoveryServices.Kademlia;
 using LUC.DiscoveryServices.Messages;
 using LUC.DiscoveryServices.Messages.KademliaRequests;
@@ -41,7 +42,14 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
             {
                 AbstractFileResponse response = new CheckFileExistsResponse( request, m_currentUserProvider.LoggedUser?.Groups, m_currentUserProvider.RootFolderPath );
 
-                await response.SendAsync( eventArgs.AcceptedSocket ).ConfigureAwait( continueOnCapturedContext: false );
+                try
+                {
+                    await response.SendAsync( eventArgs.AcceptedSocket ).ConfigureAwait( continueOnCapturedContext: false );
+                }
+                catch ( TimeoutException ex )
+                {
+                    DsLoggerSet.DefaultLogger.LogError( ex, ex.Message );
+                }
             }
         }
 

@@ -108,6 +108,10 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
 
                     await downloadFileResponse.SendAsync( eventArgs.AcceptedSocket ).ConfigureAwait( continueOnCapturedContext: false );
                 }
+                catch ( TimeoutException ex )
+                {
+                    DsLoggerSet.DefaultLogger.LogError( ex, ex.Message );
+                }
                 catch ( IOException ex )
                 {
                     DsLoggerSet.DefaultLogger.LogInfo( ex.ToString() );

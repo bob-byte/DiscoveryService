@@ -19,7 +19,7 @@ namespace LUC.DiscoveryServices.Messages
 
         public const Int32 MIN_TCP_CLIENT_MESS_LENGTH = 71;
 
-        public Message(Byte[] receivedBytes)
+        public Message( Byte[] receivedBytes )
         {
             Read( receivedBytes );
         }
@@ -117,13 +117,10 @@ namespace LUC.DiscoveryServices.Messages
             sender.SendTimeout = (Int32)DsConstants.SendTimeout.TotalMilliseconds;
             Byte[] buffer = ToByteArray();
 
-            DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started send {buffer.Length} bytes to {sender.RemoteEndPoint}." );
-#if !RECEIVE_UDP_FROM_OURSELF
-            DsLoggerSet.DefaultLogger.LogInfo( ToString() );
-#endif
-
             await sender.SendAsync( buffer: new ArraySegment<Byte>( buffer ), SocketFlags.None ).ConfigureAwait( continueOnCapturedContext: false );
-            DsLoggerSet.DefaultLogger.LogInfo( $"Sent {buffer.Length} bytes to {sender.RemoteEndPoint}" );
+#if DEBUG
+            DsLoggerSet.DefaultLogger.LogInfo( $"Sent \n{this}" );
+#endif
         }
 
         /// <summary>
@@ -197,8 +194,15 @@ namespace LUC.DiscoveryServices.Messages
             }
         }
 
-        public override String ToString() =>
-            Display.ToString( objectToConvert: this );
+        public override String ToString()
+        {
+            if ( MessageLength == 0 )
+            {
+                MessageLength = (UInt32)Length();
+            }
+
+            return Display.ToString( objectToConvert: this );
+        }
 
         protected virtual void DefaultInit( params Object[] args )
         {

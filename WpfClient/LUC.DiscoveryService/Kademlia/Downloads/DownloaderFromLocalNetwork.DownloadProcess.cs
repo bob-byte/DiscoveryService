@@ -5,6 +5,7 @@ using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
+using LUC.Interfaces.Enums;
 using LUC.Interfaces.Extensions;
 
 using Nito.AsyncEx;
@@ -12,6 +13,7 @@ using Nito.AsyncEx;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -46,6 +48,8 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
 
             using ( FileStream fileStream = FileExtensions.FileStreamForDownload( request.PathWhereDownloadFileFirst ) )
             {
+                FileExtensions.SetAttributesToTempDownloadingFile( request.PathWhereDownloadFileFirst );
+
                 fileStream.SetLength( signedBytesFileCount );
 
                 foreach ( IContact contact in contactsWithFile )
@@ -70,7 +74,6 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             }
         }
 
-        //TODO: add IoBehavior in parameters to force not using async execution 
         /// <summary>
         /// <paramref name="downloadFileRequest"/> should be absolutelly initialized outside this method
         /// </summary>
@@ -89,8 +92,8 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             Boolean isWritenInFile = false;
             var lastRequest = (DownloadChunkRequest)downloadFileRequest.Clone();
 
-            (DownloadChunkResponse response, _, Boolean isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate
-                    ( remoteContact, ioBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
+            (DownloadChunkResponse response, _, Boolean isRightResponse) = await downloadFileRequest.ResultAsyncWithCountDownloadedBytesUpdate
+                    ( remoteContact, ioBehavior, m_discoveryService.ProtocolVersion, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -117,7 +120,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         private Boolean IsLastChunkPerContact( UInt64 start, UInt64 end ) =>
             start >= end;
 
-        private async ValueTask DownloadBigFileAsync(
+        private async Task DownloadBigFileAsync(
             IEnumerable<IContact> contactsWithFile,
             DownloadChunkRequest initialRequest,
             UInt64 bytesCount,
@@ -141,6 +144,9 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             }
             else
             {
+                String contactsWithFileAsStr = contactsWithFileList.ToString( showAllPropsOfItems: true, initialTabulation: String.Empty, nameOfEnumerable: $"contacts with file {initialRequest.FileOriginalName}" );
+                DsLoggerSet.DefaultLogger.LogInfo( contactsWithFileAsStr );
+
                 GetContactsAndRequestsToDownload( initialRequest, contactsWithFileList, bytesCount, cancellationToken, out contactsWithRequest );
 
                 Boolean isDownloadedAnyChunk = false;
@@ -150,6 +156,9 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                 VerifyAbilityToDownloadFile( pathWhereDownloadFile, bytesStreamCount, out String bestPlaceWhereDownloadFile );
                 pathWhereDownloadFile = bestPlaceWhereDownloadFile;
                 initialRequest.PathWhereDownloadFileFirst = bestPlaceWhereDownloadFile;
+
+                Int64 countDownloadedBytes = 0;
+                var timer = new Timer( OnDownloadBigFileTimerElapsed, new Tuple<List<DataOfDownloadBigFileBlock>, Int64>(contactsWithRequest, countDownloadedBytes), dueTime: m_periodToShowDownloadProgress, period: m_periodToShowDownloadProgress );
 
                 try
                 {
@@ -178,9 +187,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                                  try
                                  {
                                      (updatedRequest, isDownloadedAnyChunkFromContact) = await DownloadProcessBigFileAsync(
-                                         contactWithRequest.Contact,
-                                         contactWithRequest.Request,
-                                         contactWithRequest.ChunkRanges,
+                                         contactWithRequest,
                                          fileStream,
                                          IoBehavior.Synchronous,//otherwise we will have too many tasks
                                          cancellationToken,
@@ -243,10 +250,10 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                                 AsyncContext.Run( () => taskDownloadProcess );
                             }
 
-                            UInt64 bytesCountWhichShouldBeDownloaded = (UInt64)contactsWithRequest.Select( c => (Int64)c.Request.ChunkRange.TotalPerContact ).Sum();
-                            IEnumerable<UInt64> downloadedBytesByEachContact = contactsWithRequest.Select( c => c.Request.CountDownloadedBytes );
+                            Int64 downloadedBytesByEachContact = contactsWithRequest.Select( c => (Int64)c.Request.CountDownloadedBytes ).Sum();
+                            countDownloadedBytes += downloadedBytesByEachContact;
 
-                            isFileFullyDownloaded = IsFileFullyDownloaded( pathWhereDownloadFile, bytesCountWhichShouldBeDownloaded, downloadedBytesByEachContact );
+                            isFileFullyDownloaded = countDownloadedBytes == bytesStreamCount;
                             if ( !isFileFullyDownloaded )
                             {
                                 //get new contacts and requests considering the previous download
@@ -266,6 +273,11 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                     ex.Data.Add( TEMP_FULL_FILE_NAME_KEY, pathWhereDownloadFile );
                     throw;
                 }
+                finally
+                {
+                    timer.Stop();
+                    timer.Dispose();
+                }
             }
 
             try
@@ -279,11 +291,21 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             }
         }
 
-        //TODO: add IoBehavior in parameters to force not using async execution 
-        private async ValueTask<(DownloadChunkRequest updatedRequest, Boolean isDownloadedAnyChunk)> DownloadProcessBigFileAsync(
-            IContact contact,
-            DownloadChunkRequest request,
-            List<ChunkRange> chunkRanges,
+        private void OnDownloadBigFileTimerElapsed(Object timerState)
+        {
+            var convertedState = timerState as Tuple<List<DataOfDownloadBigFileBlock>, Int64>;
+
+            DataOfDownloadBigFileBlock sampleData = convertedState.Item1[ 0 ];
+            Int64 fullFileSize = (Int64)sampleData.ChunkRanges[ 0 ].Total;
+            Int64 alreadyDownloadedBytes = convertedState.Item1.Select( c => (Int64)c.Request.CountDownloadedBytes ).Sum() + convertedState.Item2;
+
+            Double percents = (Double)alreadyDownloadedBytes / fullFileSize * 100;
+
+            DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"    {sampleData.Request.FileOriginalName}: downloading {percents.ToString( "0.00", CultureInfo.InvariantCulture )}%. Now is {DateTime.UtcNow.ToLongTimeString()}" );
+        }
+
+        private async Task<(DownloadChunkRequest updatedRequest, Boolean isDownloadedAnyChunk)> DownloadProcessBigFileAsync(
+            DataOfDownloadBigFileBlock dataOfDownloadBigFileBlock,
             FileStream fileStream,
             IoBehavior ioBehavior,
             CancellationToken cancellationToken,
@@ -292,15 +314,15 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         {
             DownloadChunkRequest updatedRequest;
             Boolean isDownloadedAnyChunk;
-            request.ChunkRange = chunkRanges.Last();
+            dataOfDownloadBigFileBlock.Request.ChunkRange = dataOfDownloadBigFileBlock.ChunkRanges.Last();
 
-            if ( request.ChunkRange.TotalPerContact <= DsConstants.MAX_CHUNK_SIZE )
+            if ( dataOfDownloadBigFileBlock.Request.ChunkRange.TotalPerContact <= DsConstants.MAX_CHUNK_SIZE )
             {
-                (isDownloadedAnyChunk, updatedRequest) = await DownloadProcessSmallChunkAsync( contact, request, fileStream, ioBehavior, cancellationToken, downloadProgress ).ConfigureAwait( continueOnCapturedContext: false );
+                (isDownloadedAnyChunk, updatedRequest) = await DownloadProcessSmallChunkAsync( dataOfDownloadBigFileBlock.Contact, dataOfDownloadBigFileBlock.Request, fileStream, ioBehavior, cancellationToken, downloadProgress ).ConfigureAwait( continueOnCapturedContext: false );
             }
             else
             {
-                (updatedRequest, isDownloadedAnyChunk) = await DownloadBigTotalPerContactBytesAsync( contact, request, chunkRanges, fileStream, ioBehavior, cancellationToken, downloadProgress ).ConfigureAwait( false );
+                (updatedRequest, isDownloadedAnyChunk) = await DownloadBigTotalPerContactBytesAsync( dataOfDownloadBigFileBlock.Contact, dataOfDownloadBigFileBlock.Request, dataOfDownloadBigFileBlock.ChunkRanges, fileStream, ioBehavior, cancellationToken, downloadProgress ).ConfigureAwait( false );
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -318,7 +340,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             IProgress<FileDownloadProgressArgs> downloadProgress
         )
         {
-            var lastRequest = (DownloadChunkRequest)sampleRequest.Clone();
+            DownloadChunkRequest lastRequest = sampleRequest;
 
             Boolean isRightResponse = false;
             Boolean isDownloadedAnyChunk = false;
@@ -329,7 +351,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                 lastRequest.ChunkRange = chunkRangesPerContact[ numChunkPerContact ];
 
                 DownloadChunkResponse response;
-                (response, _, isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate( remoteContact, ioBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
+                (response, _, isRightResponse) = await lastRequest.ResultAsyncWithCountDownloadedBytesUpdate( remoteContact, ioBehavior, m_discoveryService.ProtocolVersion, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -439,10 +461,9 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             }
         }
 
-        private Boolean IsFileFullyDownloaded( String fullPathToFile, UInt64 countOfBytes, IEnumerable<UInt64> downloadedBytesByEachContact )
+        private Boolean IsFileFullyDownloaded( String fullPathToFile, UInt64 countOfBytes, UInt64 downloadedBytesByEachContact )
         {
-            UInt64 downloadedBytesCount = (UInt64)downloadedBytesByEachContact.Sum( c => (Int64)c );
-            Boolean isRightDownloaded = ( countOfBytes == downloadedBytesCount ) && File.Exists( fullPathToFile );
+            Boolean isRightDownloaded = ( countOfBytes == downloadedBytesByEachContact ) && File.Exists( fullPathToFile );
 
             return isRightDownloaded;
         }

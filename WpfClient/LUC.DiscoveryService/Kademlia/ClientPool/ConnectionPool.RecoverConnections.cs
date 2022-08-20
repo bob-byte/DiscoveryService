@@ -10,6 +10,7 @@ using System.Threading.Tasks.Dataflow;
 
 using LUC.DiscoveryServices.Common;
 using LUC.Interfaces.Constants;
+using LUC.Interfaces.Enums;
 
 namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
@@ -68,14 +69,14 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             var socketsWithRecoveredConnections = new ConcurrentBag<EndPoint>();
 
             var recoverLeasedSockets = new ActionBlock<KeyValuePair<EndPoint, Socket>>( 
-                async socket =>
+                socket =>
                 {
                     //TODO use cancellationToken argument
-                    (Boolean isTaken, Socket takenSocket) = await TryTakeLeasedSocketAsync( 
+                    (Boolean isTaken, Socket takenSocket) = TryTakeLeasedSocketAsync( 
                         socket.Key, 
-                        IoBehavior.Asynchronous, 
+                        IoBehavior.Synchronous, 
                         timeWaitToReturnToPool 
-                    ).ConfigureAwait( continueOnCapturedContext: false );
+                    ).GetAwaiter().GetResult();
                 
                     if(isTaken)
                     {
@@ -96,8 +97,8 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
 
             try
             {
-                //await completion of adding to 
-                //BackgroundConnectionResetHelper all leased sockets
+                //await completion of adding all leased
+                //sockets to BackgroundConnectionResetHelper
                 await recoverLeasedSockets.Completion.ConfigureAwait( false );
             }
             catch ( OperationCanceledException )
@@ -112,42 +113,39 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
         {
             ExecutionDataflowBlockOptions parallelOptions = ParallelOptions( cancellationToken );
 
-            var recoverSockets = new ActionBlock<KeyValuePair<EndPoint, Socket>>( async socket =>
+            var recoverSockets = new ActionBlock<KeyValuePair<EndPoint, Socket>>( socket =>
              {
                  m_sockets.TryRemove( socket.Key, value: out _ );
-                 await TakeFromPoolAsync( socket.Value, IoBehavior.Asynchronous, timeWaitToReturnToPool ).ConfigureAwait( continueOnCapturedContext: false );
+                 TakeFromPoolAsync( socket.Value, IoBehavior.Synchronous, timeWaitToReturnToPool ).GetAwaiter().GetResult();
 
                  AddLeasedSocket( socket.Key, socket.Value );
                  BackgroundConnectionResetHelper.AddSocket( socket.Value, cancellationToken );
 
              }, parallelOptions );
 
-            using ( await m_lockTakeSocket.LockAsync().ConfigureAwait( false ) )
+            foreach ( KeyValuePair<EndPoint, Socket> socket in m_sockets )
             {
-                foreach ( KeyValuePair<EndPoint, Socket> socket in m_sockets )
-                {
-                    Boolean isConnAlreadyRecovered = ( idsOfRecoveredConnection != null ) && idsOfRecoveredConnection.Contains( socket.Key );
+                Boolean isConnAlreadyRecovered = ( idsOfRecoveredConnection != null ) && idsOfRecoveredConnection.Contains( socket.Key );
 
-                    if ( !isConnAlreadyRecovered )
-                    {
-                        await recoverSockets.SendAsync( socket ).ConfigureAwait( continueOnCapturedContext: false );
-                    }
-                }
-
-                //Signals that we will not post more sockets. 
-                //recoverSockets.Completion will never be completed without this call
-                recoverSockets.Complete();
-
-                try
+                if ( !isConnAlreadyRecovered )
                 {
-                    //await completion of adding to 
-                    //BackgroundConnectionResetHelper all sockets
-                    await recoverSockets.Completion.ConfigureAwait( false );
+                    await recoverSockets.SendAsync( socket ).ConfigureAwait( continueOnCapturedContext: false );
                 }
-                catch ( OperationCanceledException )
-                {
-                    ;//do nothing
-                }
+            }
+
+            //Signals that we will not post more sockets. 
+            //recoverSockets.Completion will never be completed without this call
+            recoverSockets.Complete();
+
+            try
+            {
+                //await completion of adding to 
+                //BackgroundConnectionResetHelper all sockets
+                await recoverSockets.Completion.ConfigureAwait( false );
+            }
+            catch ( OperationCanceledException )
+            {
+                ;//do nothing
             }
         }
 

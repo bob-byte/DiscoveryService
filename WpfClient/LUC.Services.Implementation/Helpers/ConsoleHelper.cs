@@ -14,7 +14,7 @@ namespace LUC.Services.Implementation.Helpers
     // https://developercommunity.visualstudio.com/content/problem/12166/console-output-is-gone-in-vs2017-works-fine-when-d.html
     static class ConsoleHelper
     {
-        private const Int32 MY_CODE_PAGE = 65001;
+        private const Int32 MY_CODE_PAGE = 1251;
         private const UInt32 GENERIC_WRITE = 0x40000000;
         private const UInt32 FILE_SHARE_WRITE = 0x2;
         private const UInt32 OPEN_EXISTING = 0x3;
@@ -50,8 +50,10 @@ namespace LUC.Services.Implementation.Helpers
                 IntPtr stdHandle = CreateFile( "CONOUT$", GENERIC_WRITE, FILE_SHARE_WRITE, 0, OPEN_EXISTING, 0, 0 );
                 var safeFileHandle = new SafeFileHandle( stdHandle, true );
                 var fileStream = new FileStream( safeFileHandle, FileAccess.Write );
-                var encoding = Encoding.GetEncoding( MY_CODE_PAGE );
-                var standardOutput = new StreamWriter( fileStream, encoding )
+                
+                var defaultConsoleEncoding = Encoding.GetEncoding( MY_CODE_PAGE );
+
+                var standardOutput = new StreamWriter( fileStream, defaultConsoleEncoding )
                 {
                     AutoFlush = true
                 };
@@ -60,7 +62,6 @@ namespace LUC.Services.Implementation.Helpers
                 //clear line which was added by creating standardOutput variable
                 ClearCurrentConsoleLine();
 
-                Console.OutputEncoding = Encoding.UTF8;
 #if DEBUG
                 Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 #endif

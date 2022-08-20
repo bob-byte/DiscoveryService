@@ -35,6 +35,7 @@ namespace LUC.Services.Implementation
         public SyncingObjectsList( ICurrentUserProvider currentUserProvider )
         {
             CurrentUserProvider = currentUserProvider;
+            CurrentUserProvider.RootFolderPathChanged += ( s, e ) => CancelDownloadingAllFilesWhichBelongPath( e.OldRootFolder );
 
             m_lockIsUploadingNow = new Object();
 

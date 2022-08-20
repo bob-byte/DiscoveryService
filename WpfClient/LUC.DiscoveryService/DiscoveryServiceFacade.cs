@@ -3,6 +3,7 @@ using LUC.DiscoveryServices.Common.Extensions;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
+using LUC.Interfaces.Extensions;
 using LUC.Services.Implementation;
 
 using System;

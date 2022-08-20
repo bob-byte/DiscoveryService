@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace LUC.DiscoveryServices.Common
+namespace LUC.DiscoveryServices.Common.Extensions
 {
     static partial class IpAddressExtension
     {

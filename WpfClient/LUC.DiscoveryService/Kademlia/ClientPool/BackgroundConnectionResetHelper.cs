@@ -1,5 +1,7 @@
 ﻿using LUC.DiscoveryServices.Common;
 using LUC.Interfaces.Constants;
+using LUC.Interfaces.Enums;
+using LUC.Interfaces.Helpers;
 
 using System;
 using System.Collections.Generic;
@@ -10,47 +12,35 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
 {
     static class BackgroundConnectionResetHelper
     {
-        private static readonly Object s_lock = new Object();
-        private static readonly SemaphoreSlim s_semaphore = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+        //locks s_workerTask initialization
+        private static readonly Object s_mutex = new Object();
+        private static readonly SemaphoreSlim s_semaphore = new SemaphoreSlim( initialCount: 1, maxCount: 1 );
 
         private static readonly CancellationTokenSource s_cancellationTokenSource = new CancellationTokenSource();
 
         private static readonly List<Task<Boolean>> s_resetTasks = new List<Task<Boolean>>();
         private static Task s_workerTask;
 
-        public static void AddSocket(ConnectionPool.Socket socket, CancellationToken cancellationToken = default)
+        public static void AddSocket( ConnectionPool.Socket socket, CancellationToken cancellationToken = default )
         {
-            try
+            Task<Boolean> resetTask = socket.TryRecoverConnectionAsync( returnToPool: true, DsConstants.ConnectTimeout, IoBehavior.Asynchronous, cancellationToken );
+            lock ( s_mutex )
             {
-                ;//do nothing
+                s_resetTasks.Add( resetTask );
             }
-            finally
+
+            DsLoggerSet.DefaultLogger.LogInfo( $"Started Session {socket.Id} reset in background; TaskCount: {s_resetTasks.Count}." );
+
+            // release only if it is likely to succeed
+            if ( s_semaphore.CurrentCount == 0 )
             {
-                Task<Boolean> resetTask = socket.TryRecoverConnectionAsync(returnToPool: true, reuseSocket: false, DsConstants.DisconnectTimeout, DsConstants.ConnectTimeout, IoBehavior.Asynchronous, cancellationToken);
-                lock (s_lock)
+                try
                 {
-                    s_resetTasks.Add(resetTask);
+                    s_semaphore.Release();
                 }
-
-#if DEBUG
-                DsLoggerSet.DefaultLogger.LogInfo( $"Started Session {socket.Id} reset in background; waiting TaskCount: {s_resetTasks.Count}." );
-#endif
-
-                // release only if it is likely to succeed
-                if (s_semaphore.CurrentCount == 0)
+                catch ( SemaphoreFullException )
                 {
-#if DEBUG
-                    DsLoggerSet.DefaultLogger.LogInfo( "Releasing semaphore." );
-#endif
-
-                    try
-                    {
-                        s_semaphore.Release();
-                    }
-                    catch (SemaphoreFullException)
-                    {
-                        // ignore
-                    }
+                    ;// ignore
                 }
             }
         }
@@ -59,35 +49,26 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
         {
             DsLoggerSet.DefaultLogger.LogInfo( "Starting BackgroundConnectionResetHelper worker." );
 
-            if ( s_workerTask == null )
-            {
-                lock ( s_lock )
-                {
-                    if ( s_workerTask == null )
-                    {
-                        s_workerTask = Task.Run( ReturnSocketsAsync );
-                    }
-                }
-            }
+            SingletonInitializer.ThreadSafeInit( value: () => Task.Run( ReturnSocketsAsync ), s_mutex, ref s_workerTask );
         }
 
         public static async Task StopAsync()
         {
             DsLoggerSet.DefaultLogger.LogInfo( "Stopping BackgroundConnectionResetHelper worker." );
-            
+
             s_cancellationTokenSource.Cancel();
 
             Task workerTask;
-            lock ( s_lock )
+            lock ( s_mutex )
             {
                 workerTask = s_workerTask;
             }
 
-            if (workerTask != null)
+            if ( workerTask != null )
             {
                 try
                 {
-                    await workerTask.ConfigureAwait(continueOnCapturedContext: false);
+                    await workerTask.ConfigureAwait( continueOnCapturedContext: false );
                 }
                 catch ( OperationCanceledException )
                 {
@@ -100,7 +81,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
 
         private static async Task ReturnSocketsAsync()
         {
-            DsLoggerSet.DefaultLogger.LogInfo( "Started BackgroundConnectionResetHelper worker." );
+            DsLoggerSet.DefaultLogger.LogInfo( logRecord: "Started BackgroundConnectionResetHelper worker." );
 
             var localTasks = new List<Task<Boolean>>();
 
@@ -109,14 +90,14 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             {
                 try
                 {
-                    await s_semaphore.WaitAsync(s_cancellationTokenSource.Token).ConfigureAwait(continueOnCapturedContext: false);
+                    await s_semaphore.WaitAsync( s_cancellationTokenSource.Token ).ConfigureAwait( continueOnCapturedContext: false );
 
                     //process all sockets that have started being returned
                     while ( true )
                     {
-                        lock ( s_lock )
+                        lock ( s_mutex )
                         {
-                            localTasks.AddRange(s_resetTasks);
+                            localTasks.AddRange( s_resetTasks );
                             s_resetTasks.Clear();
                         }
 
@@ -125,17 +106,16 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                             break;
                         }
 
-#if DEBUG
-                        DsLoggerSet.DefaultLogger.LogInfo( $"Found TaskCount {localTasks.Count} task(-s) to process" );
-#endif
+                        DsLoggerSet.DefaultLogger.LogInfo( $"Found {localTasks.Count} task(-s) to process connection recovering" );
+                        await Task.WhenAll( localTasks ).ConfigureAwait( continueOnCapturedContext: false );
+                        DsLoggerSet.DefaultLogger.LogInfo( $"Successfully processed {localTasks.Count} task(-s) of connection recovering" );
 
-                        await Task.WhenAll(localTasks).ConfigureAwait(continueOnCapturedContext: false);
                         localTasks.Clear();
                     }
                 }
                 catch ( Exception ex ) when ( !( ex is OperationCanceledException canceledException && canceledException.CancellationToken == s_cancellationTokenSource.Token ) )
                 {
-                    DsLoggerSet.DefaultLogger.LogInfo( $"Unhandled exception: {ex}" );
+                    DsLoggerSet.DefaultLogger.LogCriticalError( message: "Unhandled exception during connection recovering", ex );
                 }
             }
         }

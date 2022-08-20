@@ -1,5 +1,6 @@
 ﻿using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Common.Extensions;
+using LUC.Interfaces.Enums;
 using LUC.Interfaces.Helpers;
 using LUC.Services.Implementation.Helpers;
 
@@ -100,17 +101,12 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 }
                 else
                 {
-                    //the socket with the same ID can be taken from the pool by another
-                    //thread while current was waiting for releasing m_lockTakeSocket
-                    using ( await m_lockTakeSocket.LockAsync( ioBehavior ).ConfigureAwait( false ) )
-                    {
-                        desiredSocket = await CreatedOrTakenSocketAsync(
-                            remoteEndPoint,
-                            timeoutToConnect,
-                            timeWaitToReturnToPool,
-                            ioBehavior
-                        ).ConfigureAwait( false );
-                    }
+                    desiredSocket = await CreatedOrTakenSocketAsync(
+                        remoteEndPoint,
+                        timeoutToConnect,
+                        timeWaitToReturnToPool,
+                        ioBehavior
+                    ).ConfigureAwait( false );
                 }
 
                 return desiredSocket;
@@ -118,6 +114,41 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             else
             {
                 throw new InvalidOperationException( message: "Too many threads use pool." );
+            }
+        }
+
+        public void TryReturnToPoolWithoutConnectionRecover( Socket socket, out Boolean isReturned )
+        {
+            isReturned = false;
+            try
+            {
+                SocketStateInPool stateInPool;
+                try
+                {
+                    socket.VerifyConnected();
+                    stateInPool = SocketStateInPool.IsInPool;
+                }
+                catch ( ObjectDisposedException )
+                {
+                    stateInPool = SocketStateInPool.IsFailed;
+                }
+                catch ( SocketException )
+                {
+                    socket.DisposeUnmanagedResources();
+                    stateInPool = SocketStateInPool.IsFailed;
+                }
+
+                InternalReturnSocket( socket, stateInPool, out isReturned );
+            }
+            finally
+            {
+                ReleaseSocketSemaphore();
+
+                if ( !isReturned )
+                {
+                    NotifyPoolError( message:
+                        "Try to return socket which already removed from pool" );
+                }
             }
         }
 
@@ -187,16 +218,14 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
 
                     InternalReturnSocket( socket, currentStateInPool, out isReturned );
                 }
+                else
+                {
+                    socket.DisposeUnmanagedResourcesAndSetIsFailed();
+                }
             }
             finally
             {
                 ReleaseSocketSemaphore();
-
-                if ( !isReturned )
-                {
-                    NotifyPoolError( message: 
-                        "Try to return socket which already removed from pool" );
-                }
             }
 
             return isReturned;
@@ -225,7 +254,6 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
         private void NotifyPoolError( String message )
         {
             var exception = new InvalidProgramException( message );
-
 #if CONNECTION_POOL_TEST
             throw exception;
 #else
@@ -292,20 +320,8 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             return (takenSocket, desiredSocket);
         }
 
-        private void AddLeasedSocket( EndPoint socketId, Socket socket )
-        {
-            Boolean isUpdated = false;
-            m_leasedSockets.AddOrUpdate( socketId, ( key ) => socket, ( key, previousSocketValue ) =>
-               {
-                   isUpdated = true;
-                   return socket;
-               } );
-
-            if ( isUpdated )
-            {
-                NotifyPoolError( message: $"Taken socket with ID {socket.Id}, which is being used by another thread" );
-            }
-        }
+        private void AddLeasedSocket( EndPoint socketId, Socket socket ) =>
+            m_leasedSockets.AddOrUpdate( socketId, ( key ) => socket, ( key, previousSocketValue ) => socket );
 
         private void ReleaseSocketSemaphore()
         {

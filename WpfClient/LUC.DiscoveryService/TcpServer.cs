@@ -2,6 +2,7 @@
 using LUC.DiscoveryServices.Common.Extensions;
 using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Constants;
+using LUC.Interfaces.Extensions;
 
 using Nito.AsyncEx;
 
@@ -60,7 +61,7 @@ namespace LUC.DiscoveryServices
             Id = Guid.NewGuid();
             Endpoint = endpoint;
 
-            m_waitForCheckingWaitingSocket = TimeSpan.FromSeconds( value: 0.5 );
+            m_waitForCheckingWaitingSocket = TimeSpan.FromSeconds( value: 0.18 );
             m_waitTakeSocket = TimeSpan.FromSeconds( 0.3 );
         }
 
@@ -336,7 +337,7 @@ namespace LUC.DiscoveryServices
         {
             if ( e.SocketError == SocketError.Success )
             {
-                DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Successfully accepted socket {e.RemoteEndPoint} by {Endpoint.AddressFamily} {nameof( TcpServer )}" );
+                DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Successfully accepted socket {e.RemoteEndPoint}by {Endpoint} {nameof( TcpServer )}" );
 
                 if ( MAX_SESSIONS_COUNT <= m_sessions.Count + 1 )
                 {

@@ -13,6 +13,8 @@ namespace LUC.Interfaces
 
         Boolean IsSyncToServerNow { get; }
 
+        Boolean IsSyncStopped { get; }
+
         CancellationTokenSource SourceToCancelSyncToServer { get; }
 
         DispatcherTimer TimerSyncFromServer { get; }

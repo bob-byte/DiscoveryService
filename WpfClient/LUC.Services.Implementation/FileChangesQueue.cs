@@ -73,6 +73,8 @@ namespace LUC.Services.Implementation
         private readonly TimeSpan m_timeWaitWhileFileIsProcessed;
         private readonly TimeSpan m_timeWaitWhileFileSystemFacadeIgnoreFileChange;
 
+        private readonly DispatcherTimer m_tryHandleInSyncFolderTimer;
+
         private DateTime m_timeOfLastAddedChangeType;
 
         private UInt32 m_countSyncToServer;
@@ -104,13 +106,13 @@ namespace LUC.Services.Implementation
 
             m_activeList = new ConcurrentDictionary<Int64, ObjectChangeDescription>();
 
-            var timer = new DispatcherTimer
+            m_tryHandleInSyncFolderTimer = new DispatcherTimer
             {
                 Interval = new TimeSpan( 0, 0, SWITCH_CHANGES_TIMER_IN_SEC )
             };
 
-            timer.Tick += TrySwitchQueueTick;
-            timer.Start();
+            m_tryHandleInSyncFolderTimer.Tick += TrySwitchQueueTick;
+            m_tryHandleInSyncFolderTimer.Start();
 
             _ = eventAggregator.GetEvent<IsSyncFromServerChangedEvent>().Subscribe( param => IsSyncFromServerNow = param );
 

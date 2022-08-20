@@ -68,7 +68,6 @@ namespace LUC.Interfaces.Extensions
             }
 
             FileStream fileStreamForDownload = File.Create( fullFileName );
-            SetAttributesToTempDownloadingFile( fullFileName );
             return fileStreamForDownload;
         }
 

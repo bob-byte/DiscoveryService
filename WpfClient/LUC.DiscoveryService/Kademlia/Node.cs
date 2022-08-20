@@ -200,10 +200,10 @@ namespace LUC.DiscoveryServices.Kademlia
         /// </summary>
         protected void SendKeyValuesIfNewContact( IContact sender )
         {
-            var contacts = new List<IContact>();
-
-            if ( IsNewContact( sender ) )
+            if ( Storage.Keys.Any() && IsNewContact( sender ) )
             {
+                List<IContact> contacts;
+
                 lock ( BucketList )
                 {
                     // Clone so we can release the lock.
@@ -213,7 +213,7 @@ namespace LUC.DiscoveryServices.Kademlia
                 if ( contacts.Any() )
                 {
                     // and our distance to the key < any other contact's distance to the key...
-                    Storage.Keys.AsParallel().ForEach( k =>
+                    Storage.Keys.ForEach( k =>
                      {
                          // our min distance to the contact.
                          KademliaId distance = contacts.Min( c => k ^ c.KadId );
@@ -242,11 +242,11 @@ namespace LUC.DiscoveryServices.Kademlia
                 ret = BucketList.ContactExists( sender );
             }
 
-            if ( Dht != null )            // for unit testing, dht may be null
+            if ( !ret && ( Dht != null ) )            // for unit testing, dht may be null
             {
                 lock ( Dht.PendingContacts )
                 {
-                    ret |= Dht.PendingContacts.ContainsBy( sender, c => c.KadId );
+                    ret = Dht.PendingContacts.ContainsBy( sender, c => c.KadId );
                 }
             }
 

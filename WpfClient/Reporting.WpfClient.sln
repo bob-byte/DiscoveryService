@@ -414,8 +414,8 @@ Global
 		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.IntegrationTest|x64.Build.0 = IntegrationTest|x64
 		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.IntegrationTest|x86.ActiveCfg = IntegrationTest|x86
 		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.IntegrationTest|x86.Build.0 = IntegrationTest|x86
-		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.ReceiveUdpFromOurself|Any CPU.ActiveCfg = ReceiveUdpFromOurself|Any CPU
-		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.ReceiveUdpFromOurself|Any CPU.Build.0 = ReceiveUdpFromOurself|Any CPU
+		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.ReceiveUdpFromOurself|Any CPU.ActiveCfg = ConnectionPoolTest|Any CPU
+		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.ReceiveUdpFromOurself|Any CPU.Build.0 = ConnectionPoolTest|Any CPU
 		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.ReceiveUdpFromOurself|x64.ActiveCfg = ReceiveUdpFromOurself|x64
 		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.ReceiveUdpFromOurself|x64.Build.0 = ReceiveUdpFromOurself|x64
 		{9DAF9AC8-C899-4D34-A5F8-8850FA45F26E}.ReceiveUdpFromOurself|x86.ActiveCfg = ReceiveUdpFromOurself|x86

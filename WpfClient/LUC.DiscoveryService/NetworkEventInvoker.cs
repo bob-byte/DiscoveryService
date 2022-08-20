@@ -15,6 +15,8 @@ using LUC.DiscoveryServices.Kademlia;
 using LUC.DiscoveryServices.Messages;
 using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.Interfaces.Discoveries;
+using LUC.Interfaces.Enums;
+using LUC.Interfaces.Extensions;
 
 using Nito.AsyncEx;
 
@@ -34,7 +36,7 @@ namespace LUC.DiscoveryServices
         ///   Raised when any service sends a query (see <seealso cref="DiscoveryService.TryFindAllNodes"/>).
         /// </summary>
         /// <value>
-        ///   Contains the query <see cref="MulticastMessage"/>.
+        ///   Contains the query <see cref="AllNodesRecognitionMessage"/>.
         /// </value>
         /// <remarks>
         ///   Any exception throw by the event handler is simply forgotten.
@@ -51,7 +53,7 @@ namespace LUC.DiscoveryServices
 
         /// <summary>
         ///   Raised when any link-local service responds to a query by message <seealso cref="AcknowledgeTcpMessage"/>.
-        ///   This is an answer to UDP multicast (<seealso cref="MulticastMessage"/>).
+        ///   This is an answer to UDP multicast (<seealso cref="AllNodesRecognitionMessage"/>).
         /// </summary>
         /// <value>
         ///   Contains the answer <see cref="AcknowledgeTcpMessage"/>.
@@ -89,13 +91,15 @@ namespace LUC.DiscoveryServices
 
         public event EventHandler<TcpMessageEventArgs> DownloadFileReceived;
 
-        private const Int32 MAX_DATAGRAM_SIZE = MulticastMessage.MAX_LENGTH;
+        private const Int32 MAX_DATAGRAM_SIZE = AllNodesRecognitionMessage.MAX_LENGTH;
 
         /// <summary>
         /// Distributed hash tables for all version of protocols.
         /// A key is the protocol version.
         /// </summary>
-        private static readonly ConcurrentDictionary<UInt16, Dht> s_dhts;
+        private static readonly ConcurrentDictionary<UInt16, Dht> s_dhts = new ConcurrentDictionary<UInt16, Dht>();
+
+        private static IList<NetworkInterface> s_filteredInterfaces;
 
         /// <summary>
         ///   Recently received messages.
@@ -103,7 +107,8 @@ namespace LUC.DiscoveryServices
         private readonly RecentMessages m_receivedMessages;
 
         /// <summary>
-        /// Lock using <seealso cref="m_filteredInterfaces"/>, <seealso cref="m_listeners"/> and <seealso cref="m_udpSenders"/>, because network change can be in any second
+        /// Lock using <seealso cref="s_filteredInterfaces"/>, <seealso cref="m_listeners"/> 
+        /// and <seealso cref="m_udpSenders"/>, because network change can be in any second
         /// </summary>
         private readonly AsyncLock m_asyncLock;
 
@@ -129,17 +134,10 @@ namespace LUC.DiscoveryServices
 
         private Int32 m_countOfNowHandlingTcpEvents;
 
-        private IList<NetworkInterface> m_filteredInterfaces;
-
         private ListenersCollection<UdpMessageEventArgs, UdpClient> m_udpListeners;
         private ListenersCollection<TcpMessageEventArgs, TcpServer> m_tcpListenersCollection;
 
         private UdpSendersCollection m_udpSenders;
-
-        static NetworkEventInvoker()
-        {
-            s_dhts = new ConcurrentDictionary<UInt16, Dht>();
-        }
 
         /// <summary>
         ///   Create a new instance of the <see cref="NetworkEventInvoker"/> class.
@@ -149,9 +147,10 @@ namespace LUC.DiscoveryServices
             Boolean useIpv4,
             Boolean useIpv6,
             UInt16 protocolVersion,
-            IEnumerable<String> bucketLocalNames,
+            IEnumerable<String> userGroups,
             Boolean isDsTest,
-            Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null )
+            Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> filter = null
+        )
         {
             m_random = new Random();
 
@@ -163,7 +162,7 @@ namespace LUC.DiscoveryServices
                 m_minTimeOfAbsenceTcpEvents = TimeSpan.FromSeconds( value: 5 );
             }
 
-            m_filteredInterfaces = new List<NetworkInterface>();
+            s_filteredInterfaces = new List<NetworkInterface>();
 
             m_asyncLock = new AsyncLock();
 
@@ -173,7 +172,7 @@ namespace LUC.DiscoveryServices
 
             m_supportedAddressFamilies = new List<AddressFamily>();
             UseIpv4 = useIpv4;
-            if(useIpv4)
+            if ( useIpv4 )
             {
                 m_supportedAddressFamilies.Add( AddressFamily.InterNetwork );
             }
@@ -186,9 +185,18 @@ namespace LUC.DiscoveryServices
 
             ProtocolVersion = protocolVersion;
 
-            OurContact = new Contact( MachineId, KademliaId.Random(), RunningTcpPort, bucketLocalNames );
-            var distributedHashTable = new Dht( OurContact, ProtocolVersion,
-                storageFactory: () => new VirtualStorage() );
+            OurContact = new Contact(
+                MachineId,
+                contactID: KademliaId.Random(),
+                RunningTcpPort,
+                userGroups
+            );
+
+            var distributedHashTable = new Dht(
+                OurContact,
+                ProtocolVersion,
+                storageFactory: () => new VirtualStorage()
+            );
             s_dhts.TryAdd( protocolVersion, distributedHashTable );
 
             m_networkInterfacesFilter = filter;
@@ -235,9 +243,9 @@ namespace LUC.DiscoveryServices
         ///   All IPv4 addresses are considered link local.
         /// </remarks>
         /// <seealso href="https://en.wikipedia.org/wiki/Link-local_address"/>
-        public static IEnumerable<IPAddress> LinkLocalAddresses() => IPAddresses()
-                .Where( a => a.AddressFamily == AddressFamily.InterNetwork ||
-                     ( a.AddressFamily == AddressFamily.InterNetworkV6 && a.IsIPv6LinkLocal ) );
+        public static IEnumerable<IPAddress> LinkLocalAddresses() =>
+            IPAddresses().Where( a => ( a.AddressFamily == AddressFamily.InterNetwork ) ||
+                                      ( a.AddressFamily == AddressFamily.InterNetworkV6 && a.IsIPv6LinkLocal ) );
 
         /// <summary>
         ///   Get the network interfaces that are useable.
@@ -273,11 +281,16 @@ namespace LUC.DiscoveryServices
                 .SelectMany( nic => nic.GetIPProperties().UnicastAddresses )
                 .Select( u => u.Address );
 
-        public static IEnumerable<IPAddress> IpAddressesOfInterfaces( IEnumerable<NetworkInterface> nics, Boolean useIpv4, Boolean useIpv6 ) =>
-            nics.SelectMany( NetworkInterfaceLocalAddresses ).
-                 Where( a => ( useIpv4 && ( a.AddressFamily == AddressFamily.InterNetwork ) ) ||
-                             ( useIpv6 && ( a.AddressFamily == AddressFamily.InterNetworkV6 ) ) );
+        public static IEnumerable<IPAddress> IpAddressesOfInterfaces(
+            IEnumerable<NetworkInterface> nics,
+            Boolean useIpv4,
+            Boolean useIpv6
+        ) => nics.SelectMany( NetworkInterfaceLocalAddresses ).
+                  Where( a => ( useIpv4 && ( a.AddressFamily == AddressFamily.InterNetwork ) ) ||
+                              ( useIpv6 && ( a.AddressFamily == AddressFamily.InterNetworkV6 ) ) );
 
+        internal static IList<NetworkInterface> CurrentAllTransmitableNetworkInterfaces() =>
+            s_filteredInterfaces ?? AllTransmitableNetworkInterfaces().ToList();
 
         /// <summary>
         /// Get distributed hash table of object with type of <see cref="DiscoveryService"/> with <paramref name="protocolVersion"/>
@@ -293,13 +306,14 @@ namespace LUC.DiscoveryServices
         /// </exception>
         internal static Dht DistributedHashTable( UInt16 protocolVersion )
         {
-            if ( s_dhts.ContainsKey( protocolVersion ) )
+            Boolean isCreated = s_dhts.TryGetValue( protocolVersion, out Dht dht );
+            if ( isCreated )
             {
-                return s_dhts[ protocolVersion ];
+                return dht;
             }
             else
             {
-                throw new ArgumentException( $"DHT with {protocolVersion} isn\'t created" );
+                throw new ArgumentException( message: $"DHT with {protocolVersion} isn\'t created" );
             }
         }
 
@@ -311,42 +325,36 @@ namespace LUC.DiscoveryServices
         /// </returns>
         private static IEnumerable<IPAddress> NetworkInterfaceLocalAddresses( NetworkInterface nic ) =>
             nic.GetIPProperties().
-               UnicastAddresses.
-               Select( a => a.Address ).
-               Where( a => ( a.AddressFamily != AddressFamily.InterNetworkV6 ) || a.IsIPv6LinkLocal );
-
-        public List<IPAddress> CurrentReachableIpAddresses()
-        {
-            List<NetworkInterface> clonedKnownInterfaces;
-
-            using ( m_asyncLock.Lock() )
-            {
-                IEnumerable<NetworkInterface> knownInterfaces = m_networkInterfacesFilter?.Invoke( m_filteredInterfaces ) ?? m_filteredInterfaces;
-                clonedKnownInterfaces = knownInterfaces.ToList();
-
-                List<IPAddress> runningIpAddresses = IpAddressesOfInterfaces( clonedKnownInterfaces, UseIpv4, UseIpv6 ).Where( ip => IpAddressExtension.CanBeReachableInCurrentNetwork( ip, clonedKnownInterfaces ) ).ToList();
-                return runningIpAddresses;
-            }
-        }
+                UnicastAddresses.
+                Select( a => a.Address ).
+                Where( a => ( a.AddressFamily != AddressFamily.InterNetworkV6 ) || a.IsIPv6LinkLocal );
 
         public void Bootstrap( Object sender, TcpMessageEventArgs receiveResult )
         {
-            AcknowledgeTcpMessage tcpMessage = receiveResult.Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
+            AcknowledgeTcpMessage ackMessage = receiveResult.
+                Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
             try
             {
-                if ( ( tcpMessage != null ) && ( receiveResult.RemoteEndPoint is IPEndPoint ipEndPoint ) )
+                if ( ( ackMessage != null ) &&
+                     ( receiveResult.RemoteEndPoint is IPEndPoint ipEndPoint ) )
                 {
-                    var knownContact = new Contact( tcpMessage.MachineId, new KademliaId( tcpMessage.IdOfSendingContact ), tcpMessage.TcpPort, ipEndPoint.Address, tcpMessage.BucketIds );
+                    var knownContact = new Contact(
+                        ackMessage.MachineId,
+                        new KademliaId( ackMessage.IdOfSendingContact ),
+                        ackMessage.TcpPort,
+                        ipEndPoint.Address,
+                        ackMessage.BucketIds
+                    );
 
                     s_dhts[ ProtocolVersion ].Bootstrap( knownContact );
                 }
             }
             catch ( Exception e )
             {
-                DsLoggerSet.DefaultLogger.LogCriticalError( $"Kademlia bootstrap failed. Received: \n{tcpMessage}", e );
-                // eat the exception
+                DsLoggerSet.DefaultLogger.LogCriticalError( message: $"Kademlia bootstrap failed. Received: \n{ackMessage}", e );
             }
         }
+
         /// <summary>
         ///   Start the service.
         /// </summary>
@@ -354,7 +362,7 @@ namespace LUC.DiscoveryServices
         {
             using ( m_asyncLock.Lock() )
             {
-                m_filteredInterfaces.Clear();
+                s_filteredInterfaces.Clear();
             }
 
             FindNetworkInterfaces();
@@ -375,6 +383,9 @@ namespace LUC.DiscoveryServices
             StoreReceived = null;
             FindNodeReceived = null;
             FindValueReceived = null;
+
+            CheckFileExistsReceived = null;
+            DownloadFileReceived = null;
 
             NetworkInterfaceDiscovered = null;
 
@@ -407,9 +418,9 @@ namespace LUC.DiscoveryServices
                         {
                             Boolean isFirstSend = true;
 
-                            foreach ( AddressFamily addressFamily in m_supportedAddressFamilies)
+                            foreach ( AddressFamily addressFamily in m_supportedAddressFamilies )
                             {
-                                var multicastMessage = new MulticastMessage(
+                                var multicastMessage = new AllNodesRecognitionMessage(
                                     messageId: (UInt32)m_random.Next( minValue: 0, Int32.MaxValue ),
                                     ProtocolVersion,
                                     RunningTcpPort,
@@ -418,15 +429,20 @@ namespace LUC.DiscoveryServices
 
                                 if ( isFirstSend )
                                 {
-                                    DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started send UDP messages. Their content:\n{multicastMessage}" );
+                                    DsLoggerSet.DefaultLogger.LogInfo(
+                                        logRecord: $"Started send UDP messages. Their content:\n{multicastMessage}" );
                                 }
 
                                 Byte[] packet = multicastMessage.ToByteArray();
-                                await m_udpSenders.SendMulticastsAsync( packet, ioBehavior, addressFamily ).ConfigureAwait( false );
+                                await m_udpSenders.SendMulticastsAsync(
+                                    packet,
+                                    ioBehavior,
+                                    addressFamily
+                                ).ConfigureAwait( false );
 
                                 isFirstSend = false;
                             }
-                            
+
                             DsLoggerSet.DefaultLogger.LogInfo( "Finished send UDP messages" );
                         }
                         catch ( Exception ex )
@@ -438,7 +454,8 @@ namespace LUC.DiscoveryServices
             }
         }
 
-        private void OnNetworkAddressChanged( Object sender, EventArgs e ) => FindNetworkInterfaces();
+        private void OnNetworkAddressChanged( Object sender, EventArgs e ) =>
+            FindNetworkInterfaces();
 
         private void FindNetworkInterfaces()
         {
@@ -454,7 +471,7 @@ namespace LUC.DiscoveryServices
 
                 using ( m_asyncLock.Lock() )
                 {
-                    foreach ( NetworkInterface nic in m_filteredInterfaces.Where( k => currentNics.All( n => k.Id != n.Id ) ) )
+                    foreach ( NetworkInterface nic in s_filteredInterfaces.Where( k => currentNics.All( n => k.Id != n.Id ) ) )
                     {
                         oldNics.Add( nic );
 
@@ -463,7 +480,7 @@ namespace LUC.DiscoveryServices
 #endif
                     }
 
-                    foreach ( NetworkInterface nic in currentNics.Where( nic => m_filteredInterfaces.All( k => k.Id != nic.Id ) ) )
+                    foreach ( NetworkInterface nic in currentNics.Where( nic => s_filteredInterfaces.All( k => k.Id != nic.Id ) ) )
                     {
                         newNics.Add( nic );
 
@@ -472,17 +489,23 @@ namespace LUC.DiscoveryServices
 #endif
                     }
 
-                    m_filteredInterfaces = currentNics;
+                    s_filteredInterfaces = currentNics;
 
                     // Only recreate listeners and UDP-senders if something has change.
                     if ( newNics.Any() || oldNics.Any() )
                     {
-                        List<IPAddress> ipAddressesOfFilteredInterfaces = ReachableIpAddressesOfInterfaces( m_filteredInterfaces ).ToList();
+                        List<IPAddress> ipAddressesOfFilteredInterfaces =
+                            ReachableIpAddressesOfInterfaces( s_filteredInterfaces ).ToList();
 
                         OurContact.ExchangeIpAddressRange( ipAddressesOfFilteredInterfaces );
                         ReachableIpAddresses = ipAddressesOfFilteredInterfaces;
 
-                        String ipsAsStr = ReachableIpAddresses.ToString( showAllPropsOfItems: false, initialTabulation: String.Empty, nameOfEnumerable: "Reachable IP-addresses", nameOfEachItem: "IP" );
+                        String ipsAsStr = ReachableIpAddresses.ToString(
+                            showAllPropsOfItems: false,
+                            initialTabulation: String.Empty,
+                            nameOfEnumerable: "Reachable IP-addresses",
+                            nameOfEachItem: "IP"
+                        );
                         DsLoggerSet.DefaultLogger.LogInfo( ipsAsStr );
 
                         m_udpListeners?.Dispose();
@@ -523,8 +546,8 @@ namespace LUC.DiscoveryServices
             m_networkInterfacesFilter?.Invoke( interfaces ) ?? interfaces;
 
         private IEnumerable<IPAddress> ReachableIpAddressesOfInterfaces( IList<NetworkInterface> interfaces ) =>
-                IpAddressesOfInterfaces( interfaces, UseIpv4, UseIpv6 ).
-                    Where( ip => ip.CanBeReachableInCurrentNetwork( interfaces ) );
+            IpAddressesOfInterfaces( interfaces, UseIpv4, UseIpv6 ).
+                Where( ip => ip.CanBeReachable() );
 
         private void InitAllListeners()
         {
@@ -591,12 +614,16 @@ namespace LUC.DiscoveryServices
         /// </remarks>
         private void HandleMulticastMessage( Object sender, UdpMessageEventArgs eventArgs )
         {
-            if ( ( eventArgs != null ) && ( eventArgs.Buffer != null ) && ( eventArgs.Buffer.Length <= MAX_DATAGRAM_SIZE ) )
+            if ( ( eventArgs == null ) || ( eventArgs.Buffer == null ) || ( eventArgs.Buffer.Length > MAX_DATAGRAM_SIZE ) )
             {
-                MulticastMessage message;
+                DsLoggerSet.DefaultLogger.LogFatal( $"Something is wrong with {eventArgs.ToString( memberName: String.Empty )}" );
+            }
+            else
+            {
+                AllNodesRecognitionMessage message;
                 try
                 {
-                    message = new MulticastMessage( eventArgs.Buffer );
+                    message = new AllNodesRecognitionMessage( eventArgs.Buffer );
                 }
                 //isn't valid TcpPort
                 catch ( ArgumentException ex )
@@ -622,8 +649,8 @@ namespace LUC.DiscoveryServices
 #if RECEIVE_UDP_FROM_OURSELF
                 Boolean isMessFromOtherPeerInNetwork = message.ProtocolVersion == ProtocolVersion;
 #else
-                Boolean isMessFromOtherPeerInNetwork = (message.ProtocolVersion == ProtocolVersion) &&
-                    (!message.MachineId.Equals(MachineId, StringComparison.Ordinal));
+                Boolean isMessFromOtherPeerInNetwork = ( message.ProtocolVersion == ProtocolVersion ) &&
+                    ( !message.MachineId.Equals( MachineId, StringComparison.Ordinal ) );
 #endif
 
                 if ( ( !IgnoreDuplicateMessages || !isRecentlyReceivedSameMess ) && isDsMessage && isMessFromOtherPeerInNetwork )
@@ -652,6 +679,10 @@ namespace LUC.DiscoveryServices
                         DsLoggerSet.DefaultLogger.LogCriticalError( $"Receive UDP handler failed. UDP message:\n{message}", ex );
                     }
                 }
+                else if ( isRecentlyReceivedSameMess && IgnoreDuplicateMessages )
+                {
+                    DsLoggerSet.DefaultLogger.LogFatal( "Received UDP-message with the same ID" );
+                }
             }
         }
 
@@ -671,7 +702,9 @@ namespace LUC.DiscoveryServices
             }
             else
             {
+#if DEBUG
                 DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started to handle {receiveResult.Buffer.Length} bytes" );
+#endif
 
                 Message message = null;
 
@@ -758,10 +791,6 @@ namespace LUC.DiscoveryServices
                     //we need to unregister socket in order to be available handle messages from another nodes
                     receiveResult.UnregisterSocket();
                 }
-                catch ( Exception ex )
-                {
-                    DsLoggerSet.DefaultLogger.LogCriticalError( $"Cannot to handle TCP message: {message}", ex );
-                }
             }
         }
 
@@ -786,40 +815,51 @@ namespace LUC.DiscoveryServices
                     {
                         isMalformedMess = !IgnoreDuplicateMessages;
                     }
+                }
+                else if ( request is AcknowledgeTcpMessage ackMess )
+                {
+                    kadRequest = null;
 
-                    IContact senderContact = s_dhts[ ProtocolVersion ].OnlineContacts.SingleOrDefault( c => c.MachineId.Equals( kadRequest.SenderMachineId, StringComparison.Ordinal ) );
-
-                    if ( ( senderContact != null ) && ( eventArgs.RemoteEndPoint is IPEndPoint ipEndpoint ) )
+                    isMalformedMess = !m_receivedMessages.TryAdd( ackMess.MessageId );
+                    if ( isMalformedMess )
                     {
-                        senderContact.LastActiveIpAddress = ipEndpoint.Address;
+                        isMalformedMess = !IgnoreDuplicateMessages;
                     }
                 }
                 else
                 {
-                    if ( request is AcknowledgeTcpMessage ackMess )
-                    {
-                        isMalformedMess = !m_receivedMessages.TryAdd( ackMess.MessageId );
-                        if ( isMalformedMess )
-                        {
-                            isMalformedMess = !IgnoreDuplicateMessages;
-                        }
-                    }
-                    else
-                    {
-                        isMalformedMess = true;
-                    }
+                    kadRequest = null;
+
+                    isMalformedMess = true;
                 }
 
-                if ( !isMalformedMess )
+                if ( isMalformedMess )
+                {
+                    DsLoggerSet.DefaultLogger.LogFatal( "Received malformed TCP-message" );
+                }
+                else
                 {
                     eventArgs.SetMessage( request );
 
                     receiveEvent?.Invoke( this, eventArgs );
+
+                    if ( kadRequest != null )
+                    {
+                        IContact senderContact = s_dhts[ ProtocolVersion ].OnlineContacts.SingleOrDefault( c =>
+                            c.MachineId.Equals( kadRequest.SenderMachineId, StringComparison.Ordinal ) );
+
+                        if ( ( senderContact != null ) && ( eventArgs.RemoteEndPoint is IPEndPoint ipEndpoint ) )
+                        {
+                            senderContact.LastActiveIpAddress = ipEndpoint.Address;
+                        }
+                    }
                 }
             }
             finally
             {
-                DsLoggerSet.DefaultLogger.LogInfo( $"Finished to handle {eventArgs.Buffer.Length} bytes" );
+#if DEBUG
+                DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Finished to handle {eventArgs.Buffer.Length} bytes" );
+#endif
 
                 if ( m_isDsTest )
                 {

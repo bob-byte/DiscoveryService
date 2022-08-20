@@ -10,12 +10,13 @@ using System.Threading.Tasks;
 
 using LUC.DiscoveryServices.Common;
 using LUC.Interfaces.Constants;
+using LUC.Interfaces.Enums;
 
 namespace LUC.DiscoveryServices
 {
     class UdpSendersCollection : IDisposable
     {
-        private readonly ConcurrentDictionary<IPAddress, UdpClient> m_sendersUdp = new ConcurrentDictionary<IPAddress, UdpClient>();
+        private readonly ConcurrentDictionary<IPAddress, UdpClient> m_sendersUdp;
 
         private Boolean m_disposedValue;
 
@@ -27,6 +28,8 @@ namespace LUC.DiscoveryServices
         /// </param>
         public UdpSendersCollection( ICollection<IPAddress> runningIpAddresses, Int32 udpPort )
         {
+            m_sendersUdp = new ConcurrentDictionary<IPAddress, UdpClient>();
+
             foreach ( IPAddress address in runningIpAddresses )
             {
                 if ( m_sendersUdp.Keys.Contains( address ) )

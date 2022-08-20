@@ -1,5 +1,5 @@
 ﻿//#define DOES_CONTAINER_USE
-//#define IS_IN_LUC
+#define IS_IN_LUC
 
 using LUC.DiscoveryServices.Common;
 using LUC.DiscoveryServices.Common.Extensions;
@@ -10,14 +10,13 @@ using LUC.DiscoveryServices.NetworkEventHandlers;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
+using LUC.Interfaces.Enums;
+using LUC.Interfaces.Extensions;
 using LUC.Services.Implementation.Helpers;
-
-using Nito.AsyncEx.Synchronous;
 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -29,13 +28,13 @@ using System.Threading;
 using System.Threading.Tasks;
 
 //access permission to internal members in current project for DiscoveryService.Test
-[assembly: InternalsVisibleTo(assemblyName: "DiscoveryService.Test")]
+[assembly: InternalsVisibleTo( assemblyName: "DiscoveryService.Test" )]
 namespace LUC.DiscoveryServices
 {
+    // TODO: fix support of several DS 
     /// <summary>
     ///   LightUpon.Cloud Service Discovery maintens the list of IP addresses in LAN. 
     /// </summary>
-    [Export( typeof( IDiscoveryService ) )]
     public class DiscoveryService : AbstractDsData, IDiscoveryService
     {
         /// <summary>
@@ -48,7 +47,7 @@ namespace LUC.DiscoveryServices
         private static readonly Random s_random = new Random();
 
         /// <summary>
-        /// Indicates whether DS.Test project is running
+        /// Indicates whether DS.Test project uses DS
         /// </summary>
         private Boolean m_isDsTest;
 
@@ -76,9 +75,15 @@ namespace LUC.DiscoveryServices
         /// <param name="currentUserProvider">
         /// Logged user to LUC app
         /// </param>
-        private DiscoveryService( String machineId, UInt16 protocolVersion, Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, String> groups, ICurrentUserProvider currentUserProvider )
-        {
-            #region Check parameters
+        private DiscoveryService( 
+            String machineId, 
+            UInt16 protocolVersion, 
+            Boolean useIpv4, 
+            Boolean useIpv6, 
+            ConcurrentDictionary<String, String> groups, 
+            ICurrentUserProvider currentUserProvider 
+        ){
+            #region Check useIpv4 and useIpv6 parameters
             Boolean osSupportsIPv4 = Socket.OSSupportsIPv4;
             Boolean osSupportsIPv6 = Socket.OSSupportsIPv6;
 
@@ -92,31 +97,38 @@ namespace LUC.DiscoveryServices
                 throw new ArgumentException( $"{baseLogRecord} IPv6", paramName: nameof( useIpv6 ) );
             }
             #endregion
-
+            
             DefaultInit( machineId, protocolVersion, useIpv4, useIpv6, groups, currentUserProvider );
         }
 
-        private DiscoveryService( String machineId, UInt16 protocolVersion, ConcurrentDictionary<String, String> groups, ICurrentUserProvider currentUserProvider )
-        {
+        private DiscoveryService( 
+            String machineId, 
+            UInt16 protocolVersion, 
+            ConcurrentDictionary<String, String> groups, 
+            ICurrentUserProvider currentUserProvider 
+        ){
             Boolean osSupportsIPv4 = Socket.OSSupportsIPv4;
             Boolean osSupportsIPv6 = Socket.OSSupportsIPv6;
 
-            String baseLogRecord = "Doesn't support ";
-            if ( !osSupportsIPv4 )
+            if ( !osSupportsIPv4 && !osSupportsIPv6 )
             {
-                DsLoggerSet.DefaultLogger.LogFatal( message: $"{baseLogRecord} IPv4" );
-            }
+                String message = $"OS and network adaptors don't support IPv4 and IPv6";
 
-            if ( !osSupportsIPv6 )
-            {
-                DsLoggerSet.DefaultLogger.LogFatal( $"{baseLogRecord} IPv6" );
+                DsLoggerSet.DefaultLogger.LogFatal( message );
+                throw new InvalidOperationException( message );
             }
 
             DefaultInit( machineId, protocolVersion, osSupportsIPv4, osSupportsIPv6, groups, currentUserProvider );
         }
 
-        private void DefaultInit( String machineId, UInt16 protocolVersion, Boolean useIpv4, Boolean useIpv6, ConcurrentDictionary<String, String> groups, ICurrentUserProvider currentUserProvider )
-        {
+        private void DefaultInit(
+            String machineId,
+            UInt16 protocolVersion,
+            Boolean useIpv4,
+            Boolean useIpv6,
+            ConcurrentDictionary<String, String> groups,
+            ICurrentUserProvider currentUserProvider
+        ){
             #region Check parameters
             if ( machineId == null )
             {
@@ -136,7 +148,7 @@ namespace LUC.DiscoveryServices
             }
             #endregion
 
-#if !IS_IN_LUC && !DOES_CONTAINER_USE
+#if !DOES_CONTAINER_USE
             ConfigureFirewall();
 #endif
 
@@ -155,6 +167,8 @@ namespace LUC.DiscoveryServices
             m_connectionPool = ConnectionPool.Instance;
 
             CurrentUserProvider = currentUserProvider;
+
+            //TODO: replace init NetworkEventInvoker here
         }
 
 
@@ -191,12 +205,33 @@ namespace LUC.DiscoveryServices
             }
         }
 
+        public static DiscoveryService Instance(
+            String machineId,
+            UInt16 protocolVersion,
+            Boolean useIpv4,
+            Boolean useIpv6,
+            ConcurrentDictionary<String, String> userGroups,
+            ICurrentUserProvider currentUserProvider
+        ) => Instance( 
+                 protocolVersion, 
+                 userGroups, 
+                 () => new DiscoveryService( machineId, protocolVersion, useIpv4, useIpv6, userGroups, currentUserProvider ) 
+             );
+
         /// <summary>
         /// Get an instance of the <seealso cref="DiscoveryService"/> class with some <paramref name="protocolVersion"/>. 
         /// If it has not been created before with this parameter, it will be initialized
         /// </summary>
-        public static DiscoveryService Instance( String machineId, UInt16 protocolVersion, ICurrentUserProvider currentUserProvider, ConcurrentDictionary<String, String> userGroups ) =>
-            Instance( protocolVersion, userGroups, () => new DiscoveryService( machineId, protocolVersion, userGroups, currentUserProvider ) );
+        public static DiscoveryService Instance( 
+            String machineId, 
+            UInt16 protocolVersion, 
+            ICurrentUserProvider currentUserProvider, 
+            ConcurrentDictionary<String, String> userGroups 
+        ) => Instance(
+                 protocolVersion,
+                 userGroups,
+                 () => new DiscoveryService( machineId, protocolVersion, userGroups, currentUserProvider )
+             );
 
         /// <summary>
         /// Get before created instance of the <seealso cref="DiscoveryService"/> class
@@ -293,17 +328,14 @@ namespace LUC.DiscoveryServices
             }
         }
 
-        public void Start() =>
-            Start( networkIterfacesFilter: null );
-
         /// <inheritdoc/>
-        public void Start( Func<IEnumerable<NetworkInterface>, IEnumerable<NetworkInterface>> networkIterfacesFilter )
+        public void Start()
         {
             if ( !IsRunning )
             {
                 DsLoggerSet.DefaultLogger.LogInfo( logRecord: "DS (Discovery Service) is starting" );
 
-                InitNetworkEventInvoker( networkIterfacesFilter );
+                InitNetworkEventInvoker( networkIterfacesFilter: null );
 
                 m_forceConcurrencyError = new ForcingConcurrencyError();
 
@@ -311,11 +343,9 @@ namespace LUC.DiscoveryServices
                 {
                     TimeSpan intervalFindNewServices;
 #if CONNECTION_POOL_TEST
-                    intervalFindNewServices = TimeSpan.FromSeconds( value: 3 );
-#elif DEBUG
+                    intervalFindNewServices = TimeSpan.FromSeconds( value: 1.5 );
+#else
                     intervalFindNewServices = TimeSpan.FromMinutes( 1 );
-#else               
-                    intervalFindNewServices = TimeSpan.FromMinutes( 3 );
 #endif
 
                     m_tryFindAndUpdateNodesTimer = new Timer( TryFindNewServicesTick, state: this, dueTime: TimeSpan.Zero, intervalFindNewServices );
@@ -350,6 +380,7 @@ namespace LUC.DiscoveryServices
             {
                 IsRunning = false;
 
+                m_tryFindAndUpdateNodesTimer?.Change( dueTime: Timeout.Infinite, period: Timeout.Infinite );
                 m_tryFindAndUpdateNodesTimer?.Dispose();
 
                 NetworkEventInvoker?.Stop();
@@ -369,7 +400,7 @@ namespace LUC.DiscoveryServices
 
         //TODO: check SSL certificate with SNI
         /// <summary>
-        ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.RemoteEndPoint"/> using <seealso cref="MulticastMessage.TcpPort"/>
+        ///  Sends TCP message of "acknowledge" custom type to <seealso cref="TcpMessageEventArgs.RemoteEndPoint"/> using <seealso cref="AllNodesRecognitionMessage.TcpPort"/>
         ///  It is added to <seealso cref="NetworkEventInvoker.QueryReceived"/>. 
         /// </summary>
         /// <param name="sender">
@@ -386,13 +417,13 @@ namespace LUC.DiscoveryServices
             }
             else
             {
-                MulticastMessage multicastMessage = eventArgs.Message<MulticastMessage>( whetherReadMessage: false );
+                AllNodesRecognitionMessage multicastMessage = eventArgs.Message<AllNodesRecognitionMessage>( whetherReadMessage: false );
 
                 if ( ( multicastMessage != null ) && ( eventArgs?.RemoteEndPoint is IPEndPoint ipEndPoint ) )
                 {
                     ForcingConcurrencyError.TryForce();
 
-                    Boolean isTheSameNetwork = ipEndPoint.Address.CanBeReachableInCurrentNetwork();
+                    Boolean isTheSameNetwork = ipEndPoint.Address.CanBeReachable();
 
                     if ( isTheSameNetwork )
                     {
@@ -504,7 +535,7 @@ namespace LUC.DiscoveryServices
             }
             catch ( Exception ex )
             {
-                DsLoggerSet.DefaultLogger.LogCriticalError( message: $"{appName} cannot be granted in private networks", ex );
+                DsLoggerSet.DefaultLogger.LogCriticalError( message: $"{appName} cannot be granted in any networks", ex );
                 throw;
             }
         }
@@ -512,11 +543,9 @@ namespace LUC.DiscoveryServices
         private void TryFindNewServicesTick( Object timerState )
         {
 #if !CONNECTION_POOL_TEST
-            List<IContact> onlineContacts = OnlineContacts();
-
             //we don't need to say about us another nodes, when we aren't in any not Kademlia buckets,
             //because no one will download files from us, while bucket refresh will not be started
-            if ( onlineContacts.Count == 0 && m_localBuckets.Any() )
+            if ( m_localBuckets.Any() && !m_distributedHashTable.ExistsAnyOnlineContact )
             {
 #endif
                 try

@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryServices.Common;
+using LUC.Interfaces.Enums;
 
 using System;
 using System.Net;
@@ -12,35 +13,25 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
     {
         private async ValueTask<Socket> CreatedOrTakenSocketAsync(EndPoint remoteEndPoint, TimeSpan timeoutToConnect, TimeSpan timeWaitToReturnToPool, IoBehavior ioBehavior, CancellationToken cancellationToken = default)
         {
-            (Boolean isTaken, Socket desiredSocket) = await TryTakeLeasedSocketAsync(remoteEndPoint, ioBehavior, timeWaitToReturnToPool, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
+            //desiredSocket may not be in pool, because it can be removed 
+            //by ConnectionPool.TryRecoverAllConnectionsAsync or disposed or is not created
+            Boolean isTaken = m_sockets.TryRemove( remoteEndPoint, out Socket desiredSocket );
 
-            if (isTaken)
+            if ( isTaken )
             {
-                desiredSocket = await TakenSocketWithRecoveredConnectionAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket).
-                    ConfigureAwait(false);
+                await TakeFromPoolAsync( desiredSocket, ioBehavior, timeWaitToReturnToPool, cancellationToken ).ConfigureAwait( false );
+
+                desiredSocket = await ConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket, createNewSocketIfDisposed: true ).
+                    ConfigureAwait( false );
             }
             else
             {
-                //desiredSocket may not be in pool, because it can be removed 
-                //by ConnectionPool.TryRecoverAllConnectionsAsync or disposed or is not created
-                isTaken = m_sockets.TryRemove(remoteEndPoint, out desiredSocket);
+                desiredSocket = await CreatedConnectedSocketAsync( remoteEndPoint, timeoutToConnect, ioBehavior ).ConfigureAwait( false );
 
-                if (isTaken)
-                {
-                    await TakeFromPoolAsync(desiredSocket, ioBehavior, timeWaitToReturnToPool, cancellationToken).ConfigureAwait(false);
-
-                    desiredSocket = await ConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior, desiredSocket, createNewSocketIfDisposed: true).
-                        ConfigureAwait(false);
-                }
-                else
-                {
-                    desiredSocket = await CreatedConnectedSocketAsync(remoteEndPoint, timeoutToConnect, ioBehavior).ConfigureAwait(false);
-
-                    await TakeFromPoolAsync(desiredSocket, ioBehavior, timeWaitToReturnToPool, cancellationToken).ConfigureAwait(false);
-                }
-
-                AddLeasedSocket(remoteEndPoint, desiredSocket);
+                await TakeFromPoolAsync( desiredSocket, ioBehavior, timeWaitToReturnToPool, cancellationToken ).ConfigureAwait( false );
             }
+
+            AddLeasedSocket( remoteEndPoint, desiredSocket );
 
             return desiredSocket;
         }

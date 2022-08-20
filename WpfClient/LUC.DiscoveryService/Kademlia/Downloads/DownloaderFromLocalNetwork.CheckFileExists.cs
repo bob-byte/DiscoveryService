@@ -9,6 +9,8 @@ using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 using LUC.Interfaces.Discoveries;
 using LUC.Interfaces.Constants;
+using LUC.DiscoveryServices.Common;
+using LUC.Interfaces.Enums;
 
 namespace LUC.DiscoveryServices.Kademlia.Downloads
 {
@@ -16,7 +18,8 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
     {
         private Int32 ContactCountWithFileCapacity( UInt64 bytesFileCount, Int64 undownloadedFileBytesCount )
         {
-            //get total bytes / default capacity. if it is > max chunk size then contactCountWithFileCapacity = default capacity, else undownloaded bytes / maxChunkSize
+            //get total bytes / default capacity. if it is > max chunk size then
+            //contactCountWithFileCapacity = default capacity, else undownloaded bytes / maxChunkSize
             Int64 bytesPerContact = (Int64)Math.Ceiling( bytesFileCount / (Double)CONTACT_COUNT_WITH_FILE_CAPACITY );
 
             //for 1 contact will be more optimized if it has at least 2 chunks for download
@@ -44,6 +47,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             IEnumerable<IContact> contactsWithFile = ContactsWithFile( onlineContacts, sampleRequest, contactCountWithFileCapacity, bytesFileCount, cancellationToken );
             return contactsWithFile;
         }
+
         private IEnumerable<IContact> ContactsWithFile(
             IEnumerable<IContact> onlineContacts,
             DownloadChunkRequest sampleRequest,
@@ -87,26 +91,26 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                          checkFileExistsInContact.Post( contact );
                      }
 
-                    //Signals that we will not post more IContact.
-                    //checkFileExistsInContact.Completion will never be completed without this
-                    checkFileExistsInContact.Complete();
+                     //Signals that we will not post more IContact.
+                     //checkFileExistsInContact.Completion will never be completed without this
+                     checkFileExistsInContact.Complete();
 
-                    //await getting all contactsWithFile
-                    await checkFileExistsInContact.Completion.ConfigureAwait( false );
+                     //await getting all contactsWithFile
+                     await checkFileExistsInContact.Completion.ConfigureAwait( false );
                  }
                  catch ( OperationCanceledException )
                  {
                      ;//do nothing
-                }
-                //added too many contactsWithFile (called contactsWithFile.Add( contact ) after contactsWithFile.CompleteAdding() (thread race))
-                catch ( InvalidOperationException )
+                 }
+                 //added too many contactsWithFile (called contactsWithFile.Add( contact ) after contactsWithFile.CompleteAdding() (thread race))
+                 catch ( InvalidOperationException )
                  {
                      ;//do nothing
-                }
+                 }
                  finally
                  {
-                    //contactsWithFile.GetConsumingEnumerable will never be completed without this
-                    contactsWithFile.CompleteAdding();
+                     //contactsWithFile.GetConsumingEnumerable will never be completed without this
+                     contactsWithFile.CompleteAdding();
                  }
              } );
 
@@ -121,8 +125,10 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                 FileOriginalName = sampleRequest.FileOriginalName,
                 HexPrefix = sampleRequest.HexPrefix,
             };
+
+            //Synchronous execution is quicker
             (CheckFileExistsResponse response, RpcError rpcError) = await request.ResultAsync<CheckFileExistsResponse>( contact,
-                IOBehavior, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
+                IoBehavior.Synchronous, m_discoveryService.ProtocolVersion ).ConfigureAwait( continueOnCapturedContext: false );
 
             Boolean existRequiredFile;
             if ( !rpcError.HasError )
@@ -140,3 +146,4 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         }
     }
 }
+

@@ -11,6 +11,7 @@ using System.Net.NetworkInformation;
 
 using System.Reflection;
 using LUC.Interfaces.Constants;
+using LUC.DiscoveryServices.Common.Extensions;
 
 namespace LUC.DiscoveryServices.Test.Builders
 {
@@ -77,7 +78,7 @@ namespace LUC.DiscoveryServices.Test.Builders
                 Boolean isReacheable;
                 try
                 {
-                    isReacheable = IpAddressExtension.CanBeReachableInCurrentNetwork( ipAddress, networkInterfaces.ToList() );
+                    isReacheable = IpAddressExtension.CanBeReachable( ipAddress, networkInterfaces.ToList() );
                 }
                 catch ( Win32Exception )
                 {

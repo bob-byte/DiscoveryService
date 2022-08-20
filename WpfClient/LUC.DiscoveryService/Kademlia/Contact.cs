@@ -24,7 +24,7 @@ namespace LUC.DiscoveryServices.Kademlia
         /// <summary>
         /// Initialize a contact with its ID. Use this constructor when you don't know IP-addresses of your PC
         /// </summary>
-        public Contact(String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<String> bucketLocalNames)
+        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<String> bucketLocalNames )
         {
             MachineId = machineId;
             KadId = contactID;
@@ -32,7 +32,7 @@ namespace LUC.DiscoveryServices.Kademlia
             TcpPort = tcpPort;
             m_ipAddresses = new List<IPAddress>();
 
-            InitBucketLocalNames(bucketLocalNames);
+            InitBucketLocalNames( bucketLocalNames );
 
             Touch();
         }
@@ -40,8 +40,8 @@ namespace LUC.DiscoveryServices.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(String machineId, KademliaId contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress, IEnumerable<String> bucketLocalNames)
-            : this(machineId, contactID, tcpPort, bucketLocalNames)
+        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IPAddress lastActiveIpAddress, IEnumerable<String> bucketLocalNames )
+            : this( machineId, contactID, tcpPort, bucketLocalNames )
         {
             LastActiveIpAddress = lastActiveIpAddress;
         }
@@ -49,7 +49,7 @@ namespace LUC.DiscoveryServices.Kademlia
         /// <summary>
         /// Initialize a contact with its ID.
         /// </summary>
-        public Contact(String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen, IEnumerable<String> bucketLocalNames)
+        public Contact( String machineId, KademliaId contactID, UInt16 tcpPort, IEnumerable<IPAddress> ipAddresses, DateTime lastSeen, IEnumerable<String> bucketLocalNames )
         {
             MachineId = machineId;
             KadId = contactID;
@@ -57,12 +57,10 @@ namespace LUC.DiscoveryServices.Kademlia
             TcpPort = tcpPort;
 
             m_ipAddresses = new List<IPAddress>();
-            if ( ipAddresses != null )
-            {
-                TryAddIpAddressRange(ipAddresses);
-            }
+            TryAddIpAddressRange( ipAddresses );
+            m_lastActiveIpAddress = m_ipAddresses.LastOrDefault();
 
-            InitBucketLocalNames(bucketLocalNames);
+            InitBucketLocalNames( bucketLocalNames );
 
             LastSeen = lastSeen;
         }
@@ -74,8 +72,8 @@ namespace LUC.DiscoveryServices.Kademlia
 
         public DateTime LastSeen
         {
-            get => new DateTime(m_lastSeenInTicks);
-            private set => Interlocked.Exchange(ref m_lastSeenInTicks, value.Ticks);
+            get => new DateTime( m_lastSeenInTicks );
+            private set => Interlocked.Exchange( ref m_lastSeenInTicks, value.Ticks );
         }
 
         public String MachineId { get; }
@@ -88,7 +86,7 @@ namespace LUC.DiscoveryServices.Kademlia
         public KademliaId KadId
         {
             get => m_kadId;
-            set => Interlocked.Exchange(ref m_kadId, value);
+            set => Interlocked.Exchange( ref m_kadId, value );
         }
 
         public UInt16 TcpPort
@@ -96,8 +94,8 @@ namespace LUC.DiscoveryServices.Kademlia
             get => (UInt16)m_tcpPort;
             set
             {
-                AbstractDsData.CheckTcpPort(value);
-                Interlocked.Exchange(ref m_tcpPort, value);
+                AbstractDsData.CheckTcpPort( value );
+                Interlocked.Exchange( ref m_tcpPort, value );
             }
         }
 
@@ -106,9 +104,9 @@ namespace LUC.DiscoveryServices.Kademlia
             get => m_lastActiveIpAddress;
             set
             {
-                Interlocked.Exchange(ref m_lastActiveIpAddress, value);
+                Interlocked.Exchange( ref m_lastActiveIpAddress, value );
 
-                TryAddIpAddress(value, isAdded: out _);
+                TryAddIpAddress( value, isAdded: out _ );
             }
         }
 
@@ -134,11 +132,11 @@ namespace LUC.DiscoveryServices.Kademlia
 
         public override String ToString()
         {
-            String contactAsStrWithoutAddresses = Display.ToString(this);
+            String contactAsStrWithoutAddresses = Display.ToString( this );
 
-            var stringBuilder = new StringBuilder(contactAsStrWithoutAddresses);
+            var stringBuilder = new StringBuilder( contactAsStrWithoutAddresses );
 
-            stringBuilder.AppendLine($"{Display.TABULATION}{nameof(m_ipAddresses)}:");
+            stringBuilder.AppendLine( $"{Display.TABULATION}{nameof( m_ipAddresses )}:" );
 
             lock ( m_ipAddresses )
             {
@@ -158,7 +156,7 @@ namespace LUC.DiscoveryServices.Kademlia
             return stringBuilder.ToString();
         }
 
-        public void UpdateAccordingToNewState(IContact contactWithNewState)
+        public void UpdateAccordingToNewState( IContact contactWithNewState )
         {
             LastActiveIpAddress = contactWithNewState.LastActiveIpAddress;
 
@@ -167,8 +165,8 @@ namespace LUC.DiscoveryServices.Kademlia
             KadId = contactWithNewState.KadId;
 
             //contact can have new enumerables of buckets and IP-addresses
-            ExchangeLocalBucketRange(contactWithNewState.Buckets());
-            TryAddIpAddressRange(contactWithNewState.IpAddresses());
+            ExchangeLocalBucketRange( contactWithNewState.Buckets() );
+            TryAddIpAddressRange( contactWithNewState.IpAddresses() );
 
             Touch();
         }
@@ -176,7 +174,7 @@ namespace LUC.DiscoveryServices.Kademlia
         /// <summary>
         /// Update the fact that we've just seen this contact.
         /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl( MethodImplOptions.AggressiveInlining )]
         public void Touch() =>
             LastSeen = DateTime.UtcNow;
 
@@ -185,7 +183,7 @@ namespace LUC.DiscoveryServices.Kademlia
         /// </returns>
         public List<IPAddress> IpAddresses()
         {
-            lock (m_ipAddresses)
+            lock ( m_ipAddresses )
             {
                 return m_ipAddresses.ToList();
             }
@@ -196,7 +194,7 @@ namespace LUC.DiscoveryServices.Kademlia
         /// </returns>
         public List<String> Buckets()
         {
-            lock (m_supportedBuckets)
+            lock ( m_supportedBuckets )
             {
                 return m_supportedBuckets.ToList();
             }
@@ -204,51 +202,51 @@ namespace LUC.DiscoveryServices.Kademlia
 
         public void ClearAllLocalBuckets()
         {
-            lock (m_supportedBuckets)
+            lock ( m_supportedBuckets )
             {
                 m_supportedBuckets.Clear();
             }
         }
 
-        public void ExchangeLocalBucketRange(IEnumerable<String> newBuckets) =>
-            ExchangeEnumerable(m_supportedBuckets, newBuckets);
+        public void ExchangeLocalBucketRange( IEnumerable<String> newBuckets ) =>
+            ExchangeEnumerable( m_supportedBuckets, newBuckets );
 
-        public void ExchangeIpAddressRange(IEnumerable<IPAddress> newIpAddresses) =>
-            ExchangeEnumerable(m_ipAddresses, newIpAddresses);
+        public void ExchangeIpAddressRange( IEnumerable<IPAddress> newIpAddresses ) =>
+            ExchangeEnumerable( m_ipAddresses, newIpAddresses );
 
-        public void TryAddIpAddressRange(IEnumerable<IPAddress> ipAddresses)
+        public void TryAddIpAddressRange( IEnumerable<IPAddress> ipAddresses )
         {
-            if ((ipAddresses != null) && ipAddresses.Any())
+            if ( ( ipAddresses != null ) && ipAddresses.Any() )
             {
-                lock (m_ipAddresses)
+                lock ( m_ipAddresses )
                 {
-                    foreach (IPAddress address in ipAddresses)
+                    foreach ( IPAddress address in ipAddresses )
                     {
                         //to put in the end last active IP address
-                        if (m_ipAddresses.Contains(address))
+                        if ( m_ipAddresses.Contains( address ) )
                         {
-                            m_ipAddresses.Remove(address);
+                            m_ipAddresses.Remove( address );
                         }
 
-                        AddNewIpAddresss(address);
+                        AddNewIpAddresss( address );
                     }
                 }
             }
         }
 
-        public void TryAddIpAddress(IPAddress address, out Boolean isAdded)
+        public void TryAddIpAddress( IPAddress address, out Boolean isAdded )
         {
-            if (address != null)
+            if ( address != null )
             {
-                lock (m_ipAddresses)
+                lock ( m_ipAddresses )
                 {
                     //to put in the end last active IP address
-                    if (m_ipAddresses.Contains(address))
+                    if ( m_ipAddresses.Contains( address ) )
                     {
-                        m_ipAddresses.Remove(address);
+                        m_ipAddresses.Remove( address );
                     }
 
-                    AddNewIpAddresss(address);
+                    AddNewIpAddresss( address );
                     isAdded = true;
                 }
             }
@@ -258,21 +256,21 @@ namespace LUC.DiscoveryServices.Kademlia
             }
         }
 
-        public void TryRemoveIpAddress(IPAddress address, out Boolean isRemoved)
+        public void TryRemoveIpAddress( IPAddress address, out Boolean isRemoved )
         {
-            lock (m_ipAddresses)
+            lock ( m_ipAddresses )
             {
-                if (m_ipAddresses.Contains(address))
+                if ( m_ipAddresses.Contains( address ) )
                 {
-                    isRemoved = m_ipAddresses.Remove(address);
+                    isRemoved = m_ipAddresses.Remove( address );
 
-                    if (m_ipAddresses.Count > 0)
+                    if ( m_ipAddresses.Count > 0 )
                     {
-                        Interlocked.Exchange(ref m_lastActiveIpAddress, value: m_ipAddresses[IpAddressesCount - 1]);
+                        Interlocked.Exchange( ref m_lastActiveIpAddress, value: m_ipAddresses[ IpAddressesCount - 1 ] );
                     }
-                    else if (m_ipAddresses.Count == 0)
+                    else if ( m_ipAddresses.Count == 0 )
                     {
-                        Interlocked.Exchange(ref m_lastActiveIpAddress, null);
+                        Interlocked.Exchange( ref m_lastActiveIpAddress, null );
                     }
                 }
                 else
@@ -282,15 +280,15 @@ namespace LUC.DiscoveryServices.Kademlia
             }
         }
 
-        public void TryAddBucketLocalName(String bucketLocalName, out Boolean isAdded)
+        public void TryAddBucketLocalName( String bucketLocalName, out Boolean isAdded )
         {
-            if (bucketLocalName != null)
+            if ( bucketLocalName != null )
             {
-                lock (m_supportedBuckets)
+                lock ( m_supportedBuckets )
                 {
-                    if (!m_supportedBuckets.Contains(bucketLocalName))
+                    if ( !m_supportedBuckets.Contains( bucketLocalName ) )
                     {
-                        m_supportedBuckets.Add(bucketLocalName);
+                        m_supportedBuckets.Add( bucketLocalName );
                         isAdded = true;
                     }
                     else
@@ -305,30 +303,30 @@ namespace LUC.DiscoveryServices.Kademlia
             }
         }
 
-        public void TryRemoveBucketLocalName(String bucketLocalName, out Boolean isRemoved)
+        public void TryRemoveBucketLocalName( String bucketLocalName, out Boolean isRemoved )
         {
-            lock (m_supportedBuckets)
+            lock ( m_supportedBuckets )
             {
-                isRemoved = m_supportedBuckets.Contains(bucketLocalName) && m_supportedBuckets.Remove(bucketLocalName);
+                isRemoved = m_supportedBuckets.Contains( bucketLocalName ) && m_supportedBuckets.Remove( bucketLocalName );
             }
         }
 
-        private static Boolean IsEqual(IContact a, IContact b)
+        private static Boolean IsEqual( IContact a, IContact b )
         {
             Boolean isEqual = false;
 
             Boolean isANull = a is null;
             Boolean isBNull = b is null;
 
-            if (!isANull && !isBNull)
+            if ( !isANull && !isBNull )
             {
-                isEqual = a.Equals(b);
+                isEqual = a.Equals( b );
             }
-            else if (isANull && isBNull)
+            else if ( isANull && isBNull )
             {
                 isEqual = true;
             }
-            else if ((isANull && !isBNull) || (!isANull && isBNull))
+            else if ( ( isANull && !isBNull ) || ( !isANull && isBNull ) )
             {
                 isEqual = false;
             }
@@ -336,44 +334,36 @@ namespace LUC.DiscoveryServices.Kademlia
             return isEqual;
         }
 
-        private void InitBucketLocalNames(IEnumerable<String> bucketLocalNames)
+        private void InitBucketLocalNames( IEnumerable<String> bucketLocalNames )
         {
             m_supportedBuckets = new List<String>();
             if ( bucketLocalNames != null )
             {
-                ExchangeLocalBucketRange(bucketLocalNames);
+                ExchangeLocalBucketRange( bucketLocalNames );
             }
         }
 
-        private void AddNewIpAddresss(IPAddress address)
+        private void AddNewIpAddresss( IPAddress address )
         {
-            m_ipAddresses.Add(address);
-
-            m_lastActiveIpAddress = address;
-
-            if ( m_ipAddresses.Count > DsConstants.MAX_AVAILABLE_IP_ADDRESSES_IN_CONTACT )
+            IPAddress ipWithSameVersion = m_ipAddresses.FirstOrDefault( c => c.AddressFamily == address.AddressFamily );
+            if ( ipWithSameVersion != null )
             {
-                //remove the oldest IP-address
-                m_ipAddresses.RemoveAt(index: 0);
+                m_ipAddresses.Remove( ipWithSameVersion );
             }
+
+            m_ipAddresses.Add( address );
         }
 
-        private void ExchangeEnumerable<T>(List<T> oldEnumerable, IEnumerable<T> newEnumerable)
+        private void ExchangeEnumerable<T>( List<T> oldEnumerable, IEnumerable<T> newEnumerable )
         {
-            if (newEnumerable != null)
+            if ( newEnumerable != null )
             {
-                lock (oldEnumerable)
+                lock ( oldEnumerable )
                 {
                     oldEnumerable.Clear();
-                    oldEnumerable.AddRange(newEnumerable);
+                    oldEnumerable.AddRange( newEnumerable );
                 }
             }
         }
-
-        //public static Boolean operator ==( Contact a, Contact b ) =>
-        //    IsEqual( a, b );
-
-        //public static Boolean operator !=( Contact a, Contact b ) =>
-        //    !( a == b );
     }
 }

@@ -1,14 +1,13 @@
 ﻿using LUC.DiscoveryServices.Common.Extensions;
 using LUC.Interfaces.Constants;
+using LUC.Interfaces.Enums;
+using LUC.Interfaces.Extensions;
 
 using Nito.AsyncEx;
-using Nito.AsyncEx.Synchronous;
 
 using System;
 using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,8 +21,11 @@ namespace LUC.DiscoveryServices.Common
     /// </remarks>
     public partial class AsyncSocket : Socket
     {
-        public AsyncSocket( AddressFamily addressFamily, SocketType socketType, ProtocolType protocolType )
-                    : base( addressFamily, socketType, protocolType )
+        public AsyncSocket( 
+            AddressFamily addressFamily, 
+            SocketType socketType, 
+            ProtocolType protocolType 
+        ) : base( addressFamily, socketType, protocolType )
         {
             ReceiveTimeout = (Int32)DsConstants.ReceiveOneChunkTimeout.TotalMilliseconds;
             SendTimeout = (Int32)DsConstants.SendTimeout.TotalMilliseconds;
@@ -47,6 +49,7 @@ namespace LUC.DiscoveryServices.Common
 
                 if ( isAccepted )
                 {
+                    State = SocketState.Accepted;
                     acceptedSocket = stateAccept.AcceptedSocket;
                 }
                 else
@@ -67,26 +70,34 @@ namespace LUC.DiscoveryServices.Common
         //    sslStream.AuthenticateAsClient()
         //}
 
-        public void DsConnect( EndPoint remoteEndPoint, TimeSpan timeout, CancellationToken cancellationToken = default ) =>
-            SocketOperation(
-                SocketAsyncOperation.Connect,
-                ( asyncCallback ) =>
-                {
-                    DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Start to connect with {remoteEndPoint}" );
-                    return BeginConnect( remoteEndPoint, asyncCallback, state: this );
-                },
-                timeout, cancellationToken
-            );
+        public void DsConnect( 
+            EndPoint remoteEndPoint, 
+            TimeSpan timeout, 
+            CancellationToken cancellationToken = default 
+        ) => SocketOperation(
+                 SocketAsyncOperation.Connect,
+                 ( asyncCallback ) =>
+                 {
+                     DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Start to connect with {remoteEndPoint}" );
+                     return BeginConnect( remoteEndPoint, asyncCallback, state: this );
+                 },
+                 timeout, cancellationToken
+             );
 
-        public async Task DsConnectAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, IoBehavior ioBehavior, CancellationToken cancellationToken = default )
-        {
+        public Task DsConnectAsync( 
+            EndPoint remoteEndPoint, 
+            TimeSpan timeoutToConnect, 
+            IoBehavior ioBehavior, 
+            CancellationToken cancellationToken = default 
+        ){
             if ( ioBehavior == IoBehavior.Asynchronous )
             {
-                await DsConnectAsync( remoteEndPoint, timeoutToConnect, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
+                return DsConnectAsync( remoteEndPoint, timeoutToConnect, cancellationToken );
             }
             else if ( ioBehavior == IoBehavior.Synchronous )
             {
                 DsConnect( remoteEndPoint, timeoutToConnect, cancellationToken );
+                return Task.CompletedTask;
             }
             else
             {
@@ -94,27 +105,37 @@ namespace LUC.DiscoveryServices.Common
             }
         }
 
-        public Task DsConnectAsync( EndPoint remoteEndPoint, TimeSpan timeoutToConnect, CancellationToken cancellationToken = default ) =>
-            Task.Run( () => DsConnect( remoteEndPoint, timeoutToConnect, cancellationToken ) );
+        public Task DsConnectAsync( 
+            EndPoint remoteEndPoint, 
+            TimeSpan timeoutToConnect, 
+            CancellationToken cancellationToken = default 
+        ) => Task.Run( () => DsConnect( remoteEndPoint, timeoutToConnect, cancellationToken ) );
 
-        public void DsDisconnect( Boolean reuseSocket, TimeSpan timeout, CancellationToken cancellationToken = default ) =>
-            SocketOperation(
-                SocketAsyncOperation.Disconnect,
-                beginOperation: ( asyncCallback ) => BeginDisconnect( reuseSocket, asyncCallback, state: this ),
-                timeout,
-                cancellationToken
-            );
+        public void DsDisconnect( 
+            Boolean reuseSocket, 
+            TimeSpan timeout, 
+            CancellationToken cancellationToken = default 
+        ) => SocketOperation(
+                 SocketAsyncOperation.Disconnect,
+                 beginOperation: ( asyncCallback ) => BeginDisconnect( reuseSocket, asyncCallback, state: this ),
+                 timeout,
+                 cancellationToken
+             );
 
-        public async Task DsDisconnectAsync( IoBehavior ioBehavior, Boolean reuseSocket,
-            TimeSpan timeout, CancellationToken cancellationToken = default )
-        {
+        public Task DsDisconnectAsync( 
+            IoBehavior ioBehavior, 
+            Boolean reuseSocket,
+            TimeSpan timeout, 
+            CancellationToken cancellationToken = default 
+        ){
             if ( ioBehavior == IoBehavior.Asynchronous )
             {
-                await DsDisconnectAsync( reuseSocket, timeout, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
+                return DsDisconnectAsync( reuseSocket, timeout, cancellationToken );
             }
             else if ( ioBehavior == IoBehavior.Synchronous )
             {
                 DsDisconnect( reuseSocket, timeout, cancellationToken );
+                return Task.CompletedTask;
             }
             else
             {
@@ -122,11 +143,20 @@ namespace LUC.DiscoveryServices.Common
             }
         }
 
-        public async Task DsDisconnectAsync( Boolean reuseSocket, TimeSpan timeout, CancellationToken cancellationToken = default ) =>
-            await Task.Run( () => DsDisconnect( reuseSocket, timeout, cancellationToken ) ).ConfigureAwait( continueOnCapturedContext: false );
+        public Task DsDisconnectAsync( 
+            Boolean reuseSocket, 
+            TimeSpan timeout, 
+            CancellationToken cancellationToken = default 
+        ) => Task.Run( () => DsDisconnect( reuseSocket, timeout, cancellationToken ) );
 
-        public ValueTask<Byte[]> DsReceiveAsync( IoBehavior ioBehavior, TimeSpan timeout, CancellationToken cancellationToken = default )
-        {
+        //ValueTask is better, because we have to create every
+        //time another result object, but Task instance is much
+        //more larger and cannot be cached
+        public ValueTask<Byte[]> DsReceiveAsync( 
+            IoBehavior ioBehavior, 
+            TimeSpan timeout, 
+            CancellationToken cancellationToken = default 
+        ){
             ValueTask<Byte[]> bytesOfResponse;
             if ( ioBehavior == IoBehavior.Asynchronous )
             {
@@ -144,8 +174,8 @@ namespace LUC.DiscoveryServices.Common
             return bytesOfResponse;
         }
 
-        public async Task<Byte[]> DsReceiveAsync( TimeSpan timeout, CancellationToken cancellationToken = default ) =>
-            await Task.Run( () => DsReceive( timeout, cancellationToken ) ).ConfigureAwait( continueOnCapturedContext: false );
+        public Task<Byte[]> DsReceiveAsync( TimeSpan timeout, CancellationToken cancellationToken = default ) =>
+            Task.Run( () => DsReceive( timeout, cancellationToken ) );
 
         public Byte[] DsReceive( TimeSpan timeout, CancellationToken cancellationToken = default )
         {
@@ -178,30 +208,40 @@ namespace LUC.DiscoveryServices.Common
             }
         }
 
-        public void DsSend( Byte[] bytesToSend, TimeSpan timeout, CancellationToken cancellationToken = default )
-        {
-            SocketOperation( SocketAsyncOperation.Send, ( asyncCallback ) =>
-                BeginSend(
+        public void DsSend( 
+            Byte[] bytesToSend, 
+            TimeSpan timeout, 
+            CancellationToken cancellationToken = default 
+        ){
+            SocketOperation( 
+                SocketAsyncOperation.Send, 
+                ( asyncCallback ) => BeginSend(
                     bytesToSend,
                     offset: 0,
                     bytesToSend.Length,
                     SocketFlags.None,
                     asyncCallback,
                     state: this
-                ), timeout, cancellationToken );
-
-            DsLoggerSet.DefaultLogger.LogInfo( $"Sent {bytesToSend.Length} bytes" );
+                ), 
+                timeout, 
+                cancellationToken 
+            );
         }
 
-        public async Task DsSendAsync( Byte[] bytesToSend, TimeSpan timeoutToSend, IoBehavior ioBehavior, CancellationToken cancellationToken = default )
-        {
+        public Task DsSendAsync( 
+            Byte[] bytesToSend, 
+            TimeSpan timeoutToSend, 
+            IoBehavior ioBehavior, 
+            CancellationToken cancellationToken = default 
+        ){
             if ( ioBehavior == IoBehavior.Asynchronous )
             {
-                await DsSendAsync( bytesToSend, timeoutToSend, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
+                return DsSendAsync( bytesToSend, timeoutToSend, cancellationToken );
             }
             else if ( ioBehavior == IoBehavior.Synchronous )
             {
                 DsSend( bytesToSend, timeoutToSend, cancellationToken );
+                return Task.CompletedTask;
             }
             else
             {
@@ -209,11 +249,18 @@ namespace LUC.DiscoveryServices.Common
             }
         }
 
-        public async Task DsSendAsync( Byte[] bytesToSend, TimeSpan timeout, CancellationToken cancellationToken = default ) =>
-            await Task.Run( () => DsSend( bytesToSend, timeout, cancellationToken ) ).ConfigureAwait( continueOnCapturedContext: false );
+        public Task DsSendAsync( 
+            Byte[] bytesToSend, 
+            TimeSpan timeout, 
+            CancellationToken cancellationToken = default 
+        ) => Task.Run( () => DsSend( bytesToSend, timeout, cancellationToken ) );
 
-        public void SocketOperation( SocketAsyncOperation socketOp, Func<AsyncCallback, IAsyncResult> beginOperation, TimeSpan timeout, CancellationToken cancellationToken = default )
-        {
+        public void SocketOperation( 
+            SocketAsyncOperation socketOp, 
+            Func<AsyncCallback, IAsyncResult> beginOperation, 
+            TimeSpan timeout, 
+            CancellationToken cancellationToken = default 
+        ){
             switch ( socketOp )
             {
                 case SocketAsyncOperation.Connect:
@@ -252,10 +299,23 @@ namespace LUC.DiscoveryServices.Common
             var socketException = new SocketException( (Int32)SocketError.Success );
             ObjectDisposedException disposedException = null;
 
-            AsyncCallback asyncCallback = ( asyncResult ) => SocketOperationCallback( socketOp, asyncResult, operationDone, out disposedException, out socketException );
+            AsyncCallback asyncCallback = ( asyncResult ) => SocketOperationCallback( 
+                socketOp, 
+                asyncResult, 
+                operationDone, 
+                out disposedException, 
+                out socketException 
+            );
 
             beginOperation( asyncCallback );
-            WaitResultOfAsyncSocketOperation( socketOp, operationDone, timeout, cancellationToken, ref socketException, ref disposedException );
+            WaitResultOfAsyncSocketOperation( 
+                socketOp, 
+                operationDone, 
+                timeout, 
+                cancellationToken, 
+                ref socketException, 
+                ref disposedException 
+            );
         }
 
         //It throws exceptions, not <see cref="Boolean"/> value, because if socket isn't connected we should immediately end method where VerifyConnected is call
@@ -307,33 +367,27 @@ namespace LUC.DiscoveryServices.Common
             }
         }
 
-        private void HandleExceptionOfEndSocketOp<T>( Exception inEx, AsyncAutoResetEvent operationDone, out T outEx )
-                    where T : Exception
+        private void HandleExceptionOfEndSocketOp<T>( 
+            Exception inEx, 
+            AsyncAutoResetEvent operationDone, 
+            out T outEx 
+        ) where T : Exception
         {
-            //in case if ThreadAbortException is thrown (the whole finally block will be finished first, as it is a critical section). 
-            try
-            {
-                ;//do nothing
-            }
-            finally
-            {
-                outEx = null;
-                Interlocked.Exchange( ref outEx, inEx as T );
-                State = SocketState.Failed;
+            outEx = null;
+            Interlocked.Exchange( ref outEx, inEx as T );
+            State = SocketState.Failed;
 
-                operationDone.Set();
-            }
-        }
-
-        private Boolean IsInTimeCompleted( AsyncAutoResetEvent eventWait, TimeSpan timeout, CancellationToken cancellationToken = default )
-        {
-            Boolean isInTimeCompleted = eventWait.Wait( timeout, cancellationToken );
-            return isInTimeCompleted;
+            operationDone.Set();
         }
 
         //Now it is only for Connect, Send and Disconnect 
-        private void SocketOperationCallback( SocketAsyncOperation socketOp, IAsyncResult asyncResult, AsyncAutoResetEvent operationDone, out ObjectDisposedException disposedException, out SocketException socketException )
-        {
+        private void SocketOperationCallback( 
+            SocketAsyncOperation socketOp, 
+            IAsyncResult asyncResult, 
+            AsyncAutoResetEvent operationDone, 
+            out ObjectDisposedException disposedException, 
+            out SocketException socketException 
+        ){
             var socket = (Socket)asyncResult.AsyncState;
             socketException = new SocketException( (Int32)SocketError.Success );
             disposedException = null;
@@ -391,8 +445,14 @@ namespace LUC.DiscoveryServices.Common
         /// <param name="socketException">
         /// If it is not ref parameter, it will not be updated by another thread
         /// </param>
-        private void WaitResultOfAsyncSocketOperation( SocketAsyncOperation socketOp, AsyncAutoResetEvent operationDone, TimeSpan timeout, CancellationToken cancellationToken, ref SocketException socketException, ref ObjectDisposedException disposedException )
-        {
+        private void WaitResultOfAsyncSocketOperation( 
+            SocketAsyncOperation socketOp, 
+            AsyncAutoResetEvent operationDone, 
+            TimeSpan timeout, 
+            CancellationToken cancellationToken, 
+            ref SocketException socketException, 
+            ref ObjectDisposedException disposedException 
+        ){
             Boolean isInTime = operationDone.Wait( timeout, cancellationToken );
 
             Exception exception;

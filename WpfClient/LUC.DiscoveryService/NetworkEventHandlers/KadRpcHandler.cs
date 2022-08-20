@@ -166,7 +166,10 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
             where TRequest : Request
         {
             String requestTypeShortName = typeof( TRequest ).Name;
+
+#if DEBUG
             DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Started to handle {requestTypeShortName}" );
+#endif
 
             TRequest request = eventArgs.Message<TRequest>();
             IContact sender = m_distributedHashTable.OnlineContacts.SingleOrDefault( c => c.MachineId.Equals( request.SenderMachineId, StringComparison.Ordinal ) );
@@ -199,7 +202,9 @@ namespace LUC.DiscoveryServices.NetworkEventHandlers
                 DsLoggerSet.DefaultLogger.LogInfo( $"Failed to answer at a {requestTypeShortName}: {ex}" );
             }
 
+#if DEBUG
             DsLoggerSet.DefaultLogger.LogInfo( $"Finished to handle {requestTypeShortName}" );
+#endif
         }
 
         private void GetCloseContacts( IContact sendingContact, FindNodeRequest request, out List<IContact> closeContacts )

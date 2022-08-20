@@ -125,13 +125,6 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             while ( !loginResponse.IsSuccess );
 
             s_discoveryService.Start();
-            s_discoveryService.NetworkEventInvoker.NetworkInterfaceDiscovered += ( s, e ) =>
-            {
-                foreach ( System.Net.NetworkInformation.NetworkInterface nic in e.NetworkInterfaces )
-                {
-                    Console.WriteLine( $"discovered NIC '{nic.Name}'" );
-                }
-            };
 
             await s_discoveryService.NetworkEventInvoker.WaitHandleAllTcpEvents.WaitAsync().ConfigureAwait( false );
             await Task.Delay( TimeSpan.FromSeconds( value: 0.1 ) ).ConfigureAwait( false );
@@ -241,72 +234,6 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
 
                 s_cancellationTokenSource.Cancel();
                 Environment.Exit( exitCode: 0 );
-            }
-        }
-
-        private static void OnGoodTcpMessage( Object sender, TcpMessageEventArgs e )
-        {
-            lock ( UserIntersectionInConsole.Lock )
-            {
-                Console.WriteLine( "=== TCP {0:O} ===", DateTime.Now );
-
-                AcknowledgeTcpMessage tcpMessage = e.Message<AcknowledgeTcpMessage>( whetherReadMessage: false );
-                Console.WriteLine( tcpMessage.ToString() );
-            }
-        }
-
-        private static void OnGoodUdpMessage( Object sender, UdpMessageEventArgs e )
-        {
-            lock ( UserIntersectionInConsole.Lock )
-            {
-                Console.WriteLine( "=== UDP {0:O} ===", DateTime.Now );
-
-                MulticastMessage message = e.Message<MulticastMessage>( whetherReadMessage: false );
-                Console.WriteLine( message.ToString() );
-            }
-        }
-
-        private static void OnPingReceived( Object sender, TcpMessageEventArgs e )
-        {
-            lock ( UserIntersectionInConsole.Lock )
-            {
-                Console.WriteLine( "=== Kad PING received {0:O} ===", DateTime.Now );
-
-                PingRequest message = e.Message<PingRequest>( whetherReadMessage: false );
-                Console.WriteLine( message.ToString() );
-            }
-        }
-
-        private static void OnStoreReceived( Object sender, TcpMessageEventArgs e )
-        {
-            lock ( UserIntersectionInConsole.Lock )
-            {
-                Console.WriteLine( "=== Kad STORE received {0:O} ===", DateTime.Now );
-
-                StoreRequest message = e.Message<StoreRequest>( whetherReadMessage: false );
-                Console.WriteLine( message.ToString() );
-            }
-        }
-
-        private static void OnFindNodeReceived( Object sender, TcpMessageEventArgs e )
-        {
-            lock ( UserIntersectionInConsole.Lock )
-            {
-                Console.WriteLine( "=== Kad FindNode received {0:O} ===", DateTime.Now );
-
-                FindNodeRequest message = e.Message<FindNodeRequest>( whetherReadMessage: false );
-                Console.WriteLine( message.ToString() );
-            }
-        }
-
-        private static void OnFindValueReceived( Object sender, TcpMessageEventArgs e )
-        {
-            lock ( UserIntersectionInConsole.Lock )
-            {
-                Console.WriteLine( "=== Kad FindValue received {0:O} ===", DateTime.Now );
-
-                FindValueRequest message = e.Message<FindValueRequest>( whetherReadMessage: false );
-                Console.WriteLine( message.ToString() );
             }
         }
 
@@ -509,7 +436,7 @@ namespace LUC.DiscoveryServices.Test.FunctionalTests
             var random = new Random();
             UInt32 messageId = (UInt32)random.Next( maxValue: Int32.MaxValue );
 
-            eventArgs.SetMessage( new MulticastMessage( messageId, s_discoveryService.ProtocolVersion,
+            eventArgs.SetMessage( new AllNodesRecognitionMessage( messageId, s_discoveryService.ProtocolVersion,
                 remoteContact.TcpPort, machineId: s_discoveryService.MachineId ) );
             s_discoveryService.SendAcknowledgeTcpMessageAsync( eventArgs, IoBehavior.Synchronous ).GetAwaiter().GetResult();
         }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using LUC.DiscoveryServices.Messages;
 
-using Nito.AsyncEx;
+using Nito.AsyncEx.Synchronous;
 
 namespace LUC.DiscoveryServices.Common.Extensions
 {
@@ -40,7 +40,7 @@ namespace LUC.DiscoveryServices.Common.Extensions
                 if ( ( !isTooBigMessage ) && ( chunkSize != 0 ) && ( socket.Available != 0 ) )
                 {
                     var buffer = new Byte[ chunkSize ];
-                    Int32 countOfReadBytes = socket.Receive( buffer, chunkSize, SocketFlags.None );
+                    Int32 countOfReadBytes = socket.ReceiveAsync( new ArraySegment<Byte>( buffer ), SocketFlags.None ).WaitAndUnwrapException( cancellationToken );
 
                     if ( countOfReadBytes != 0 )
                     {
