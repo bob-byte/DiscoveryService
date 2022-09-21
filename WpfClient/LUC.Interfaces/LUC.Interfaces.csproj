@@ -134,6 +134,8 @@
     <Compile Include="Exceptions\NotAnIDException.cs" />
     <Compile Include="Extensions\AdsExtensions.cs" />
     <Compile Include="Extensions\AdsExtensions.Stream.cs" />
+    <Compile Include="Extensions\AsyncAutoResetEventExtension.cs" />
+    <Compile Include="Extensions\AsyncLockExtension.cs" />
     <Compile Include="Extensions\BuildUriExtensions.cs" />
     <Compile Include="Extensions\ArrayExtensions.cs" />
     <Compile Include="Extensions\ComparationLocalAndServerFileResultExtension.cs" />
@@ -142,10 +144,15 @@
     <Compile Include="Extensions\DirectoryExtensions.cs" />
     <Compile Include="Extensions\DoubleExtension.cs" />
     <Compile Include="Extensions\EnumerableExtensions.cs" />
+    <Compile Include="Extensions\EventWaitHandleExtension.cs" />
     <Compile Include="Extensions\FileExtensions.cs" />
+    <Compile Include="Extensions\IDictionaryExtension.cs" />
     <Compile Include="Extensions\IntegerExtensions.cs" />
     <Compile Include="Extensions\LoggerConfigExtension.cs" />
     <Compile Include="Extensions\ConcurrentDictionaryExtension.cs" />
+    <Compile Include="Extensions\RandomExtension.cs" />
+    <Compile Include="Extensions\TimerExtensions.cs" />
+    <Compile Include="Extensions\ValueTaskExtension.cs" />
     <Compile Include="Extensions\WindowExtensions.cs" />
     <Compile Include="Helpers\AsyncHelper.cs" />
     <Compile Include="Helpers\AsyncHelper.ExclusiveSynchronizationContext.cs" />
@@ -176,6 +183,7 @@
     <Compile Include="InputContracts\LogRequest.cs" />
     <Compile Include="InputContracts\MoveOrCopyRequest.cs" />
     <Compile Include="InputContracts\RenameRequest.cs" />
+    <Compile Include="Enums\IOBehavior.cs" />
     <Compile Include="IPathFiltrator.cs" />
     <Compile Include="ISettingsService.cs" />
     <Compile Include="ISyncingObjectsList.cs" />

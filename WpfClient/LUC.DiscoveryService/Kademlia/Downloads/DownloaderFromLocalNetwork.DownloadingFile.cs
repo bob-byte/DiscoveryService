@@ -27,7 +27,7 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             {
                 //FileAttributes tempFileAttributes = FileAttributes.Hidden | FileAttributes.ReadOnly;
                 //File.SetAttributes( fullPathToTempFile, tempFileAttributes );
-
+                FileExtensions.SetAttributesToTempDownloadingFile( fullPathToTempFile );
                 MarkAsSparseFile( fileHandle, fullPathToTempFile );
             }
 

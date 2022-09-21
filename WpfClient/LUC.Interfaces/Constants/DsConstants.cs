@@ -31,8 +31,9 @@ namespace LUC.Interfaces.Constants
 
         public const Int32 MAX_AVAILABLE_READ_BYTES = (Int32)( MAX_CHUNK_SIZE * 1.5 );
 
+        //TODO: define whether it is valid value
         public const Int32 B = 5;
-        public const Int32 K = 20;
+        public const Int32 K = 3;
         public const Int32 KID_LENGTH_BYTES = 20;
         public const Int32 KID_LENGTH_BITS = 160;
         public const Int32 MAX_CHECK_AVAILABLE_DATA = 40;//FindValue can be too long if look up algorithm is started
@@ -73,15 +74,15 @@ namespace LUC.Interfaces.Constants
         public static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds( 3 );
         public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds( 3 );
         public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds( 10 );
-        public static readonly TimeSpan ReceiveOneChunkTimeout = TimeSpan.FromSeconds( 3 );
+        public static readonly TimeSpan ReceiveOneChunkTimeout = TimeSpan.FromSeconds(6);
 
-//#if CONNECTION_POOL_TEST
-//        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromSeconds( value: 5 );
-//#elif DEBUG
-//        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromMinutes( 1 );
-//#else               
-//        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromMinutes( 3 );
-//#endif
+        //#if CONNECTION_POOL_TEST
+        //        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromSeconds( value: 5 );
+        //#elif DEBUG
+        //        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromMinutes( 1 );
+        //#else               
+        //        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromMinutes( 3 );
+        //#endif
 
         /// <summary>
         /// it's max of execution Kademlia operation (first we connect to new contact, then if it is failed, we will be failed to send, 
@@ -104,8 +105,6 @@ namespace LUC.Interfaces.Constants
         public static readonly IPEndPoint MulticastEndpointIpv6;
 
         public const String LAST_SEEN_FORMAT = "yyyy-MM-dd HH:mm:ss";
-
-        public const Int32 MAX_AVAILABLE_IP_ADDRESSES_IN_CONTACT = 4;
 
         static DsConstants()
         {

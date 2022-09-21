@@ -13,6 +13,7 @@ using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
+using LUC.Interfaces.Enums;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Models;
 using LUC.Interfaces.OutputContracts;

@@ -85,17 +85,10 @@ namespace LUC.WpfClient
             var currentUserProvider = Container.GetExportedValue<ICurrentUserProvider>();
             var settingsService = Container.GetExportedValue<ISettingsService>();
 
-  #if DEBUG
-            IDiscoveryService discoveryService = DiscoveryServiceFacade.InitWithoutForceToStart( 
-                currentUserProvider, 
-                settingsService 
+            IDiscoveryService discoveryService = DiscoveryServiceFacade.InitWithoutForceToStart(
+                currentUserProvider,
+                settingsService
             );
-  #else
-            IDiscoveryService discoveryService = DiscoveryServiceFacade.FullyInitialized( 
-                currentUserProvider, 
-                settingsService 
-            );
-  #endif
 
             Container.ComposeExportedValue( discoveryService );
         }

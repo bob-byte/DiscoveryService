@@ -1,10 +1,12 @@
 ﻿using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Extensions;
 using LUC.DiscoveryServices.Kademlia.ClientPool;
 using LUC.DiscoveryServices.Kademlia.Exceptions;
 using LUC.DiscoveryServices.Messages;
 using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Constants;
+using LUC.Interfaces.Enums;
 using LUC.Interfaces.Extensions;
 
 using Nito.AsyncEx;
@@ -24,18 +26,18 @@ namespace LUC.DiscoveryServices.Kademlia
 {
     internal class RemoteProcedureCaller
     {
-        //public event EventHandler<EndPoint> RequestIsSent;
-
         private const Int32 MAX_COUNT_TIMES_READ_MALFORMED_OR_OLD_MESS = 3;
 
         private static readonly TimeSpan s_timeWaitReadMalformedMess = TimeSpan.FromSeconds( value: 0.5 );
 
         private static readonly ConnectionPool s_connectionPool = ConnectionPool.Instance;
 
+        //TODO: take away using TResponse and Request types
         public async ValueTask<(TResponse response, RpcError rpcError)> PostAsync<TResponse>(
             Request request,
             IPEndPoint remoteEndPoint,
-            IoBehavior ioBehavior )
+            IoBehavior ioBehavior,
+            CancellationToken cancellationToken)
 
             where TResponse: Response
         {
@@ -48,13 +50,13 @@ namespace LUC.DiscoveryServices.Kademlia
             {
                 //we can change network, so it is better to check IP-address
                 //and don't wait result from unreachable IP-address
-                Boolean isSameNetwork = remoteEndPoint.Address.CanBeReachableInCurrentNetwork();
-                if ( !isSameNetwork )
+                Boolean canBeReachable = remoteEndPoint.Address.CanBeReachable();
+                if ( !canBeReachable )
                 {
                     rpcError = new RpcError
                     {
                         OtherError = true,
-                        ErrorMessage = $"{remoteEndPoint} is in different network"
+                        ErrorMessage = $"{remoteEndPoint} cannot be reachable"
                     };
                 }
                 else
@@ -84,55 +86,35 @@ namespace LUC.DiscoveryServices.Kademlia
                                 $"{request}\n" );
 #endif
 
-                    Int32 countCheck = 0;
-                    while ( ( client.Available == 0 ) && 
-                            ( countCheck <= DsConstants.MAX_CHECK_AVAILABLE_DATA ) )
+                    Byte[] bytesOfResponse = ioBehavior == IoBehavior.Asynchronous ?
+                        await client.DsReceiveAsync( DsConstants.ReceiveTimeout, cancellationToken ).ConfigureAwait( false ) :
+                        client.DsReceive( DsConstants.ReceiveTimeout, cancellationToken );
+
+                    if ( bytesOfResponse[ 0 ] != (Byte)MessageOperation.LocalError )
                     {
-                        await WaitAsync( 
-                            ioBehavior, 
-                            DsConstants.TimeCheckDataToRead 
-                        ).ConfigureAwait( false );
+                        response = (TResponse)Activator.CreateInstance(
+                            typeof( TResponse ),
+                            bytesOfResponse
+                        );
 
-                        countCheck++;
-                    }
-
-                    if ( countCheck <= DsConstants.MAX_CHECK_AVAILABLE_DATA )
-                    {
-                        Byte[] bytesOfResponse = ioBehavior == IoBehavior.Asynchronous ?
-                            await client.DsReceiveAsync( DsConstants.ReceiveTimeout ).ConfigureAwait( false ) :
-                            client.DsReceive( DsConstants.ReceiveTimeout );
-
-                        if ( bytesOfResponse[ 0 ] != (Byte)MessageOperation.LocalError )
+                        rpcError = new RpcError
                         {
-                            response = (TResponse)Activator.CreateInstance( 
-                                typeof( TResponse ), 
-                                bytesOfResponse 
-                            );
-
-                            rpcError = new RpcError
-                            {
-                                IDMismatchError = request.RandomID != response.RandomID
-                            };
+                            IDMismatchError = request.RandomID != response.RandomID
+                        };
 
 #if DEBUG
-                            DsLoggerSet.DefaultLogger.LogInfo( $"The response is received ({bytesOfResponse.Length} bytes):\n{response}" );
+                        DsLoggerSet.DefaultLogger.LogInfo( $"The response is received ({bytesOfResponse.Length} bytes):\n{response}" );
 #endif
-                        }
-                        else
-                        {
-                            var nodeErrorResp = new ErrorResponse( bytesOfResponse );
-                            rpcError = new RpcError
-                            {
-                                IDMismatchError = request.RandomID != nodeErrorResp.RandomID,
-                                ErrorMessage = nodeErrorResp.ErrorMessage,
-                                RemoteError = true
-                            };
-                        }
                     }
                     else
                     {
-                        await client.DsDisconnectAsync( ioBehavior, reuseSocket: false, DsConstants.DisconnectTimeout ).ConfigureAwait( false );
-                        throw new TimeoutException( message: $"Request with {nameof(request.RandomID)} {request.RandomID} didn't receive response from {remoteEndPoint} in time" );
+                        var nodeErrorResp = new ErrorResponse( bytesOfResponse );
+                        rpcError = new RpcError
+                        {
+                            IDMismatchError = request.RandomID != nodeErrorResp.RandomID,
+                            ErrorMessage = nodeErrorResp.ErrorMessage,
+                            RemoteError = true
+                        };
                     }
                 }
             }
@@ -185,16 +167,19 @@ namespace LUC.DiscoveryServices.Kademlia
                 }
             }
 
-            DsLoggerSet.DefaultLogger.LogInfo( rpcError.ToString() );
+            if ( rpcError.HasError )
+            {
+                DsLoggerSet.DefaultLogger.LogInfo( rpcError.ToString() );
+            }
 
             return (response, rpcError);
         }
 
         private async ValueTask CleanExtraBytesAsync( ConnectionPool.Socket client, IoBehavior ioBehavior )
         {
-            Int32 countTimesReadBytes = 0;
+            Int32 countReadBytes = 0;
 
-            while ( ( client.Available > 0 ) && ( countTimesReadBytes < MAX_COUNT_TIMES_READ_MALFORMED_OR_OLD_MESS ) )
+            while ( ( client.Available > 0 ) && ( countReadBytes < DsConstants.MAX_AVAILABLE_READ_BYTES ) )
             {
                 //use always async method, because ReceiveTimeout works only for async methods
                 Task<Int32> taskReceive = client.ReceiveAsync( 
@@ -203,18 +188,17 @@ namespace LUC.DiscoveryServices.Kademlia
                 );
                 if ( ioBehavior == IoBehavior.Asynchronous )
                 {
-                    await taskReceive.ConfigureAwait( continueOnCapturedContext: false );
+                    countReadBytes += await taskReceive.ConfigureAwait( continueOnCapturedContext: false );
                 }
                 else if ( ioBehavior == IoBehavior.Synchronous )
                 {
-                    AsyncContext.Run( async () => await taskReceive.ConfigureAwait( false ) );
+                    countReadBytes += AsyncContext.Run( () => taskReceive );
                 }
 
-                countTimesReadBytes++;
                 await WaitAsync( ioBehavior, s_timeWaitReadMalformedMess ).ConfigureAwait( false );
             }
 
-            if ( ( countTimesReadBytes == MAX_COUNT_TIMES_READ_MALFORMED_OR_OLD_MESS ) && ( client.Available > 0 ) )
+            if ( ( countReadBytes == MAX_COUNT_TIMES_READ_MALFORMED_OR_OLD_MESS ) && ( client.Available > 0 ) )
             {
                 String message = $"Malfactor attacks communication with {client.Id}.";
                 throw new MalfactorAttackException( message );

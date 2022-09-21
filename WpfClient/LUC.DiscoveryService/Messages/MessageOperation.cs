@@ -13,7 +13,10 @@ namespace LUC.DiscoveryServices.Messages
     {
         LocalError,
 
-        Multicast,
+        /// <summary>
+        /// UDP multicast
+        /// </summary>
+        AllNodesRecognition,
 
         /// <summary>
         ///   Acknowledge operation is type of TCP packet, sent on response to UDP message.

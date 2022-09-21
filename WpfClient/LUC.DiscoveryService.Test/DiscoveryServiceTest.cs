@@ -109,7 +109,7 @@ namespace LUC.DiscoveryServices.Test
 
             m_discoveryService.NetworkEventInvoker.QueryReceived += ( sender, e ) =>
             {
-                if ( e.Message<MulticastMessage>() != null )
+                if ( e.Message<AllNodesRecognitionMessage>() != null )
                 {
                     done.Set();
                 }
@@ -179,7 +179,7 @@ namespace LUC.DiscoveryServices.Test
                 RemoteEndPoint = new IPEndPoint( availableIps[ 1 ], m_discoveryService.RunningTcpPort )
             };
 
-            eventArgs.SetMessage( new MulticastMessage( messageId: 123, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, machineId: DsSetUpTests.Fixture.Create<String>() ) );
+            eventArgs.SetMessage( new AllNodesRecognitionMessage( messageId: 123, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, machineId: DsSetUpTests.Fixture.Create<String>() ) );
 
             await m_discoveryService.SendAcknowledgeTcpMessageAsync( eventArgs, IoBehavior.Asynchronous ).ConfigureAwait( continueOnCapturedContext: false );
 
@@ -205,7 +205,7 @@ namespace LUC.DiscoveryServices.Test
         {
             m_discoveryService.Start();
             var eventArgs = new UdpMessageEventArgs();
-            eventArgs.SetMessage<MulticastMessage>( message: null );
+            eventArgs.SetMessage<AllNodesRecognitionMessage>( message: null );
 
             AssertSendAcknowledgeTcpMessageAsyncThrowArgException(eventArgs);
         }
@@ -218,7 +218,7 @@ namespace LUC.DiscoveryServices.Test
             {
                 RemoteEndPoint = null
             };
-            eventArgs.SetMessage( new MulticastMessage( messageId: 123, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null ) );
+            eventArgs.SetMessage( new AllNodesRecognitionMessage( messageId: 123, tcpPort: m_discoveryService.RunningTcpPort, protocolVersion: 1, machineId: null ) );
 
             AssertSendAcknowledgeTcpMessageAsyncThrowArgException(eventArgs);
         }

@@ -1,4 +1,5 @@
 ﻿using LUC.DiscoveryServices.Common;
+using LUC.Interfaces.Enums;
 
 using Nito.AsyncEx;
 using Nito.AsyncEx.Synchronous;

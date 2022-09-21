@@ -41,7 +41,7 @@ namespace LUC.ApiClient
 
         private readonly IFileChangesQueue m_fileChangesQueue;
 
-        public Downloader( ApiClient apiClient ) 
+        public Downloader( ApiClient apiClient )
             : base( apiClient, apiClient.ObjectNameProvider )
         {
             m_downloaderFromLan = new DownloaderFromLocalNetwork( apiClient.DiscoveryService, IoBehavior.Asynchronous );
@@ -63,7 +63,7 @@ namespace LUC.ApiClient
         )
         {
             #region Check input data
-            if ( String.IsNullOrWhiteSpace(CurrentUserProvider.RootFolderPath))
+            if ( String.IsNullOrWhiteSpace( CurrentUserProvider.RootFolderPath ) )
             {
                 return;
             }
@@ -89,9 +89,9 @@ namespace LUC.ApiClient
                 // TODO Directory.CreateDirectoryOnServer(localFolderPath); // TODO Release 2.0 Do server able to create several prefixes by one request? Also check UnauthorizedAccessException.
             }
 
-            var downloadingFileInfo = objectDescription.ToDownloadingFileInfo( 
-                serverBucketName, 
-                fullLocalFilePath, 
+            var downloadingFileInfo = objectDescription.ToDownloadingFileInfo(
+                serverBucketName,
+                fullLocalFilePath,
                 hexFilePrefix
             );
 
@@ -111,29 +111,10 @@ namespace LUC.ApiClient
                 LoggingService.LogInfo( $"{downloadingFileInfo.LocalFilePath} dosn't exist before download operation. {DateTime.UtcNow.ToLongTimeString()}" );
             }
 
-#if ENABLE_DS_DOWNLOAD_FROM_CURRENT_PC
-            String localFilePathInRootFolder = Path.Combine( CurrentUserProvider.RootFolderPath, localOriginalName );
-
-            String fileVersion = AdsExtensions.ReadLastSeenVersion( localFilePathInRootFolder );
-
-            if (!File.Exists( localFilePathInRootFolder ))
-            {
-                downloadingFileInfo.LocalFilePath = localFilePathInRootFolder;
-
-                await DownloadFileProcessAsync( downloadingFileInfo, objectDescription ).ConfigureAwait( continueOnCapturedContext: false );
-
-                downloadingFileInfo.LocalFilePath = fullLocalFilePath;
-            }
-            else if (fileVersion != objectDescription.Version)
-            {
-                AdsExtensions.WriteLastSeenVersion( localFilePathInRootFolder, objectDescription.Version );
-            }
-#endif
-
             await DownloadFileInternalAsync( downloadingFileInfo ).ConfigureAwait( continueOnCapturedContext: false );
         }
 
-        internal void DownloadNecessaryChunksFromServer( IEnumerable<ChunkRange> undownloadedChunks, DownloadingFileInfo downloadingFileInfo, String fullFileName )
+        internal void DownloadNecessaryChunksFromServer( Int64 alreadyDownloadedBytesCount, IEnumerable<ChunkRange> undownloadedChunks, DownloadingFileInfo downloadingFileInfo, String fullFileName )
         {
             downloadingFileInfo.CancellationToken.ThrowIfCancellationRequested();
 
@@ -188,13 +169,11 @@ namespace LUC.ApiClient
                             cancellationToken: downloadingFileInfo.CancellationToken,
                             logPartOfDownloadWithWatchUpdate: ( numReading, watch ) =>
                             {
-                                LogPartOfDownloadWithWatchUpdate(
-                                    numReading,
-                                    BUFFER_SIZE_TO_READ_FROM_SERVER,
-                                    downloadingFileInfo.ByteCount,
-                                    fullFileName,
-                                    ref watch
-                                );
+                                Int64 alreadyDownloadedBytes = alreadyDownloadedBytesCount + ( numReading * BUFFER_SIZE_TO_READ_FROM_SERVER );
+
+                                Double percents = alreadyDownloadedBytes / downloadingFileInfo.ByteCount * 100;
+
+                                LoggingService.LogInfo( logRecord: $"    {downloadingFileInfo.OriginalName}: downloading {percents.ToString( "0.00", CultureInfo.InvariantCulture )}%. Now is {DateTime.UtcNow.ToLongTimeString()}" );
 
                                 return watch;
                             }
@@ -204,13 +183,13 @@ namespace LUC.ApiClient
             }
         }
 
-        internal IEnumerable<ChunkRange> JoinedChunkRanges(IEnumerable<ChunkRange> chunkRanges)
+        internal IEnumerable<ChunkRange> JoinedChunkRanges( IEnumerable<ChunkRange> chunkRanges )
         {
             IEnumerable<ChunkRange> sortedRanges = chunkRanges.OrderBy( c => c.Start );
             UInt64 start = 0;
 
             IEnumerator<ChunkRange> enumerator = sortedRanges.GetEnumerator();
-            if( enumerator.MoveNext())
+            if ( enumerator.MoveNext() )
             {
                 ChunkRange previous = enumerator.Current;
 
@@ -244,20 +223,25 @@ namespace LUC.ApiClient
                     await m_downloaderFromLan.DownloadFileAsync( downloadingFileInfo, m_fileChangesQueue ).ConfigureAwait( continueOnCapturedContext: false );
                 }
                 //when DS (DiscoveryService) doesn't find any node or node with required file
-                catch ( InvalidOperationException )
+                catch ( InvalidOperationException ex )
                 {
+                    LoggingService.LogError( ex, ex.Message );
+
                     DownloadFullFileFromServer( downloadingFileInfo );
                 }
                 catch ( FilePartiallyDownloadedException ex )
                 {
+                    LoggingService.LogError( ex, ex.Message );
+
                     //user can move or delete file
                     if ( File.Exists( ex.TempFullFileName ) )
                     {
                         //check whether file is changed on server
                         await CheckFileChangedOnServerAsync( downloadingFileInfo ).ConfigureAwait( false );
+                        Int64 countOfUndownloadedBytes = ex.UndownloadedRanges.Select( c => (Int64)( c.End - c.Start ) ).Sum();
 
                         //if file on server doesn't changed, then finish download from server
-                        Single rateOfUndownloadedSize = ex.UndownloadedRanges.Select( c => (Int64)( c.End - c.Start ) ).Sum() / (Single)downloadingFileInfo.ByteCount;
+                        Single rateOfUndownloadedSize = countOfUndownloadedBytes / (Single)downloadingFileInfo.ByteCount;
                         List<ChunkRange> joinedChunkRanges = JoinedChunkRanges( ex.UndownloadedRanges ).ToList();
 
                         Int32 equatorOfFileSize = 400 * GeneralConstants.BYTES_IN_ONE_MEGABYTE;
@@ -268,7 +252,10 @@ namespace LUC.ApiClient
                              ( ( rateOfUndownloadedSize <= 0.7f ) && ( joinedChunkRanges.Count <= DsConstants.MAX_THREADS ) && 80 * GeneralConstants.BYTES_IN_ONE_MEGABYTE <= downloadingFileInfo.ByteCount && downloadingFileInfo.ByteCount <= equatorOfFileSize ) ||
                                ( ( joinedChunkRanges.Count <= 5 ) && ( rateOfUndownloadedSize <= 0.7f ) && ( equatorOfFileSize < downloadingFileInfo.ByteCount ) ) )
                         {
+                            Int64 countDownloadedBytes = downloadingFileInfo.ByteCount - countOfUndownloadedBytes;
+
                             DownloadNecessaryChunksFromServer(
+                                countDownloadedBytes,
                                 ex.UndownloadedRanges,
                                 downloadingFileInfo,
                                 downloadingFileInfo.PathWhereDownloadFileFirst
@@ -293,6 +280,8 @@ namespace LUC.ApiClient
                 }
                 catch ( IOException ex )
                 {
+                    LoggingService.LogError( ex, ex.Message );
+
                     DeleteUndownloadedFile( downloadingFileInfo );
 
                     NotifyService.Notify( new NotificationResult
@@ -314,7 +303,14 @@ namespace LUC.ApiClient
             {
                 CancelDownloadFile( downloadingFileInfo );
 
-                LoggingService.LogCriticalError( ex );
+                if ( ex is OperationCanceledException )
+                {
+                    throw;
+                }
+                else
+                {
+                    LoggingService.LogCriticalError( ex );
+                }
             }
         }
 
@@ -346,7 +342,6 @@ namespace LUC.ApiClient
             String requestUri = BuildUriExtensions.DownloadUri( m_apiSettings.Host, downloadingFileInfo.ServerBucketName, downloadingFileInfo.FileHexPrefix, downloadingFileInfo.ObjectKey );
 
             // TODO Release 2.0 Track last downloaded chunk. if internet is off -> next download should start from last. See Seek method.
-            DateTime startDownloadTime = DateTime.UtcNow;
             WebRequest request = WebRequestWithoutContentRange( requestUri );
 
             downloadingFileInfo.CancellationToken.ThrowIfCancellationRequested();
@@ -366,6 +361,7 @@ namespace LUC.ApiClient
 
                     using ( FileStream fileStream = FileExtensions.FileStreamForDownload( downloadingFileInfo.PathWhereDownloadFileFirst ) )
                     {
+                        FileExtensions.SetAttributesToTempDownloadingFile( downloadingFileInfo.PathWhereDownloadFileFirst );
                         fileStream.SetLength( downloadingFileInfo.ByteCount );
 
                         WriteResponseBytes(

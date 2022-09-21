@@ -4,6 +4,7 @@ using LUC.DiscoveryServices.Messages.KademliaRequests;
 using LUC.Interfaces;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
+using LUC.Interfaces.Enums;
 using LUC.Interfaces.Extensions;
 using LUC.Interfaces.Models;
 
@@ -48,6 +49,8 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         private const Int32 CONTACT_COUNT_WITH_FILE_CAPACITY = 10;
 
         private readonly TimeSpan m_timeWaitRepostContactInActionBlock = TimeSpan.FromSeconds( value: 0.5 );
+
+        private readonly TimeSpan m_periodToShowDownloadProgress = TimeSpan.FromSeconds( value: 10 );
 
         private readonly Object m_lockWriteFile;
         private readonly DownloadingFile m_downloadingFile;
@@ -188,10 +191,6 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         )
         {
             List<IContact> onlineContacts = m_discoveryService.OnlineContacts();
-
-            String onlineContactsAsStr = onlineContacts.ToString( showAllPropsOfItems: true, initialTabulation: String.Empty, nameOfEnumerable: "Online Contacts" );
-            DsLoggerSet.DefaultLogger.LogInfo( onlineContactsAsStr );
-
             var contactsInSameBucket = ContactsInSameBucket( onlineContacts, downloadingFileInfo.BucketId ).ToList();
 
             try
@@ -253,16 +252,19 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
                 downloadingFileInfo.LocalFilePath = FullFileNameAfterDownloadBigFileException( ex, downloadingFileInfo.LocalFilePath );
 
                 HandleException( ex, downloadingFileInfo.LocalFilePath );
+                throw;
             }
             catch ( InvalidOperationException ex )
             {
                 HandleException( ex, downloadingFileInfo.LocalFilePath );
+                throw;
             }
             catch ( IOException ex )
             {
                 downloadingFileInfo.LocalFilePath = FullFileNameAfterDownloadBigFileException( ex, downloadingFileInfo.LocalFilePath );
 
                 HandleException( ex, downloadingFileInfo.LocalFilePath );
+                throw;
             }
             catch ( FilePartiallyDownloadedException ex )
             {
@@ -273,24 +275,8 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
             }
         }
 
-        private void HandleException( Exception exception, String fullFileName )
-        {
-#if DEBUG
-            if ( exception is InvalidOperationException )
-            {
-                DsLoggerSet.DefaultLogger.LogError( exception.Message );
-            }
-            else
-            {
-#endif
-                DsLoggerSet.DefaultLogger.LogCriticalError( exception );
-#if DEBUG
-            }
-#endif
-
+        private void HandleException( Exception exception, String fullFileName ) => 
             DownloadErrorHappened?.Invoke( sender: this, new DownloadErrorHappenedEventArgs( exception, fullFileName ) );
-            throw exception;
-        }
 
         private IEnumerable<IContact> ContactsInSameBucket( IEnumerable<IContact> contacts, String bucketId ) =>
             contacts.Where( c => c.Buckets().Any( b => b.Equals( bucketId, StringComparison.OrdinalIgnoreCase ) ) );

@@ -7,6 +7,7 @@ using LUC.DiscoveryServices.Kademlia.Exceptions;
 using LUC.DiscoveryServices.Messages.KademliaResponses;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
+using LUC.Interfaces.Enums;
 using LUC.Services.Implementation;
 
 using Nito.AsyncEx;
@@ -115,7 +116,7 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
         /// <param name="ioBehavior"></param>
         /// <param name="protocolVersion"></param>
         /// <returns></returns>
-        public async ValueTask<(TResponse, RpcError)> ResultAsync<TResponse>( IContact remoteContact, IoBehavior ioBehavior, UInt16 protocolVersion )
+        public async ValueTask<(TResponse, RpcError)> ResultAsync<TResponse>( IContact remoteContact, IoBehavior ioBehavior, UInt16 protocolVersion, CancellationToken cancellationToken = default )
             where TResponse : Response
         {
             TResponse response = null;
@@ -129,7 +130,7 @@ namespace LUC.DiscoveryServices.Messages.KademliaRequests
                    numAddress-- )
             {
                 var ipEndPoint = new IPEndPoint( clonedListOfIpAddresses[ numAddress ], remoteContact.TcpPort );
-                (response, rpcError) = await s_remoteProcedureCaller.PostAsync<TResponse>( this, ipEndPoint, ioBehavior ).ConfigureAwait( continueOnCapturedContext: false );
+                (response, rpcError) = await s_remoteProcedureCaller.PostAsync<TResponse>( this, ipEndPoint, ioBehavior, cancellationToken ).ConfigureAwait( continueOnCapturedContext: false );
 
                 if ( response != null )
                 {

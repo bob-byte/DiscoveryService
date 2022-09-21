@@ -168,7 +168,7 @@ namespace LUC.UnitTests
             List<ChunkRange> allChunkRanges = ChunkRanges( start: 0, finallyEnd: totalBytesCountOfFile - 1, DsConstants.MAX_CHUNK_SIZE, totalBytesCountOfFile );
             var downloadingFileInfo = m_objectDescription.ToDownloadingFileInfo( m_rndBucketName.ServerName, m_pathForDownloadingFile, m_hexPrefixOfUploadedFile );
 
-            m_apiClient.Downloader.DownloadNecessaryChunksFromServer( allChunkRanges, downloadingFileInfo, m_pathForDownloadingFile );
+            m_apiClient.Downloader.DownloadNecessaryChunksFromServer( alreadyDownloadedBytesCount: 0, allChunkRanges, downloadingFileInfo, m_pathForDownloadingFile );
 
             //method DownloadNecessaryChunksFromServer sets readonly attribute to m_pathForDownloadingFile
             File.SetAttributes( m_pathForDownloadingFile, FileAttributes.Normal );

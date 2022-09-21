@@ -9,29 +9,24 @@ namespace LUC.Services.Implementation
     {
         private class CheckServerChangesEventArgsCollection : IEnumerable<CheckServerChangesEventArgs>
         {
-            private readonly ConcurrentQueue<CheckServerChangesEventArgs> m_queue;
+            private readonly Stack<CheckServerChangesEventArgs> m_collection;
 
             public CheckServerChangesEventArgsCollection()
             {
-                m_queue = new ConcurrentQueue<CheckServerChangesEventArgs>();
+                m_collection = new Stack<CheckServerChangesEventArgs>();
             }
 
             public void Add( CheckServerChangesEventArgs eventArgs ) =>
-                m_queue.Enqueue( eventArgs );
+                m_collection.Push( eventArgs );
 
-            public void TryRemoveFirstItem( out Boolean isRemoved ) =>
-                isRemoved = m_queue.TryDequeue( result: out _ );
+            public void GetLast(out CheckServerChangesEventArgs takenItem) =>
+                takenItem = m_collection.Peek();
 
-            public void Clear()
-            {
-                while ( !m_queue.IsEmpty )
-                {
-                    m_queue.TryDequeue( out _ );
-                }
-            }
+            public void Clear() =>
+                m_collection.Clear();
 
             public IEnumerator<CheckServerChangesEventArgs> GetEnumerator() =>
-                m_queue.GetEnumerator();
+                m_collection.GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() =>
                 GetEnumerator();

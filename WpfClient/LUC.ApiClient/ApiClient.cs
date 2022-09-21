@@ -152,7 +152,6 @@ namespace LUC.ApiClient
                     Settings.InitializeAccessToken( result.Token );
                     IsTokenExpiredOrIncorrectAccessToken = false;
 
-                    result.Message = $"Logged as '{result.Login}' at {DateTime.UtcNow.ToLongTimeString()} {DateTime.UtcNow.ToLongDateString()}";
                     LoggingService.LogInfo( result.Message );
 
                     try
@@ -162,7 +161,6 @@ namespace LUC.ApiClient
                     }
                     catch
                     {
-                        ;
                     }
                     
                     return result;

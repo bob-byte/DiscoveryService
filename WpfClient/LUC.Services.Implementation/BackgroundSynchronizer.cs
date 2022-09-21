@@ -40,14 +40,18 @@ namespace LUC.Services.Implementation
 
         private static TimeSpan s_timeWaitCheckSyncToServerStopped = TimeSpan.FromSeconds( value: 1 );
 
-        private Boolean m_isTickSyncFromServerStarted;
-        private Boolean m_isSyncStopped;
+        private readonly TimeSpan m_timeWaitCancellationOfSyncFromServer;
+
+        private Boolean m_isSyncRunningFromServer;
         private static DispatcherTimer s_timerSyncFromServer;
 
         private readonly IEventAggregator m_eventAggregator;
         private readonly IPathFiltrator m_pathFiltrator;
-        private CancellationTokenSource m_cancelSyncToServer;
 
+        private CancellationTokenSource m_cancelSyncToServer;
+        private CancellationTokenSource m_cancelObjOfSyncFromServer;
+
+        private readonly AsyncAutoResetEvent m_stopEventOfSyncFromServer;
 
         #endregion
 
@@ -65,6 +69,9 @@ namespace LUC.Services.Implementation
             _ = eventAggregator.GetEvent<IsSyncToServerChangedEvent>().Subscribe( param => IsSyncToServerNow = param );
 
             LockNotifyAndCheckSyncStart = new AsyncLock();
+
+            m_stopEventOfSyncFromServer = new AsyncAutoResetEvent( set: false );
+            m_timeWaitCancellationOfSyncFromServer = TimeSpan.FromSeconds( value: 5 );
         }
 
         #endregion
@@ -99,13 +106,17 @@ namespace LUC.Services.Implementation
 
         public Boolean IsSyncToServerNow { get; private set; }
 
+        public Boolean IsSyncStopped { get; private set; }
+
         public CancellationTokenSource SourceToCancelSyncToServer => m_cancelSyncToServer;
+
+        public CancellationTokenSource CancelObjOfSyncFromServer => m_cancelObjOfSyncFromServer;
 
         protected override Action StopOperation { get; }
 
         protected override Action RerunOperation { get; }
 
-        Boolean IBackgroundSynchronizer.IsTickSyncFromServerStarted => m_isTickSyncFromServerStarted;
+        Boolean IBackgroundSynchronizer.IsTickSyncFromServerStarted => m_isSyncRunningFromServer;
         DispatcherTimer IBackgroundSynchronizer.TimerSyncFromServer => s_timerSyncFromServer;
 
         #endregion
@@ -116,7 +127,7 @@ namespace LUC.Services.Implementation
         {
             ResetSyncToServerCancellation();
 
-            m_isSyncStopped = false;
+            IsSyncStopped = false;
             try
             {
                 await RunOnceSyncToServer();
@@ -132,7 +143,7 @@ namespace LUC.Services.Implementation
         // TODO Release 2.0 Should be events from server about changes.
         public void RunPeriodicSyncFromServer( Boolean whetherRunImmediatelySyncProcess = true )
         {
-            m_isSyncStopped = false;
+            IsSyncStopped = false;
             String intervalSyncInMin = ConfigurationManager.AppSettings[ "SyncFromServerIntervalInMinutes" ];
 
             if ( !Int32.TryParse( intervalSyncInMin, out Int32 parsedIntervalSyncInMin ) )
@@ -143,7 +154,7 @@ namespace LUC.Services.Implementation
             LoggingService.LogInfo( $@"SyncFromServerIntervalInMinutes = {parsedIntervalSyncInMin}" );
 
             StartTimer( TimeSpan.FromMinutes( parsedIntervalSyncInMin ), TickSyncFromServer, ref s_timerSyncFromServer );
-            
+
             if ( whetherRunImmediatelySyncProcess )
             {
                 TrySyncAllFromServerAsync().ConfigureAwait( continueOnCapturedContext: false );
@@ -231,25 +242,57 @@ namespace LUC.Services.Implementation
         ///<inheritdoc/>
         public void StopAllSync()
         {
-            SourceToCancelSyncToServer.Cancel();
+            try
+            {
+                SourceToCancelSyncToServer.Cancel();
+
+                //we can immediately dispose this obj and method
+                //SourceToCancelSyncToServer.Token.ThrowIfCancellationRequested
+                //won't throw ObjectDisposedException
+                SourceToCancelSyncToServer.Dispose();
+            }
+            catch ( Exception ex )
+            {
+                LoggingService.LogCriticalError( ex );
+            }
+
             StopSyncFromServer();
         }
 
         public void StopSyncFromServer()
         {
+            try
+            {
+                CancelObjOfSyncFromServer.Cancel();
+            }
+            catch ( Exception ex )
+            {
+                LoggingService.LogCriticalError( ex );
+            }
+            finally
+            {
+                if ( m_isSyncRunningFromServer )
+                {
+                    //5 seconds timeout to wait cancel of sync from server
+                    m_stopEventOfSyncFromServer.Wait( m_timeWaitCancellationOfSyncFromServer );
+                }
+
+                CancelObjOfSyncFromServer.Dispose();
+            }
+
             //boolean value can be changed in any tick, so we shouldn't pass m_isTickSyncFromServerStarted
             //in m_eventAggregator.GetEvent<IsSyncFromServerChangedEvent>().Publish
-            m_isTickSyncFromServerStarted = false;
+            m_isSyncRunningFromServer = false;
             m_eventAggregator.GetEvent<IsSyncFromServerChangedEvent>().Publish( payload: false );
 
-            m_isSyncStopped = true;
+            IsSyncStopped = true;
 
             if ( s_timerSyncFromServer != null )
             {
                 s_timerSyncFromServer.Tick -= TickSyncFromServer;
                 s_timerSyncFromServer.Stop();
                 s_timerSyncFromServer.IsEnabled = false;
-                m_isTickSyncFromServerStarted = false;
+                m_isSyncRunningFromServer = false;
             }
 
             SyncingObjectsList.Clear();
@@ -278,13 +321,13 @@ namespace LUC.Services.Implementation
 
             using ( await LockNotifyAndCheckSyncStart.LockAsync().ConfigureAwait( continueOnCapturedContext: false ) )
             {
-                if ( !m_isTickSyncFromServerStarted && !IsSyncToServerNow )
+                if ( !m_isSyncRunningFromServer && !IsSyncToServerNow )
                 {
-                    m_isSyncStopped = false;
+                    IsSyncStopped = false;
 
                     //boolean value can be changed in any tick, so we shouldn't pass m_isTickSyncFromServerStarted
                     //in m_eventAggregator.GetEvent<IsSyncFromServerChangedEvent>().Publish
-                    m_isTickSyncFromServerStarted = true;
+                    m_isSyncRunningFromServer = true;
                     m_eventAggregator.GetEvent<IsSyncFromServerChangedEvent>().Publish( payload: true );
 
                     shouldSyncAllFromServer = true;
@@ -305,8 +348,15 @@ namespace LUC.Services.Implementation
         private void ResetSyncToServerCancellation()
         {
             //thread-safe reset m_cancelSyncToServer.IsCancellationRequested to false
-            //TODO: dispose previous m_cancelSyncToServer value
+            m_cancelSyncToServer?.Dispose();
             Interlocked.Exchange( ref m_cancelSyncToServer, value: new CancellationTokenSource() );
+        }
+
+        private void ResetSyncFromServerCancelObj()
+        {
+            //thread-safe reset m_cancelSyncToServer.IsCancellationRequested to false
+            m_cancelObjOfSyncFromServer?.Dispose();
+            m_cancelObjOfSyncFromServer = new CancellationTokenSource();
         }
 
         // Info: User may create custom folders inside root folder. We do not need them.
@@ -332,18 +382,20 @@ namespace LUC.Services.Implementation
 
         private async Task SyncAllFromServer()
         {
+            ResetSyncFromServerCancelObj();
+
             var checkServerEventArgsCollection = new CheckServerChangesEventArgsCollection();
             var period = TimeSpan.FromMinutes( value: 0.5 );
 
+            Boolean isSignaledStopSyncEvent = false;
             var checkFileOnServerTimer = new Timer( CheckFilesOnServerAsync, checkServerEventArgsCollection, dueTime: period, period );
-
             try
             {
                 await FileChangesQueue.HandleLockedFilesAsync();
                 await FileChangesQueue.HandleDownloadedNotMovedFilesAsync().ConfigureAwait( continueOnCapturedContext: false );
 
 #if DEBUG
-                Log.Debug( $"{nameof( IsSyncFromServerChangedEvent )} = {m_isTickSyncFromServerStarted}" );
+                Log.Debug( $"{nameof( IsSyncFromServerChangedEvent )} = {m_isSyncRunningFromServer}" );
 #endif
 
                 LoggingService.LogInfo( DateTime.UtcNow.ToLongTimeString() + " Sync from server started..." );
@@ -367,11 +419,11 @@ namespace LUC.Services.Implementation
                         }
 
                         //if we need to update UI, then we will delete ConfigureAwait( continueOnCapturedContext: false )
-                        isSuccessSync = await SyncDirectoryFromServerAsync( bucketName, String.Empty, bucketDirectory, checkServerEventArgsCollection );
+                        isSuccessSync = await SyncDirectoryFromServerAsync( bucketName, String.Empty, bucketDirectory, checkServerEventArgsCollection, CancelObjOfSyncFromServer.Token );
 
                         if ( !isSuccessSync )
                         {
-                            shouldSyncBeStopped = m_isSyncStopped;
+                            shouldSyncBeStopped = IsSyncStopped;
                             if ( shouldSyncBeStopped )
                             {
                                 break;
@@ -390,14 +442,22 @@ namespace LUC.Services.Implementation
             }
             catch ( Exception ex )
             {
-                LoggingService.LogCriticalError( ex );
+                //we don't need to handle OperationCanceledException and run again sync, because root folder 
+                if ( !( ex is OperationCanceledException ) )
+                {
+                    LoggingService.LogCriticalError( ex );
 
-                StopSyncFromServer();
-                RunPeriodicSyncFromServer( whetherRunImmediatelySyncProcess: false );
+                    m_stopEventOfSyncFromServer.Set();
+                    isSignaledStopSyncEvent = true;
+                    StopSyncFromServer();
+
+                    RunPeriodicSyncFromServer( whetherRunImmediatelySyncProcess: false );
+                }
             }
             finally
             {
-                //In order not to load the server
+                //Stop timer in order not to load the server
+                checkFileOnServerTimer.Change( Timeout.Infinite, Timeout.Infinite );
                 checkFileOnServerTimer.Dispose();
 
                 try
@@ -409,23 +469,33 @@ namespace LUC.Services.Implementation
                     LoggingService.LogError( "Can't save LastSyncDateTime to file" );
                 }
 
-                m_isTickSyncFromServerStarted = false;
+                m_isSyncRunningFromServer = false;
 
-                m_eventAggregator.GetEvent<IsSyncFromServerChangedEvent>().Publish( m_isTickSyncFromServerStarted );
+                m_eventAggregator.GetEvent<IsSyncFromServerChangedEvent>().Publish( m_isSyncRunningFromServer );
 
 #if DEBUG
-                Log.Debug( $"{nameof( IsSyncFromServerChangedEvent )} = {m_isTickSyncFromServerStarted}" );
+                Log.Debug( $"{nameof( IsSyncFromServerChangedEvent )} = {m_isSyncRunningFromServer}" );
 #endif
 
                 LoggingService.LogInfo( "...finished sync from server " + DateTime.UtcNow.ToLongTimeString() );
+
+                if ( !isSignaledStopSyncEvent )
+                {
+                    m_stopEventOfSyncFromServer.Set();
+                }
             }
         }
 
         // The method executes from time to time.
         // Return indication that sync process got IsForbidden response from server.
-        private async Task<Boolean> SyncDirectoryFromServerAsync( IBucketName bucketName, String hexPrefix, String bucketDirectory, CheckServerChangesEventArgsCollection checkServerEventArgsCollection )
+        /// <exception cref="OperationCanceledException">
+        /// Sync from server is canceled
+        /// </exception>
+        private async Task<Boolean> SyncDirectoryFromServerAsync( IBucketName bucketName, String hexPrefix, String bucketDirectory, CheckServerChangesEventArgsCollection checkServerEventArgsCollection, CancellationToken cancellationToken )
         {
-            if ( m_isSyncStopped )
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if ( IsSyncStopped )
             {
                 LoggingService.LogInfo( "Sync is stopped." );
                 return false;
@@ -477,7 +547,7 @@ namespace LUC.Services.Implementation
 
                     //remove read-only attribute
                     di.Attributes &= ~FileAttributes.ReadOnly;
-                }                
+                }
             }
             else  // If directory is present when remove read-only attribute
             {
@@ -517,7 +587,7 @@ namespace LUC.Services.Implementation
             // Delete files which are deleted on server side, but still exists on client side.
             foreach ( ObjectDescriptionModel serverObjectDescr in listModel.ObjectDescriptions )
             {
-                if ( m_isSyncStopped )
+                if ( IsSyncStopped )
                 {
                     return false;
                 }
@@ -556,6 +626,7 @@ namespace LUC.Services.Implementation
                             isFileAlreadyLocked = false;
                         }
 
+
                         if ( fileInfo != null )
                         {
                             Boolean shouldBeDownloaded = serverObjectDescr.ShouldBeDownloaded( fileInfo );
@@ -563,19 +634,20 @@ namespace LUC.Services.Implementation
                             if ( !isFileAlreadyOnCurrentPc && !shouldBeDownloaded )
                             {
                                 SyncingObjectsList.RenameFileOnlyLocal( fileInfo, possibleLocalFilePath, serverObjectDescr.LastModifiedDateTimeUtc, serverObjectDescr.Guid );
+                                cancellationToken.ThrowIfCancellationRequested();
                             }
                             else if ( shouldBeDownloaded )
                             {
                                 // TODO Ask Upload old file to server - how it is now? the same but vice versa.
-                                await ApiClient.DownloadFileAsync( bucketName.ServerName, hexPrefix, relatedToPrefixFolder, serverObjectDescr.OriginalName, serverObjectDescr ).ConfigureAwait( false );
+                                await ApiClient.DownloadFileAsync( bucketName.ServerName, hexPrefix, relatedToPrefixFolder, serverObjectDescr.OriginalName, serverObjectDescr, cancellationToken ).ConfigureAwait( false );
                             }
                         }
                         else
                         {
-                            await ApiClient.DownloadFileAsync( bucketName.ServerName, hexPrefix, relatedToPrefixFolder, serverObjectDescr.OriginalName, serverObjectDescr ).ConfigureAwait( false );
+                            await ApiClient.DownloadFileAsync( bucketName.ServerName, hexPrefix, relatedToPrefixFolder, serverObjectDescr.OriginalName, serverObjectDescr, cancellationToken ).ConfigureAwait( false );
                         }
 
-                        //TODO:fix it
+                        //TODO: fix file locking in local PC
                         if ( !isFileAlreadyLocked && serverObjectDescr.IsLocked )
                         {
                             WriteLockedFileInAds( serverObjectDescr, fileInfo.FullName );
@@ -603,7 +675,9 @@ namespace LUC.Services.Implementation
             // Delete local files which not exist on server side
             foreach ( String localFilePath in localFilePaths )
             {
-                if ( m_isSyncStopped )
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if ( IsSyncStopped )
                 {
                     return false;
                 }
@@ -620,6 +694,7 @@ namespace LUC.Services.Implementation
                     if ( fileInfo == null || fileInfo.Length == 0 )
                     {
                         await ApiClient.DeleteAsync( localFilePath );   //delete empty files from server
+
                         continue;
                     }
 
@@ -672,7 +747,9 @@ namespace LUC.Services.Implementation
 
             foreach ( String localDirectory in localDirectories )
             {
-                if ( m_isSyncStopped )
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if ( IsSyncStopped )
                 {
                     return false;
                 }
@@ -723,12 +800,12 @@ namespace LUC.Services.Implementation
             // Ignore deleted directory descriptions.
             foreach ( DirectoryDescriptionModel item in listModel.DirectoryDescriptions.Where( x => x.IsDeleted is false ) )
             {
-                if ( m_isSyncStopped )
+                if ( IsSyncStopped )
                 {
                     return false;
                 }
 
-                await SyncDirectoryFromServerAsync( bucketName, item.Prefix, bucketDirectory, checkServerEventArgsCollection );
+                await SyncDirectoryFromServerAsync( bucketName, item.Prefix, bucketDirectory, checkServerEventArgsCollection, cancellationToken );
             }
 
             return true;
@@ -750,12 +827,19 @@ namespace LUC.Services.Implementation
         private async void CheckFilesOnServerAsync( Object timerState )
         {
             LoggingService.LogInfo( logRecord: $"{nameof( CheckFilesOnServerAsync )} is started at {DateTime.UtcNow}" );
-
-            var checkEventArgsCollection = timerState as CheckServerChangesEventArgsCollection;
-            foreach ( CheckServerChangesEventArgs checkEventArgs in checkEventArgsCollection )
+            if ( SyncingObjectsList.HasDownloadingFiles() )
             {
-                await ApiClient.ListWithCancelDownloadAsync( checkEventArgs.ServerBucketName, checkEventArgs.HexPrefix, showDeleted: true ).ConfigureAwait( continueOnCapturedContext: false );
-                checkEventArgsCollection.TryRemoveFirstItem( isRemoved: out _ );
+                var checkEventArgsCollection = timerState as CheckServerChangesEventArgsCollection;
+
+                try
+                {
+                    checkEventArgsCollection.GetLast( out CheckServerChangesEventArgs checkEventArgs );
+                    await ApiClient.ListWithCancelDownloadAsync( checkEventArgs.ServerBucketName, checkEventArgs.HexPrefix, showDeleted: true ).ConfigureAwait( continueOnCapturedContext: false );
+                }
+                catch ( Exception ex )
+                {
+                    LoggingService.LogCriticalError( ex );
+                }
             }
         }
 
@@ -804,7 +888,7 @@ namespace LUC.Services.Implementation
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if ( m_isSyncStopped || currentDirectory.IsJunctionDirectory() )
+            if ( IsSyncStopped || currentDirectory.IsJunctionDirectory() )
             {
                 return;
             }
@@ -855,7 +939,7 @@ namespace LUC.Services.Implementation
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if ( m_isSyncStopped )
+                if ( IsSyncStopped )
                 {
                     return;
                 }
@@ -1082,7 +1166,7 @@ namespace LUC.Services.Implementation
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if ( m_isSyncStopped )
+                if ( IsSyncStopped )
                 {
                     return;
                 }

@@ -38,6 +38,28 @@ namespace LUC.WpfClient
 
         private Mutex m_mutex;
         private ILoggingService m_loggingService;
+        private Boolean m_isAppRightExited;
+
+        #endregion
+
+        #region Contructor
+
+        public App()
+        {
+            m_isAppRightExited = false;
+        }
+
+        #endregion
+
+        #region Destructor
+
+        ~App()
+        {
+            if ( !m_isAppRightExited )
+            {
+                Application_Exit( this, e: null );
+            }
+        }
 
         #endregion
 
@@ -232,7 +254,7 @@ namespace LUC.WpfClient
                         }
                         catch ( Exception )
                         {
-                            m_loggingService.LogInfo( $"Old log files can`t delete" );
+                            m_loggingService.LogInfo( logRecord: $"Old log files can`t delete" );
                         }
                     }
                 }
@@ -250,7 +272,12 @@ namespace LUC.WpfClient
                 ;//do nothing
             }
 
-            m_loggingService.LogInfo( $"Application exit with code {e.ApplicationExitCode}" );
+            if ( e != null )
+            {
+                m_loggingService.LogInfo( $"Application exit with code {e.ApplicationExitCode}" );
+            }
+
+            m_isAppRightExited = true;
         }
 
         #endregion

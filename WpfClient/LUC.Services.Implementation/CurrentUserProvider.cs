@@ -26,11 +26,18 @@ namespace LUC.Services.Implementation
 
         private static readonly Object s_lockUsingLoggedUser = new Object();
 
+        public CurrentUserProvider()
+        {
+            SettingsService = AppSettings.ExportedValue<ISettingsService>();
+        }
+
         [Import( typeof( ILoggingService ) )]
         public ILoggingService LoggingService { get; set; }
 
         [Import( typeof( IPathFiltrator ) )]
         public IPathFiltrator PathFiltrator { get; set; }
+
+        private ISettingsService SettingsService { get; }
 
         public Boolean IsLoggedIn => ( LoggedUser != null ) && !LoggedUser.Id.Equals( String.Empty, StringComparison.Ordinal );
 
@@ -44,6 +51,8 @@ namespace LUC.Services.Implementation
                     lock ( s_lockUsingLoggedUser )
                     {
                         m_loggedUser = value;
+
+                        RootFolderPath = SettingsService.ReadUserRootFolderPath();
                         _ = TryCreateLocalBuckets();
                     }
                 }
@@ -269,7 +278,7 @@ namespace LUC.Services.Implementation
                 return false;
             }
 
-            IList<String> bucketDirectoryPathes = ProvideBucketDirectoryPaths();
+            IList<String> bucketDirectoryPathes = ProvideBucketDirectoryPaths( RootFolderPath );
 
             var existedBuckets = new List<String>();
 
@@ -305,6 +314,9 @@ namespace LUC.Services.Implementation
         }
 
         // TODO 1.0 dublicated.
-        public IList<String> ProvideBucketDirectoryPaths() => LoggedUser.Groups.Select( @group => Path.Combine( RootFolderPath, @group.Name ) ).ToList();
+        public IList<String> ProvideBucketDirectoryPaths() =>
+            ProvideBucketDirectoryPaths( RootFolderPath );
+
+        private IList<String> ProvideBucketDirectoryPaths(String rootFolder) => LoggedUser.Groups.Select( @group => Path.Combine( rootFolder, @group.Name ) ).ToList();
     }
 }

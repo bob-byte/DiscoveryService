@@ -20,24 +20,18 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             private sealed class StateInPoolReference
             {
                 //it is Int32, because we need to use Intelocked.Exchange for faster thread-safe execution 
-                //private Int32 m_value;
+                private Int32 m_value;
 
                 public StateInPoolReference( SocketStateInPool value )
                 {
-                    Value = value;
+                    m_value = (Int32)value;
                 }
 
                 public SocketStateInPool Value
                 {
-                    get;
-                    set;
+                    get => (SocketStateInPool)m_value;
+                    set => Interlocked.Exchange( ref m_value, (Int32)value );
                 }
-
-                //public SocketStateInPool Value
-                //{
-                //    get => (SocketStateInPool)m_value;
-                //    set => Interlocked.Exchange( ref m_value, (Int32)value );
-                //}
             }
         }
     }    
