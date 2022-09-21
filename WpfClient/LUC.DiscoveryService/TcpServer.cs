@@ -2,10 +2,7 @@
 using LUC.DiscoveryServices.Common.Extensions;
 using LUC.DiscoveryServices.Messages;
 using LUC.Interfaces.Constants;
-<<<<<<< HEAD
-=======
 using LUC.Interfaces.Extensions;
->>>>>>> release/integrated-into-luc
 
 using Nito.AsyncEx;
 
@@ -64,11 +61,7 @@ namespace LUC.DiscoveryServices
             Id = Guid.NewGuid();
             Endpoint = endpoint;
 
-<<<<<<< HEAD
-            m_waitForCheckingWaitingSocket = TimeSpan.FromSeconds( value: 0.5 );
-=======
             m_waitForCheckingWaitingSocket = TimeSpan.FromSeconds( value: 0.18 );
->>>>>>> release/integrated-into-luc
             m_waitTakeSocket = TimeSpan.FromSeconds( 0.3 );
         }
 
@@ -344,11 +337,7 @@ namespace LUC.DiscoveryServices
         {
             if ( e.SocketError == SocketError.Success )
             {
-<<<<<<< HEAD
-                DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Successfully accepted socket {e.RemoteEndPoint} by {Endpoint.AddressFamily} {nameof( TcpServer )}" );
-=======
                 DsLoggerSet.DefaultLogger.LogInfo( logRecord: $"Successfully accepted socket {e.RemoteEndPoint}by {Endpoint} {nameof( TcpServer )}" );
->>>>>>> release/integrated-into-luc
 
                 if ( MAX_SESSIONS_COUNT <= m_sessions.Count + 1 )
                 {
@@ -385,24 +374,24 @@ namespace LUC.DiscoveryServices
             while ( !foundSessionWithData && IsStarted )
             {
                 Parallel.ForEach( m_sessions, s_parallelOptions, ( session, loopState ) =>
-                 {
-                     try
-                     {
-                         if ( ( session.Value.Socket != null ) && ( session.Value.Socket.Available > 0 ) && session.Value.CanBeUsedByAnotherThread.IsSet )
-                         {
-                             Interlocked.Exchange( ref sessionWithData, session.Value );
-                             loopState.Break();
-                         }
-                     }
-                     catch ( ObjectDisposedException )
-                     {
-                         ;//do nothing
-                     }
-                     catch ( SocketException )
-                     {
-                         ;//do nothing
-                     }
-                 } );
+                {
+                    try
+                    {
+                        if ( ( session.Value.Socket != null ) && ( session.Value.Socket.Available > 0 ) && session.Value.CanBeUsedByAnotherThread.IsSet )
+                        {
+                            Interlocked.Exchange( ref sessionWithData, session.Value );
+                            loopState.Break();
+                        }
+                    }
+                    catch ( ObjectDisposedException )
+                    {
+                        ;//do nothing
+                    }
+                    catch ( SocketException )
+                    {
+                        ;//do nothing
+                    }
+                } );
 
                 foundSessionWithData = sessionWithData != null;
 
@@ -662,7 +651,7 @@ namespace LUC.DiscoveryServices
         /// <param name="error">Socket error code</param>
         protected virtual void OnError( SocketError error )
         {
-            //DsLoggerSet.DefaultLogger.LogFatal( message: $"Error in {nameof( TcpServer )} with {nameof( Endpoint )} {Endpoint}: {error}" );
+            DsLoggerSet.DefaultLogger.LogFatal( message: $"Error in {nameof( TcpServer )} with {nameof( Endpoint )} {Endpoint}: {error}" );
         }
 
         internal void OnConnectingInternal( TcpSession session ) => OnConnecting( session );

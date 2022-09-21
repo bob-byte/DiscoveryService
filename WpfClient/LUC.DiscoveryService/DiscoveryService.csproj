@@ -125,7 +125,7 @@
     <Compile Include="Common\DsLoggerSet.cs" />
     <Compile Include="Common\Extensions\IpAddressExtension.cs" />
     <Compile Include="Common\Extensions\IpAddressExtension.SockAddrIn6.cs" />
-    <Compile Include="Common\ForcingConcurrencyError.cs" />
+    <Compile Include="Common\ConcurrencyErrorForcer.cs" />
     <Compile Include="DiscoveryServiceFacade.cs" />
     <Compile Include="Common\DsLogger.cs" />
     <Compile Include="Common\ListenersCollection.cs" />

@@ -53,8 +53,6 @@ namespace LUC.DiscoveryServices
 
         private Dht m_distributedHashTable;
 
-        private ForcingConcurrencyError m_forceConcurrencyError;
-
         private Timer m_tryFindAndUpdateNodesTimer;
 
         private NetworkEventHandler m_networkEventHandler;
@@ -337,18 +335,9 @@ namespace LUC.DiscoveryServices
 
                 InitNetworkEventInvoker( networkIterfacesFilter: null );
 
-                m_forceConcurrencyError = new ForcingConcurrencyError();
-
                 if ( !m_isDsTest )
                 {
-                    TimeSpan intervalFindNewServices;
-#if CONNECTION_POOL_TEST
-                    intervalFindNewServices = TimeSpan.FromSeconds( value: 1.5 );
-#else
-                    intervalFindNewServices = TimeSpan.FromMinutes( 1 );
-#endif
-
-                    m_tryFindAndUpdateNodesTimer = new Timer( TryFindNewServicesTick, state: this, dueTime: TimeSpan.Zero, intervalFindNewServices );
+                    m_tryFindAndUpdateNodesTimer = new Timer( TryFindNewServicesTick, state: this, dueTime: TimeSpan.Zero, DsConstants.IntervalFindNewServices );
                 }
 
                 IsRunning = true;
@@ -390,7 +379,6 @@ namespace LUC.DiscoveryServices
                 ServiceInstanceShutdown?.Invoke(sender: this, e: new EventArgs());
 
                 m_connectionPool.ClearPoolAsync(IoBehavior.Synchronous, respectMinPoolSize: false, allowReuseService, CancellationToken.None).ConfigureAwait(continueOnCapturedContext: false);
-                m_forceConcurrencyError?.Dispose();
             }
         }
 
@@ -421,8 +409,6 @@ namespace LUC.DiscoveryServices
 
                 if ( ( multicastMessage != null ) && ( eventArgs?.RemoteEndPoint is IPEndPoint ipEndPoint ) )
                 {
-                    ForcingConcurrencyError.TryForce();
-
                     Boolean isTheSameNetwork = ipEndPoint.Address.CanBeReachable();
 
                     if ( isTheSameNetwork )
@@ -438,18 +424,19 @@ namespace LUC.DiscoveryServices
                            groupsIds: m_localBuckets?.Keys?.ToList()
                        );
 
-                        ForcingConcurrencyError.TryForce();
                         Byte[] bytesToSend = tcpMessage.ToByteArray();
 
-                        var remoteEndPoint = new IPEndPoint( ipEndPoint.Address, (Int32)multicastMessage.TcpPort );
+                        var remoteEndPoint = new IPEndPoint( ipEndPoint.Address, multicastMessage.TcpPort );
+
+                        await ConcurrencyErrorForcer.TryForceAsync().ConfigureAwait( continueOnCapturedContext: false );
                         ConnectionPool.Socket client = null;
 
                         try
                         {
                             client = await m_connectionPool.SocketAsync( remoteEndPoint, DsConstants.ConnectTimeout,
-                               ioBehavior, DsConstants.TimeWaitSocketReturnedToPool ).ConfigureAwait( continueOnCapturedContext: false );
+                               ioBehavior, DsConstants.TimeWaitSocketReturnedToPool ).ConfigureAwait( false );
 
-                            ForcingConcurrencyError.TryForce();
+                            await ConcurrencyErrorForcer.TryForceAsync().ConfigureAwait( false );
                             client = await client.DsSendWithAvoidNetworkErrorsAsync( bytesToSend, DsConstants.SendTimeout,
                                DsConstants.ConnectTimeout, ioBehavior ).ConfigureAwait( false );
 
@@ -457,7 +444,6 @@ namespace LUC.DiscoveryServices
                             DsLoggerSet.DefaultLogger.LogInfo( $"{tcpMessage.GetType().Name} is sent to {client.Id}:\n" +
                                                             $"{tcpMessage}\n" );
 #endif
-                            ForcingConcurrencyError.TryForce();
                         }
                         catch ( TimeoutException ex )
                         {
@@ -475,6 +461,8 @@ namespace LUC.DiscoveryServices
                         {
                             if ( client != null )
                             {
+                                await ConcurrencyErrorForcer.TryForceAsync().ConfigureAwait( false );
+
                                 await client.ReturnToPoolAsync( DsConstants.ConnectTimeout, ioBehavior ).ConfigureAwait( false );
                             }
                         }
@@ -545,7 +533,7 @@ namespace LUC.DiscoveryServices
 #if !CONNECTION_POOL_TEST
             //we don't need to say about us another nodes, when we aren't in any not Kademlia buckets,
             //because no one will download files from us, while bucket refresh will not be started
-            if ( m_localBuckets.Any() && !m_distributedHashTable.ExistsAnyOnlineContact )
+            if ( !m_distributedHashTable.ExistsAnyOnlineContact && m_localBuckets.Any()  )
             {
 #endif
                 try

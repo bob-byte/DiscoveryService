@@ -76,13 +76,11 @@ namespace LUC.Interfaces.Constants
         public static readonly TimeSpan ReceiveTimeout = TimeSpan.FromSeconds( 10 );
         public static readonly TimeSpan ReceiveOneChunkTimeout = TimeSpan.FromSeconds(6);
 
-        //#if CONNECTION_POOL_TEST
-        //        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromSeconds( value: 5 );
-        //#elif DEBUG
-        //        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromMinutes( 1 );
-        //#else               
-        //        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromMinutes( 3 );
-        //#endif
+#if CONNECTION_POOL_TEST
+        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromSeconds( value: 3 );
+#else
+        public static readonly TimeSpan IntervalFindNewServices = TimeSpan.FromMinutes( 1 );
+#endif
 
         /// <summary>
         /// it's max of execution Kademlia operation (first we connect to new contact, then if it is failed, we will be failed to send, 
