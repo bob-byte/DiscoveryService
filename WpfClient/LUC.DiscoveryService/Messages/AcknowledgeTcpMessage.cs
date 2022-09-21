@@ -37,7 +37,7 @@ namespace LUC.DiscoveryServices.Messages
         /// </param>
         public AcknowledgeTcpMessage( UInt32 messageId, String machineId, BigInteger idOfSendingContact,
             UInt16 tcpPort, UInt16 protocolVersion, List<String> groupsIds )
-            : base( messageId, machineId, protocolVersion )
+            : base( messageId, machineId, protocolVersion, tcpPort )
         {
             DefaultInit( groupsIds );
 
@@ -58,12 +58,7 @@ namespace LUC.DiscoveryServices.Messages
             {
                 base.Read( reader );
 
-                MessageId = reader.ReadUInt32();
                 IdOfSendingContact = reader.ReadBigInteger();
-                MachineId = reader.ReadString( Encoding.UTF8 );
-
-                ProtocolVersion = reader.ReadUInt16();
-                TcpPort = reader.ReadUInt16();
                 BucketIds = reader.ReadListOfAsciiStrings();
 
                 return this;
@@ -96,11 +91,7 @@ namespace LUC.DiscoveryServices.Messages
             {
                 base.Write( writer );
 
-                writer.Write( MessageId );
                 writer.Write( IdOfSendingContact );
-                writer.Write( MachineId, Encoding.UTF8 );
-                writer.Write( ProtocolVersion );
-                writer.Write( TcpPort );
                 writer.WriteEnumerable( BucketIds );
             }
             else

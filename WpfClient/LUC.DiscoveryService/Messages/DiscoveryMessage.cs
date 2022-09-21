@@ -1,6 +1,9 @@
-﻿using LUC.DiscoveryServices.Common;
+﻿using LUC.DiscoveryServices.CodingData;
+using LUC.DiscoveryServices.Common;
+using LUC.DiscoveryServices.Common.Interfaces;
 
 using System;
+using System.Text;
 
 namespace LUC.DiscoveryServices.Messages
 {
@@ -29,11 +32,12 @@ namespace LUC.DiscoveryServices.Messages
         /// <param name="protocolVersion">
         ///   Supported version of protocol
         /// </param>
-        protected DiscoveryMessage( UInt32 messageId, String machineId, UInt16 protocolVersion )
+        protected DiscoveryMessage( UInt32 messageId, String machineId,  UInt16 protocolVersion, UInt16 tcpPort )
         {
             MessageId = messageId;
             MachineId = machineId;
             ProtocolVersion = protocolVersion;
+            TcpPort = tcpPort;
         }
 
         /// <summary>
@@ -64,5 +68,45 @@ namespace LUC.DiscoveryServices.Messages
         ///   Supported version of protocol of the remote application.
         /// </summary>
         public UInt16 ProtocolVersion { get; set; }
+
+        /// <inheritdoc/>
+        public override IWireSerialiser Read( WireReader reader )
+        {
+            if ( reader != null )
+            {
+                base.Read( reader );
+
+                MessageId = reader.ReadUInt32();
+                MachineId = reader.ReadString( Encoding.UTF8 );
+
+                ProtocolVersion = reader.ReadUInt16();
+                TcpPort = reader.ReadUInt16();
+
+                return this;
+            }
+            else
+            {
+                throw new ArgumentNullException( nameof( reader ) );
+            }
+        }
+
+        /// <inheritdoc/>
+        public override void Write( WireWriter writer )
+        {
+            if ( writer != null )
+            {
+                base.Write( writer );
+
+                writer.Write( MessageId );
+                writer.Write( MachineId, Encoding.UTF8 );
+
+                writer.Write( ProtocolVersion );
+                writer.Write( TcpPort );
+            }
+            else
+            {
+                throw new ArgumentNullException( nameof( writer ) );
+            }
+        }
     }
 }

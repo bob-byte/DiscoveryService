@@ -8,6 +8,7 @@ using LUC.DiscoveryServices.Messages;
 using LUC.DiscoveryServices.Test.Builders;
 using LUC.Interfaces.Constants;
 using LUC.Interfaces.Discoveries;
+using LUC.Interfaces.Enums;
 using LUC.Services.Implementation;
 
 using NUnit.Framework;

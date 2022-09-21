@@ -39,50 +39,9 @@ namespace LUC.DiscoveryServices.Messages
         /// Id of machine which is sending this messege
         /// </param>
         public AllNodesRecognitionMessage( UInt32 messageId, UInt16 protocolVersion, UInt16 tcpPort, String machineId )
-            : base( messageId, machineId, protocolVersion )
+            : base( messageId, machineId, protocolVersion, tcpPort )
         {
             DefaultInit();
-            TcpPort = tcpPort;
-        }
-
-        /// <inheritdoc/>
-        public override IWireSerialiser Read( WireReader reader )
-        {
-            if ( reader != null )
-            {
-                base.Read( reader );
-
-                MessageId = reader.ReadUInt32();
-                MachineId = reader.ReadString( Encoding.UTF8 );
-
-                ProtocolVersion = reader.ReadUInt16();
-                TcpPort = reader.ReadUInt16();
-
-                return this;
-            }
-            else
-            {
-                throw new ArgumentNullException( nameof( reader ) );
-            }
-        }
-
-        /// <inheritdoc/>
-        public override void Write( WireWriter writer )
-        {
-            if ( writer != null )
-            {
-                base.Write( writer );
-
-                writer.Write( MessageId );
-                writer.Write( MachineId, Encoding.UTF8 );
-
-                writer.Write( ProtocolVersion );
-                writer.Write( TcpPort );
-            }
-            else
-            {
-                throw new ArgumentNullException( nameof( writer ) );
-            }
         }
 
         protected override void DefaultInit( params Object[] args ) =>
