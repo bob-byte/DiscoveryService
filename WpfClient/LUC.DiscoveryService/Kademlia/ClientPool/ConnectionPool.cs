@@ -101,17 +101,12 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 }
                 else
                 {
-                    //the socket with the same ID can be taken from the pool by another
-                    //thread while current was waiting for releasing m_lockTakeSocket
-                    using ( await m_lockTakeSocket.LockAsync( ioBehavior ).ConfigureAwait( false ) )
-                    {
                     desiredSocket = await CreatedOrTakenSocketAsync(
                         remoteEndPoint,
                         timeoutToConnect,
                         timeWaitToReturnToPool,
                         ioBehavior
                     ).ConfigureAwait( false );
-                }
                 }
 
                 return desiredSocket;
@@ -231,12 +226,6 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             finally
             {
                 ReleaseSocketSemaphore();
-
-                if ( !isReturned )
-                {
-                    NotifyPoolError( message: 
-                        "Try to return socket which already removed from pool" );
-            }
             }
 
             return isReturned;
@@ -265,7 +254,6 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
         private void NotifyPoolError( String message )
         {
             var exception = new InvalidProgramException( message );
-
 #if CONNECTION_POOL_TEST
             throw exception;
 #else
@@ -332,6 +320,8 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
             return (takenSocket, desiredSocket);
         }
 
+        private void AddLeasedSocket( EndPoint socketId, Socket socket ) =>
+            m_leasedSockets.AddOrUpdate( socketId, ( key ) => socket, ( key, previousSocketValue ) => socket );
 
         private void ReleaseSocketSemaphore()
         {

@@ -37,7 +37,7 @@ using LoginResponse = LUC.Interfaces.OutputContracts.LoginResponse;
 //TODO 1.0 Directory was deleted during sync to server when created offline.
 
 // TODO Release 2.0 Remember downloaded chunks for big file even if app was closed.
-[assembly: InternalsVisibleTo(assemblyName: "LUC.UnitTests")]
+[assembly: InternalsVisibleTo( assemblyName: "LUC.UnitTests" )]
 namespace LUC.ApiClient
 {
     [Export( typeof( IApiClient ) )]
@@ -152,6 +152,7 @@ namespace LUC.ApiClient
                     Settings.InitializeAccessToken( result.Token );
                     IsTokenExpiredOrIncorrectAccessToken = false;
 
+                    result.Message = $"Logged as '{result.Login}' at {DateTime.UtcNow}";
                     LoggingService.LogInfo( result.Message );
 
                     try
@@ -161,8 +162,9 @@ namespace LUC.ApiClient
                     }
                     catch
                     {
+                        ;//do nothing
                     }
-                    
+
                     return result;
                 }
                 else
