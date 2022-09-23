@@ -19,5 +19,5 @@ How it works
 5. When DS found few nodes, you can download some specific file from a list of contacts.
 
 
-For more information, see "Documentation.docx"
-==============================================
+For more information, see "Documentation.pdf"
+=============================================
