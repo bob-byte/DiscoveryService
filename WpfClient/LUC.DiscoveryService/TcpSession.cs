@@ -143,9 +143,6 @@ namespace LUC.DiscoveryServices
             // Update the connected flag
             IsConnected = true;
 
-            // Try to receive something from the client
-            //TryReceive();
-
             // Check the socket disposed state: in some rare cases it might be disconnected while receiving!
             if ( IsSocketDisposed )
             {
@@ -862,11 +859,8 @@ namespace LUC.DiscoveryServices
         public Boolean IsSocketDisposed { get; private set; } = true;
 
         // Implement IDisposable.
-        public void Dispose()
-        {
-            Dispose( true );
-            GC.SuppressFinalize( this );
-        }
+        public void Dispose() => 
+            Dispose( disposingManagedResources: true );
 
         protected virtual void Dispose( Boolean disposingManagedResources )
         {
@@ -897,13 +891,6 @@ namespace LUC.DiscoveryServices
                 // Mark as disposed.
                 IsDisposed = true;
             }
-        }
-
-        // Use C# destructor syntax for finalization code.
-        ~TcpSession()
-        {
-            // Simply call Dispose(false).
-            Dispose( false );
         }
 
         #endregion

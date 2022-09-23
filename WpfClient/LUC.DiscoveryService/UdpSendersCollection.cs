@@ -193,6 +193,9 @@ namespace LUC.DiscoveryServices
             }
         }
 
+        public void Dispose() =>
+            Dispose( disposing: true );
+
         protected virtual void Dispose( Boolean disposing )
         {
             if ( !m_disposedValue )
@@ -216,12 +219,6 @@ namespace LUC.DiscoveryServices
 
                 m_disposedValue = true;
             }
-        }
-
-        public void Dispose()
-        {
-            Dispose( disposing: true );
-            GC.SuppressFinalize( this );
         }
     }
 }

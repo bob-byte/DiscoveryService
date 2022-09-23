@@ -116,9 +116,6 @@ namespace LUC.DiscoveryServices.Kademlia
         public override Boolean Equals( Object obj ) =>
             obj is IContact contact && Equals( contact );
 
-        //public Boolean Equals(IContact a, IContact b) =>
-        //    IsEqual(a, b);
-
         public Boolean Equals( IContact contact )
         {
             Boolean isContactNull = contact is null;

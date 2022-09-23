@@ -18,6 +18,7 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
 
         private static readonly CancellationTokenSource s_cancellationTokenSource = new CancellationTokenSource();
 
+        //TODO: change type to ConcurrentBag<Task<Boolean>>
         private static readonly List<Task<Boolean>> s_resetTasks = new List<Task<Boolean>>();
         private static Task s_workerTask;
 

@@ -106,6 +106,7 @@ namespace LUC.DiscoveryServices.Messages
 
             if ( args.Length > 0 )
             {
+                //null doesn't have some type
                 if ( args[ 0 ] is List<String> groupIds )
                 {
                     BucketIds = groupIds;

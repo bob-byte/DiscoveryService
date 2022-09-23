@@ -63,13 +63,6 @@ namespace LUC.DiscoveryServices.Common
             }
         }
 
-        //public SslStream DsSslConnect( EndPoint remoteEndPoint, TimeSpan timeout, CancellationToken cancellationToken = default )
-        //{
-        //    var networkStream = new NetworkStream( this );
-        //    var sslStream = new SslStream( networkStream );
-        //    sslStream.AuthenticateAsClient()
-        //}
-
         public void DsConnect( 
             EndPoint remoteEndPoint, 
             TimeSpan timeout, 

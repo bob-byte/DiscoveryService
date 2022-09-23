@@ -27,15 +27,5 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         public DownloadChunkRequest Request { get; set; }
 
         public List<ChunkRange> ChunkRanges { get; }
-
-        //public static DataOfDownloadBigFileBlock Create(DownloadChunkRequest request, ICollection<ChunkRange> chunkRanges )
-        //{
-        //    var contactWithFile = AppSettings.Mapper.Map<DataOfDownloadBigFileBlock>();
-        //    contactWithFile.Request = request;
-        //    contactWithFile.ChunkRanges = chunkRanges;
-
-        //    return contactWithFile;
-        //}
-
     }
 }

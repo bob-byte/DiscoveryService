@@ -5,14 +5,10 @@ using System.Net.Sockets;
 namespace LUC.DiscoveryServices.Messages
 {
     /// <summary>
-    ///   The event data for <see cref="NetworkEventInvoker.QueryReceived"/> or
-    ///   <see cref="NetworkEventInvoker.AnswerReceived"/>.
+    ///   The event data for TCP message receiving.
     /// </summary>
     public class TcpMessageEventArgs : MessageEventArgs
     {
-        //public TcpMessageEventArgs(Byte[] buffer, Socket acceptedSocket, Action unregisterSocket, EndPoint localEndPoint, EndPoint remoteEndPoint )
-        //{ }
-
         /// <summary>
         /// Socket which is accepted after any <see cref="Socket.Accept"/> method
         /// </summary>

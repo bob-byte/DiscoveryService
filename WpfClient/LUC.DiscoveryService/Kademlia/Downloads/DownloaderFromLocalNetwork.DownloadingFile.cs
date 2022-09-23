@@ -18,15 +18,13 @@ namespace LUC.DiscoveryServices.Kademlia.Downloads
         /// <summary>
         /// It is thread safe class. That is the reason why it has only methods
         /// </summary>
-        private class DownloadingFile
+        private sealed class DownloadingFile
         {
             public String FileNameFromSyncFolder( String syncFolder, String fullFileName ) =>
                 fullFileName.Substring( syncFolder.Length + 1 );
 
             public void SetTempFileAttributes( String fullPathToTempFile, SafeFileHandle fileHandle )
             {
-                //FileAttributes tempFileAttributes = FileAttributes.Hidden | FileAttributes.ReadOnly;
-                //File.SetAttributes( fullPathToTempFile, tempFileAttributes );
                 FileExtensions.SetAttributesToTempDownloadingFile( fullPathToTempFile );
                 MarkAsSparseFile( fileHandle, fullPathToTempFile );
             }

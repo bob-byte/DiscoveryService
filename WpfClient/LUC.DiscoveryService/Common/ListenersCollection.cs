@@ -61,11 +61,8 @@ namespace LUC.DiscoveryServices.Common
 
         #region IDisposable Support
         
-        public void Dispose()
-        {
+        public void Dispose() =>
             Dispose( disposing: true );
-            GC.SuppressFinalize( this );
-        }
 
         // This code is added to correctly implement the disposable pattern.
         protected virtual void Dispose( Boolean disposing )

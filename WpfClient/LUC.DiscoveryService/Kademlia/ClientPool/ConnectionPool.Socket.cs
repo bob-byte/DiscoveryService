@@ -119,17 +119,6 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                 return sendingBytesSocket;
             }
 
-            //public async Task ConnectAsync()
-            //{
-            //    //check status in lock
-            //    //add changing status in all methods
-            //    //take work with SslProtocols and TLS
-            //    //maybe should to check whether remoteEndPoint is Windows
-            //    //check whether remoteEndPoint supports SSL (send message to ask)
-            //    //call ConnectAsync with timeout
-            //    //change state to connected if it is, otherwise to failed
-            //}
-
             public async ValueTask<Boolean> ReturnToPoolAsync( TimeSpan timeoutToConnect, IoBehavior ioBehavior )
             {
 #if CONNECTION_POOL_TEST

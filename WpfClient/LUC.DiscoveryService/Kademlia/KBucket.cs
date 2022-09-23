@@ -171,10 +171,6 @@ namespace LUC.DiscoveryServices.Kademlia
         {
             Boolean[] idbits = id.Bytes.Bits().ToArray();
 
-            // Useful for viewing the bit arrays.
-            //string sbits1 = System.String.Join("", bits.Select(b => b ? "1" : "0"));
-            //string sbits2 = System.String.Join("", idbits.Select(b => b ? "1" : "0"));
-
             Int32 q = DsConstants.KID_LENGTH_BITS - 1;
             Int32 n = bits.Length - 1;
             var sharedBits = new List<Boolean>();

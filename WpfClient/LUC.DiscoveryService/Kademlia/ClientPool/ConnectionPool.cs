@@ -90,24 +90,19 @@ namespace LUC.DiscoveryServices.Kademlia.ClientPool
                     cancellationToken
                 ).ConfigureAwait( false );
 
-                if ( isTaken )
-                {
-                    desiredSocket = await TakenSocketWithRecoveredConnectionAsync(
+                desiredSocket = isTaken
+                    ? await TakenSocketWithRecoveredConnectionAsync(
                         remoteEndPoint,
                         timeoutToConnect,
                         ioBehavior,
                         desiredSocket
-                    ).ConfigureAwait( false );
-                }
-                else
-                {
-                    desiredSocket = await CreatedOrTakenSocketAsync(
+                    ).ConfigureAwait( false )
+                    : await CreatedOrTakenSocketAsync(
                         remoteEndPoint,
                         timeoutToConnect,
                         timeWaitToReturnToPool,
                         ioBehavior
                     ).ConfigureAwait( false );
-                }
 
                 return desiredSocket;
             }

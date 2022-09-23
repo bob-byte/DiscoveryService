@@ -52,9 +52,7 @@ namespace LUC.DiscoveryServices.Common
             };
         }
 
-#pragma warning disable S1186 // Methods should not be empty
         public static Task TryForceAsync()
-#pragma warning restore S1186 // Methods should not be empty
         {
 #if TEST_CONCURRENCY
             Int32 methodIndex = s_threadRandom.Value.Next( s_forcingConcurrencyErrorMethods.Length );

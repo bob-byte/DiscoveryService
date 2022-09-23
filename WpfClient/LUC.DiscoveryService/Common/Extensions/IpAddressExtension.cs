@@ -136,6 +136,8 @@ namespace LUC.DiscoveryServices.Common.Extensions
                     isSameNetwork = ( ipNetwork != null ) && ipNetwork.Contains( destinationAddress );
                 }
 
+                canBeReachableInOurNetwork = isSameNetwork;
+
                 if ( isSameNetwork )
                 {
                     DsLoggerSet.DefaultLogger.LogInfo( $"IP {destinationAddress} in the same network" );
@@ -145,7 +147,6 @@ namespace LUC.DiscoveryServices.Common.Extensions
                     DsLoggerSet.DefaultLogger.LogInfo( $"IP {destinationAddress} in another network" );
                 }
 
-                canBeReachableInOurNetwork = canBeReachable && isSameNetwork;
             }
             else
             {
@@ -161,9 +162,9 @@ namespace LUC.DiscoveryServices.Common.Extensions
             return canBeReachable;
         }
 
-        public static Boolean IsInSubnet( this IPAddress address, string subnetMask )
+        public static Boolean IsInSubnet( this IPAddress address, String subnetMask )
         {
-            var slashIdx = subnetMask.IndexOf( "/" );
+            Int32 slashIdx = subnetMask.IndexOf( "/" );
             if ( slashIdx == -1 )
             { // We only handle netmasks in format "IP/PrefixLength".
                 throw new NotSupportedException( "Only SubNetMasks with a given prefix length are supported." );
@@ -178,7 +179,7 @@ namespace LUC.DiscoveryServices.Common.Extensions
             }
 
             // Now find out how long the prefix is.
-            int maskLength = int.Parse( subnetMask.Substring( slashIdx + 1 ) );
+            Int32 maskLength = Int32.Parse( subnetMask.Substring( slashIdx + 1 ) );
 
             if ( maskLength == 0 )
             {
@@ -193,13 +194,13 @@ namespace LUC.DiscoveryServices.Common.Extensions
             if ( maskAddress.AddressFamily == AddressFamily.InterNetwork )
             {
                 // Convert the mask address to an unsigned integer.
-                var maskAddressBits = BitConverter.ToUInt32( maskAddress.GetAddressBytes().Reverse().ToArray(), 0 );
+                UInt32 maskAddressBits = BitConverter.ToUInt32( maskAddress.GetAddressBytes().Reverse().ToArray(), 0 );
 
                 // And convert the IpAddress to an unsigned integer.
-                var ipAddressBits = BitConverter.ToUInt32( address.GetAddressBytes().Reverse().ToArray(), 0 );
+                UInt32 ipAddressBits = BitConverter.ToUInt32( address.GetAddressBytes().Reverse().ToArray(), 0 );
 
                 // Get the mask/network address as unsigned integer.
-                uint mask = uint.MaxValue << ( 32 - maskLength );
+                UInt32 mask = UInt32.MaxValue << ( 32 - maskLength );
 
                 // https://stackoverflow.com/a/1499284/3085985
                 // Bitwise AND mask and MaskAddress, this should be the same as mask and IpAddress
@@ -215,7 +216,7 @@ namespace LUC.DiscoveryServices.Common.Extensions
 
                 // And convert the IpAddress to a BitArray. Reverse the BitArray to compare the bits of each byte in the right order.
                 var ipAddressBits = new BitArray( address.GetAddressBytes().Reverse().ToArray() );
-                var ipAddressLength = ipAddressBits.Length;
+                Int32 ipAddressLength = ipAddressBits.Length;
 
                 if ( maskAddressBits.Length != ipAddressBits.Length )
                 {
@@ -223,7 +224,7 @@ namespace LUC.DiscoveryServices.Common.Extensions
                 }
 
                 // Compare the prefix bits.
-                for ( var i = ipAddressLength - 1; i >= ipAddressLength - maskLength; i-- )
+                for ( Int32 i = ipAddressLength - 1; i >= ipAddressLength - maskLength; i-- )
                 {
                     try
                     {
