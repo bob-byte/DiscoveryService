@@ -20,7 +20,7 @@ namespace LUC.DiscoveryServices
         public static DiscoveryService InitWithoutForceToStart( ICurrentUserProvider currentUserProvider, ISettingsService settingsService )
         {
             DsBucketsSupported.Define( currentUserProvider, out ConcurrentDictionary<String, String> bucketsSupported );
-
+            HashSet<String> bucketsSupported = new HashSet<String>();
             DiscoveryService discoveryService = InternalInitWithoutForceToStart( currentUserProvider, bucketsSupported, settingsService.MachineId );
             return discoveryService;
         }
