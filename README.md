@@ -16,7 +16,7 @@ How it works
 2. Remote Discovery Service instances receive UDP datagrams and respond with TCP connection.
 3. Discovery Service accepts TCP connection on port 17500 and saves groups, source IP and node ID.
 4. Every 30 minutes DS updates info about found contacts using Kademlia protocol.
-5. When DS found few nodes, you can download some specific file from a list of contacts.
+5. When DS found a few nodes, you can download some specific file from a list of contacts.
 
 
 For more information, see "Documentation.pdf"
